@@ -35,8 +35,8 @@ load g0
     dr = 0.01; % Power-stroke Size; Units: um
     kstiff1 = g0(13)*1500; 
     kstiff2 = g0(14)*10000;     
-% Non-zero velocities
-vel = (-Data_ATP(:,1)).*ML; % micron per sec
+    
+vel = (-Data_ATP(:,1)).*ML; % micron per sec    
 
 for k = [1 3]
 
@@ -91,7 +91,7 @@ for k = [1 3]
 %     
 %   end
     for j = 1:length(vel)
-        F_active(j,k) = evaluateModel(vel(j), [0 1], MgATP(k),Pi,MgADP,g0);
+        F_active(j,k) = evaluateModel(vel(j), 1, MgATP(k),Pi,MgADP,g0);
     end
 end
 
@@ -112,7 +112,7 @@ for k = 1:length(MgATP_iso)
 %   p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 %   p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
 %   F_iso(k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
-  F_iso(k) = evaluateModel(0, [0 1], MgATP_iso(k),Pi,MgADP,g0);
+  F_iso(k) = evaluateModel(0, 1, MgATP_iso(k),Pi,MgADP,g0);
 end
 
 
@@ -306,7 +306,9 @@ for l = 1:5
   end
 
   EN = EN + sum(abs(Ktr-Ktr_mean).^2);
- 
+  %%
+  EN1 = evaluateProblem(gN)
+ %%
   if EN < E0
     E0 = EN;
     g0 = gN;
