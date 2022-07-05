@@ -1,4 +1,4 @@
-clear
+ clear
 % g0 = ones(1,12);
 load g0
 
