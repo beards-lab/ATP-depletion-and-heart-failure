@@ -15,6 +15,10 @@ Data_ATP = [0		56.4048	63.6074	61.3192
         2		17.8025	13.5516	10.2112
         6		2.212	1.1823	1.2117];
 
+ML = 1.1; % half sarcomere length (microns)
+% Non-zero velocities
+vel = (-Data_ATP(:,1)).*ML; % micron per sec
+
 %% Fmax (normalized.) versus [MgATP] (mM) from Ebus et al.(2001)
 iso_data = ...
     [0.0098736     0.019874      0.04959     0.098478      0.49024        5.063
@@ -23,5 +27,11 @@ MgATP_iso = iso_data(1,:);
 
 F_data = iso_data(2,:).*57;
 
-%% Ktr data from Beard et al.
+%% Ktr data from Beard et al. - 8, 4, 2 mM
+MgATP = [8 4 2];
 Ktr_mean = [37.7928 29.0 25.8033];
+Ktr_err  = [1.9308  1.30    2.0167];
+
+%% Set up environment
+MgADP = 0; 
+Pi    = 0; 
