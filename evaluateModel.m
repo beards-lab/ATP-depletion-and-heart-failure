@@ -1,4 +1,4 @@
-function F_active = evaluateModel(vel,T,MgATP,Pi,MgADP,g0)
+function F_active = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0)
 
     if size(T, 2) == 1
         % T is an endpoint, thus output F_active is just a
@@ -32,13 +32,13 @@ function F_active = evaluateModel(vel,T,MgATP,Pi,MgADP,g0)
 
     if vel == 0
       % Zero velocity:
-      [t,PU] = ode15s(@dPUdT,Tspan,PU0,[],N,dS,MgATP,Pi,MgADP,g0);
+      [t,PU] = ode15s(fcn,Tspan,PU0,[],N,dS,MgATP,Pi,MgADP,g0);
     else
         dt = dS/abs(vel);
         tend = 0.20/abs(vel); % ending time of simulation
         Nstep = round(tend/dt);
         % simulate kinetics for 1/2 timestep
-        [t,PU] = ode15s(@dPUdT,[0 dt/2],PU0,[],N,dS,MgATP,Pi,MgADP,g0);
+        [t,PU] = ode15s(fcn,[0 dt/2],PU0,[],N,dS,MgATP,Pi,MgADP,g0);
         PU = PU(end,:); 
         for i = 1:(Nstep-1)
           % advection (sliding step)
@@ -46,7 +46,7 @@ function F_active = evaluateModel(vel,T,MgATP,Pi,MgADP,g0)
           PU(1*N+2:2*N+1) = PU(1*N+3:2*N+2); PU(2*N+2) = 0;
           PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
           % simulate kinetics for full step
-          [t,PU] = ode15s(@dPUdT,[0 dt],PU,[],N,dS,MgATP,Pi,MgADP,g0);
+          [t,PU] = ode15s(fcn,[0 dt],PU,[],N,dS,MgATP,Pi,MgADP,g0);
           PU = PU(end,:); 
         end
         % final advection (sliding step)
@@ -54,7 +54,7 @@ function F_active = evaluateModel(vel,T,MgATP,Pi,MgADP,g0)
         PU(1*N+2:2*N+1) = 0.5*(PU(1*N+3:2*N+2) + PU(1*N+2:2*N+1)); PU(2*N+2) = 0.5*(0 + PU(2*N+2));
         PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
         % final 1/2 timestep for kinetics
-        [t,PU] = ode15s(@dPUdT,[0 dt/2],PU,[],N,dS,MgATP,Pi,MgADP,g0);
+        [t,PU] = ode15s(fcn,[0 dt/2],PU,[],N,dS,MgATP,Pi,MgADP,g0);
     end
 
         if ~ vector_output 

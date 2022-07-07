@@ -307,7 +307,8 @@ for l = 1:5
 
   EN = EN + sum(abs(Ktr-Ktr_mean).^2);
   %%
-  EN1 = evaluateProblem(gN)
+  fcn = @dPUdT;
+  EN1 = evaluateProblem(fcn, gN)
  %%
   if EN < E0
     E0 = EN;
