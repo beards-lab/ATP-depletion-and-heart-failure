@@ -27,6 +27,8 @@ Pi    = 0;
 
 ML = 1.1; % half sarcomere length (microns)
 
+fcn = @dPUdT;
+
 %% Parameters and computing initial error
 % g0 = ones(1,12);
 load g0
@@ -91,7 +93,7 @@ for k = [1 3]
 %     
 %   end
     for j = 1:length(vel)
-        F_active(j,k) = evaluateModel(vel(j), 1, MgATP(k),Pi,MgADP,g0);
+        F_active(j,k) = evaluateModel(fcn, vel(j), 1, MgATP(k),Pi,MgADP,g);
     end
 end
 
@@ -112,7 +114,7 @@ for k = 1:length(MgATP_iso)
 %   p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 %   p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
 %   F_iso(k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
-  F_iso(k) = evaluateModel(0, 1, MgATP_iso(k),Pi,MgADP,g0);
+  F_iso(k) = evaluateModel(fcn, 0, 1, MgATP_iso(k),Pi,MgADP,g);
 end
 
 
@@ -142,7 +144,7 @@ for k = 1:length(MgATP)
 %   F_active_ktr2 = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
 %   
   % Tspan array returns F active array
-  F_active_ktr = evaluateModel(0, Tspan, MgATP(k),Pi,MgADP,g0);
+  F_active_ktr = evaluateModel(fcn,0, Tspan, MgATP(k),Pi,MgADP,g);
   % cehck
 %   sum(F_active_ktr2 - F_active_ktr)
   
@@ -208,56 +210,59 @@ for l = 1:5
   PU0 = [p1; p2; p3; U_NR];
 
   for k = [1 3]
-    % Zero velocity:
-    [t,PU] = ode15s(@dPUdT,[0 1],PU0,[],N,dS,MgATP(k),Pi,MgADP,gN);
-    PU = PU(end,:);
-    p1 = PU(1:1*N+1);
-    p2 = PU(1*N+2:2*N+2);
-    p3 = PU(2*N+3:3*N+3);
-    p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-    p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-    p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
-    F_active(1,k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
+%     % Zero velocity:
+%     [t,PU] = ode15s(@dPUdT,[0 1],PU0,[],N,dS,MgATP(k),Pi,MgADP,gN);
+%     PU = PU(end,:);
+%     p1 = PU(1:1*N+1);
+%     p2 = PU(1*N+2:2*N+2);
+%     p3 = PU(2*N+3:3*N+3);
+%     p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
+%     p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
+%     p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
+%     F_active(1,k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
 
     % Non-zero velocities
-    for j = 2:length(vel)
-    %   Set the outer timestep based on space step:
-      dt = dS/abs(vel(j));
-      tend = 0.20/abs(vel(j)); % ending time of simulation
-      Nstep = round(tend/dt);
-      % simulate kinetics for 1/2 timestep
-      [t,PU] = ode15s(@dPUdT,[0 dt/2],PU0,[],N,dS,MgATP(k),Pi,MgADP,gN);
-      PU = PU(end,:); 
-      for i = 1:(Nstep-1)
-        % advection (sliding step)
-        PU(1:1*N+0)     = PU(2:1*N+1); PU(N+1) = 0;
-        PU(1*N+2:2*N+1) = PU(1*N+3:2*N+2); PU(2*N+2) = 0;
-        PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
-        % simulate kinetics for full step
-        [t,PU] = ode15s(@dPUdT,[0 dt],PU,[],N,dS,MgATP(k),Pi,MgADP,gN);
-        PU = PU(end,:); 
-      end
-      % final advection (sliding step)
-      PU(1:1*N+0)     = 0.5*(PU(2:1*N+1) + PU(1:1*N+0));         PU(N+1) = 0.5*(0 + PU(N+1));
-      PU(1*N+2:2*N+1) = 0.5*(PU(1*N+3:2*N+2) + PU(1*N+2:2*N+1)); PU(2*N+2) = 0.5*(0 + PU(2*N+2));
-      PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
-      % final 1/2 timestep for kinetics
-      [t,PU] = ode15s(@dPUdT,[0 dt/2],PU,[],N,dS,MgATP(k),Pi,MgADP,gN);
-      PU = PU(end,:);
-  
-      p1 = PU(1:1*N+1);
-      p2 = PU(1*N+2:2*N+2);
-      p3 = PU(2*N+3:3*N+3);
-      p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-      p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-      p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
-      F_active(j,k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
-      
-      if j==3
-        p3_0;
-      end
-  
-    end
+%     for j = 2:length(vel)
+%     %   Set the outer timestep based on space step:
+%       dt = dS/abs(vel(j));
+%       tend = 0.20/abs(vel(j)); % ending time of simulation
+%       Nstep = round(tend/dt);
+%       % simulate kinetics for 1/2 timestep
+%       [t,PU] = ode15s(@dPUdT,[0 dt/2],PU0,[],N,dS,MgATP(k),Pi,MgADP,gN);
+%       PU = PU(end,:); 
+%       for i = 1:(Nstep-1)
+%         % advection (sliding step)
+%         PU(1:1*N+0)     = PU(2:1*N+1); PU(N+1) = 0;
+%         PU(1*N+2:2*N+1) = PU(1*N+3:2*N+2); PU(2*N+2) = 0;
+%         PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
+%         % simulate kinetics for full step
+%         [t,PU] = ode15s(@dPUdT,[0 dt],PU,[],N,dS,MgATP(k),Pi,MgADP,gN);
+%         PU = PU(end,:); 
+%       end
+%       % final advection (sliding step)
+%       PU(1:1*N+0)     = 0.5*(PU(2:1*N+1) + PU(1:1*N+0));         PU(N+1) = 0.5*(0 + PU(N+1));
+%       PU(1*N+2:2*N+1) = 0.5*(PU(1*N+3:2*N+2) + PU(1*N+2:2*N+1)); PU(2*N+2) = 0.5*(0 + PU(2*N+2));
+%       PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
+%       % final 1/2 timestep for kinetics
+%       [t,PU] = ode15s(@dPUdT,[0 dt/2],PU,[],N,dS,MgATP(k),Pi,MgADP,gN);
+%       PU = PU(end,:);
+%   
+%       p1 = PU(1:1*N+1);
+%       p2 = PU(1*N+2:2*N+2);
+%       p3 = PU(2*N+3:3*N+3);
+%       p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
+%       p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
+%       p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
+%       F_active(j,k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
+%       
+%       if j==3
+%         p3_0;
+%       end
+%   
+%     end
+    for j = 1:length(vel)
+        F_active(j,k) = evaluateModel(vel(j), 1, MgATP(k),Pi,MgADP,g0);
+    end    
   end
   
   EN = sum(abs(F_active(:,1)-Data_ATP(:,2)).^2) + ...
@@ -265,16 +270,17 @@ for l = 1:5
 %   EN = sum(abs(F_active(:,1)-Data(:,2)).^2);
 
   for k = 1:length(MgATP_iso)
-    % Zero velocity:
-    [t,PU] = ode15s(@dPUdT,[0 1],PU0,[],N,dS,MgATP_iso(k),Pi,MgADP,gN);  
-    PU = PU(end,:);
-    p1 = PU(1:1*N+1);
-    p2 = PU(1*N+2:2*N+2);
-    p3 = PU(2*N+3:3*N+3);
-    p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-    p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-    p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
-    F_iso(k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
+%     % Zero velocity:
+%     [t,PU] = ode15s(@dPUdT,[0 1],PU0,[],N,dS,MgATP_iso(k),Pi,MgADP,gN);  
+%     PU = PU(end,:);
+%     p1 = PU(1:1*N+1);
+%     p2 = PU(1*N+2:2*N+2);
+%     p3 = PU(2*N+3:3*N+3);
+%     p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
+%     p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
+%     p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
+%     F_iso(k) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
+  F_iso(k) = evaluateModel(fcn, 0, 1, MgATP_iso(k),Pi,MgADP,g);
   end
 
   F_data = iso_data(2,:).*57;
@@ -290,18 +296,26 @@ for l = 1:5
 
   for k = 1:length(MgATP)
 
-    % Zero velocity:
-    [t,PU] = ode15s(@dPUdT,Tspan,PU0,[],N,dS,MgATP(k),Pi,MgADP,gN);  
-    p1 = PU(:,1:1*N+1);
-    p2 = PU(:,1*N+2:2*N+2);
-    p3 = PU(:,2*N+3:3*N+3);
-    p1_0 = dS*sum(p1'); p1_1 = dS*sum(s'.*p1');
-    p2_0 = dS*sum(p2'); p2_1 = dS*sum(s'.*p2');
-    p3_0 = dS*sum(p3'); p3_1 = dS*sum(s'.*p3');
-    F_active_ktr = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
-  
-    Frel = F_active_ktr./F_active_ktr(end);
-    Ktr(k) = 1/interp1(Frel,Tspan,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
+%     % Zero velocity:
+%     [t,PU] = ode15s(@dPUdT,Tspan,PU0,[],N,dS,MgATP(k),Pi,MgADP,gN);  
+%     p1 = PU(:,1:1*N+1);
+%     p2 = PU(:,1*N+2:2*N+2);
+%     p3 = PU(:,2*N+3:3*N+3);
+%     p1_0 = dS*sum(p1'); p1_1 = dS*sum(s'.*p1');
+%     p2_0 = dS*sum(p2'); p2_1 = dS*sum(s'.*p2');
+%     p3_0 = dS*sum(p3'); p3_1 = dS*sum(s'.*p3');
+%     F_active_ktr = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
+%   
+%     Frel = F_active_ktr./F_active_ktr(end);
+%     Ktr(k) = 1/interp1(Frel,Tspan,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
+
+      % Tspan array returns F active array
+      F_active_ktr = evaluateModel(fcn,0, Tspan, MgATP(k),Pi,MgADP,g);
+
+      Frel(k, :) = F_active_ktr./F_active_ktr(end);
+
+      % get the time constant
+      Ktr(k) = 1/interp1(Frel(k, :),Tspan,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
 
   end
 

@@ -1,24 +1,40 @@
-%% set g0
+%% set g0//
 load g0;
 g = g0;
 % original Dan's g0
 g = [0.7009    1.2243    1.0965    1.8390    0.4718 2.3357    0.3960    0.2372    0.1465    0.9817 0.8737    1.8333    0.2916    0.9513    1.0085]
 
 % optimized g0
+% negative kstiff1
 % g = [0.8713    3.5481    1.0423   -1.3882    0.0349 1.3336    0.2065    0.6945    0.1177    2.1158    1.2210    2.0750   -0.9861    1.1191    3.2453]
-g = [0.8713    3.5481    1.0423   -1.3882    0.0349 1.3336    0.2065    0.6945    0.1177    2.1158    1.2210    2.0750   0.9861    1.1191    3.2453]
-
+% negative kstiff1 compensated
+% g = [0.8713    3.5481    1.0423   1.0    0.0349 1.3336    0.2065    0.6945    0.1177    2.1158    1.2210    2.0750   0.1    1.1191    3.2453]
+% rerun
+g = [1.0695    3.4444    1.1394    0.8159    0.0215 1.0595    0.1061    1.3011    0.0920    2.6525 1.1631    2.2622    0.0997    1.0826    3.7106];
 g0 = g;
 save g0 g0;
 %% set up the problem
 fcn = @dPUdT;
-E0 = evaluateProblem(fcn, g, true)
+E0 = evaluateProblem(fcn, g_all, true)
 %%
-options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1000, 'OutputFcn', @myoutput);
-optimfun = @(g)evaluateProblem(fcn, g, false)
-
+options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 5000, 'OutputFcn', @myoutput);
+% optimfun = @(g)evaluateProblem(fcn, g, false)
 x = fminsearch(optimfun, g, options)
+E0 = evaluateProblem(fcn, x, true)
+%% reduced g
+g_selection = [1 3 5:15];
+% leftovers = setdiff(1:length(g),g_selection);
 
+gr = g(g_selection);
+g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
+
+optimfun = @(gr)evaluateProblem(fcn, g_all, false);
+
+
+x = fminsearch(optimfun, gr, options)
+
+
+% x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
 %% plot g
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3"};
 figure(2);clf;
@@ -56,7 +72,7 @@ for k = 1:length(g)
 end
 disp("Done!")
 
-%%
+%
 figure(2);subplot(212);cla;hold on;
 title('Relative sensitivity to one-at-a-time perturbation of G by \delta');
 bar(E/E0);
@@ -78,12 +94,13 @@ plot(nan, nan, '*k');
 legend('g(x) - \delta', 'baseline', 'g(x) + \delta', 'baseline', 'g(x) = 0');
 %%
 
-function stop = myoutput(x,optimvalues,state);
+function stop = myoutput(gr,optimvalues,state);
     stop = false;    
     if ~isequal(state,'iter') || mod(optimvalues.iteration, 10) > 0
         return;
     end
     fcn = @dPUdT;
-    evaluateProblem(fcn, x, true);
-
+%     g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
+%     evaluateProblem(fcn, gr_all, true);
+    evaluateProblem(fcn, gr, true);
 end

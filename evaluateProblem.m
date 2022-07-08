@@ -12,7 +12,8 @@ end
 
 
 E(1) = sum(abs(F_active(:,1)-Data_ATP(:,2)).^2) + ...
-     sum(abs(F_active(:,3)-Data_ATP(:,4)).^2);
+       sum(abs(F_active(:,2)-Data_ATP(:,3)).^3) + ...
+       sum(abs(F_active(:,3)-Data_ATP(:,4)).^2);
 
 %% force x iso MgATP
 for k = 1:length(MgATP_iso)
@@ -31,6 +32,11 @@ for k = 1:length(MgATP)
   % Tspan array returns F active array
   F_active_ktr = evaluateModel(fcn,0, Tspan, MgATP(k),Pi,MgADP,g);
   
+  if F_active_ktr(end) == 0
+      Ktr(k) = 0;
+      continue;
+  end
+  
   Frel(k, :) = F_active_ktr./F_active_ktr(end);
   
   % get the time constant
@@ -39,7 +45,11 @@ end
 
 E(3) = sum(abs(Ktr-Ktr_mean).^2);
 %% Return
-Etot = sum(E);
+
+penalty = abs((min(0.1, g(13)) - 0.1)*1000);
+Etot = sum(E) + penalty;
+
+
 
 %% plot?
 
@@ -50,7 +60,7 @@ end
 %% Force velocity
 figure(101); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
 plot(F_active(:,1), -vel./ML,'b-','linewidth',1.5);
-plot(F_active(:,2), -vel./ML,'g-','linewidth',0.5);
+plot(F_active(:,2), -vel./ML,'g-','linewidth',1.5);
 plot(F_active(:,3), -vel./ML,'r-','linewidth',1.5);
 ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
 xlabel('Force (kPa)','interpreter','latex','fontsize',16);
@@ -58,7 +68,7 @@ set(gca,'fontsize',14);
 axis([0 65 0 6]);
 box on;
 plot(Data_ATP(:,2),Data_ATP(:,1),'bo','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
-plot(Data_ATP(:,3),Data_ATP(:,1),'go','linewidth',1.5,'Markersize',4,'markerfacecolor',[1 1 1]);
+plot(Data_ATP(:,3),Data_ATP(:,1),'go','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 plot(Data_ATP(:,4),Data_ATP(:,1),'ro','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 ldg = legend('8','4','2 mM');
 title(ldg,'[MgATP]');
@@ -86,7 +96,7 @@ set(gca,'fontsize',14,'ylim',[0 1.1]);  box on;
 ldg = legend('2','4','8 mM','location','northwest');
 title(ldg,'[MgATP]');
 axes('position',[0.6 0.2 0.3 0.2]); hold on;
-plot(MgATP,Ktr,'k-','linewidth',1.5);
+plot(MgATP,Ktr,'k.-','linewidth',1.5);
 errorbar(MgATP,Ktr_mean,Ktr_err,'ko','linewidth',1.5,'markersize',6);
 xlabel('[MgATP] (mM)','interpreter','latex','fontsize',6);
 ylabel('$K_{tr}$ (sec.$^{-1}$)','interpreter','latex','fontsize',6);
