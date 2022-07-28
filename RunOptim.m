@@ -8,19 +8,71 @@ g = [0.7009    1.2243    1.0965    1.8390    0.4718 2.3357    0.3960    0.2372  
 % negative kstiff1
 % g = [0.8713    3.5481    1.0423   -1.3882    0.0349 1.3336    0.2065    0.6945    0.1177    2.1158    1.2210    2.0750   -0.9861    1.1191    3.2453]
 % negative kstiff1 compensated
-% g = [0.8713    3.5481    1.0423   1.0    0.0349 1.3336    0.2065    0.6945    0.1177    2.1158    1.2210    2.0750   0.1    1.1191    3.2453]
-% rerun
-g = [1.0695    3.4444    1.1394    0.8159    0.0215 1.0595    0.1061    1.3011    0.0920    2.6525 1.1631    2.2622    0.0997    1.0826    3.7106];
-g0 = g;
-save g0 g0;
+g = [0.8713    3.5481    1.0423   1.0    0.0349 1.3336    0.2065    0.6945    0.1177    2.1158    1.2210    2.0750   0.1    1.1191    3.2453]
+% % rerun
+% g = [1.0695    3.4444    1.1394    0.8159    0.0215 1.0595    0.1061    1.3011    0.0920    2.6525 1.1631    2.2622    0.0997    1.0826    3.7106];
+% g0 = g;
+% save g0 g0;
+
+% dPUdT2 
+g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5560, 0.7972, 1.0657, 2.0000, 0.5240, 0.9312, 0.9737, 1.3799];
+% dPUdt2, option 2;
+g = [1.8682, 1.1595, 2.1354, 1.0000, 2.0445, 2.8134, 0.4285, 1.6496, 0.9649, 1.5970, 0.7838, 1.0657, 2.0000, 0.5132, 0.9800, 0.8845, 1.4225];
+% dPUdt3
+g = [3.8413, 1.4807, 3.3446, 1.1211, 3.1461, 0.91776, 0.51122, 1.3703, 0.76326,  2.741, 0.85679, 1.3433, 2.3047, 0.51121, 1.9806, 0.75292, 1.0673];
 %% set up the problem
 fcn = @dPUdT;
-E0 = evaluateProblem(fcn, g_all, true)
-%%
+[Etot, E1] = evaluateProblem(fcn, g, true)
+%% test different setups
+
+g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5560, 0.7972, 1.0657, 2.0000, 0.5240, 0.9312, 0.9737, 1.3799];
+[~, E1] = evaluateProblem(@dPUdT2, g, true)
+g = [1.8682, 1.1595, 2.1354, 1.0000, 2.0445, 2.8134, 0.4285, 1.6496, 0.9649, 1.5970, 0.7838, 1.0657, 2.0000, 0.5132, 0.9800, 0.8845, 1.4225];
+[~, E1_2] = evaluateProblem(@dPUdT2, g, true)
+g = [3.8413, 1.4807, 3.3446, 1.1211, 3.1461, 0.91776, 0.51122, 1.3703, 0.76326,  2.741, 0.85679, 1.3433, 2.3047, 0.51121, 1.9806, 0.75292, 1.0673];
+[~, E2] = evaluateProblem(@dPUdT3, g, true)
+
+sum([E1;E1_2;E2]')
+
+%% optim for each of plots separately, but together with km
+g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5560, 0.7972, 1.0657, 2.0000, 0.5240, 0.9312, 0.9737, 1.3799];
+fcn = @dPUdT2;
+options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+x0101 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 1 0 1]), g, options);
+x0011 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 0 1 1]), g, options);
+x1001 = fminsearch(@(g)evaluateProblem(fcn, g, false, [1 0 0 1]), g, options);
+
+evaluateProblem(@dPUdT2, x0101, true);
+h1 = figure(101); h2 = figure(40101);copyobj(allchild(h1),h2);
+evaluateProblem(@dPUdT2, x0011, true);
+h1 = figure(101); h2 = figure(40011);copyobj(allchild(h1),h2);
+evaluateProblem(@dPUdT2, x1001, true);
+h1 = figure(101); h2 = figure(41001);copyobj(allchild(h1),h2);
+
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17"};
+s1001 = calcSensitivities(fcn, x1001, g_names, true, false);title('Optim for 1001');
+s0101 = calcSensitivities(fcn, x0101, g_names, true, false);title('Optim for 0101');
+s0011 = calcSensitivities(fcn, x0011, g_names, true, false);title('Optim for 0011');
+
+% 0101: not significant kd, k16, extreme significant k1, ksr, s3, kstiff2
+% 1001: not sig: kd, kt3, k16
+% 0011: not sig: kd, k1, k16
+
+% only evaluated sensitivities
+se1001 = calcSensitivities(fcn, x1001, g_names, true, false, [1 0 0 1]);title('Eval Optim for 1001');
+se0101 = calcSensitivities(fcn, x0101, g_names, true, false, [0 1 0 1]);title('Eval Optim for 0101');
+se0011 = calcSensitivities(fcn, x0011, g_names, true, false, [0 0 1 1]);title('Eval Optim for 0011');
+
+%% find a parameters that give a neagtive force
+fcn = @dPUdT;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 5000, 'OutputFcn', @myoutput);
-% optimfun = @(g)evaluateProblem(fcn, g, false)
+x = fminsearch(@EvaluateNegativeForce, g0, options)
+
+%% parameter search
+options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 5000, 'OutputFcn', @myoutput);
+optimfun = @(g)evaluateProblem(fcn, g, false)
 x = fminsearch(optimfun, g, options)
-E0 = evaluateProblem(fcn, x, true)
+% E0 = evaluateProblem(fcn, x, true)
 %% reduced g
 g_selection = [1 3 5:15];
 % leftovers = setdiff(1:length(g),g_selection);
@@ -96,11 +148,10 @@ legend('g(x) - \delta', 'baseline', 'g(x) + \delta', 'baseline', 'g(x) = 0');
 
 function stop = myoutput(gr,optimvalues,state);
     stop = false;    
-    if ~isequal(state,'iter') || mod(optimvalues.iteration, 10) > 0
+    if ~isequal(state,'iter') || mod(optimvalues.iteration, 20) > 0
         return;
     end
-    fcn = @dPUdT;
 %     g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 %     evaluateProblem(fcn, gr_all, true);
-    evaluateProblem(fcn, gr, true);
+    evaluateProblem(@dPUdT, gr, true);
 end

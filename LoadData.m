@@ -20,9 +20,14 @@ ML = 1.1; % half sarcomere length (microns)
 vel = (-Data_ATP(:,1)).*ML; % micron per sec
 
 %% Fmax (normalized.) versus [MgATP] (mM) from Ebus et al.(2001)
+% iso_data = ...
+%     [0.0098736     0.019874      0.04959     0.098478      0.49024        5.063
+%       1.5925       1.6826       1.5898       1.4657       1.2884      0.99732];
+
 iso_data = ...
-    [0.0098736     0.019874      0.04959     0.098478      0.49024        5.063
+    [0.01     0.02      0.05     0.1      0.5        5.0
       1.5925       1.6826       1.5898       1.4657       1.2884      0.99732];
+  
 MgATP_iso = iso_data(1,:);
 
 F_data = iso_data(2,:).*57;
@@ -32,6 +37,14 @@ MgATP = [8 4 2];
 Ktr_mean = [37.7928 29.0 25.8033];
 Ktr_err  = [1.9308  1.30    2.0167];
 
-%% Set up environment
-MgADP = 0; 
-Pi    = 0; 
+%% Km range
+% Yamashita et al 1994: ADP Inhibits the Sliding Velocit of Fluorescent Actin Filaments on Cardiac and Skeletal Myosins
+% they got a value of 0.043
+% HOwever the in vitro preparation underestimates the Km. Thus, we
+% extrapolate the error to form a range
+
+k_m_ADP0 = [0.04 0.1];
+
+% extrapolation for nonzero MgADP
+% k_m_=0.043(1 + [MgADP]/194)
+

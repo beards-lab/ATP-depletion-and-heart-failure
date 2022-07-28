@@ -75,8 +75,8 @@ while forcepositive
   
 end
 
-% (2.) next run at constant velocity until SL = SLo
-vel = -1.0*1.1; % micron per sec
+%% (2.) next run at constant velocity until SL = SLo
+vel = -5.0*1.1; % micron per sec
 dt = dS/abs(vel);
 tend = 0.1/abs(vel); % ending time of simulation
 Nstep = round(tend/dt);

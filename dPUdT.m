@@ -54,6 +54,7 @@ sigma0 = g(7)*33;
 kmsr   = g(8)*250; % 
 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
+% dU_NR = + ksr*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
 dU_NR = + ksr*exp(F_active/sigma0)*U_SR - kmsr*(K_T3/(MgATP + K_T3))*U_NR*Pu  ; 
 dp1   = - kd*p1 - k1*(exp(-alpha1*s).*p1) + k_1*(exp(+alpha1*s).*p2);
 dp2   = + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s).*p2) + k_2*p3  ;
