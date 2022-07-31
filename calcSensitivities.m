@@ -1,4 +1,4 @@
-function E = calcSensitivities(fcn, g, g_names, drawPlots, tryZeros, evalParts)
+function E = calcSensitivities(fcn, g, g0, g_names, drawPlots, tryZeros, evalParts)
 E0 = evaluateProblem(fcn, g, false, evalParts);
 delta = 0.1; % 10% difference
 % clear E;
@@ -7,7 +7,8 @@ for k = 1:length(g)
     g_s = g;
     g_s(k) = g(k)*(1 - delta);
     E(k, 1) = evaluateProblem(fcn, g_s, false, evalParts);
-    E(k, 2) = E0;
+    g_s(k) = g0(k)
+    E(k, 2) = evaluateProblem(fcn, g_s, false, evalParts);;
     g_s(k) = g(k)*(1 + delta);
     E(k, 3) = evaluateProblem(fcn, g_s, false, evalParts);
     % does this even matter? 

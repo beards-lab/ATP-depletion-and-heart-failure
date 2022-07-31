@@ -97,6 +97,7 @@ if abs(e) > tol
     E(4) = (abs(e) > tol)*(exp(errScale*abs(e)-1e-4) - 1);
 else
         % we have found a zero force
+    E(4) = (v_max - targetVel).^2;
 
     %
     % search for MgATP, that gives us fa = 0 at 1/2 of the max velocity
@@ -125,7 +126,7 @@ else
     %     + (k_m_ADP0(2) < MgATP_halfv)*(k_m_ADP0(2)/k_m_ADP0(2)*scale - MgATP_halfv/k_m_ADP0(2)*scale)^2;
 
     % divide the errscale by 2 so we are on right track
-    E(4) = (abs(e) > tol)*(exp(errScale/2*abs(e)-tol) - 1) ...
+    E(5) = (abs(e) > tol)*(exp(errScale/2*abs(e)-tol) - 1) ...
         + (k_m_ADP0(1) > K_m)*(k_m_ADP0(1)/k_m_ADP0(1)*errScale - K_m/k_m_ADP0(1)*errScale)^2 ...
         + (k_m_ADP0(2) < K_m)*(k_m_ADP0(2)/k_m_ADP0(2)*errScale - K_m/k_m_ADP0(2)*errScale)^2;
 end
@@ -133,7 +134,7 @@ end
 %% Return
 
 penalty = abs((min(0.1, g(13)) - 0.1)*1000);
-E(5) = penalty;
+E(6) = penalty;
 Etot = sum(E) + penalty;
 
 
