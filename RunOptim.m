@@ -82,13 +82,27 @@ x0010 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 0 1 0]), g, options);
 x0100 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 1 0 0]), g, options);
 x1000 = fminsearch(@(g)evaluateProblem(fcn, g, false, [1 0 0 0]), g, options);
 
+x0001 = [1.6822    1.1376    1.5914    1.0087    1.5093    4.1669    0.3229    1.3498    0.9787    1.5737    0.7892    1.0799    1.9628    0.5371    0.9223    0.9751    1.3855]
+x0010 = [0.1274    1.2493    1.3222    1.3170    1.0162    4.6460    0.4426    1.9234    1.0820    1.2623    0.5493    0.7691    2.1239    0.5530    1.0370    1.0055    1.8911]
+x0100 = [2.3993    0.9786    0.9433    0.5044    1.6071    1.8642    0.3983    0.9183    1.8131    1.9488    1.4771    0.6349    1.0298    0.9803    1.2062    0.7588    0.7980]
+x1000 = [1.0422   -1.4125    3.7460    1.9151    1.7821    2.1777    0.3901    1.7396   -0.2467    3.1627    0.1900   -1.1967    2.5191    1.4679    1.5302    0.8636    2.2706]
+
+
 % only evaluated sensitivities
 se0001 = calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
 se0010 = calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
 se0100 = calcSensitivities(fcn, x0100, g, g_names, true, false, [0 1 0 0]);title('Eval Optim for 0100');
 se1000 = calcSensitivities(fcn, x1000, g, g_names, true, false, [1 0 0 0]);title('Eval Optim for 1000');
 
-save singleOptRes
+% save singleOptRes
+%%
+% already evaluated sensitivities
+calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1], se0001);title('Eval Optim for 0001');
+calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0], se0010);title('Eval Optim for 0010');
+calcSensitivities(fcn, x0100, g, g_names, true, false, [0 1 0 0], se0100);title('Eval Optim for 0100');
+calcSensitivities(fcn, x1000, g, g_names, true, false, [1 0 0 0], se1000);title('Eval Optim for 1000');
+
+
 %% find a parameters that give a neagtive force
 fcn = @dPUdT;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 5000, 'OutputFcn', @myoutput);

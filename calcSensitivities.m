@@ -1,5 +1,6 @@
-function E = calcSensitivities(fcn, g, g0, g_names, drawPlots, tryZeros, evalParts)
+function E = calcSensitivities(fcn, g, g0, g_names, drawPlots, tryZeros, evalParts, sens)
 E0 = evaluateProblem(fcn, g, false, evalParts);
+if nargin < 8
 delta = 0.1; % 10% difference
 % clear E;
 for k = 1:length(g)
@@ -23,19 +24,24 @@ for k = 1:length(g)
     end
 
 end
-disp("Done!")
+disp("Sensitivities Done!")
+else
+    E = sens;
+    disp('sensitivities provided, plotting..')
+end
 
 if ~drawPlots
     return;
 end
-%
+%%
 figure();
 subplot(211);cla;hold on;
 
-bar(g);
+bar([g0;g]');
 plot([0, 16], [1 1], '--r')
+legend('Original', 'Single-optimized')
 
-title('Optimized values of G');
+title(['Optimized values of G for '  num2str(evalParts)]);
 ylabel('g modifier value');
 xticks(1:15)
 xticklabels(g_names);
@@ -63,4 +69,4 @@ end
 end
 plot(nan, nan, '*k');
 legend('g(x) - \delta', 'baseline', 'g(x) + \delta', 'baseline', 'g(x) = 0');
-ylim([0.95 1.05])
+% ylim([0.95 1.05])
