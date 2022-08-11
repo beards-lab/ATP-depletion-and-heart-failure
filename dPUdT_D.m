@@ -1,4 +1,4 @@
-function f = dPUdT(~,PU,N,dS,MgATP,Pi,MgADP,g)
+function f = dPUdT(~,PU,N,dS,MgATP,Pi,MgADP,g,SL)
 % ODE function for the d/dt operator for the cross-bridge mode.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
@@ -18,7 +18,7 @@ dr = +g(12)*0.01; % Power-stroke Size; Units: um
 s = (-N:1:0)'*dS;
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
+p3_0 = dS*sum(p3); p3_1 = dS*sum((s-dr).*p3);
 Pu = 1.0 - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
 
 % strain-associated parameters
@@ -57,14 +57,14 @@ F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 );
 % F_total = F_active + 2;
 
 % transitions between super relaxed state and non relaxed state
-ksr0   = g(6)*10 ; % 
+ksr0   = g(6)*20*g4 ; % 
 sigma0 = g(7)*20;
-kmsr   = g(8)*10; % 
+kmsr   = g(8)*20; % 
 % kmsr   = g(8)*250*(1-g3); % 
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu  ; 
+dU_NR = + ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu  ; 
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 

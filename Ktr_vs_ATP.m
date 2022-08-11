@@ -1,4 +1,4 @@
- clear
+clear
 % g0 = ones(1,12);
 load g0
 
@@ -8,7 +8,7 @@ Ktr_err  = [2.0167  1.30    1.9308];
 
 %% Setting up problem
 N = 50; % space (strain) discretization--number of grid points in half domain
-Slim = 0.075; 
+Slim = 0.040; 
 dS = Slim/N;
 s = (-N:1:0)*dS; % strain 
 p1 = zeros(N+1,1);
@@ -27,9 +27,9 @@ Pi    = 0;
 %% Simulating sliding and kinetics via Strang operator splitting
 
 % moments and force
-dr = 0.01; % Power-stroke Size; Units: um
-kstiff1 = g0(13)*1500; 
-kstiff2 = g0(14)*10000; 
+dr = +g0(12)*0.01; % Power-stroke Size; Units: um
+kstiff1 = g0(13)*2500; 
+kstiff2 = g0(14)*200; 
 alpha3 = g0(9)*125;
 s3     = 0.010;
 K_T1 = g0(11)*1.0; % (mM) 
@@ -47,8 +47,8 @@ for k = 1:length(MgATP)
   p3 = PU(:,2*N+3:3*N+3);
   p1_0 = dS*sum(p1'); p1_1 = dS*sum(s'.*p1');
   p2_0 = dS*sum(p2'); p2_1 = dS*sum(s'.*p2');
-  p3_0 = dS*sum(p3'); p3_1 = dS*sum(s'.*p3');
-  F_active(k,:) = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 ) ;
+  p3_0 = dS*sum(p3'); p3_1 = dS*sum((s+dr)'.*p3');
+  F_active(k,:) = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 ) ;
   
   Frel = F_active(k,:)./F_active(k,end);
   Ktr(k) = 1/interp1(Frel,Tspan,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
