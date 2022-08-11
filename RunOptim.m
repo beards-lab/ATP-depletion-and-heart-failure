@@ -1,4 +1,5 @@
 %% set g0//
+% clear
 load g0;
 g = g0;
 % original Dan's g0
@@ -22,8 +23,10 @@ g = [1.8682, 1.1595, 2.1354, 1.0000, 2.0445, 2.8134, 0.4285, 1.6496, 0.9649, 1.5
 g = [3.8413, 1.4807, 3.3446, 1.1211, 3.1461, 0.91776, 0.51122, 1.3703, 0.76326,  2.741, 0.85679, 1.3433, 2.3047, 0.51121, 1.9806, 0.75292, 1.0673];
 %% set up the problem
 fcn = @dPUdT;
-fcn = @dPUdT_D;
-[Etot, E1] = evaluateProblem(fcn, g, true)
+% fcn = @dPUdT_D;
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0])
+
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0])
 
 %% test different setups
 
@@ -76,7 +79,7 @@ h1 = figure(101); h2 = figure(41000);copyobj(allchild(h1),h2);
 %%
 % single ident
 options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 800);
-g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5560, 0.7972, 1.0657, 2.0000, 0.5240, 0.9312, 0.9737, 1.3799];
+% g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5560, 0.7972, 1.0657, 2.0000, 0.5240, 0.9312, 0.9737, 1.3799];
 x0001 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 0 0 1]), g, options);
 x0010 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 0 1 0]), g, options);
 x0100 = fminsearch(@(g)evaluateProblem(fcn, g, false, [0 1 0 0]), g, options);
@@ -89,6 +92,8 @@ x1000 = [1.0422   -1.4125    3.7460    1.9151    1.7821    2.1777    0.3901    1
 
 
 % only evaluated sensitivities
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18"};
+
 se0001 = calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
 se0010 = calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
 se0100 = calcSensitivities(fcn, x0100, g, g_names, true, false, [0 1 0 0]);title('Eval Optim for 0100');
@@ -96,11 +101,23 @@ se1000 = calcSensitivities(fcn, x1000, g, g_names, true, false, [1 0 0 0]);title
 
 % save singleOptRes
 %%
-% already evaluated sensitivities
-calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1], se0001);title('Eval Optim for 0001');
-calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0], se0010);title('Eval Optim for 0010');
-calcSensitivities(fcn, x0100, g, g_names, true, false, [0 1 0 0], se0100);title('Eval Optim for 0100');
-calcSensitivities(fcn, x1000, g, g_names, true, false, [1 0 0 0], se1000);title('Eval Optim for 1000');
+% only evaluated sensitivities
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18"};
+
+se0001 = calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
+se0010 = calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
+se0100 = calcSensitivities(fcn, x0100, g, g_names, true, false, [0 1 0 0]);title('Eval Optim for 0100');
+se1000 = calcSensitivities(fcn, x1000, g, g_names, true, false, [1 0 0 0]);title('Eval Optim for 1000');
+
+
+%%
+% Lets Run sensitivities for the result per partes
+calcSensitivities(fcn, g, g, g_names, true, false, [1 1 1 1]);title('Eval Optim for 0001');
+
+calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
+calcSensitivities(fcn, g, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
+calcSensitivities(fcn, g, g, g_names, true, false, [0 1 0 0]);title('Eval Optim for 0100');
+calcSensitivities(fcn, g, g, g_names, true, false, [1 0 0 0]);title('Eval Optim for 1000');
 
 
 %% find a parameters that give a neagtive force

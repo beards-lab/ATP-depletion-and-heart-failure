@@ -1,4 +1,9 @@
-function F_active = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0)
+function Force = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0, opts)
+
+    if ~exist('opts')
+        opts = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0);
+    end
+    
 
     if size(T, 2) == 1
         % T is an endpoint, thus output F_active is just a
@@ -10,9 +15,9 @@ function F_active = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0)
         vector_output = true;
     end;
 
-    F_active = zeros(size(vel));
-    N = 20; % space (strain) discretization--number of grid points in half domain
-    Slim = 0.075; 
+    Force = zeros(size(vel));
+    N = opts.N; % space (strain) discretization--number of grid points in half domain
+    Slim = opts.Slim; 
     dS = Slim/N;
     s = (-N:1:0)*dS; % strain 
 
@@ -25,9 +30,11 @@ function F_active = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0)
     PU0 = [p1; p2; p3; U_NR];
 
     % moments and force
-    dr = 0.01; % Power-stroke Size; Units: um
-    kstiff1 = g0(13)*1500; 
-    kstiff2 = g0(14)*10000;     
+    dr = g0(12)*0.01; % Power-stroke Size; Units: um
+    kstiff1 = g0(13)*2500; 
+    kstiff2 = g0(14)*200;
+    mu = 0.5; % viscosity
+    
 
 
     if vel == 0
@@ -35,7 +42,7 @@ function F_active = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0)
       [t,PU] = ode15s(fcn,Tspan,PU0,[],N,dS,MgATP,Pi,MgADP,g0);
     else
         dt = dS/abs(vel);
-        tend = 0.20/abs(vel); % ending time of simulation
+        tend = Tspan(end)/abs(vel); % ending time of simulation
         Nstep = round(tend/dt);
         % simulate kinetics for 1/2 timestep
         [t,PU] = ode15s(fcn,[0 dt/2],PU0,[],N,dS,MgATP,Pi,MgADP,g0);
@@ -72,5 +79,21 @@ function F_active = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0)
 
         p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
         p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-        p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);       
-        F_active = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 );      
+        %p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);       
+        %Force = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 );      
+        
+        p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);       
+        Force = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 ) + mu*vel;
+        
+        if ~opts.PlotProbsOnFig
+            return
+        end
+        
+        figure(opts.PlotProbsOnFig);cla;hold on;
+        
+        plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
+        ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
+        xlabel('strain, $s$ ($\mu$m)','interpreter','latex','fontsize',16);
+        set(gca,'fontsize',14);
+        set(gca,'xlim',[-Slim 0]);
+        legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
