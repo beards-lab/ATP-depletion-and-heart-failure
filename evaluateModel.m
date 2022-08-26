@@ -33,7 +33,7 @@ function Force = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0, opts)
     dr = g0(12)*0.01; % Power-stroke Size; Units: um
     kstiff1 = g0(13)*2500; 
     kstiff2 = g0(14)*200;
-    mu = 0.5; % viscosity
+    mu = g0(19)*0.5; % viscosity
     
 
 
@@ -43,17 +43,39 @@ function Force = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0, opts)
     else
         dt = dS/abs(vel);
         tend = Tspan(end)/abs(vel); % ending time of simulation
-        Nstep = round(tend/dt);
+        Nstep = round(tend/dt);% = Tspan(end)/dS
+
+        
         % simulate kinetics for 1/2 timestep
-        [t,PU] = ode15s(fcn,[0 dt/2],PU0,[],N,dS,MgATP,Pi,MgADP,g0);
+        [~,PU] = ode15s(fcn,[0 dt/2],PU0,[],N,dS,MgATP,Pi,MgADP,g0);
         PU = PU(end,:); 
+          
         for i = 1:(Nstep-1)
+          
+%           if opts.ValuesInTime
+%             PU = PU(end,:);
+%             p1 = PU(1:1*N+1);
+%             p2 = PU(1*N+2:2*N+2);
+%             p3 = PU(2*N+3:3*N+3);
+%             p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
+%             p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
+%             %p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);       
+%             %Force = kstiff2*p3_0*dr + kstiff1*( p2_1 + p3_1 );      
+% 
+%             p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);       
+%             F(i) = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1), 0) + mu*vel;
+%             if i > 1
+%                 t(i) = t(i-1) + dt;
+%                 SL(i) = SL(i-1) +vel*dt;
+%             end
+%           end
+            
           % advection (sliding step)
           PU(1:1*N+0)     = PU(2:1*N+1); PU(N+1) = 0;
           PU(1*N+2:2*N+1) = PU(1*N+3:2*N+2); PU(2*N+2) = 0;
           PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
           % simulate kinetics for full step
-          [t,PU] = ode15s(fcn,[0 dt],PU,[],N,dS,MgATP,Pi,MgADP,g0);
+          [~,PU] = ode15s(fcn,[0 dt],PU,[],N,dS,MgATP,Pi,MgADP,g0);
           PU = PU(end,:); 
         end
         % final advection (sliding step)
@@ -61,20 +83,24 @@ function Force = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0, opts)
         PU(1*N+2:2*N+1) = 0.5*(PU(1*N+3:2*N+2) + PU(1*N+2:2*N+1)); PU(2*N+2) = 0.5*(0 + PU(2*N+2));
         PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
         % final 1/2 timestep for kinetics
-        [t,PU] = ode15s(fcn,[0 dt/2],PU,[],N,dS,MgATP,Pi,MgADP,g0);
+        [~,PU] = ode15s(fcn,[0 dt/2],PU,[],N,dS,MgATP,Pi,MgADP,g0);
+                
     end
 
-        if ~ vector_output 
+        if ~ vector_output
             PU = PU(end,:);
             p1 = PU(1:1*N+1);
             p2 = PU(1*N+2:2*N+2);
             p3 = PU(2*N+3:3*N+3);
-        else
-            % vector output, at each timestep
+        elseif vel == 0
+            % vector output, at each timestep for zero velocity only
             p1 = PU(:,1:1*N+1)';
             p2 = PU(:,1*N+2:2*N+2)';
             p3 = PU(:,2*N+3:3*N+3)';
             s = s';
+        else
+           error("Non-zero velocity vector output not implemented") 
+           
         end
 
         p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
@@ -89,7 +115,16 @@ function Force = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0, opts)
             return
         end
         
-        figure(opts.PlotProbsOnFig);cla;hold on;
+        figure(opts.PlotProbsOnFig);clf;hold on;
+        
+%         if opts.ValuesInTime
+%             subplot(122);
+%             plot(t, F);
+%             xlabel('t');
+%             ylabel('Force');
+%             
+%             subplot(121);
+%         end
         
         plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
         ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
@@ -97,3 +132,7 @@ function Force = evaluateModel(fcn, vel,T,MgATP,Pi,MgADP,g0, opts)
         set(gca,'fontsize',14);
         set(gca,'xlim',[-Slim 0]);
         legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
+        
+        
+        
+        

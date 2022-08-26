@@ -21,13 +21,31 @@ g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5
 g = [1.8682, 1.1595, 2.1354, 1.0000, 2.0445, 2.8134, 0.4285, 1.6496, 0.9649, 1.5970, 0.7838, 1.0657, 2.0000, 0.5132, 0.9800, 0.8845, 1.4225];
 % dPUdt3
 g = [3.8413, 1.4807, 3.3446, 1.1211, 3.1461, 0.91776, 0.51122, 1.3703, 0.76326,  2.741, 0.85679, 1.3433, 2.3047, 0.51121, 1.9806, 0.75292, 1.0673];
+% update the length
+g = [g 1 1]
+% 19 pcs from 26-08 incl the mu viscosity optim
+g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1.3384    0.3296    0.6091    1.1200 1.7357    1.5442    0.8284    1.4614 2.3482    0.6206    1.2782]
 %% set up the problem
 fcn = @dPUdT;
 % fcn = @dPUdT_D;
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1])
 
 [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0])
 
+%% Run basic sensitivity with updated cost func
+% only evaluated sensitivities
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "20"};
+
+se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
+se0010 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
+se0100 = calcSensitivities(fcn, g, g, g_names, true, false, [0 1 0 0]);title('Eval Optim for 0100');
+se1000 = calcSensitivities(fcn, g, g, g_names, true, false, [1 0 0 0]);title('Eval Optim for 1000');
+
+se1111 = calcSensitivities(fcn, g, g, g_names, true, false, [1 1 1 1]);title('Eval Optim for 1111');
+%%
+fcn = @dPUdTExt;
+se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
+se1111 = calcSensitivities(fcn, g, g, g_names, true, false, [1 1 1 1]);title('Eval Optim for 1111');
 %% test different setups
 
 g = [1.6841, 1.1324, 1.5813, 1.0150, 1.4815, 4.1527, 0.3237, 1.3563, 0.9649, 1.5560, 0.7972, 1.0657, 2.0000, 0.5240, 0.9312, 0.9737, 1.3799];
@@ -126,21 +144,33 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @opt
 x = fminsearch(@EvaluateNegativeForce, g0, options)
 
 %% parameter search
-options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 5000, 'OutputFcn', @myoutput);
-optimfun = @(g)evaluateProblem(fcn, g, false)
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 2000, 'OutputFcn', @myoutput);
+% tic
+% estart = evaluateProblem(fcn, g, true, [0 0 0 1])
+% toc
+
+optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 1 1]);
 x = fminsearch(optimfun, g, options)
+g = x
+save gopt826 g
 % E0 = evaluateProblem(fcn, x, true)
 %% reduced g
-g_selection = [1 3 5:15];
+fcn = @dPUdT;
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 500, 'OutputFcn', @myoutput);
+
+g_selection = [1 3 5:18];
 % leftovers = setdiff(1:length(g),g_selection);
 
 gr = g(g_selection);
-g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
+% g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 
-optimfun = @(gr)evaluateProblem(fcn, g_all, false);
+% optimfun = @(gr)evaluateProblem(fcn, g_all, false);
+% optimfun = @(gr)evaluateProblem(fcn, [gr(1) 0.0555 gr(2) 3.6484 gr(3:end)], false, [1 1 1 1]);
+optimfun = @(gr)evaluateProblem(fcn, gr, false, [0 0 0 1]);
 
-
-x = fminsearch(optimfun, gr, options)
+    
+% x = fminsearch(optimfun, gr, options)
+x = fminsearch(optimfun, g, options)
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
@@ -205,10 +235,10 @@ legend('g(x) - \delta', 'baseline', 'g(x) + \delta', 'baseline', 'g(x) = 0');
 
 function stop = myoutput(gr,optimvalues,state);
     stop = false;    
-    if ~isequal(state,'iter') || mod(optimvalues.iteration, 20) > 0
+    if ~isequal(state,'iter') || mod(optimvalues.iteration, 10) > 0
         return;
     end
 %     g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
-%     evaluateProblem(fcn, gr_all, true);
-    evaluateProblem(@dPUdT, gr, true);
+    evaluateProblem(@dPUdT, gr, true, [1 1 1 1]);
+%     evaluateProblem(@dPUdT, [gr(1) 0.0555 gr(2) 3.6484 gr(3:end)], true);
 end

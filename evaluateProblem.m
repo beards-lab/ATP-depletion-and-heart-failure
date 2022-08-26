@@ -1,4 +1,6 @@
 function [Etot, E] = evaluateProblem(fcn, g, drawPlots, evalParts)
+
+
 if nargin < 4
     evalParts = [1, 1, 1, 1];
 end
@@ -8,33 +10,52 @@ LoadData;
 
 %% Set up environment
 MgADP = 0; 
-Pi    = 0; 
+Pi    = 0;
+F_active_0 = zeros(length(vel), length(MgATP));
+t_sl0 = 0.11; % time at which the SL = 2.2 - time to stop the experiment
+t_ss = 0.3; %% steady state time
+
 
 %% force x velocity
-F_active = zeros(length(vel), length(MgATP));
+F_active = F_active_0;
 if evalParts(1)
 % save from previous run
 % FAb - F_active(j,k)    
 opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
 for k = [1 2 3]
     for j = 1:length(vel)
-        F_active(j,k) = evaluateModel(fcn, vel(j), 0.11, MgATP(k),Pi,MgADP,g, opts);
+        F_active(j,k) = evaluateModel(fcn, vel(j), t_sl0, MgATP(k),Pi,MgADP,g, opts);
     end
 end
 
-E(1) = sum(abs(F_active(:,1)-Data_ATP(:,2)).^2) + ...
+% normalize by number of data points
+E(1) = (sum(abs(F_active(:,1)-Data_ATP(:,2)).^2) + ...
        sum(abs(F_active(:,2)-Data_ATP(:,3)).^3) + ...
-       sum(abs(F_active(:,3)-Data_ATP(:,4)).^2);
+       sum(abs(F_active(:,3)-Data_ATP(:,4)).^2))/size(Data_ATP, 1)/(size(Data_ATP, 2) -1);
    
+end
+
    %% linearized method for vmax
-   % take the last two
    k = 3; % atp of 2
+   if F_active == F_active_0
+       % the first part has not been run, we have to evaluate additionally
+       opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+       F_active(end-1, k) = evaluateModel(fcn, vel(end-1), t_sl0, MgATP(k),Pi,MgADP,g, opts);
+       F_active(end, k) = evaluateModel(fcn, vel(end), t_sl0, MgATP(k),Pi,MgADP,g, opts);
+   end
+   % take the last two
+   
    % dy/dx = y/x, thus y = x*dy/dx
    dx = F_active(end-1, k) - F_active(end, k);
    dy = abs(vel(end)) - abs(vel(end-1));
    v_f0 = F_active(end-1, k)*dy/dx + abs(vel(end-1));
-   
-end
+
+   dx_data = Data_ATP(end-1, k+1) - Data_ATP(end, k+1);
+   dy_data = abs(vel(end)) - abs(vel(end-1));
+   v_f0_data = Data_ATP(end-1, k+1)*dy/dx + abs(vel(end-1));
+%    [v_f0 v_f0_data (v_f0-v_f0_data).^2]
+
+
 %% force x iso MgATP
 
 F_iso = zeros(1, length(MgATP_iso));
@@ -43,18 +64,18 @@ if evalParts(2)
 
     for k = 1:length(MgATP_iso)
       % Zero velocity:
-      F_iso(k) = evaluateModel(fcn, 0, 1, MgATP_iso(k),Pi,MgADP,g, opts);
+      F_iso(k) = evaluateModel(fcn, 0, t_ss, MgATP_iso(k),Pi,MgADP,g, opts);
     end
-
-    E(2) = sum(abs(F_iso-F_data).^2);
+    
+    % weight per data point
+    E(2) = (sum(abs(F_iso-F_data).^2))/length(MgATP_iso);
 end
 %% time constant of MgATP
-Tspan = [0:0.005:0.2];
+Tspan = [0:0.01:0.2];
 Frel = zeros(length(MgATP), length(Tspan));
 Ktr = zeros(1, length(MgATP));
 
 if evalParts(3)
-tic
 opts = struct('N', 20, 'Slim', 0.02, 'PlotProbsOnFig', 0);
 for k = 1:length(MgATP)
 
@@ -72,18 +93,19 @@ for k = 1:length(MgATP)
   Ktr(k) = 1/interp1(Frel(k, :),Tspan,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
 end
 
-E(3) = sum(abs(Ktr-Ktr_mean).^2);
-toc
+E(3) = (sum(abs(Ktr-Ktr_mean).^2))/length(MgATP);
 end
 %% Zero-force velocity
 K_m = 0;
 
+if evalParts(4)
+%%
 % have to search for velocity, which gives us a zero force
 % currently the target is about 6 um/s
 MgATP_vmax = 2;
 targetVel = 6;
 
-tol = 1e-3;
+tol = 1e-2;
 
 % scaling of the error function
 errScale = 1e2;
@@ -93,53 +115,72 @@ e = Inf;
 step = targetVel*2;
 % the loop will search up to step*2
 v_max = step;
+maxIter = 5;
 % real tolerance achievable:
-% targetVel*2*(1/2)^14
+realTol = targetVel*2*(1/2)^maxIter;
 
-if evalParts(4)
-%%
-tic
-% opts = struct('N', 30, 'Slim', 0.06, 'PlotProbsOnFig', 0);
-% while abs(e) > tol && i < 14
-%     i = i + 1
-%     e = evaluateModel(fcn, -v_max, 1, MgATP_vmax,Pi,MgADP,g ,opts);
-% %     if i == 0 && e > 0 
-% %         % not found in current range, cancelling the search
-% %         break;
-% %     end
-%     step = abs(step)/2;
-%     if e > 0
-%         % we havent reached the pivot
-%         v_max = v_max + step;
-%     else
-%         % we went too far, reduce the speed
-%         v_max = v_max - step;
-%     end
-% end
-v_max = v_f0;
-% disp("v_max - v_f0: " + num2str(v_max - v_f0))
-e = 0;
+estimateVmax = 0;
+if ~estimateVmax
+    
+    
+    % debug only
+    range = [v_max*(1/2)^(maxIter), v_max + step*(1 -(1/2)^(maxIter))];
+    opts = struct('N', 30, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+    while abs(e) > tol && i < maxIter
+        i = i + 1;
+        e = evaluateModel(fcn, -v_max, t_ss, MgATP_vmax,Pi,MgADP,g ,opts);
+%         e = 10;
+    %     if i == 0 && e > 0 
+    %         % not found in current range, cancelling the search
+    %         break;
+    %     end
+        step = abs(step)/2;
+        if e > 0
+            % we havent reached the pivot
+            v_max = v_max + step;
+        else
+            % we went too far, reduce the speed
+            v_max = v_max - step;
+        end
+    end
 
-if abs(e) > tol 
-    % we have not found a zero force up till max speed of step*2
-    E(4) = (abs(e) > tol)*(exp(errScale*abs(e)-1e-4) - 1);
 else
-        % we have found a zero force
-    E(4) = (v_max - targetVel).^2;
+    v_max = v_f0;
+    e = 0;
+    targetVel = v_f0_data;
+end
+% v_max
+% e
+% v_max - e
 
-    %
+errScale = 1;
+% disp("v_max - v_f0: " + num2str(v_max - v_f0))
+
+%%
+% if abs(e) > tol 
+    % we have not found a zero force up till max speed of step*2
+%     E(4) = (abs(e) > tol)*(exp(errScale*abs(e)-1e-4) - 1);
+% else
+    % we have found a zero force
+    E(4) = 0*(v_max - targetVel).^2;
+%%
     % search for MgATP, that gives us fa = 0 at 1/2 of the max velocity
     i = 0;
     e = Inf;
-    step = MgATP_vmax/10;
+    step = MgATP_vmax/4;
     K_m = step;
+    maxIter = 7;
     % real tolerance
-    % step*targetVel*2*(1/2)^6
-    while abs(e) > tol && i < 6
+    tol_min = step*step*2*(1/2)^maxIter;
+    tol = 0.01;
+    % debug only
+    range = [K_m*(1/2)^(maxIter), K_m + step*(1 -(1/2)^(maxIter))];
+
+    while abs(e) > tol && i < maxIter
         i = i + 1;
         opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
-        e = evaluateModel(fcn, -v_max/2, 1, K_m,Pi,MgADP,g, opts);
-
+        e = evaluateModel(fcn, -v_max/2, t_ss, K_m,Pi,MgADP,g, opts);
+% e = 11;
         step = abs(step)/2;
         if e > 0
             % Km too high, reduce
@@ -155,17 +196,21 @@ else
     %     + (k_m_ADP0(2) < MgATP_halfv)*(k_m_ADP0(2)/k_m_ADP0(2)*scale - MgATP_halfv/k_m_ADP0(2)*scale)^2;
 
     % divide the errscale by 2 so we are on right track
-    E(5) = (abs(e) > tol)*(exp(errScale/2*abs(e)-tol) - 1) ...
-        + (k_m_ADP0(1) > K_m)*(k_m_ADP0(1)/k_m_ADP0(1)*errScale - K_m/k_m_ADP0(1)*errScale)^2 ...
-        + (k_m_ADP0(2) < K_m)*(k_m_ADP0(2)/k_m_ADP0(2)*errScale - K_m/k_m_ADP0(2)*errScale)^2;
-end
-toc
+%     E(5) = (abs(e) > tol)*(exp(errScale/2*abs(e)-tol) - 1) ...
+%         + (k_m_ADP0(1) > K_m)*(k_m_ADP0(1)/k_m_ADP0(1)*errScale - K_m/k_m_ADP0(1)*errScale)^2 ...
+%         + (k_m_ADP0(2) < K_m)*(k_m_ADP0(2)/k_m_ADP0(2)*errScale - K_m/k_m_ADP0(2)*errScale)^2;
+
+    % take the 0.07 as an average of 0.04 and 0.1
+    E(5) = 100*(K_m/0.07 - 1).^2;
+
+% end
+
 end
 %% Return
 
-penalty = abs((min(0.1, g(13)) - 0.1)*1000);
+penalty = sum(max(0, -g))*1000;
 E(6) = penalty;
-Etot = sum(E) + penalty;
+Etot = sum(E);
 
 
 
@@ -251,4 +296,22 @@ figure();clf;subplot(121);
 plot(Nspan, EE, 'x-',Nspan, t, '+-');xlabel('N');legend('Error', 'Time');
 subplot(122);plot(EE, t, '*-');xlabel('Error');ylabel('time');
 
-%% 
+%% show in time
+opts = struct('N', 50, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+tspan = 0:0.02:t_ss;
+clear f;
+for i = 1:length(vel)
+    for j = 2:length(tspan)
+        f(i,j) = evaluateModel(fcn, vel(i), tspan(j), 2,Pi,MgADP,g, opts);
+    end
+end   
+%
+figure(104);clf;hold on;
+for i = 1:size(f, 1)
+    plot(tspan, f(i, :), '*-')
+    l{i} = "v = " + num2str(vel(i));
+end
+l{length(l)+1} = "zero force";
+plot([0, tspan(end)], [0 0], 'r--');
+legend(l)
+    

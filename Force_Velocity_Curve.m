@@ -1,4 +1,4 @@
-% clear
+clear
 % g0 = ones(1,14);
 load g0
 
@@ -116,7 +116,6 @@ end
 %% plots
 
 figure(1); clf; axes('position',[0.15 0.15 0.8 0.8]); hold on;
-% figure(102);hotld on;
 plot(Force(:,1) , -vel./ML,'b-','linewidth',1.5);
 plot(Force(:,2) , -vel./ML,'g-','linewidth',1.5);
 plot(Force(:,3) , -vel./ML,'r-','linewidth',1.5);

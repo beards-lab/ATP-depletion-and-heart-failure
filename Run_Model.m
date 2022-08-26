@@ -1,4 +1,4 @@
-% clear
+clear
 load g0
 
 %% Setting up problem
@@ -133,9 +133,3 @@ plot([0 120]*1e3,[SLo SLo],'k--');
 ylabel('Length ($\mu$m)','interpreter','latex','fontsize',16);
 xlabel('time (ms)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14,'Xlim',[0 120]);
-
-figure(11);clf;
-plot(SL_sim,F_sim,'linewidth',1.5);
-ylabel('Force (kPa)','interpreter','latex','fontsize',16);
-xlabel('SL size (ms)','interpreter','latex','fontsize',16);
-set(gca,'fontsize',14);

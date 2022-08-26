@@ -53,8 +53,10 @@ k3  = g2*g(10)*25;%;
 % Force model
 kstiff1 = g(13)*2500; 
 kstiff2 = g(14)*200;
-F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 );
-% F_total = F_active + 2;
+F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
+
+% we do nont know the velocity here, so we do that up a level
+% Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
 
 % transitions between super relaxed state and non relaxed state
 ksr0   = g(6)*10 ; % 
