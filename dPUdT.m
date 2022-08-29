@@ -53,7 +53,7 @@ k3  = g2*g(10)*25;%;
 % Force model
 kstiff1 = g(13)*2500; 
 kstiff2 = g(14)*200;
-F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
+F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0).^g(20);
 
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
@@ -66,7 +66,7 @@ kmsr   = g(8)*10; %
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu  ; 
+dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
