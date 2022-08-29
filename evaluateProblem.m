@@ -2,7 +2,9 @@ function [Etot, E] = evaluateProblem(fcn, g, drawPlots, evalParts)
 
 
 if nargin < 4
-    evalParts = [1, 1, 1, 1];
+    % force X velocity, force X concetration, ktr, Km, plot zeroforce
+    % velocity to ATP conc
+    evalParts = [1, 1, 1, 1, 0];
 end
 E = zeros(4, 1);
 
@@ -40,8 +42,8 @@ end
    if F_active == F_active_0
        % the first part has not been run, we have to evaluate additionally
        opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
-       F_active(end-1, k) = evaluateModel(fcn, vel(end-1), t_sl0, MgATP(k),Pi,MgADP,g, opts);
-       F_active(end, k) = evaluateModel(fcn, vel(end), t_sl0, MgATP(k),Pi,MgADP,g, opts);
+       F_active(end-1, k) = evaluateModel(fcn, vel(end-1), t_ss, MgATP(k),Pi,MgADP,g, opts);
+       F_active(end, k) = evaluateModel(fcn, vel(end), t_ss, MgATP(k),Pi,MgADP,g, opts);
    end
    % take the last two
    
@@ -105,7 +107,7 @@ if evalParts(4)
 MgATP_vmax = 2;
 targetVel = 6;
 
-tol = 1e-2;
+tol = 1e-3;
 
 % scaling of the error function
 errScale = 1e2;
@@ -172,7 +174,7 @@ errScale = 1;
     maxIter = 7;
     % real tolerance
     tol_min = step*step*2*(1/2)^maxIter;
-    tol = 0.01;
+    tol = 0.00001;
     % debug only
     range = [K_m*(1/2)^(maxIter), K_m + step*(1 -(1/2)^(maxIter))];
 
@@ -180,7 +182,6 @@ errScale = 1;
         i = i + 1;
         opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
         e = evaluateModel(fcn, -v_max/2, t_ss, K_m,Pi,MgADP,g, opts);
-% e = 11;
         step = abs(step)/2;
         if e > 0
             % Km too high, reduce
@@ -231,7 +232,7 @@ ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
 xlabel('Force (kPa)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14); 
 axis([0 65 0 6]);
-title("With Km of " + num2str(K_m) )
+title('Force-velocity')
 box on;
 plot(Data_ATP(:,2),Data_ATP(:,1),'bo','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 plot(Data_ATP(:,3),Data_ATP(:,1),'go','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
@@ -242,17 +243,17 @@ title(ldg,'[MgATP]');
 % MgATP
 % figure(104); clf; 
 axes('position',[0.6 0.6 0.35 0.35]); 
-title("and V_max of " + num2str(v_max));
 semilogx(MgATP_iso,F_iso,'b-','linewidth',1.5); hold on;
 semilogx(MgATP_iso,F_data,'ko','linewidth',2,'markersize',8,'markerfacecolor',[1 1 1]);
 xlabel('[MgATP] (mM)','interpreter','latex','fontsize',16);
 ylabel('Max. Force (kPa)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14,'ylim',[0 100]); 
 box on;
+title('Max-force to ATP');
 
 % KTR
 % figure(106); clf; 
-axes('position',[0.1 0.13 0.85 0.33]); hold on;
+axes('position',[0.1 0.13 0.35 0.35]); hold on;
 plot(Tspan,Frel(3, :),'r-','linewidth',1.5);
 plot(Tspan,Frel(2, :),'g-','linewidth',1.5);
 plot(Tspan,Frel(1, :),'b-','linewidth',1.5);
@@ -260,15 +261,66 @@ plot(Tspan,Frel(1, :),'b-','linewidth',1.5);
 xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
 ylabel('Force (rel.)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14,'ylim',[0 1.1]);  box on;
+title('Speed of the transient');
 ldg = legend('2','4','8 mM','location','northwest');
 title(ldg,'[MgATP]');
-axes('position',[0.6 0.2 0.3 0.2]); hold on;
+axes('position',[0.25 0.15 0.15 0.2]); hold on;
 plot(MgATP,Ktr,'k.-','linewidth',1.5);
 errorbar(MgATP,Ktr_mean,Ktr_err,'ko','linewidth',1.5,'markersize',6);
 xlabel('[MgATP] (mM)','interpreter','latex','fontsize',6);
 ylabel('$K_{tr}$ (sec.$^{-1}$)','interpreter','latex','fontsize',6);
 set(gca,'fontsize',9,'xlim',[0 10],'ylim',[0 45]); box on;
 
+% axes('position',[0.1 0.13 0.45 0.33]); hold on;
+% figure;
+
+%%
+
+if evalParts(5)
+    v_atp = [];
+    opts = struct('N', 50, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+    atp_range = 0:0.2:2;
+    % more datapoints for lower bounds, relax near SS
+    atp = (exp(atp_range)-1)/exp(atp_range(end))*atp_range(end)*1.5;
+%     plot(atp, ones(length(atp)), 'bx--');
+    v_atp = zeros(size(atp));
+    maxIter = 8;
+    % real tolerance achievable:
+    % realTol = v_max/2*2*(1/2)^maxIter
+
+
+    for a = 1:length(atp)
+        disp("Running K_m " + num2str(round(a/length(atp)*100)) + "%...");
+        % the loop will search up to step*2
+        v = v_max/2; step = v;
+        for i = 1:maxIter
+            e = evaluateModel(fcn, -v, t_ss, atp(a),Pi,MgADP,g ,opts);
+            step = abs(step)/2;
+            if e > 0 v = v + step; else v = v - step;end;
+        end
+        v_atp(a) = v;
+    end
+else
+    atp = [0, K_m, 2];
+    v_atp = [0, v_max/2, v_max];
+end
+%%
+% figure(102);clf;hold on;
+
+axes('position',[0.6 0.13 0.35 0.35]);cla;hold on;
+set(gca,'fontsize',14);box on;
+title("Maximum sliding velocity, Km " + num2str(K_m));
+fill([0.04 0.1 0.1 0.04], [0 0 4 4], [0.8 0.98 0.8], 'LineStyle', 'None');
+fill([1.96 2.0 2.0 1.96], [2 2 8 8], [0.8 0.8 0.98], 'LineStyle', 'None');
+plot([0, K_m, 2], [0, v_max/2, v_max], 's--', 'Color', [0 0 0.3], 'MarkerSize', 8, 'MarkerFaceColor', [0 0 0.3]);
+plot(atp, v_atp, 'bo-', 'MarkerSize', 4, 'MarkerFaceColor', [0 0 1]);
+
+plot([0, 2], [v_max/2, v_max/2], '--', 'Color', [1 0 0]);
+text(1.5, v_max/2 - 0.3, 'half-max velocity', 'Color', [1 0 0])
+xlim([0, 2]);
+xlabel('MgATP');
+ylabel('Zero force velocity ML/s');
+legend('K_m area', 'V_{max} area', 'v_{max} simplified', 'v_{max}', 'Location', 'NorthWest', 'fontsize',9)
 return
 %% Eval the N
 
@@ -314,4 +366,14 @@ end
 l{length(l)+1} = "zero force";
 plot([0, tspan(end)], [0 0], 'r--');
 legend(l)
+
+%% show in time
+
+opts = struct('N', 50, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+opts.ValuesInTime = 1;
+
+for i = 2:length(vel)
+    opts.PlotProbsOnFig = 1;
+    evaluateModel(fcn, vel(i), abs(2*vel(i)),2, Pi,MgADP,g, opts);
+end
     

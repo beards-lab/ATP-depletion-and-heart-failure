@@ -27,21 +27,26 @@ g = [g 1 1]
 g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1.3384    0.3296    0.6091    1.1200 1.7357    1.5442    0.8284    1.4614 2.3482    0.6206    1.2782]
 %% set up the problem
 fcn = @dPUdT;
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0"};
 % fcn = @dPUdT_D;
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1 1])
 
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 1])
 
-%% Run basic sensitivity with updated cost func
+% [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0])
+
+% Run basic sensitivity with updated cost func
 % only evaluated sensitivities
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "20"};
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u"};
+se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 1 1]);title('Eval Optim for 1111');
 
+%% extension
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
 se0010 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
 se0100 = calcSensitivities(fcn, g, g, g_names, true, false, [0 1 0 0]);title('Eval Optim for 0100');
 se1000 = calcSensitivities(fcn, g, g, g_names, true, false, [1 0 0 0]);title('Eval Optim for 1000');
 
-se1111 = calcSensitivities(fcn, g, g, g_names, true, false, [1 1 1 1]);title('Eval Optim for 1111');
+
 %%
 fcn = @dPUdTExt;
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
@@ -72,7 +77,6 @@ h1 = figure(101); h2 = figure(40011);copyobj(allchild(h1),h2);
 evaluateProblem(@dPUdT2, x1001, true);
 h1 = figure(101); h2 = figure(41001);copyobj(allchild(h1),h2);
 
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17"};
 s1001 = calcSensitivities(fcn, x1001, g_names, true, false);title('Optim for 1001');
 s0101 = calcSensitivities(fcn, x0101, g_names, true, false);title('Optim for 0101');
 s0011 = calcSensitivities(fcn, x0011, g_names, true, false);title('Optim for 0011');
@@ -110,7 +114,6 @@ x1000 = [1.0422   -1.4125    3.7460    1.9151    1.7821    2.1777    0.3901    1
 
 
 % only evaluated sensitivities
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18"};
 
 se0001 = calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
 se0010 = calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
@@ -120,7 +123,6 @@ se1000 = calcSensitivities(fcn, x1000, g, g_names, true, false, [1 0 0 0]);title
 % save singleOptRes
 %%
 % only evaluated sensitivities
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18"};
 
 se0001 = calcSensitivities(fcn, x0001, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
 se0010 = calcSensitivities(fcn, x0010, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
@@ -149,10 +151,10 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % estart = evaluateProblem(fcn, g, true, [0 0 0 1])
 % toc
 
-optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 1 1]);
+optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 1 1 0]);
 x = fminsearch(optimfun, g, options)
 g = x
-save gopt826 g
+save gopt829 g
 % E0 = evaluateProblem(fcn, x, true)
 %% reduced g
 fcn = @dPUdT;
@@ -239,6 +241,6 @@ function stop = myoutput(gr,optimvalues,state);
         return;
     end
 %     g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
-    evaluateProblem(@dPUdT, gr, true, [1 1 1 1]);
+    evaluateProblem(@dPUdT, gr, true, [1 1 1 1 0]);
 %     evaluateProblem(@dPUdT, [gr(1) 0.0555 gr(2) 3.6484 gr(3:end)], true);
 end

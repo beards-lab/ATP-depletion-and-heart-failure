@@ -38,13 +38,18 @@ end
 figure();
 subplot(211);cla;hold on;
 
-bar([g0;g]');
-plot([0, 16], [1 1], '--r')
-legend('Original', 'Single-optimized')
+if isempty(g0)
+    bar(g, 'b');
+    plot([1, 20], [1 1], '--r')
+else
+    bar([[g0 1];g]');
+    plot([0, 20], [1 1], '--r')
+    legend('Original', 'Single-optimized')
+end
 
 title(['Optimized values of G for '  num2str(evalParts)]);
 ylabel('g modifier value');
-xticks(1:15)
+xticks(1:20)
 xticklabels(g_names);
 xtickangle(45);
 
@@ -56,7 +61,7 @@ plot([0, 16], [1 1], '--r')
 
 ylabel('E / E0');
 ylim([0, 10])
-xticks(1:15)
+xticks(1:20)
 xticklabels(g_names);
 xtickangle(45);
 
