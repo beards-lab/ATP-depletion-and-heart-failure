@@ -274,9 +274,8 @@ set(gca,'fontsize',9,'xlim',[0 10],'ylim',[0 45]); box on;
 % axes('position',[0.1 0.13 0.45 0.33]); hold on;
 % figure;
 
-%%
-
 if evalParts(5)
+    %%
     v_atp = [];
     opts = struct('N', 50, 'Slim', 0.06, 'PlotProbsOnFig', 0);
     atp_range = 0:0.2:2;
@@ -287,6 +286,7 @@ if evalParts(5)
     maxIter = 8;
     % real tolerance achievable:
     % realTol = v_max/2*2*(1/2)^maxIter
+    MgADP = 2;
 
 
     for a = 1:length(atp)
