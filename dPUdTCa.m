@@ -1,32 +1,62 @@
-function f = dPUdT(~,PU,N,dS,params, g)
+function f = dPUdTCa(t,PU,N,dS,params,g)
 % ODE function for the d/dt operator for the cross-bridge mode.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
 %  third 2N-1 entries represent p3(s,t)
-%  last entry is U_NR, the fraction of myosin heads in not-relaxed state
+%  third-last entry is U_NR, the fraction of myosin heads in not-relaxed state
+% then second last NP and last SL 
 
 MgATP = params.MgATP;
 Pi = params.Pi;
 MgADP = params.MgADP;
-% vel = params.velocity;
-% Ca_i = params.Ca;
+vel = params.Velocity;
+Ca_i = params.Ca;
 
+
+% Dan's parameters:
+% from cross bridge model identrification
+g0 = [ 1.5*0.3977    2.0478    1.4903    0.3765    0.5219    0.2726    1.25  1.0471    0.2382    0.9342];
+
+K_coop = 5.7;
+k_on   = g0(1)*100;
+k_off  = g0(2)*1.5*100;
+
+freq = 1;
+T = 1/freq;
 
 % State Variables
 p1 = PU(1:1*N+1);
 p2 = PU(1*N+2:2*N+2);
 p3 = PU(2*N+3:3*N+3);
 U_NR = PU(3*N+4);
+if isfield(params, 'UseCa') && params.UseCa
+    NP = PU(3*N + 5);
+else
+    NP = 0;
+end
+
+SL = PU(3*N + 6);
+
 U_SR = 1 - U_NR;
 
-dr = +g(12)*0.01; % Power-stroke Size; Units: um
 
+% Sarcomere geometry
+if isfield(params, 'UseOverlap') && params.UseOverlap
+    sovr_ze = min(L_thick*0.5, SL*0.5);
+    sovr_cle = max(SL*0.5 - (SL-L_thin),L_hbare*0.5);
+    L_sovr = sovr_ze - sovr_cle; % Length of single overlap region
+    N_overlap = L_sovr*2/(L_thick - L_hbare);
+else
+    N_overlap = 1;
+end
+
+dr = +g(12)*0.01; % Power-stroke Size; Units: um
 % calculation of moments of strain distributions
 s = (-N:1:0)'*dS;
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-Pu = 1.0 - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
+Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
 
 % strain-associated parameters
 alpha1 = g(16)*50;
@@ -57,6 +87,7 @@ k2  = g(5)*500;
 k_2 = g1*10; % not identified
 k3  = g2*g(10)*25;%;
 
+
 % Force model
 kstiff1 = g(13)*2500; 
 kstiff2 = g(14)*200;
@@ -70,6 +101,17 @@ ksr0   = g(6)*10 ; %
 sigma0 = g(7)*20;
 kmsr   = g(8)*10; % 
 % kmsr   = g(8)*250*(1-g3); % 
+
+% phi = mod(t,T)/T;
+% Ts = (0.36/0.3197)*(T^2.2)/(0.39^2.2 + T^2.2); % ratio of relaxation time to 1-Hz relaxation time
+% Ca0 = 0.050; % micro M
+% a = 0.558*(1 + g0(6)*(freq-0.5)); % micro M
+% % a = 0.550*(1 + (freq-0.5)/(freq) ); % micro M
+% b = 7.6516/Ts;
+% c = 0.2893*Ts;
+% d = 162.07/Ts;
+% Ca_i = a*( 0.5*(1-tanh(b*(T*phi-c))) - exp(-(d*T*phi))  ) + Ca0;
+
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
@@ -85,4 +127,9 @@ dp3   = + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 dp1(N+1) = dp1(N+1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 
-f = [dp1; dp2; dp3; dU_NR;0;1];
+Jon  = k_on*Ca_i*NP*(1 + K_coop*(1 - NP));
+Joff = k_off*(Pu/N_overlap)*(1 + K_coop*NP);
+dNP = - Jon + Joff; % dN_LV / dt
+dSL = -vel;
+
+f = [dp1; dp2; dp3; dU_NR; dNP; dSL];

@@ -14,8 +14,9 @@ LoadData;
 MgADP = 0; 
 Pi    = 0;
 F_active_0 = zeros(length(vel), length(MgATP));
-t_sl0 = 0.11; % time at which the SL = 2.2 - time to stop the experiment
-t_ss = 0.3; %% steady state time
+t_sl0 = [0 0.11]; % time at which the SL = 2.2 - time to stop the experiment
+t_ss = [0 0.3]; %%  steady state time, divided then by the velocity
+params0 = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
 
 
 %% force x velocity
@@ -24,9 +25,12 @@ if evalParts(1)
 % save from previous run
 % FAb - F_active(j,k)    
 opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+params = params0;
 for k = [1 2 3]
+    params.MgATP = MgATP(k);
     for j = 1:length(vel)
-        F_active(j,k) = evaluateModel(fcn, vel(j), t_sl0, MgATP(k),Pi,MgADP,g, opts);
+        params.Velocity = vel(j);
+        F_active(j,k) = evaluateModel(fcn, t_sl0, params, g, opts);
     end
 end
 
@@ -42,8 +46,12 @@ end
    if F_active == F_active_0
        % the first part has not been run, we have to evaluate additionally
        opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
-       F_active(end-1, k) = evaluateModel(fcn, vel(end-1), t_ss, MgATP(k),Pi,MgADP,g, opts);
-       F_active(end, k) = evaluateModel(fcn, vel(end), t_ss, MgATP(k),Pi,MgADP,g, opts);
+       params = params0;
+       params.MgATP = MgATP(k);
+       params.Velocity = vel(end-1);
+       F_active(end-1, k) = evaluateModel(fcn, t_ss, params, g, opts);
+       params.Velocity = vel(end);
+       F_active(end, k) = evaluateModel(fcn, t_ss, params, g, opts);
    end
    % take the last two
    
@@ -63,10 +71,11 @@ end
 F_iso = zeros(1, length(MgATP_iso));
 if evalParts(2)
     opts = struct('N', 10, 'Slim', 0.04, 'PlotProbsOnFig', 0);
-
+    params = params0;
     for k = 1:length(MgATP_iso)
       % Zero velocity:
-      F_iso(k) = evaluateModel(fcn, 0, t_ss, MgATP_iso(k),Pi,MgADP,g, opts);
+      params.MgATP = MgATP_iso(k);
+      F_iso(k) = evaluateModel(fcn, t_ss, params, g, opts);
     end
     
     % weight per data point
@@ -78,11 +87,12 @@ Frel = zeros(length(MgATP), length(Tspan));
 Ktr = zeros(1, length(MgATP));
 
 if evalParts(3)
-opts = struct('N', 20, 'Slim', 0.02, 'PlotProbsOnFig', 0);
+opts = struct('N', 20, 'Slim', 0.02, 'PlotProbsOnFig', 0, 'ValuesInTime', 1);
+params = params0;
 for k = 1:length(MgATP)
-
+  params.MgATP = MgATP(k);
   % Tspan array returns F active array
-  F_active_ktr = evaluateModel(fcn,0, Tspan, MgATP(k),Pi,MgADP,g);
+  F_active_ktr = evaluateModel(fcn, Tspan, params, g, opts);
   
   if F_active_ktr(end) == 0
       Ktr(k) = 0;
@@ -127,10 +137,14 @@ if ~estimateVmax
     
     % debug only
     range = [v_max*(1/2)^(maxIter), v_max + step*(1 -(1/2)^(maxIter))];
-    opts = struct('N', 30, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+    opts = struct('N', 30, 'Slim', 0.06, 'PlotProbsOnFig', 0, 'ValuesInTime', 0);
+    params = params0;
+    params.MgATP = MgATP_vmax;
     while abs(e) > tol && i < maxIter
         i = i + 1;
-        e = evaluateModel(fcn, -v_max, t_ss, MgATP_vmax,Pi,MgADP,g ,opts);
+        params.Velocity = -v_max;
+        
+        e = evaluateModel(fcn, t_ss, params, g, opts);
 %         e = 10;
     %     if i == 0 && e > 0 
     %         % not found in current range, cancelling the search
@@ -177,11 +191,14 @@ errScale = 1;
     tol = 0.00001;
     % debug only
     range = [K_m*(1/2)^(maxIter), K_m + step*(1 -(1/2)^(maxIter))];
-
+    
+    opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
+    params = params0;
+    params.Velocity = -v_max/2;
     while abs(e) > tol && i < maxIter
         i = i + 1;
-        opts = struct('N', 20, 'Slim', 0.06, 'PlotProbsOnFig', 0);
-        e = evaluateModel(fcn, -v_max/2, t_ss, K_m,Pi,MgADP,g, opts);
+        params.MgATP = K_m;
+        e = evaluateModel(fcn, t_ss, params, g, opts);
         step = abs(step)/2;
         if e > 0
             % Km too high, reduce
@@ -273,7 +290,7 @@ set(gca,'fontsize',9,'xlim',[0 10],'ylim',[0 45]); box on;
 
 % axes('position',[0.1 0.13 0.45 0.33]); hold on;
 % figure;
-
+%%
 if evalParts(5)
     %%
     v_atp = [];
@@ -287,14 +304,18 @@ if evalParts(5)
     % real tolerance achievable:
     % realTol = v_max/2*2*(1/2)^maxIter
     MgADP = 2;
-
+    params = params0;
+    
 
     for a = 1:length(atp)
         disp("Running K_m " + num2str(round(a/length(atp)*100)) + "%...");
         % the loop will search up to step*2
         v = v_max/2; step = v;
+        
+        params.MgATP = atp(a);
         for i = 1:maxIter
-            e = evaluateModel(fcn, -v, t_ss, atp(a),Pi,MgADP,g ,opts);
+            params.Velocity = -v;
+            e = evaluateModel(fcn, t_ss, params, g,opts);
             step = abs(step)/2;
             if e > 0 v = v + step; else v = v - step;end;
         end
