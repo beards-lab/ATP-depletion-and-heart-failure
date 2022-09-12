@@ -1,4 +1,4 @@
-function f = dPUdT(~,PU,N,dS,params, g)
+function f = dPUdT(~,PU,N,dS,params, g, vel)
 % ODE function for the d/dt operator for the cross-bridge mode.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
@@ -85,4 +85,4 @@ dp3   = + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 dp1(N+1) = dp1(N+1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 
-f = [dp1; dp2; dp3; dU_NR;0;1];
+f = [dp1; dp2; dp3; dU_NR;0;vel];

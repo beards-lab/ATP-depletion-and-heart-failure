@@ -16,7 +16,7 @@ opts = struct('N', 40, 'Slim', 0.05, 'PlotProbsOnFig', 0, 'ValuesInTime', 1);
 figure(1);clf;
 params = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 100,'Velocity', 0,'UseCa', true,'UseOverlap', false);
 [F, outs] = evaluateModel(fcn, t_ss, params,g, opts);
-%%
+%% Force velocity profile
 
 figure(4);clf;
 subplot(211);
@@ -168,3 +168,18 @@ for i = 1:size(hf, 1)
     semilogx(cRange, hill_fit(hf(i, :), cRange), 'x-', 'linewidth', 1, 'Color', c(i, :));
     title('Hill Fit (Abs)');
 end
+
+%% Test stepping up the SL
+% cant use zero velocity
+zv = 1e-3; % zero velocity
+sv = 10; % step velocity
+st = 1/sv; % step time
+durVel = [1, zv;0.1/sv,sv;1, zv]; % duration x velocity
+timesVel = [[0; cumsum(durVel(:, 1))], [durVel(:, 2);0]]
+ML = 2.2;
+dML = durVel(1:end, 1).*durVel(1:end, 2); % change in ML per each step
+MLt = [0 ; cumsum(dML)]
+
+plot(timesVel(:, 1), MLt*ML)
+
+% timesVel(2:end,1) = durVel(1:end, 1) + durVel(2:end-1, 1) 
