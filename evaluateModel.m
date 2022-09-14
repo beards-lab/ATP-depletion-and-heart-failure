@@ -7,26 +7,35 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
 % if Velocity in params needs to be vector too
 
     if ~exist('opts')
-        opts = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, 'ValuesInTime', 0);
+        opts = struct()
     end
+    defs = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, ...
+        'ValuesInTime', 0, 'MatchTimeSegments', 0, ...
+        'SL0', 2.2, ... % initial SL length
+        'ML', 2.2 ... % muscle length (um)(for calculating velocity)
+        );
+    
+    opts = fillInDefaults(opts, defs);
+    
     vel = params.Velocity;
     
 %     Force = zeros(size(vel));
     N = opts.N; % space (strain) discretization--number of grid points in half domain
-    Slim = opts.Slim; 
-    dS = Slim/N;
-    s = (-N:1:0)*dS; % strain 
+%     Slim = opts.Slim; 
+    opts.dS = opts.Slim/opts.N;
+    opts.s = (-opts.N:1:0)*opts.dS; % strain 
+    opts.T = T;
 
     % Initial variables for Force-velocity experiment
-    p1 = zeros(N+1,1);
-    p2 = zeros(N+1,1);
-    p3 = zeros(N+1,1);
-    out = struct();
+    p1 = zeros(opts.N+1,1);
+    p2 = zeros(opts.N+1,1);
+    p3 = zeros(opts.N+1,1);
+%     out = struct();
     U_NR = 1;
     NP = 0;
-    SL = 2.2;
+    SL0 = opts.SL0;
     % State variable vector concatenates p1, p2, p2, and U_NR
-    PU = [p1; p2; p3; U_NR;NP;SL];
+    PU = [p1; p2; p3; U_NR;NP;SL0];
 %     PU = PU0;
 
     % moments and force
@@ -34,7 +43,6 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
     kstiff1 = g0(13)*2500; 
     kstiff2 = g0(14)*200;
     mu = g0(19)*0.5; % viscosity
-    
     
     if all(vel == 0)
         % Zero velocity:
@@ -84,49 +92,71 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
     else
         
         
-        if isfield(opts, 'ValuesInTime') && opts.ValuesInTime
-            % just an estim TODO
-            Nstep = 100;
-            zer = zeros(Nstep,1);
-            out.F = zer;
-            out.t = zer;
-            out.SL = zer;
-            % dsitribution in time
-            out.p1_0 = zer;
-            out.p2_0 = zer;
-            out.p3_0 = zer;
-            out.p1_1 = zer;
-            out.p2_1 = zer;
-            out.p3_1 = zer;
-            out.NR = zer;
-            out.NP = zer;
-            out.SL = zer;
-%             % peaks in time: to plot against the means
-%             out.p1p_t = zer;
-%             out.p2p_t = zer;
-%             out.p3p_t = zer;
-            % minimal value from the right - meaning we overflow our span
-            out.ps0_t = zer;
+        if opts.ValuesInTime
+            out = struct('F', [], ...
+                't', [], ...
+                'SL', [], ...
+                'p1_0', [], ...
+                'p2_0', [], ...
+                'p3_0', [], ...
+                'p1_1', [], ...
+                'p2_1', [], ...
+                'p3_1', [], ...
+                'v', [],... % velocity in ML/s
+                'NR', [], ...
+                'NP', [], ...
+                'ps0_t', [], ...
+                'dr', dr);
+%             % just an estim TODO
+%             Nstep = 100;
+%             zer = zeros(Nstep,1);
+%             out.F = zer;
+%             out.t = zer;
+%             out.SL = zer;
+%             % dsitribution in time
+%             out.p1_0 = zer;
+%             out.p2_0 = zer;
+%             out.p3_0 = zer;
+%             out.p1_1 = zer;
+%             out.p2_1 = zer;
+%             out.p3_1 = zer;
+%             out.NR = zer;
+%             out.NP = zer;
+% %             % peaks in time: to plot against the means
+% %             out.p1p_t = zer;
+% %             out.p2p_t = zer;
+% %             out.p3p_t = zer;
+%             % minimal value from the right - meaning we overflow our span
+%             out.ps0_t = zer;
         end
         
-        i=1;
         % vs for VelocitySegment
         for vs = 1:length(vel)
             ts = T(vs);
+%             et = 0; %elapsed time
+            tend = T(vs+1); % ending time of simulation in the current segment
+            
+            % TODO account for SL = 1 correction
             if abs(vel(vs)) == 0
-                v = 1e-3;
+                v = 0;
+                dt = tend - ts;
+                Nstep = 0;
             else
                 v = vel(vs);
+                dt = opts.dS/abs(v);
+                Nstep = round((tend-ts)/dt);% = Tspan(end)/dS
             end
                 
-            dt = dS/abs(v);
-            % TODO account for SL = 1 correction
-            tend = T(vs+1); % ending time of simulation
-            Nstep = round((tend-ts)/dt);% = Tspan(end)/dS
+%             if tend < T(vs) + dt
+%                 warning(['Too long dt, shortening the step at ' num2str(T(vs))]);
+%                 dt = T(vs+1) - T(vs);
+%             end
         
             % simulate kinetics for 1/2 timestep
-            [~,PU] = ode15s(fcn,[ts ts+dt/2],PU,[],N,dS,params,g0, v);
+            [t,PU] = ode15s(fcn,[0 dt/2],PU,[],opts.N,opts.dS,params,g0, v*opts.ML);
             PU = PU(end,:); 
+            out = storeOutputs(out, PU, opts, dt/2, v);
+            et = dt/2;
 
             for j = 1:(Nstep-1)         
 
@@ -136,59 +166,63 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
               PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
 
               % simulate kinetics for full step
-              [~,PU] = ode15s(fcn,[ts ts+dt],PU,[],N,dS,params,g0, v);
-              PU = PU(end,:);           
+              [~,PU] = ode15s(fcn,[0 dt],PU,[],N,opts.dS,params,g0, v*opts.ML);
+              PU = PU(end,:);
+              et = et + dt;
 
               if isfield(opts, 'ValuesInTime') && opts.ValuesInTime
-                p1 = PU(1:1*N+1); p2 = PU(1*N+2:2*N+2); p3 = PU(2*N+3:3*N+3);
-                out.p1_0(i) = dS*sum(p1); out.p1_1(i) = dS*sum(s.*p1);
-                out.p2_0(i) = dS*sum(p2); out.p2_1(i) = dS*sum(s.*p2);
-                out.p3_0(i) = dS*sum(p3); out.p3_1(i) = dS*sum((s+dr).*p3); 
+               out = storeOutputs(out, PU, opts, dt, v);
 
-                out.F(i) = kstiff2*out.p3_0(i) ...
-                    - max(-kstiff1*(out.p2_1(i) + out.p3_1(i)), 0)^g0(20) + mu*v;
-                if i > 1
-                    out.t(i) = out.t(i-1) + dt;
-                else
-                    out.t(1) = ts+dt/2 + dt;
-                end
-                out.NR(i) = PU(3*N+4);
-                out.NP(i) = PU(3*N+5);
-                out.SL(i) = PU(3*N+6);
-                % check the overflow
-                out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);
-                i = i+1;
               end
 
             end
-            % final advection (sliding step)
-            PU(1:1*N+0)     = 0.5*(PU(2:1*N+1) + PU(1:1*N+0));         PU(N+1) = 0.5*(0 + PU(N+1));
-            PU(1*N+2:2*N+1) = 0.5*(PU(1*N+3:2*N+2) + PU(1*N+2:2*N+1)); PU(2*N+2) = 0.5*(0 + PU(2*N+2));
-            PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
+            if opts.MatchTimeSegments
+                PU_1 = PU; % save for later
+            end
+            
+            if Nstep > 0
+                % final advection (sliding step) only for non-zero velocities
+                PU(1:1*N+0)     = 0.5*(PU(2:1*N+1) + PU(1:1*N+0));         PU(N+1) = 0.5*(0 + PU(N+1));
+                PU(1*N+2:2*N+1) = 0.5*(PU(1*N+3:2*N+2) + PU(1*N+2:2*N+1)); PU(2*N+2) = 0.5*(0 + PU(2*N+2));
+                PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
+            end
             % final 1/2 timestep for kinetics
-            [~,PU] = ode15s(fcn,[ts ts+dt/2],PU,[],N,dS,params,g0,v);
+            [~,PU] = ode15s(fcn,[0 dt/2],PU,[],N,opts.dS,params,g0,v*opts.ML);
+            PU = PU(end, :);
+            
+            if opts.MatchTimeSegments
+                % extrapolate to match the exact end time
+                PU = interp1([et et+dt/2], [PU_1;PU], tend-ts, 'linear', 'extrap');
+                tf = tend-ts - et; % final timestep length
+                if tf > dt/2 || tf < 0 
+                    warning('Extrapolattion out of reasonable bounds');
+                end
+            else
+                [~,PU] = ode15s(fcn,[0 dt/2],PU,[],N,opts.dS,params,g0,v*opts.ML);
+                tf = dt/2;
+            end
 
-            PU = PU(end,:);
             p1 = PU(1:1*N+1);
             p2 = PU(1*N+2:2*N+2);
             p3 = PU(2*N+3:3*N+3);
 
-            p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-            p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
+%             p1_0 = opts.dS*sum(p1); p1_1 = opts.dS*sum(s.*p1);
+%             p2_0 = opts.dS*sum(p2); 
+            p2_1 = opts.dS*sum(opts.s.*p2);
         %     p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
             % TODO explain the difference
-            p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);       
+            p3_0 = opts.dS*sum(p3); p3_1 = opts.dS*sum((opts.s + dr).*p3);       
 
             Force = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1), 0).^g0(20) + mu*v;
 
-            if isfield(opts, 'ValuesInTime') && opts.ValuesInTime
-                out.F(end) = Force; out.t(end) = tend;out.SL(end) = out.SL(end-1) + v*dt;
-                out.p1_0(end) = p1_0;out.p2_0(end) = p2_0;out.p3_0(end) = p3_0;
-                out.p1_1(end) = p1_1;out.p2_1(end) = p2_1;out.p3_1(end) = p3_1;
-                out.NR(end) = PU(3*N+4);
-                out.NP(end) = PU(3*N+5);
-                out.SL(end) = PU(3*N+6);
-
+            if opts.ValuesInTime
+                out = storeOutputs(out, PU, opts, tf, v);
+                
+                % reconstruct Force
+                out.F = kstiff2*out.p3_0 ...
+                    - max(-kstiff1*(out.p2_1 + out.p3_1), 0).^g0(20) ...
+                    + mu*out.v;
+                
                 if max(out.ps0_t) > 1e-3
                     warning("Boundary broken at vel " + num2str(v) + ...
                         " Extend the Slim from " + num2str(Slim) );
@@ -206,14 +240,6 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
 %%
     figure(opts.PlotProbsOnFig);hold on;
 
-
-%         subplot(122);
-%         plot(t, F);
-%         xlabel('t');
-%         ylabel('Force');
-% 
-%         subplot(121);
-
     plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
     ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
     xlabel('strain, $s$ ($\mu$m)','interpreter','latex','fontsize',16);
@@ -222,7 +248,42 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
     legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
         
         
-        
-        
-        
-        
+end
+
+function out = storeOutputs(out, PU, opts, dt, v)
+    % extend the curent size
+    i = length(out.t) + 1;
+    p1 = PU(1:1*opts.N+1); p2 = PU(1*opts.N+2:2*opts.N+2); p3 = PU(2*opts.N+3:3*opts.N+3);
+    out.p1_0(i) = opts.dS*sum(p1); out.p1_1(i) = opts.dS*sum(opts.s.*p1);
+    out.p2_0(i) = opts.dS*sum(p2); out.p2_1(i) = opts.dS*sum(opts.s.*p2);
+    out.p3_0(i) = opts.dS*sum(p3); out.p3_1(i) = opts.dS*sum((opts.s+out.dr).*p3); 
+
+    % calculated post-process
+    %     out.F(i) = kstiff2*out.p3_0(i) ...
+    %         - max(-kstiff1*(out.p2_1(i) + out.p3_1(i)), 0)^g0(20) + mu*v;
+    out.v(i) = v;
+    if i > 1
+        out.t(i) = out.t(i-1) + dt;
+    else
+        out.t(1) = opts.T(1) + dt;
+    end
+    out.NR(i) = PU(3*opts.N+4);
+    out.NP(i) = PU(3*opts.N+5);
+    out.SL(i) = PU(3*opts.N+6);
+    
+    % check the overflow
+    out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);        
+end
+
+function opts = fillInDefaults(opts, defs)
+    % thanks to Adam Danz from MatlabCentral
+    % List fields in both structs
+    optsfn = fieldnames(opts); 
+    defsfn = fieldnames(defs); 
+    % List fields missing in s
+    missingIdx = find(~ismember(defsfn,optsfn));
+    % Assign missing fields to s
+    for i = 1:length(missingIdx)
+        opts.(defsfn{missingIdx(i)}) = defs.(defsfn{missingIdx(i)}); 
+    end
+end

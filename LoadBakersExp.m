@@ -41,8 +41,10 @@ plot(data_lf8.Time, data_lf8.F);
 dsf = 5;
 maxvel = 50;
 t = data_lf8.Time;
-td = downsample(data_lf8.Time, dsf);
-ld = downsample(data_lf8.L, dsf);
+td = downsample(t, dsf);
+l = data_lf8.L;
+ld = downsample(l, dsf);
+fd = downsample(data_lf8.F, dsf);
 dL = [diff(data_lf8.L);0];
 ddL = [diff(max(min(1000*diff(movmean(ld,[5 5])), maxvel), -maxvel));0;0];
 dT = [diff(data_lf2.Time);0];
@@ -72,44 +74,57 @@ xlim(xl);
 % ramping down
 % pif = ddl > 1e-4 && circshift(ddl, -1) < 1e-4; %inflection points
 % TODO
-ts = [490, 500.3, 501, 509.2, 510, 519.4,539.8, 550];
+ts = [490, 500.25, 500.9, 509.25, 510, 519.5,539.8, 550];
 %% Split it into segments with const velocities
 
 vs = [];
 for it = 1:(length(ts)-1)
-    t1 = find(td > ts(it), 1);
-    t2 = find(td > ts(it + 1), 1);
-    vs(it) = round((ld(t1) - ld(t2))/(td(t1) - td(t2))*1000, 1);
+    t1 = find(t >= ts(it), 1);
+    t2 = find(t >= ts(it + 1), 1);
+    vs(it) = round((l(t1) - l(t2))/(t(t1) - t(t2))*1000, 1);
 end
-vs
+[ts;[vs 0]]
+
+%% reconstruct from vel
+
 %% Throw it into evaluateModel
 fcn = @dPUdT;
 simulateTimes = ts/1000;
 velocities = vs;
-params = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 1000,...
+params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
     'Velocity', velocities, ...
     'UseCa', false,'UseOverlap', false);
 
 % TODO breaking and slacking velocities
 opts = struct('N', 50, 'Slim', 0.08, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ...
-    'BreakingVelocity', -10, 'SlackVelocity', 10);
+    'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', 2.2*1.1, 'MatchTimeSegments', 1, 'ML', 2.2);
 
 
 [F outs] = evaluateModel(fcn, simulateTimes, params, g, opts);
 
 
-vel = 1:20;
-dt = 1e-4;
-N = opts.N; % space (strain) discretization--number of grid points in half domain
-Slim = opts.Slim; 
-% dS = Slim/N;
-dS = dt*vel;
+% vel = 1:20;
+% dt = 1e-4;
+% N = opts.N; % space (strain) discretization--number of grid points in half domain
+% Slim = opts.Slim; 
+% % dS = Slim/N;
+% dS = dt*vel;
 % Slim = dS*N
 % dt = dS./abs(vel)
 % tend = T(end)./abs(vel); % ending time of simulation
 % Nstep = round(tend/dt);% = Tspan(end)/dS
 %
 % figure;
-plot(outs.t, outs.SL, '*-')
-plot(outs.t, outs.F, '*-')
+%
+clf;
+subplot(211);hold on;
+plot(t/1000, l, '|-');
+plot([simulateTimes;simulateTimes], repmat([min(ld);max(ld)], [1 size(simulateTimes, 2)]))
+plot(outs.t, outs.SL/2.2, '*-')
+xlim([0.45 0.55])
+subplot(212);hold on;
+plot(td/1000, fd);
+plot(outs.t, outs.F*7.5, '*-')
+xlim([0.45 0.55])
+ylim([-50, Inf])
 

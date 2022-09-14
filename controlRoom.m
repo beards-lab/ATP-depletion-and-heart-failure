@@ -97,7 +97,7 @@ end
 set(gca, 'XDir','reverse');
 legend(leg, 'Location', 'Best')
 title("Force-pCa relation");
-xlabel('pCa (10^{-x})');
+xlabel('pCa');
 ylabel('Force')
 
 subplot(234);cla;hold on;
