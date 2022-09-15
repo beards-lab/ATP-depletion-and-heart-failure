@@ -20,11 +20,13 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
     vel = params.Velocity;
     
 %     Force = zeros(size(vel));
-    N = opts.N; % space (strain) discretization--number of grid points in half domain
+    params.N = opts.N; % space (strain) discretization--number of grid points in half domain
+    N = opts.N;
 %     Slim = opts.Slim; 
-    opts.dS = opts.Slim/opts.N;
-    opts.s = (-opts.N:1:0)*opts.dS; % strain 
-    opts.T = T;
+    params.dS = opts.Slim/opts.N;
+    params.Slim = opts.Slim;
+    params.s = (0:1:opts.N)*params.dS; % strain 
+%     opts.T = T;
 
     % Initial variables for Force-velocity experiment
     p1 = zeros(opts.N+1,1);
@@ -138,35 +140,41 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
             
             % TODO account for SL = 1 correction
             if abs(vel(vs)) == 0
-                v = 0;
+                params.v = 0; % ML/s
                 dt = tend - ts;
                 Nstep = 0;
             else
-                v = vel(vs);
-                dt = opts.dS/abs(v);
+                params.v = vel(vs);
+                dt = params.dS/abs(params.v);
                 Nstep = round((tend-ts)/dt);% = Tspan(end)/dS
             end
+            params.Vums = params.v*opts.ML; % velocity in um/s
         
             % simulate kinetics for 1/2 timestep
-            [t,PU] = ode15s(fcn,[ts ts+dt/2],PU,[],opts.N,opts.dS,params,g0, v*opts.ML);
-            out = storeOutputs(out, PU, opts, t, v);
+            [t,PU] = ode15s(fcn,[ts ts+dt/2],PU,[], params,g0);
+            out = storeOutputs(out, PU, params, t, opts.ValuesInTime);
 %             et = dt/2;
             PU = PU(end,:); 
 
             for j = 1:(Nstep-1)         
 
-              % advection (sliding step)
-              PU(1:1*N+0)     = PU(2:1*N+1); PU(N+1) = 0;
-              PU(1*N+2:2*N+1) = PU(1*N+3:2*N+2); PU(2*N+2) = 0;
-              PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
+%               % advection (sliding step) - negative velocity (contracting)
+%               PU(1:1*N+0)     = PU(2:1*N+1); PU(N+1) = 0;
+%               PU(1*N+2:2*N+1) = PU(1*N+3:2*N+2); PU(2*N+2) = 0;
+%               PU(2*N+3:3*N+2) = PU(2*N+4:3*N+3); PU(3*N+3) = 0;
+              
+              % advection (sliding step) - positive velocity (extending)
+              PU(2:1*N+1) = PU(1:1*N+0); PU(1) = 0;
+              PU(1*N+3:2*N+2) = PU(1*N+2:2*N+1); PU(N+2) = 0;
+              PU(2*N+4:3*N+3) = PU(2*N+3:3*N+2); PU(2*N+3) = 0;              
 
               % simulate kinetics for full step
-              [t,PU] = ode15s(fcn,[t(end) t(end) + dt],PU,[],N,opts.dS,params,g0, v*opts.ML);
+              [t,PU] = ode15s(fcn,[t(end) t(end) + dt],PU,[], params,g0);
               PU = PU(end,:);
 %               et = et + dt;
 
               if opts.ValuesInTime
-                out = storeOutputs(out, PU, opts, t(end), v);
+                out = storeOutputs(out, PU, params, t(end), opts.ValuesInTime);
               end
 
             end
@@ -182,7 +190,7 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
                 PU(2*N+3:3*N+2) = 0.5*(PU(2*N+4:3*N+3) + PU(2*N+3:3*N+2)); PU(3*N+3) = 0.5*(0 + PU(3*N+3));
             end
             % final 1/2 timestep for kinetics
-            [t,PU] = ode15s(fcn,[t(end) t(end)+ dt/2],PU,[],N,opts.dS,params,g0,v*opts.ML);
+            [t,PU] = ode15s(fcn,[t(end) t(end)+ dt/2],PU,[],params,g0);
             
             
             if opts.MatchTimeSegments
@@ -203,7 +211,7 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
             end
             
             if opts.ValuesInTime
-                out = storeOutputs(out, PU, opts, t, v);
+                out = storeOutputs(out, PU, params, t, opts.ValuesInTime);
                 
                 % reconstruct Force
                 out.F = kstiff2*out.p3_0 ...
@@ -211,8 +219,8 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
                     - abs(mu*out.v);
                 
                 if max(out.ps0_t) > 1e-3
-                    warning("Boundary broken at vel " + num2str(v) + ...
-                        " Extend the Slim from " + num2str(Slim) );
+                    warning("Boundary broken at vel " + num2str(params.v) + ...
+                        " Extend the Slim from " + num2str(params.Slim) );
                 end
             end
             
@@ -224,12 +232,12 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
 
 %             p1_0 = opts.dS*sum(p1); p1_1 = opts.dS*sum(s.*p1);
 %             p2_0 = opts.dS*sum(p2); 
-            p2_1 = opts.dS*sum(opts.s.*p2);
+            p2_1 = params.dS*sum(params.s.*p2);
         %     p3_0 = dS*sum(p3); p3_1 = dS*sum(s.*p3);
             % TODO explain the difference
-            p3_0 = opts.dS*sum(p3); p3_1 = opts.dS*sum((opts.s + dr).*p3);       
+            p3_0 = params.dS*sum(p3); p3_1 = params.dS*sum((params.s + dr).*p3);       
 
-            Force = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1), 0).^g0(20) - abs(mu*v);
+            Force = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1), 0).^g0(20) - abs(mu*params.v);
 
         end % end the velocity segment
 %     end % end the velocity dependent condition
@@ -253,8 +261,8 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
         
 end
 
-function out = storeOutputs(out, PU, opts, T, v)
-    if ~opts.ValuesInTime
+function out = storeOutputs(out, PU, params, T, store)
+    if ~store
         return;
     end
         
@@ -262,24 +270,24 @@ function out = storeOutputs(out, PU, opts, T, v)
     for j = 1:length(T)
 %         dt = T(j);
         i = length(out.t) + 1;
-        p1 = PU(j, 1:1*opts.N+1); p2 = PU(j, 1*opts.N+2:2*opts.N+2); p3 = PU(j, 2*opts.N+3:3*opts.N+3);
-        out.p1_0(i) = opts.dS*sum(p1); out.p1_1(i) = opts.dS*sum(opts.s.*p1);
-        out.p2_0(i) = opts.dS*sum(p2); out.p2_1(i) = opts.dS*sum(opts.s.*p2);
-        out.p3_0(i) = opts.dS*sum(p3); out.p3_1(i) = opts.dS*sum((opts.s+out.dr).*p3); 
+        p1 = PU(j, 1:1*params.N+1); p2 = PU(j, 1*params.N+2:2*params.N+2); p3 = PU(j, 2*params.N+3:3*params.N+3);
+        out.p1_0(i) = params.dS*sum(p1); out.p1_1(i) = params.dS*sum(params.s.*p1);
+        out.p2_0(i) = params.dS*sum(p2); out.p2_1(i) = params.dS*sum(params.s.*p2);
+        out.p3_0(i) = params.dS*sum(p3); out.p3_1(i) = params.dS*sum((params.s+out.dr).*p3); 
 
         % calculated post-process
         %     out.F(i) = kstiff2*out.p3_0(i) ...
         %         - max(-kstiff1*(out.p2_1(i) + out.p3_1(i)), 0)^g0(20) + mu*v;
-        out.v(i) = v;
+        out.v(i) = params.v;
         out.t(i) = T(j);
 %         if i > 1
 %             out.t(i) = out.t(i-1) + dt;
 %         else
 %             out.t(1) = opts.T(1) + dt;
 %         end
-        out.NR(i) = PU(j, 3*opts.N+4);
-        out.NP(i) = PU(j, 3*opts.N+5);
-        out.SL(i) = PU(j, 3*opts.N+6);
+        out.NR(i) = PU(j, 3*params.N+4);
+        out.NP(i) = PU(j, 3*params.N+5);
+        out.SL(i) = PU(j, 3*params.N+6);
 
         % check the overflow
         out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);

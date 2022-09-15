@@ -126,18 +126,6 @@ opts = struct('N', 50, 'Slim', 0.08, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ...
 [F outs] = evaluateModel(fcn, simulateTimes, params, g, opts);
 
 
-% vel = 1:20;
-% dt = 1e-4;
-% N = opts.N; % space (strain) discretization--number of grid points in half domain
-% Slim = opts.Slim; 
-% % dS = Slim/N;
-% dS = dt*vel;
-% Slim = dS*N
-% dt = dS./abs(vel)
-% tend = T(end)./abs(vel); % ending time of simulation
-% Nstep = round(tend/dt);% = Tspan(end)/dS
-%
-% figure;
 %
 clf;
 subplot(211);hold on;
@@ -151,7 +139,9 @@ xlim([0 inf])
 subplot(212);hold on;
 plot(td, fd);
 plot(outs.t*1000, outs.F, '|-', 'MarkerSize', 2)
+plot([simulateTimes;simulateTimes]*1000, repmat([min([fd;outs.F']);max([fd;outs.F'])], [1 size(simulateTimes, 2)]))
 legend('Force (kPa?), Data', 'Force (mmHg), Simulation')
+
 xlim([0 inf])
 ylim([-50, Inf])
 
