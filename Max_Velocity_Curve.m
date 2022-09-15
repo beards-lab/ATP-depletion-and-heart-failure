@@ -26,13 +26,13 @@ Pi    = 0;
 dr = 0.01; % Power-stroke Size; Units: um
 kstiff1 = g0(13)*2500; 
 kstiff2 = g0(14)*200;
-mu = 0.50;
+mu = 0.25;
 F_load = 0; % afterload force
 
 for j = 1:length(MgATP)
 
   Force = 1; % initial value (arbitrary)
-  vel = -6.35/(1 + (0.40/MgATP(j))); % initial guess
+  vel = -7.8/(1 + (0.40/MgATP(j))); % initial guess
   % vel = 2*1.1;
 
   while abs(F_load-Force) > 0.0001
@@ -68,8 +68,7 @@ for j = 1:length(MgATP)
     p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
     Force = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 ) + mu*vel;
   
-    vel = vel + 1*(F_load - Force);
-    [Force vel]
+    vel = vel + 2.0*(F_load - Force);
   
   end
   vel_max(j) = vel;

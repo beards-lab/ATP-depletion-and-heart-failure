@@ -1,53 +1,76 @@
 %% length-velocity protocol
 % load Anthony Baker's experiments
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
+load gopt;
 
 %% load length-force data for 2 mM
-data_lf2 = readtable(datafile, ...
+data_table = readtable(datafile, ...
     "filetype", 'spreadsheet', ...
     'VariableNamingRule', 'modify', ...
     'Sheet', '2 mM', ...
     'Range', 'A5:C86004');
 
-data_lf2.Properties.VariableNames = {'Time', 'L', 'F'};
-data_lf2.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
-
+data_table.Properties.VariableNames = {'Time', 'L', 'F'};
+data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+datalabel = "2 mM";
 %% load length-force data for 8 mM
-data_lf8 = readtable(datafile, ...
+data_table = readtable(datafile, ...
     "filetype", 'spreadsheet', ...
     'VariableNamingRule', 'modify', ...
     'Sheet', '8 mM', ...
     'Range', 'A5:C86004');
 
-data_lf8.Properties.VariableNames = {'Time', 'L', 'F'};
-data_lf8.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+data_table.Properties.VariableNames = {'Time', 'L', 'F'};
+data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+datalabel = "8 mM";
+ts = [490, 500.25, 500.9, 509.25, 510, 519.5,539.8, 550];
+SL0 = 2.2*1.1;
 
-%% plot 2 mM
+%% load step-up data for 2 mM
+datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
+data_table = readtable(datafile, ...
+    "filetype", 'spreadsheet', ...
+    'VariableNamingRule', 'modify', ...
+    'Sheet', 'Sheet1', ...
+    'Range', 'A5:C10005');
+
+data_table.Properties.VariableNames = {'Time', 'L', 'F'};
+data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+datalabel = "step-up 2 mM";
+ts = [-200, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
+% ts = ts(1:4);
+stopTime = ts(end);    
+SL0 = 2.2;
+
+%% plot
 figure(1); clf; 
 subplot(211);hold on;
-plot(data_lf2.Time, data_lf2.L);
+plot(data_table.Time, data_table.L, 'x-');
 % xlim(xl);
 subplot(212);hold on;
-plot(data_lf2.Time, data_lf2.F);
+plot(data_table.Time, data_table.F);
 % xlim(xl);
 
 %% Plot 8 mM
 subplot(211);
-plot(data_lf8.Time, data_lf8.L);
+plot(data_table.Time, data_table.L);
 subplot(212);
-plot(data_lf8.Time, data_lf8.F);
+plot(data_table.Time, data_table.F);
 
-%% Extract the speed
+%% Relabel and downsample 
 dsf = 5;
 maxvel = 50;
-t = data_lf8.Time;
+imax = find(data_table.Time >= stopTime, 1);
+t = data_table.Time(1:imax);
 td = downsample(t, dsf);
-l = data_lf8.L;
+l = data_table.L(1:imax);
 ld = downsample(l, dsf);
-fd = downsample(data_lf8.F, dsf);
-dL = [diff(data_lf8.L);0];
+f = data_table.F(1:imax);
+fd = downsample(f, dsf);
+dL = [diff(data_table.L);0];
 ddL = [diff(max(min(1000*diff(movmean(ld,[5 5])), maxvel), -maxvel));0;0];
-dT = [diff(data_lf2.Time);0];
+dT = [diff(data_table.Time);0];
+%% Extract the speed
 % dL = [0;diff(ld)];
 % dT = [0;diff(td)];
 sp8 = dL./dT*1000;
@@ -59,7 +82,7 @@ xl = [500 540];
 
 figure(1);clf;
 % subplot(311);
-plot(data_lf8.Time, data_lf8.L, td, ld)
+plot(data_table.Time, data_table.L, td, ld)
 xlim(xl);
 
 % subplot(312);plot(t, sp8a,t, sp8a, td, sp8ad, 'x-')
@@ -74,7 +97,7 @@ xlim(xl);
 % ramping down
 % pif = ddl > 1e-4 && circshift(ddl, -1) < 1e-4; %inflection points
 % TODO
-ts = [490, 500.25, 500.9, 509.25, 510, 519.5,539.8, 550];
+
 %% Split it into segments with const velocities
 
 vs = [];
@@ -97,7 +120,7 @@ params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
 
 % TODO breaking and slacking velocities
 opts = struct('N', 50, 'Slim', 0.08, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ...
-    'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', 2.2*1.1, 'MatchTimeSegments', 1, 'ML', 2.2);
+    'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', SL0, 'MatchTimeSegments', 1, 'ML', 2.2);
 
 
 [F outs] = evaluateModel(fcn, simulateTimes, params, g, opts);
@@ -118,13 +141,17 @@ opts = struct('N', 50, 'Slim', 0.08, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ...
 %
 clf;
 subplot(211);hold on;
-plot(t/1000, l, '|-');
-plot([simulateTimes;simulateTimes], repmat([min(ld);max(ld)], [1 size(simulateTimes, 2)]))
-plot(outs.t, outs.SL/2.2, '*-')
-xlim([0.45 0.55])
+plot(t, l, '-');
+plot(outs.t*1000, outs.SL/2.2, '|-', 'MarkerSize', 2)
+plot([simulateTimes;simulateTimes]*1000, repmat([min(ld);max(ld)], [1 size(simulateTimes, 2)]))
+legend('Muscle length (-), Data', 'Muscle length (-), Simulation')
+% xlim([0.45 0.55])
+xlim([0 inf])
+
 subplot(212);hold on;
-plot(td/1000, fd);
-plot(outs.t, outs.F*7.5, '*-')
-xlim([0.45 0.55])
+plot(td, fd);
+plot(outs.t*1000, outs.F, '|-', 'MarkerSize', 2)
+legend('Force (kPa?), Data', 'Force (mmHg), Simulation')
+xlim([0 inf])
 ylim([-50, Inf])
 
