@@ -1,4 +1,4 @@
-function f = dPUdTCa(t,PU,N,dS,params,g)
+function f = dPUdTCa(~,PU,params, g)
 % ODE function for the d/dt operator for the cross-bridge mode.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
@@ -11,6 +11,7 @@ Pi = params.Pi;
 MgADP = params.MgADP;
 vel = params.Velocity;
 Ca_i = params.Ca;
+N = params.N;
 
 
 % Dan's parameters:
@@ -42,18 +43,23 @@ U_SR = 1 - U_NR;
 
 % Sarcomere geometry
 if isfield(params, 'UseOverlap') && params.UseOverlap
-    sovr_ze = min(L_thick*0.5, SL*0.5);
-    sovr_cle = max(SL*0.5 - (SL-L_thin),L_hbare*0.5);
-    L_sovr = sovr_ze - sovr_cle; % Length of single overlap region
-    N_overlap = L_sovr*2/(L_thick - L_hbare);
+L_thick = 1.67; % Length of thick filament, um
+L_hbare = 0.10; % Length of bare region of thick filament, um
+L_thin  = 1.20; % Length of thin filament, um
+deltaR  = 0.010; % um    
+    L_T_HS1 = min(L_thick*0.5, SL*0.5);
+    L_T_HS2 = max(SL*0.5 - (SL-L_thin),L_hbare*0.5);
+    L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
+    N_overlap = L_ov*2/(L_thick - L_hbare);
 else
     N_overlap = 1;
 end
 
 dr = +g(12)*0.01; % Power-stroke Size; Units: um
 % calculation of moments of strain distributions
-s = (-N:1:0)'*dS;
-p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
+s = params.s';%(-N:1:0)'*dS;
+dS = params.dS;
+p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
 Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
@@ -115,7 +121,8 @@ kmsr   = g(8)*10; %
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
+% dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
+dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
@@ -125,11 +132,26 @@ dp2   = + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s
 dp3   = + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
-dp1(N+1) = dp1(N+1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+dp1(params.s_i0) = dp1(params.s_i0) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+% dp1(params.s_i0) = dp1(params.s_i0) + ka*Pu*U_NR/dS; % attachment
 
 Jon  = k_on*Ca_i*NP*(1 + K_coop*(1 - NP));
 Joff = k_off*(Pu/N_overlap)*(1 + K_coop*NP);
 dNP = - Jon + Joff; % dN_LV / dt
-dSL = -vel;
+dSL = params.Vums;
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL];
+
+if ~params.PlotProbsOnStep
+    return;
+end
+
+% figure(params.PlotProbsOnStep);hold on;
+% cla;hold on;
+plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
+ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
+xlabel('strain, $s$ ($\mu$m)','interpreter','latex','fontsize',16);
+set(gca,'fontsize',14);
+set(gca,'xlim',[s(1) s(N)]);
+legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
+drawnow;

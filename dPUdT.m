@@ -25,7 +25,7 @@ dr = +g(12)*0.01; % Power-stroke Size; Units: um
 % calculation of moments of strain distributions
 s = params.s';%(-N:1:0)'*dS;
 dS = params.dS;
-p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
+p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
 Pu = 1.0 - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
@@ -85,7 +85,7 @@ dp2   = + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s
 dp3   = + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
-% dp1(N+1) = dp1(N+1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
-dp1(1) = dp1(1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+dp1(N+1) = dp1(N+1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+% dp1(1) = dp1(1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 
 f = [dp1; dp2; dp3; dU_NR;0;params.Vums];

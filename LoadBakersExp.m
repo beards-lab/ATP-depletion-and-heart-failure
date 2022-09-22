@@ -38,9 +38,9 @@ data_table.Properties.VariableNames = {'Time', 'L', 'F'};
 data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 datalabel = "step-up 2 mM";
 ts = [-200, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
-% ts = ts(1:4);
+ts = ts(1:4);
 stopTime = ts(end);    
-SL0 = 2.2;
+SL0 = 2.0;
 
 %% plot
 figure(1); clf; 
@@ -77,13 +77,13 @@ sp8 = dL./dT*1000;
 sp8a = movmean(max(min(sp8, maxvel), -maxvel),[5 5]);
 sp8ad = downsample(movmean(max(min(sp8, maxvel), -maxvel),[5 5]), dsf);
 % sp8a = smooth(sp8, 1000, 'lowess');
-xl = [500 540];
+% xl = [500 540];
 % yl = [-10 10];
 
 figure(1);clf;
 % subplot(311);
 plot(data_table.Time, data_table.L, td, ld)
-xlim(xl);
+% xlim(xl);
 
 % subplot(312);plot(t, sp8a,t, sp8a, td, sp8ad, 'x-')
 % xlim(xl)
@@ -111,7 +111,7 @@ end
 %% reconstruct from vel
 
 %% Throw it into evaluateModel
-fcn = @dPUdT;
+fcn = @dPUdTCa;
 simulateTimes = ts/1000;
 velocities = vs;
 params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
@@ -119,18 +119,20 @@ params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
     'UseCa', false,'UseOverlap', false);
 
 % TODO breaking and slacking velocities
-opts = struct('N', 50, 'Slim', 0.08, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ...
-    'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', SL0, 'MatchTimeSegments', 1, 'ML', 2.2);
+opts = struct('N', 30, 'Slim', 0.02, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ...
+    'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', SL0, ...
+    'MatchTimeSegments', 1, 'ML', 2.0, 'PlotProbsOnStep', false);
 
+% figure(1);clf;
 
 [F outs] = evaluateModel(fcn, simulateTimes, params, g, opts);
 
 
-%
+%%
 clf;
 subplot(211);hold on;
 plot(t, l, '-');
-plot(outs.t*1000, outs.SL/2.2, '|-', 'MarkerSize', 2)
+plot(outs.t*1000, outs.SL/2.0, '|-', 'MarkerSize', 2)
 plot([simulateTimes;simulateTimes]*1000, repmat([min(ld);max(ld)], [1 size(simulateTimes, 2)]))
 legend('Muscle length (-), Data', 'Muscle length (-), Simulation')
 % xlim([0.45 0.55])
@@ -145,3 +147,47 @@ legend('Force (kPa?), Data', 'Force (mmHg), Simulation')
 xlim([0 inf])
 ylim([-50, Inf])
 
+%% clf;
+figure;clf; hold on;
+Pus = 1 - outs.p1_0 - outs.p2_0 - outs.p3_0% PU substitute
+leg = plot(outs.t, Pus, outs.t, outs.p1_0, outs.t, outs.p2_0, outs.t, outs.p3_0, outs.t, out.NR);
+plot([simulateTimes;simulateTimes], repmat([0; 1], [1 size(simulateTimes, 2)]))
+legend(leg)
+legend('Pu', 'P1', 'P2', 'P3', 'NR')
+
+
+
+%% Animate the probs
+out = outs;
+
+times2 = linspace(out.t(1), out.t(end), 1000);
+ut = find(out.t ~= circshift(out.t, 1));
+PU = interp1(out.t(ut), out.PU(ut, :), times2);
+
+
+figure(1);clf;
+N = opts.N;
+
+params.dS = opts.Slim/opts.N;
+%     params.Slim = opts.Slim;
+%     params.s = (0:1:opts.N)*params.dS; % strain 
+    params.s = (0:opts.N)*params.dS; % strain space
+
+for i = 600:size(PU, 1)
+    subplot(211);
+    p1 = PU(i, 1:1*N+1);
+    p2 = PU(i, 1*N+2:2*N+2);
+    p3 = PU(i, 2*N+3:3*N+3);
+    NR = PU(i, 3*N+4);
+    NP = PU(i, 3*N+5);
+    SL = PU(i, 3*N+6);    
+    plot(params.s, p1, params.s, p2, params.s, p3);
+    ylim([0 100]);
+    subplot(212);cla;hold on;
+    plot(out.t, out.SL)
+    plot([times2(i) times2(i)], [2 2.2])
+    xlim([out.t(1), out.t(end)])
+    
+%     drawnow;
+    pause(1/10)
+end
