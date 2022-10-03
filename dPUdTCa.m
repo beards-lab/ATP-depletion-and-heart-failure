@@ -9,9 +9,10 @@ function f = dPUdTCa(~,PU,params, g)
 MgATP = params.MgATP;
 Pi = params.Pi;
 MgADP = params.MgADP;
-vel = params.Velocity;
+vel = params.Vums;
 Ca_i = params.Ca;
-N = params.N;
+% N = params.N;
+ss = params.ss; % space size (length of the s for each of p1-p3)
 
 
 % Dan's parameters:
@@ -26,27 +27,26 @@ freq = 1;
 T = 1/freq;
 
 % State Variables
-p1 = PU(1:1*N+1);
-p2 = PU(1*N+2:2*N+2);
-p3 = PU(2*N+3:3*N+3);
-U_NR = PU(3*N+4);
+p1 = PU(1:ss);
+p2 = PU(ss+1:2*ss);
+p3 = PU(2*ss +1:3*ss);
+U_NR = PU(3*ss+1);
 if isfield(params, 'UseCa') && params.UseCa
-    NP = PU(3*N + 5);
+    NP = PU(3*ss + 2);
 else
     NP = 0;
 end
-
-SL = PU(3*N + 6);
-
+SL = PU(3*ss + 3);
 U_SR = 1 - U_NR;
+LSE = PU(3*ss + 4);
 
 
 % Sarcomere geometry
 if isfield(params, 'UseOverlap') && params.UseOverlap
-L_thick = 1.67; % Length of thick filament, um
-L_hbare = 0.10; % Length of bare region of thick filament, um
-L_thin  = 1.20; % Length of thin filament, um
-deltaR  = 0.010; % um    
+    L_thick = 1.67; % Length of thick filament, um
+    L_hbare = 0.10; % Length of bare region of thick filament, um
+    L_thin  = 1.20; % Length of thin filament, um
+    deltaR  = 0.010; % um    
     L_T_HS1 = min(L_thick*0.5, SL*0.5);
     L_T_HS2 = max(SL*0.5 - (SL-L_thin),L_hbare*0.5);
     L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
@@ -95,12 +95,52 @@ k3  = g2*g(10)*25;%;
 
 
 % Force model
-kstiff1 = g(13)*2500; 
-kstiff2 = g(14)*200;
-F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0).^g(20);
+kstiff1 = params.kstiff1; 
+kstiff2 = params.kstiff2;
+F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
 
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
+
+% muscle model
+velHS = (params.kSE*LSE - F_active)/params.mu;% velocity of half-sarcomere
+dLSEdt = vel - velHS;
+
+% Estimating space derivatives, upwind differencing
+% dp1ds = zeros(N+1,1);
+% dp2ds = zeros(N+1,1);
+% dp3ds = zeros(N+1,1);
+if velHS > 0
+%   dp1ds(2:2*N+1) = ( p1(2:2*N+1) - p1(1:2*N) )/dS;
+%   dp1ds(1)       = ( p1(1) - 0 )/dS;
+%   dp2ds(2:2*N+1) = ( p2(2:2*N+1) - p2(1:2*N) )/dS;
+%   dp2ds(1)       = ( p2(1) - 0 )/dS;
+%   dp3ds(2:2*N+1) = ( p3(2:2*N+1) - p3(1:2*N) )/dS;
+%   dp3ds(1)       = ( p3(1) - 0 )/dS;
+
+dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
+dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
+dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
+  
+else % velHS <= 0
+%     N = params.N;
+%   dp1ds(1:2*N) = ( p1(2:2*N+1) - p1(1:2*N) )/dS;
+%   dp1ds(2*N+1) = ( 0 - p1(2*N+1) )/dS;
+%   dp2ds(1:2*N) = ( p2(2:2*N+1) - p2(1:2*N) )/dS;
+%   dp2ds(2*N+1) = ( 0 - p2(2*N+1) )/dS;
+%   dp3ds(1:2*N) = ( p3(2:2*N+1) - p3(1:2*N) )/dS;
+%   dp3ds(2*N+1) = ( 0 - p3(2*N+1) )/dS;
+
+% this is probably wrong
+  dp1ds = [p1(2:end) - p1(1:end-1); (0 - p1(end))]/dS;
+  dp2ds = [p2(2:end) - p2(1:end-1); (0 - p2(end))]/dS;    
+  dp3ds = [p3(2:end) - p3(1:end-1); (0 - p3(end))]/dS;
+
+%   dp1ds = [p1(1:end-1) - p1(2:end); (0 - p1(end))]/dS;
+%   dp2ds = [p2(1:end-1) - p2(2:end); (0 - p2(end))]/dS;    
+%   dp3ds = [p3(1:end-1) - p3(2:end); (0 - p3(end))]/dS;
+  
+end
 
 % transitions between super relaxed state and non relaxed state
 ksr0   = g(6)*10 ; % 
@@ -121,15 +161,15 @@ kmsr   = g(8)*10; %
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-% dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
-dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
+dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
+% dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
 % dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
-dp1   = - kd*p1 - k1*(exp(-alpha1*s).*p1) + k_1*(exp(+alpha1*s).*p2);
-dp2   = + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s).*p2) + k_2*p3  ;
-dp3   = + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
+dp1   = -velHS/2*dp1ds - kd*p1 - k1*(exp(-alpha1*s).*p1) + k_1*(exp(+alpha1*s).*p2);
+dp2   = -velHS/2*dp2ds + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s).*p2) + k_2*p3  ;
+dp3   = -velHS/2*dp3ds + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 dp1(params.s_i0) = dp1(params.s_i0) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
@@ -138,20 +178,8 @@ dp1(params.s_i0) = dp1(params.s_i0) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/d
 Jon  = k_on*Ca_i*NP*(1 + K_coop*(1 - NP));
 Joff = k_off*(Pu/N_overlap)*(1 + K_coop*NP);
 dNP = - Jon + Joff; % dN_LV / dt
-dSL = params.Vums;
+dSL = vel;
 
-f = [dp1; dp2; dp3; dU_NR; dNP; dSL];
+% dLse = Kse*Lse
 
-if ~params.PlotProbsOnStep
-    return;
-end
-
-% figure(params.PlotProbsOnStep);hold on;
-% cla;hold on;
-plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
-ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
-xlabel('strain, $s$ ($\mu$m)','interpreter','latex','fontsize',16);
-set(gca,'fontsize',14);
-set(gca,'xlim',[s(1) s(N)]);
-legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
-drawnow;
+f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];

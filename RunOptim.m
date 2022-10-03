@@ -26,10 +26,12 @@ g = [g 1 1]
 % 19 pcs from 26-08 incl the mu viscosity optim
 g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1.3384    0.3296    0.6091    1.1200 1.7357    1.5442    0.8284    1.4614 2.3482    0.6206    1.2782]
 %% set up the problem
-fcn = @dPUdT;
+fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0"};
 % fcn = @dPUdT_D;
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1 1])
+tic
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 0 0 0 0])
+toc
 
 % [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 1])
 %%
@@ -38,7 +40,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 % Run basic sensitivity with updated cost func
 % only evaluated sensitivities
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u"};
-se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 1 1]);title('Eval Optim for 1111');
+se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 0 0 0 0]);title('Eval Optim for 1111');
 
 %% extension
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
@@ -151,10 +153,10 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % estart = evaluateProblem(fcn, g, true, [0 0 0 1])
 % toc
 
-optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 1 1 0]);
+optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 0 0 0 0]);
 x = fminsearch(optimfun, g, options)
 g = x
-save gopt829 g
+save gopt926 g
 % E0 = evaluateProblem(fcn, x, true)
 %% reduced g
 fcn = @dPUdT;
@@ -241,6 +243,6 @@ function stop = myoutput(gr,optimvalues,state);
         return;
     end
 %     g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
-    evaluateProblem(@dPUdT, gr, true, [1 1 1 1 0]);
+    evaluateProblem(@dPUdTCa, gr, true, [1 1 1 1 0 1]);
 %     evaluateProblem(@dPUdT, [gr(1) 0.0555 gr(2) 3.6484 gr(3:end)], true);
 end

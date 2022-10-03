@@ -50,7 +50,10 @@ end
 title(['Optimized values of G for '  num2str(evalParts)]);
 ylabel('g modifier value');
 xticks(1:20)
-xticklabels(g_names);
+for i = 1:length(g_names)
+    g_lab{i} = g_names{i} + " (" + num2str(i) + ")";
+end
+xticklabels(g_lab);
 xtickangle(45);
 
 

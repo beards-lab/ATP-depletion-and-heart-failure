@@ -1,6 +1,6 @@
 %% loads data for fitting
 
-%% Data ([ATP] = 8, 4, 6 mM)
+%% Data ([ATP] = 8, 4, 2 mM)
 Data_ATP = [0		56.4048	63.6074	61.3192
         0.5		51.812	51.8626	47.4794
         1		37.4459	35.9182	31.387
@@ -10,15 +10,18 @@ Data_ATP = [0		56.4048	63.6074	61.3192
         5		3.2759	1.6526	1.594
         6		2.212	1.1823	1.2117];
 
-% Data_ATP = [0		56.4048	63.6074	61.3192
-%         1		37.4459	35.9182	31.387
-%         2		17.8025	13.5516	10.2112
-%         5		3.2759	1.6526	1.594
-%         6		2.212	1.1823	1.2117];
+Data_ATP = [0		56.4048	63.6074	61.3192
+        1		37.4459	35.9182	31.387
+        2		17.8025	13.5516	10.2112
+        5		3.2759	1.6526	1.594
+        6		2.212	1.1823	1.2117];
 
-ML = 1.1; % half sarcomere length (microns)
+% ML = 1.1; % half sarcomere length (microns)
+ML = 2.2; % reference muscle length
+
+SL0 = 2.2*1.1;
 % Non-zero velocities
-vel = (-Data_ATP(:,1)).*ML; % micron per sec
+vel = (-Data_ATP(:,1)); % ML/s
 
 %% Fmax (normalized.) versus [MgATP] (mM) from Ebus et al.(2001)
 % iso_data = ...
@@ -32,6 +35,7 @@ iso_data = ...
 MgATP_iso = iso_data(1,:);
 
 F_data = iso_data(2,:).*57;
+F_data_r = iso_data(2,:); % relative data
 
 %% Ktr data from Beard et al. - 8, 4, 2 mM
 MgATP = [8 4 2];

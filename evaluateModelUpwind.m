@@ -1,4 +1,4 @@
-function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
+function [Force, out] = evaluateModelUpwind(fcn, T, params, g0, opts)
 % params: model parameter structure (required)s
 % default: params = struct('Pi;, 0,'MgADP', 0, 'velocity', -1);
 % opts: optional simulation options, otherwise reverting to default
@@ -7,17 +7,15 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
 % if Velocity in params needs to be vector too
 
     if ~exist('opts')
-        opts = struct();
+        opts = struct()
     end
     defs = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, ...
         'ValuesInTime', 0, 'MatchTimeSegments', 0, ...
         'SL0', 2.2, ... % initial SL length
         'ML', 2.2, ... % muscle length (um)(for calculating velocity)
         'PlotProbsOnStep', false, ...
-        'ReduceSpace', false, ...
         'SLmax', Inf, ...
-        'OutputAtSL', Inf, ...
-        'LSE0', 0 ...
+        'OutputAtSL', Inf ...
         );
     
     opts = fillInDefaults(opts, defs);
@@ -62,16 +60,15 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
     U_NR = 1;
     NP = 0;
     SL0 = opts.SL0;
-    LSE = opts.LSE0;
+    LSE = 0;
     % State variable vector concatenates p1, p2, p2, and U_NR
     PU = [p1, p2, p3, U_NR,NP,SL0,LSE];
 
     % moments and force
     dr = g0(12)*0.01; % Power-stroke Size; Units: um
-    params.kstiff1 = g0(13)*2500; 
-    params.kstiff2 = g0(14)*200;
-    params.mu = g0(19)*1; % viscosity
-    params.kSE = g0(20)*1000;
+    kstiff1 = g0(13)*2500; 
+    kstiff2 = g0(14)*200;
+    mu = g0(19)*0.5; % viscosity
         
         if opts.ValuesInTime
             out = struct('F', [], ...
@@ -101,14 +98,13 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
             % TODO account for SL = 1 correction
             params.v = vel(vs);
             params.Vums = params.v*opts.ML; % velocity in um/s
-            params.g0 = g0;
         
             [t,PU] = ode15s(fcn,[ts tend],PU(end,:),[], params,g0);
             out = storeOutputs(out, PU, params, t, opts.ValuesInTime);
             
             if opts.ValuesInTime                
                 % reconstruct Force
-%                 out.F =  out.LSE*params.kSE;                
+                out.F =  out.LSE*params.kSE;                
                 if max(out.ps0_t) > 1e-3
                     warning("Boundary broken at vel " + num2str(params.v) + ...
                         " Extend the Slim from " + num2str(opts.Slim) );
@@ -138,17 +134,23 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
         end
         % find the exact time
         v = (SL(i) - SL(i-1))/(t(i)-t(i-1));                s = opts.OutputAtSL - SL(i-1); 
-        tc = s/v + t(i-1); % [t(i-1) tc t(i)]
+        tc = s/v + t(i-1);
 %         tc = (SL(i) - (opts.OutputAtSL))./((SL(i) - SL(i-1))/(t(i)-t(i-1))) + t(i-1);
         PUi = interp1(t, PU, tc);        
-%         SLc = PUi(:, 3*params.ss+3) % control value 
+%         SLc = PUi(:, 3*params.ss+3); % control value
         Force = PUi(3*params.ss+4)*params.kSE;
-        % importance of interp
-%         [PU(i - 1, 3*params.ss+4)*params.kSE Force PU(i, 3*params.ss+4)*params.kSE]
     else
         Force = PU(end, 3*params.ss+4)*params.kSE;
     end
     
+    if opts.ValuesInTime
+        out.FXB = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1), 0).^g0(20);
+    end
+
+    
+
+            
+
     
     if ~opts.PlotProbsOnFig
         return
@@ -173,14 +175,7 @@ function out = storeOutputs(out, PU, params, T, store)
     end
         
     % extend the curent size
-%     The first point of the simulation overlaps with last point of the
-%     previous one. Lets cut the frist point then
-if length(T) > 1
-    fp = 2;% skip the first point
-else
-    fp = 1; % do not skip, we have just one datapoint!
-end
-    for j = fp:length(T)
+    for j = 1:length(T)
 %         dt = T(j);
         i = length(out.t) + 1;
         out.PU(i, :) = PU(j, :);
@@ -200,9 +195,8 @@ end
         out.SL(i) = PU(j, 3*params.ss+3);
         out.LSE(i) = PU(j, 3*params.ss+4);
             
+        out.LSE(i) = PU(end, 3*params.ss+4);
         out.Force(i) = out.LSE(i)*params.kSE;
-        out.FXB(i) = params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
-        
         out.LXB = out.SL - out.LSE;
         if i > 1
             out.Vxb(i) = (out.LXB(i) - out.LXB(i-1))/(out.t(i) - out.t(i-1));            
@@ -212,16 +206,7 @@ end
 
         % check the overflow
         % TODO repair the overflow for both directions
-        if params.s_i0 == 1 
-            % positive velocities, right side only
-            out.ps0_t(i) = max([p1(end), p2(end), p3(end)]);
-        elseif params.s_i0 == params.ss
-            % negative velocities, left side only
-            out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);
-        else
-            % whole space, mixed velocities, better check both sides
-            out.ps0_t(i) = max([[p1(1), p2(1), p3(1)], p1(end), p2(end), p3(end)]);
-        end
+        out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);
     end
 end
 
