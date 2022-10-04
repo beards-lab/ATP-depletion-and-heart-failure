@@ -1,4 +1,4 @@
-function f = dPUdTCa(~,PU,params, g)
+function [f, outputs] = dPUdTCa(~,PU,params, g)
 % ODE function for the d/dt operator for the cross-bridge mode.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
@@ -183,3 +183,4 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
+outputs = [F_active];

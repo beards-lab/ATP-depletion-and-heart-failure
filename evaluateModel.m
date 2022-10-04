@@ -201,7 +201,10 @@ end
         out.LSE(i) = PU(j, 3*params.ss+4);
             
         out.Force(i) = out.LSE(i)*params.kSE;
-        out.FXB(i) = params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
+        
+        % get the XB force from the dpudt directly        
+        [f out.FXB(i)] = dPUdTCa(0, PU(j, :)', params, params.g0); 
+%         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
         
         out.LXB = out.SL - out.LSE;
         if i > 1
