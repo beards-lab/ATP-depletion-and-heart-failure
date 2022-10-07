@@ -14,13 +14,13 @@ LoadData;
 MgADP = 0; 
 Pi    = 0;
 F_active_0 = zeros(length(vel), length(MgATP));
-t_sl0 = [0 0.11]; % time at which the SL = 2.2 - time to stop the experiment
+t_sl0 = [0 0.1]; % time at which the SL = 2.2 at velocity of 1 ML/s - time to stop the experiment
 t_ss = [0 1]; %%  steady state time
-params0 = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', true);
-opts0 = struct('N', 40, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', false, ...
+params0 = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
+opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
     'SL0', SL0, ...
     'MatchTimeSegments', 1, 'ML', ML, 'PlotProbsOnStep', false, 'ReduceSpace', false,...
-    'OutputAtSL', 2.2, 'LSE0', 0.01);
+    'OutputAtSL', 2.2, 'LSE0', 0);
 
 %% force x velocity
 F_active = F_active_0;
@@ -29,22 +29,24 @@ if evalParts(1)
 % save from previous run
 % FAb - F_active(j,k) 
 opts = opts0;
-opts.OutputAtSL = 2.2;
+opts.OutputAtSL = Inf; % this is solved by limited sim time
 params = params0;
 for k = [1 2 3]
     params.MgATP = MgATP(k);
     for j = 1:length(vel)
         params.Velocity = vel(j);
-        opts.OutputAtSL = Inf;
         if vel(j) == 0 
-            [F_active(j,k) out] = evaluateModel(fcn, [0 0.4], params, g, opts);
+            opts.Slim = 0.04;
+%             if isfield(params, 'PU0'), params = rmfield(params, 'PU0');end
+            [F_active(j,k) out] = evaluateModel(fcn, t_ss, params, g, opts);
+            params.PU0 = out.PU(end, :);
         else
-%             opts.OutputAtSL = 2.2; 
-            [F_active(j,k) out] = evaluateModel(fcn, [0 0.1/abs(vel(j))], params, g, opts);
-%             out.SL(end)
+            opts.Slim = 0.06; % make sure we have enough space
+            [F_active(j,k) out] = evaluateModel(fcn, t_sl0/abs(vel(j)), params, g, opts);
         end        
     end
 end
+% save the init PU to save some time
 
 % normalize by number of data points
 E(1) = (sum(abs(F_active(:,1)-Data_ATP(:,2)).^2) + ...
@@ -114,7 +116,7 @@ params = params0;
 for k = 1:length(MgATP)
   params.MgATP = MgATP(k);
   % Tspan array returns F active array
-  [F_active_ktr out] = evaluateModel(fcn, [0 0.2], params, g, opts);
+  [F_active_ktr out] = evaluateModel(fcn, t_ss, params, g, opts);
   
   if F_active_ktr(end) == 0
       Ktr(k) = 0;
@@ -300,7 +302,8 @@ end
 
 disp("With Km of " + num2str(K_m) + " at max velosity of " + v_max)
 %% Force velocity
-figure(101); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
+% figure(101); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
+figure(); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
 % figure(102);hold on;
 plot(F_active(:,1), -vel,'b-','linewidth',1.5);
 plot(F_active(:,2), -vel,'g-','linewidth',1.5);
@@ -308,9 +311,10 @@ plot(F_active(:,3), -vel,'r-','linewidth',1.5);
 ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
 xlabel('Force (kPa)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14); 
-axis([0 65 0 6]);
+% axis([0 65 0 6]);
+axis([-10 65 0 6]);
 title('Force-velocity')
-box on;
+box on;grid on;
 plot(Data_ATP(:,2),Data_ATP(:,1),'bo','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 plot(Data_ATP(:,3),Data_ATP(:,1),'go','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 plot(Data_ATP(:,4),Data_ATP(:,1),'ro','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);

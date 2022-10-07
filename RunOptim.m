@@ -25,13 +25,46 @@ g = [3.8413, 1.4807, 3.3446, 1.1211, 3.1461, 0.91776, 0.51122, 1.3703, 0.76326, 
 g = [g 1 1]
 % 19 pcs from 26-08 incl the mu viscosity optim
 g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1.3384    0.3296    0.6091    1.1200 1.7357    1.5442    0.8284    1.4614 2.3482    0.6206    1.2782]
+%% Eval the model at vel 0
+g = ones(1, 20)
+params0 = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
+opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
+    'SL0', 2.2*1.1, ...
+    'MatchTimeSegments', 1, 'ML', 2.2, 'PlotProbsOnStep', false, 'ReduceSpace', false,...
+    'OutputAtSL', Inf, 'LSE0', 0.0);
+A = [8 4 2];
+params0.Velocity = -6;
+
+for k = 3:3
+    params0.MgATP = A(k);
+    params0.Velocity = 0;
+    [F(k), out] = evaluateModel(fcn, [0 1], params0, g, opts0);
+    params0.Velocity = -6;
+    params0.PU0 = out.PU(end, :);
+    [F(k) out] = evaluateModel(fcn, [0 0.20/abs(params0.Velocity*2.2)], params0, g, opts0);
+end
+params = params0;opts = opts0;
 %% set up the problem
 fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0"};
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 0 0 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 0])
 toc
+
+%% Run through params to eval their importance
+close all;
+evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+set(gcf, 'Name', 'Baseline' , 'NumberTitle', 'off')
+
+for i = 1:length(g)
+    disp(i)
+    gt = g(i);
+    g(i) = g(i)*2;
+    evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+    g(i) = gt;
+    set(gcf, 'Name', ['Param ' num2str(i) ' to 150%'], 'NumberTitle', 'off')
+end
 
 % [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 1])
 %%
@@ -148,7 +181,7 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @opt
 x = fminsearch(@EvaluateNegativeForce, g0, options)
 
 %% parameter search
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 2000, 'OutputFcn', @myoutput);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 500, 'OutputFcn', @myoutput);
 % tic
 % estart = evaluateProblem(fcn, g, true, [0 0 0 1])
 % toc
@@ -156,7 +189,7 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 0 0 0 0]);
 x = fminsearch(optimfun, g, options)
 g = x
-save gopt926 g
+save gopt1004 g
 % E0 = evaluateProblem(fcn, x, true)
 %% reduced g
 fcn = @dPUdT;

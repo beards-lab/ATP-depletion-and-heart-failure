@@ -9,7 +9,7 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
     if ~exist('opts')
         opts = struct();
     end
-    defs = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, ...
+    defs = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, ...
         'ValuesInTime', 0, 'MatchTimeSegments', 0, ...
         'SL0', 2.2, ... % initial SL length
         'ML', 2.2, ... % muscle length (um)(for calculating velocity)
@@ -54,24 +54,27 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
 % 
 %     p1([3, params.ss-2]) = 4;
 %     p2([3, params.ss-2]) = 4;
-%     p3([3, params.ss-2]) = 4;    
+%     p3([3, params.ss-2]) = 4;
+if isfield(params,'PU0')
+    PU = params.PU0;
+else
     p1 = zeros(1, params.ss);
     p2 = zeros(1, params.ss);
     p3 = zeros(1, params.ss);
-    out = struct();
-    U_NR = 1;
+    U_NR = 0;
     NP = 0;
     SL0 = opts.SL0;
     LSE = opts.LSE0;
     % State variable vector concatenates p1, p2, p2, and U_NR
     PU = [p1, p2, p3, U_NR,NP,SL0,LSE];
+end
 
     % moments and force
-    dr = g0(12)*0.01; % Power-stroke Size; Units: um
+    dr = g0(12)*1; % Power-stroke Size; Units: um
     params.kstiff1 = g0(13)*2500; 
-    params.kstiff2 = g0(14)*200;
-    params.mu = g0(19)*1; % viscosity
-    params.kSE = g0(20)*1000;
+    params.kstiff2 = g0(14)*20000;
+    params.mu = g0(19)*0.001; % viscosity
+    params.kSE = g0(20)*10000;
         
         if opts.ValuesInTime
             out = struct('F', [], ...
@@ -169,17 +172,20 @@ end
 
 function out = storeOutputs(out, PU, params, T, store)
     if ~store
+        out.PU = PU(end, :);
         return;
     end
         
     % extend the curent size
 %     The first point of the simulation overlaps with last point of the
 %     previous one. Lets cut the frist point then
+%%
 if length(T) > 1
     fp = 2;% skip the first point
 else
     fp = 1; % do not skip, we have just one datapoint!
 end
+
     for j = fp:length(T)
 %         dt = T(j);
         i = length(out.t) + 1;

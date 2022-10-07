@@ -67,8 +67,8 @@ Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fracti
 % strain-associated parameters
 alpha1 = g(16)*50;
 alpha2 = g(17)*50;
-alpha3 = g(9)*5000;
-s3     = dr;
+alpha3 = g(9)*10000;
+s3     = 0.0025;
 
 % dissociation constants
 K_Pi = 15;
@@ -91,13 +91,14 @@ k1  = g(3)*f2*500;%
 k_1 = g(4)*50;%
 k2  = g(5)*500;
 k_2 = g1*10; % not identified
-k3  = g2*g(10)*25;%;
+k3  = g2*g(10)*80;%;
 
 
 % Force model
 kstiff1 = params.kstiff1; 
 kstiff2 = params.kstiff2;
-F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
+% F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
+F_active = kstiff1*p2_1 + kstiff2*p3_1;
 
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
@@ -122,7 +123,7 @@ dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
 dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
 dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
   
-else % velHS <= 0
+elseif velHS < 0
 %     N = params.N;
 %   dp1ds(1:2*N) = ( p1(2:2*N+1) - p1(1:2*N) )/dS;
 %   dp1ds(2*N+1) = ( 0 - p1(2*N+1) )/dS;
@@ -139,13 +140,15 @@ else % velHS <= 0
 %   dp1ds = [p1(1:end-1) - p1(2:end); (0 - p1(end))]/dS;
 %   dp2ds = [p2(1:end-1) - p2(2:end); (0 - p2(end))]/dS;    
 %   dp3ds = [p3(1:end-1) - p3(2:end); (0 - p3(end))]/dS;
-  
+else 
+    % just optim, because its multiplied by 0 anyway
+    dp1ds = 0;dp2ds = 0;dp3ds = 0;
 end
 
 % transitions between super relaxed state and non relaxed state
-ksr0   = g(6)*10 ; % 
+ksr0   = g(6)*20*g4 ; % 
 sigma0 = g(7)*20;
-kmsr   = g(8)*10; % 
+kmsr   = g(8)*20; % 
 % kmsr   = g(8)*250*(1-g3); % 
 
 % phi = mod(t,T)/T;
@@ -161,7 +164,7 @@ kmsr   = g(8)*10; %
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
+dU_NR = + ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
 % dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
@@ -169,7 +172,7 @@ dU_NR = + ksr0*g4*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
 % dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
 dp1   = -velHS/2*dp1ds - kd*p1 - k1*(exp(-alpha1*s).*p1) + k_1*(exp(+alpha1*s).*p2);
 dp2   = -velHS/2*dp2ds + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s).*p2) + k_2*p3  ;
-dp3   = -velHS/2*dp3ds + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s+s3).^2).*p3);
+dp3   = -velHS/2*dp3ds + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s-s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 dp1(params.s_i0) = dp1(params.s_i0) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment

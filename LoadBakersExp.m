@@ -198,7 +198,7 @@ opts = struct('N', 40, 'Slim', 0.025, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ..
 [F out] = evaluateModelUpwind(fcn, simulateTimes, params, g, opts);
 
 
-%%
+%% Plot the lengths and forces
 clf;
 subplot(211);hold on;
 % plot(t, l, '-');
