@@ -2,7 +2,7 @@
 % load g0
 
 %% Setting up problem
-N = 50; % space (strain) discretization--number of grid points in half domain
+N = 40; % space (strain) discretization--number of grid points in half domain
 Slim = 0.040; 
 dS = Slim/N;
 s = (-N:1:N)*dS; % strain 
@@ -23,7 +23,7 @@ Pi    = 0;
 mu = 0.01; % viscosity
 dr = 0.01; % Power-stroke Size; Units: um
 kstiff1 = g0(13)*2500; 
-kstiff2 = g0(14)*200;
+kstiff2 = g0(14)*20000;
 kSE = 10000;
 
 
@@ -36,7 +36,8 @@ p3 = PU(4*N+3:6*N+3);
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-F_active = kstiff2*p3_0 + kstiff1*(  p2_1 + p3_1 ) ; % initial steady-state force
+% F_active = kstiff2*p3_0 + kstiff1*(  p2_1 + p3_1 ) ; % initial steady-state force
+F_active = kstiff2*p3_1 + kstiff1*p2_1;
 LSE = PU(6*N+5); % length series element
 F_SE = kSE*LSE;  % force series element
 
@@ -150,7 +151,7 @@ set(gca,'xlim',[-Slim +Slim],'xtick',-Slim:0.02:Slim);
 legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
 
 %
-figure(9);hold on;
+figure(9)
 plot(T_sim*1e3,F_sim,'linewidth',1.5);
 ylabel('Force (kPa)','interpreter','latex','fontsize',16);
 xlabel('time (ms)','interpreter','latex','fontsize',16);

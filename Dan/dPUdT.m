@@ -57,8 +57,9 @@ k3  = g2*g(10)*80;%;
 
 % Force model
 kstiff1 = g(13)*2500; 
-kstiff2 = g(14)*200;
-F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 );
+kstiff2 = g(14)*20000;
+% F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 );
+F_active = kstiff2*p3_1 + kstiff1*p2_1;
 % F_total = F_active + 2;
 
 % muscle model
@@ -98,9 +99,9 @@ dU_NR = + ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu  ;
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
 % dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
-dp1   = -velHS*dp1ds - kd*p1 - k1*(exp(-alpha1*s).*p1) + k_1*(exp(+alpha1*s).*p2);
-dp2   = -velHS*dp2ds + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s).*p2) + k_2*p3  ;
-dp3   = -velHS*dp3ds + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp((alpha3*(s-s3).^2).^2).*p3);
+dp1   = -velHS*dp1ds/2 - kd*p1 - k1*(exp(-alpha1*s).*p1) + k_1*(exp(+alpha1*s).*p2);
+dp2   = -velHS*dp2ds/2 + k1*(exp(-alpha1*s).*p1) - k_1*(exp(+alpha1*s).*p2) - k2*(exp(-alpha2*s).*p2) + k_2*p3  ;
+dp3   = -velHS*dp3ds/2 + k2*(exp(-alpha2*s).*p2) - k_2*p3 - k3*(exp(alpha3*(s-s3).^2).*p3);
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 dp1(N+1) = dp1(N+1) + ka*Pu*(Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment

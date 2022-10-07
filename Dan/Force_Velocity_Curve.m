@@ -1,5 +1,5 @@
 % clear
-% % g0 = ones(1,14);
+g0 = ones(1,20);
 % load g0
 
 %% Data ([ATP] = 8, 4, 2 mM)
@@ -13,7 +13,7 @@ Data = [0		56.4048	63.6074	61.3192
     5		3.2759	1.6526	1.594
     6		2.212	1.1823	1.2117];
 
-ML = 1.1; % half sarcomere length (microns)
+ML = 2.2; % half sarcomere length (microns)
 
 %% Setting up problem
 N = 20; % space (strain) discretization--number of grid points in half domain
@@ -38,10 +38,10 @@ Pi    = 0;
 % moments and force
 dr = g0(12)*0.01; % Power-stroke Size; Units: um
 kstiff1 = g0(13)*2500; 
-kstiff2 = g0(14)*200; 
+kstiff2 = g0(14)*20000; 
 kSE = 10000;
-alpha3 = g0(9)*5000;
-s3     = dr;
+alpha3 = g0(9)*10000;
+s3     = 0.0025;
 K_T1 = g0(11)*1.0; % (mM) 
 K_D  = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
 
@@ -59,7 +59,9 @@ for k = 1:3
   p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
   p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
   p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-  F_active(1,k) = kstiff2*p3_0 + kstiff1*(  p2_1 + p3_1 ) ;
+%   F_active(1,k) = kstiff2*p3_0 + kstiff1*(  p2_1 + p3_1 ) ;
+  F_active(1,k) = kstiff2*p3_1 + kstiff1*p2_1 ;
+  F_SE(1,k) = F_active(1,k);
   
   % Calculate XB cycling rate
   g2 = (MgATP(k)/K_T1)/(1 + MgATP(k)/K_T1 + MgADP/K_D);
@@ -74,25 +76,36 @@ for k = 1:3
     dt = dS/abs(vel(j));
     tend = 0.20/abs(vel(j)); % ending time of simulation
     % simulate kinetics for time tend
+        
     [t,PU] = ode15s(@dPUdT,[0 tend],PU,[],N,dS,MgATP(k),Pi,MgADP,g0,vel(j));
-    PU = PU(end,:); 
+    clear out;
+    out = struct();
+    out.t = t;
+    out.PU = PU;
+    out.LSE = PU(:, 6*N+5);
+%     PU = PU(end,:); 
    
-    p1 = PU(1:2*N+1);
-    p2 = PU(2*N+2:4*N+2);
-    p3 = PU(4*N+3:6*N+3);
-    p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-    p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-    p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-    F_active(j,k) = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 ) ;
-    LSE = PU(6*N+5); % length series element
-    F_SE(j,k) = kSE*LSE;  % force series element
+    p1 = PU(:, 1:2*N+1);
+    p2 = PU(:, 2*N+2:4*N+2);
+    p3 = PU(:, 4*N+3:6*N+3);
+    p1_0 = dS*sum(p1'); p1_1 = dS*sum((s.*p1)');
+    p2_0 = dS*sum(p2); p2_1 = dS*sum((s.*p2)');
+    p3_0 = dS*sum(p3); p3_1 = dS*sum(((s+dr).*p3)');
+%     F_active(j,k) = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1 ) ;
+    F_active(j,k) = kstiff2*p3_1(end) + kstiff1*p2_1(end);
+    LSE = PU(:, 6*N+5); % length series element
+    F_SE(j,k) = kSE*LSE(end);  % force series element
+    out.LSE = LSE;out.Force = kSE*LSE;out.FXB =  kstiff2*p3_1' + kstiff1*p2_1';
+    out.p1 = p1; out.p2 = p2; out.p3 = p3;
   
-    PU(6*N+4);
-    AA(j,k) = p1_0 + p2_0 + p3_0;
+%     PU(end, 6*N+4);
+    AA(j,k) = p1_0(end) + p2_0(end) + p3_0(end);
 
     % Calculate XB cycling rate
-    r_off = k3*(exp(alpha3*(s+s3).^2).*p3);
+    r_off = k3*(exp(alpha3*(s+s3).^2).*p3(end));
     XBCR(j,k) = dS*sum(r_off);
+    
+    PU = PU(end,:); 
   
   end
 
@@ -101,9 +114,13 @@ end
 %% plots
 
 figure(1); clf; axes('position',[0.15 0.15 0.8 0.8]); hold on;
-plot(F_active(:,1), -vel./ML,'b-','linewidth',1.5);
-plot(F_active(:,2), -vel./ML,'g-','linewidth',1.5);
-plot(F_active(:,3), -vel./ML,'r-','linewidth',1.5);
+plot(F_active(:,1), -vel./ML,'b--','linewidth',1.5);
+plot(F_active(:,2), -vel./ML,'g--','linewidth',1.5);
+plot(F_active(:,3), -vel./ML,'r--','linewidth',1.5);
+plot(F_SE(:,1), -vel./ML,'b-','linewidth',1.5);
+plot(F_SE(:,2), -vel./ML,'g-','linewidth',1.5);
+plot(F_SE(:,3), -vel./ML,'r-','linewidth',1.5);
+
 ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
 xlabel('Force (kPa)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14); 

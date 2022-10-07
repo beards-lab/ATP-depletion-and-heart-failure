@@ -1,6 +1,6 @@
 % clear
 % load g0
-g0 = ones(20, 1);
+
 %% Setting up problem
 N = 50; % space (strain) discretization--number of grid points in half domain
 Slim = 0.040; 
@@ -23,7 +23,7 @@ Pi    = 0;
 mu = 1; % viscosity
 dr = 0.01; % Power-stroke Size; Units: um
 kstiff1 = g0(13)*2500; 
-kstiff2 = g0(14)*200;
+kstiff2 = g0(14)*20000;
 kSE = 10000;
 
 %   Set the outer timestep based on space step:
@@ -40,7 +40,8 @@ p3 = PU(4*N+3:6*N+3);
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-F_active = kstiff2*p3_0 + kstiff1*(  p2_1 + p3_1 ) ; % initial steady-state force
+% F_active = kstiff2*p3_0 + kstiff1*(  p2_1 + p3_1 ) ; % initial steady-state force
+F_active = kstiff2*p3_1 + kstiff1*p2_1 ; % initial steady-state force
 
 T_sim = 0;
 F_sim = F_active;
@@ -65,7 +66,8 @@ while forcepositive
   p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
   p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
   p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-  F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1) ;
+%   F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1) ;
+  F_active = kstiff2*p3_1 + kstiff1*p2_1 ; 
   LSE = PU(6*N+5); % length series element
   F_SE = kSE*LSE;  % force series element
   forcepositive = F_active > 25;
@@ -76,7 +78,7 @@ while forcepositive
 end
 
 % (2.) next run at constant velocity until SL = SLo
-vel = -1*1.1; % micron per sec
+vel = -2*1.1; % micron per sec
 dt = dS/abs(vel);
 tend = 0.1/abs(vel); % ending time of simulation
 Nstep = round(tend/dt);
@@ -93,7 +95,8 @@ for i = 1:100
   p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
   p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
   p3_0 = dS*sum(p3); p3_1 = dS*sum((s+dr).*p3);
-  F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1) ;
+%   F_active = kstiff2*p3_0 + kstiff1*( p2_1 + p3_1) ;
+  F_active = kstiff2*p3_1 + kstiff1*p2_1 ; 
   LSE = PU(6*N+5); % length series element
   F_SE = kSE*LSE;  % force series element
   F_sim = [F_sim, F_SE];
@@ -125,7 +128,7 @@ xlabel('time (ms)','interpreter','latex','fontsize',16);
 set(gca,'fontsize',14,'Xlim',[0 120]);
 
 figure(10); clf
-plot(T_sim*1e3,SL_sim, '*--','linewidth',1.5); hold on;
+plot(T_sim*1e3,SL_sim,'linewidth',1.5); hold on;
 plot([0 120]*1e3,[SLo SLo],'k--');
 ylabel('Length ($\mu$m)','interpreter','latex','fontsize',16);
 xlabel('time (ms)','interpreter','latex','fontsize',16);
