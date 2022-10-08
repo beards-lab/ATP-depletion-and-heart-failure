@@ -73,8 +73,8 @@ end
     dr = g0(12)*1; % Power-stroke Size; Units: um
     params.kstiff1 = g0(13)*2500; 
     params.kstiff2 = g0(14)*20000;
-    params.mu = g0(19)*0.001; % viscosity
-    params.kSE = g0(20)*10000;
+    params.mu = g0(19)*0.1; % viscosity
+    params.kSE = g0(20)*5000;
         
         if opts.ValuesInTime
             out = struct('F', [], ...

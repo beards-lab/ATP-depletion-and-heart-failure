@@ -25,6 +25,8 @@ g = [3.8413, 1.4807, 3.3446, 1.1211, 3.1461, 0.91776, 0.51122, 1.3703, 0.76326, 
 g = [g 1 1]
 % 19 pcs from 26-08 incl the mu viscosity optim
 g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1.3384    0.3296    0.6091    1.1200 1.7357    1.5442    0.8284    1.4614 2.3482    0.6206    1.2782]
+% 10/08
+g = [1.6469, 1.0000, 1.1611, 0.0053, 1.5031, 1.5605, 0.9276, 0.0220, 0.3455, 1.0114, 0.2624, 1.9307, 1.5611, 1.2518, 1.6784, 0.6298, 1.1186, 0.4442, 1.3752, 1.0959]
 %% Eval the model at vel 0
 g = ones(1, 20)
 params0 = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
@@ -49,7 +51,7 @@ fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0"};
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 0 0 1])
 toc
 
 %% Run through params to eval their importance
@@ -73,7 +75,7 @@ end
 % Run basic sensitivity with updated cost func
 % only evaluated sensitivities
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u"};
-se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 0 0 0 0]);title('Eval Optim for 1111');
+se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 1 0 0 1]);title('Eval Optim for 1111');
 
 %% extension
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
@@ -191,26 +193,43 @@ x = fminsearch(optimfun, g, options)
 g = x
 save gopt1004 g
 % E0 = evaluateProblem(fcn, x, true)
-%% reduced g
-fcn = @dPUdT;
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 500, 'OutputFcn', @myoutput);
+%% Attempt on GA
+% parpool
+ga_Opts = optimoptions('ga', ...
+    'PopulationSize',64, ...            % 250
+    'Display','iter', ...
+    'MaxStallGenerations',5, ...  % 10
+    'UseParallel',true);
 
-g_selection = [1 3 5:18];
+[p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
+    ga(optimfun,size(gr, 2), ...
+    [],[],[],[],zeros(size(gr)),Inf(size(gr)),[],ga_Opts);
+
+%% reduced g
+fcn = @dPUdTCa;
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
+% , 'OutputFcn', @myoutput);
+
+g_selection = [1 3:20];
 % leftovers = setdiff(1:length(g),g_selection);
 
 gr = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
-% optimfun = @(gr)evaluateProblem(fcn, [gr(1) 0.0555 gr(2) 3.6484 gr(3:end)], false, [1 1 1 1]);
-optimfun = @(gr)evaluateProblem(fcn, gr, false, [0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 1 0 0 1]);
+% optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 1 1 0 0 1 ]);
 
     
-% x = fminsearch(optimfun, gr, options)
-x = fminsearch(optimfun, g, options)
+x = fminsearch(optimfun, gr, options)
+% x = fminsearch(optimfun, g, options)
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
+
+
+
+
 %% plot g
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3"};
 figure(2);clf;

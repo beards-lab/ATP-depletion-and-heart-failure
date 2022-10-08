@@ -17,7 +17,7 @@ F_active_0 = zeros(length(vel), length(MgATP));
 t_sl0 = [0 0.1]; % time at which the SL = 2.2 at velocity of 1 ML/s - time to stop the experiment
 t_ss = [0 1]; %%  steady state time
 params0 = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
-opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
+opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', false, ...
     'SL0', SL0, ...
     'MatchTimeSegments', 1, 'ML', ML, 'PlotProbsOnStep', false, 'ReduceSpace', false,...
     'OutputAtSL', 2.2, 'LSE0', 0);
@@ -36,7 +36,7 @@ for k = [1 2 3]
     for j = 1:length(vel)
         params.Velocity = vel(j);
         if vel(j) == 0 
-            opts.Slim = 0.04;
+            opts.Slim = 0.06;
 %             if isfield(params, 'PU0'), params = rmfield(params, 'PU0');end
             [F_active(j,k) out] = evaluateModel(fcn, t_ss, params, g, opts);
             params.PU0 = out.PU(end, :);
@@ -47,6 +47,7 @@ for k = [1 2 3]
     end
 end
 % save the init PU to save some time
+PU0 = params.PU0;
 
 % normalize by number of data points
 E(1) = (sum(abs(F_active(:,1)-Data_ATP(:,2)).^2) + ...
@@ -94,6 +95,7 @@ if evalParts(2)
       % Zero velocity:
       params.MgATP = MgATP_iso(k);
       [F_iso(k) out] = evaluateModel(fcn, t_ss, params, g, opts);
+      params.PU0 = out.PU(end, :); % speeds the next initialization a bit
 %       F_iso(k) - out.Force(end)
     end
     
@@ -108,7 +110,7 @@ KtrOuts = cell(length(MgATP), 2);
 if evalParts(3)
 %%     
 opts = opts0;
-opts.N = 30;
+opts.N = 20;
 opts.ValuesInTime = true;
 opts.OutputAtSL = Inf;
 params = params0;
@@ -127,7 +129,10 @@ for k = 1:length(MgATP)
   Frel = out.Force./out.Force(end);
   
   % get the time constant
-  Ktr(k) = 1/interp1(Frel,out.t,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
+%   Ktr(k) = 1/interp1(Frel,out.t,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
+%   find val at time 1-exp(-1)
+  i = find(Frel >= 1-exp(-1), 1);
+  Ktr(k) = 1/out.t(i);
   KtrOuts{k, 1} = out.t;
   KtrOuts{k, 2} = Frel;
 end
@@ -350,7 +355,8 @@ plot(MgATP,Ktr,'k.-','linewidth',1.5);
 errorbar(MgATP,Ktr_mean,Ktr_err,'ko','linewidth',1.5,'markersize',6);
 xlabel('[MgATP] (mM)','interpreter','latex','fontsize',6);
 ylabel('$K_{tr}$ (sec.$^{-1}$)','interpreter','latex','fontsize',6);
-set(gca,'fontsize',9,'xlim',[0 10],'ylim',[0 45]); box on;
+% set(gca,'fontsize',9,'xlim',[0 10],'ylim',[0 45]); box on;
+set(gca,'fontsize',9,'xlim',[0 10]); box on;
 
 % axes('position',[0.1 0.13 0.45 0.33]); hold on;
 % figure;
