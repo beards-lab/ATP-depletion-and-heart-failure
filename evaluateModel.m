@@ -73,8 +73,8 @@ end
     dr = g0(12)*1; % Power-stroke Size; Units: um
     params.kstiff1 = g0(13)*2500; 
     params.kstiff2 = g0(14)*20000;
-    params.mu = g0(19)*0.1; % viscosity
-    params.kSE = g0(20)*5000;
+    params.mu = g0(19)*5; % viscosity
+    params.kSE = g0(20)*2500;
         
         if opts.ValuesInTime
             out = struct('F', [], ...
@@ -209,7 +209,9 @@ end
         out.Force(i) = out.LSE(i)*params.kSE;
         
         % get the XB force from the dpudt directly        
-        [f out.FXB(i)] = dPUdTCa(0, PU(j, :)', params, params.g0); 
+        [f outputs] = dPUdTCa(0, PU(j, :)', params, params.g0); 
+        out.FXB(i) = outputs(1);
+        out.FXBPassive(i) = outputs(2);
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
         
         out.LXB = out.SL - out.LSE;

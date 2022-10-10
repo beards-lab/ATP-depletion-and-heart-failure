@@ -100,11 +100,22 @@ kstiff2 = params.kstiff2;
 % F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
 F_active = kstiff1*p2_1 + kstiff2*p3_1;
 
+if params.UsePassive
+    Lsc0    = 1.51;
+    gamma = 7.5;
+    k_pas = 230*g(21); % From Kim Salla et al.
+    F_passive = k_pas*(SL - Lsc0)^gamma; 
+else
+    F_passive = 0;
+end
+
+F_total = F_active + F_passive;
+
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
 
 % muscle model
-velHS = (params.kSE*LSE - F_active)/params.mu;% velocity of half-sarcomere
+velHS = (params.kSE*LSE - F_total)/params.mu;% velocity of half-sarcomere
 dLSEdt = vel - velHS;
 
 % Estimating space derivatives, upwind differencing
@@ -186,4 +197,4 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-outputs = [F_active];
+outputs = [F_active, F_passive];

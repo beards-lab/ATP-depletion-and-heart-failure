@@ -48,11 +48,13 @@ end
 params = params0;opts = opts0;
 %% set up the problem
 fcn = @dPUdTCa;
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0"};
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0", "k_pas"};
+
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 0 0 1])
 toc
+E1
 % writematrix(g, 'gopt.csv')
 
 %% Run through params to eval their importance
@@ -211,7 +213,7 @@ fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % , 'OutputFcn', @myoutput);
 
-g_selection = [1 3:20];
+g_selection = [1 3:21];
 % leftovers = setdiff(1:length(g),g_selection);
 
 gr = g(g_selection);
@@ -228,7 +230,7 @@ x = fminsearch(optimfun, gr, options)
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
 g = [x(1) 1 x(2:end)];
-save gopt1008_2 g;
+save gopt1010 g;
 
 % to commit as plaintext
 writematrix(g, 'gopt.csv')
