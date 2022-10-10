@@ -51,8 +51,9 @@ fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0"};
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
 toc
+% writematrix(g, 'gopt.csv')
 
 %% Run through params to eval their importance
 close all;
@@ -76,7 +77,7 @@ end
 % only evaluated sensitivities
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u"};
 se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 1 0 0 1]);title('Eval Optim for 1111');
-
+saveas(gcf, 'sensitivities.png')
 %% extension
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
 se0010 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 1 0]);title('Eval Optim for 0010');
@@ -183,15 +184,15 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'TolX', 1, 'PlotFcns', @opt
 x = fminsearch(@EvaluateNegativeForce, g0, options)
 
 %% parameter search
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 500, 'OutputFcn', @myoutput);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500, 'OutputFcn', @myoutput);
 % tic
 % estart = evaluateProblem(fcn, g, true, [0 0 0 1])
 % toc
 
 optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 0 0 0 0]);
 x = fminsearch(optimfun, g, options)
-g = x
-save gopt1004 g
+g = x;
+save gopt1010 g;
 % E0 = evaluateProblem(fcn, x, true)
 %% Attempt on GA
 % parpool
@@ -207,7 +208,7 @@ ga_Opts = optimoptions('ga', ...
 
 %% reduced g
 fcn = @dPUdTCa;
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % , 'OutputFcn', @myoutput);
 
 g_selection = [1 3:20];
@@ -226,9 +227,16 @@ x = fminsearch(optimfun, gr, options)
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
+g = [x(1) 1 x(2:end)];
+save gopt1008_2 g;
 
+% to commit as plaintext
+writematrix(g, 'gopt.csv')
 
-
+tic
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+toc
+saveas(gcf, 'ProblemEval.png')
 
 %% plot g
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3"};
