@@ -175,7 +175,7 @@ kmsr   = g(8)*20; %
 
 Amax = g(18)*0.5;
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-dU_NR = + ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu; 
+dU_NR = + ksr0*exp(F_total/sigma0)*U_SR - kmsr*U_NR*Pu; 
 % dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 

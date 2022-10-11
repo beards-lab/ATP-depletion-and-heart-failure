@@ -52,7 +52,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 0 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -220,7 +220,7 @@ gr = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
-optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 1 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 1 1 0 0 1 ]);
 
     
