@@ -1,4 +1,4 @@
-function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
+function [Force, out] = evaluateModel(fcn, T, params)
 % params: model parameter structure (required)s
 % default: params = struct('Pi;, 0,'MgADP', 0, 'velocity', -1);
 % opts: optional simulation options, otherwise reverting to default
@@ -6,55 +6,6 @@ function [Force, out] = evaluateModel(fcn, T, params, g0, opts)
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
 
-    if ~exist('opts')
-        opts = struct();
-    end
-    defs = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, ...
-        'ValuesInTime', 0, 'MatchTimeSegments', 0, ...
-        'SL0', 2.2, ... % initial SL length
-        'ML', 2.2, ... % muscle length (um)(for calculating velocity)
-        'PlotProbsOnStep', false, ...
-        'ReduceSpace', false, ...
-        'SLmax', Inf, ...
-        'OutputAtSL', Inf, ...
-        'LSE0', 0 ...
-        );
-    
-    opts = fillInDefaults(opts, defs);
-    
-    vel = params.Velocity;
-    params.PlotProbsOnStep = opts.PlotProbsOnStep;
-    
-%     Force = zeros(size(vel));
-    params.N = opts.N; % space (strain) discretization--number of grid points in half domain
-    N = opts.N;
-%     Slim = opts.Slim; 
-    params.dS = opts.Slim/opts.N;
-%     params.Slim = opts.Slim;
-    if opts.ReduceSpace && all(params.Velocity == 0)
-        params.s = [-opts.N 0 opts.N]*params.dS; % strain space
-        params.s_i0 = 1; % index of the origin zero strain    
-    elseif opts.ReduceSpace && all(params.Velocity >= 0)
-        params.s = (0:opts.N)*params.dS; % strain space
-        params.s_i0 = 1; % index of the origin zero strain    
-    elseif opts.ReduceSpace && all(params.Velocity <= 0)
-        params.s = (-opts.N:0)*params.dS; % strain space
-        params.s_i0 = length(params.s); % index of the origin zero strain    
-    else
-        params.s = (-opts.N:opts.N).*params.dS; % strain space
-        params.s_i0 = opts.N + 1; % index of the origin zero strain    
-    end
-
-    params.ss = length(params.s); % strain step (number of Ns in one set)
-
-    % Initial variables for Force-velocity experiment
-%     p1 = 1*ones(1, params.ss);
-%     p2 = 2*ones(1, params.ss);
-%     p3 = 3*ones(1, params.ss);   
-% 
-%     p1([3, params.ss-2]) = 4;
-%     p2([3, params.ss-2]) = 4;
-%     p3([3, params.ss-2]) = 4;
 if isfield(params,'PU0')
     PU = params.PU0;
 else
@@ -63,65 +14,41 @@ else
     p3 = zeros(1, params.ss);
     U_NR = 0;
     NP = 0;
-    SL0 = opts.SL0;
-    LSE = opts.LSE0;
+    SL0 = params.SL0;
+    LSE = params.LSE0;
     % State variable vector concatenates p1, p2, p2, and U_NR
     PU = [p1, p2, p3, U_NR,NP,SL0,LSE];
 end
-
-    % moments and force
-    dr = g0(12)*1; % Power-stroke Size; Units: um
-    params.kstiff1 = g0(13)*2500; 
-    params.kstiff2 = g0(14)*20000;
-    params.mu = g0(19)*1; % viscosity
-    params.kSE = g0(20)*5000;
         
-        if opts.ValuesInTime
-            out = struct('F', [], ...
-                't', [] , ...
-                'SL', [], ...
-                'p1_0', [], ...
-                'p2_0', [], ...
-                'p3_0', [], ...
-                'p1_1', [], ...
-                'p2_1', [], ...
-                'p3_1', [], ...
-                'v', [],... % velocity in ML/s
-                'NR', [], ...
-                'NP', [], ...
-                'ps0_t', [], ...
-                'dr', dr);
-        else
-            out = struct();
-        end
+        out = [];
         
         % vs for VelocitySegment
-        for vs = 1:length(vel)
+        for vs = 1:length(params.Velocity)
             ts = T(vs);
 %             et = 0; %elapsed time
             tend = T(vs+1); % ending time of simulation in the current segment
             
-            % TODO account for SL = 1 correction
-            params.v = vel(vs);
-            params.Vums = params.v*opts.ML; % velocity in um/s
-            params.g0 = g0;
+            params.v = params.Velocity(vs);
+            params.Vums = params.v*params.ML; % velocity in um/s
+
         
-            [t,PU] = ode15s(fcn,[ts tend],PU(end,:),[], params,g0);
-            out = storeOutputs(out, PU, params, t, opts.ValuesInTime);
+            [t,PU] = ode15s(fcn,[ts tend],PU(end,:),[], params);
+            out = storeOutputs(out, PU, params, t);
             
-            if opts.ValuesInTime                
+            if params.ValuesInTime                
                 % reconstruct Force
 %                 out.F =  out.LSE*params.kSE;                
                 if max(out.ps0_t) > 1e-3
                     warning("Boundary broken at vel " + num2str(params.v) + ...
-                        " Extend the Slim from " + num2str(opts.Slim) );
+                        "( " + num2str(max(out.ps0_t)) + ")" + ...
+                        " Extend the Slim from " + num2str(params.Slim) );
                 end
             end      
         
         end % end the velocity segment
     
     %% Check for the length crossing IN THE LAST SEGMENT ONLY
-    if opts.OutputAtSL < Inf
+    if params.OutputAtSL < Inf
         SL = PU(:, 3*params.ss+3);
         ma = max(SL);
         mi = min(SL);
@@ -153,7 +80,7 @@ end
     end
     
     
-    if ~opts.PlotProbsOnFig
+    if ~params.PlotProbsOnFig
         return
     end
 
@@ -170,18 +97,35 @@ end
         
 end
 
-function out = storeOutputs(out, PU, params, T, store)
-    if ~store
+function out = storeOutputs(out, PU, params, T)
+    if ~params.ValuesInTime
         out.PU = PU(end, :);
-        return;
+        T = T(end)
+%         return;
     end
-        
+    
+        if isempty(out)
+            out = struct('F', [], ...
+                't', [] , ...
+                'SL', [], ...
+                'p1_0', [], ...
+                'p2_0', [], ...
+                'p3_0', [], ...
+                'p1_1', [], ...
+                'p2_1', [], ...
+                'p3_1', [], ...
+                'v', [],... % velocity in ML/s
+                'NR', [], ...
+                'NP', [], ...
+                'ps0_t', []);
+        end    
+
     % extend the curent size
 %     The first point of the simulation overlaps with last point of the
 %     previous one. Lets cut the frist point then
 %%
 if length(T) > 1
-    fp = 2;% skip the first point
+    fp = 2;% skip the first point to seamless stitch the velocity segments together
 else
     fp = 1; % do not skip, we have just one datapoint!
 end
@@ -193,7 +137,7 @@ end
         p1 = PU(j, 1:params.ss); p2 = PU(j, 1*params.ss+1:2*params.ss); p3 = PU(j, 2*params.ss+1:3*params.ss);
         out.p1_0(i) = params.dS*sum(p1); out.p1_1(i) = params.dS*sum(params.s.*p1);
         out.p2_0(i) = params.dS*sum(p2); out.p2_1(i) = params.dS*sum(params.s.*p2);
-        out.p3_0(i) = params.dS*sum(p3); out.p3_1(i) = params.dS*sum((params.s+out.dr).*p3); 
+        out.p3_0(i) = params.dS*sum(p3); out.p3_1(i) = params.dS*sum((params.s+params.dr).*p3); 
 
         % calculated post-process
         %     out.F(i) = kstiff2*out.p3_0(i) ...
@@ -209,7 +153,7 @@ end
         out.Force(i) = out.LSE(i)*params.kSE;
         
         % get the XB force from the dpudt directly        
-        [f outputs] = dPUdTCa(0, PU(j, :)', params, params.g0); 
+        [f outputs] = dPUdTCa(0, PU(j, :)', params); 
         out.FXB(i) = outputs(1);
         out.FXBPassive(i) = outputs(2);
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
@@ -233,18 +177,5 @@ end
             % whole space, mixed velocities, better check both sides
             out.ps0_t(i) = max([[p1(1), p2(1), p3(1)], p1(end), p2(end), p3(end)]);
         end
-    end
-end
-
-function opts = fillInDefaults(opts, defs)
-    % thanks to Adam Danz from MatlabCentral
-    % List fields in both structs
-    optsfn = fieldnames(opts); 
-    defsfn = fieldnames(defs); 
-    % List fields missing in s
-    missingIdx = find(~ismember(defsfn,optsfn));
-    % Assign missing fields to s
-    for i = 1:length(missingIdx)
-        opts.(defsfn{missingIdx(i)}) = defs.(defsfn{missingIdx(i)}); 
     end
 end

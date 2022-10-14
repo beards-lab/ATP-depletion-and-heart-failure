@@ -16,33 +16,27 @@ Pi    = 0;
 F_active_0 = zeros(length(vel), length(MgATP));
 t_sl0 = [0 0.1]; % time at which the SL = 2.2 at velocity of 1 ML/s - time to stop the experiment
 t_ss = [0 1]; %%  steady state time
-params0 = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', true, 'UsePassive', true);
-opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
-    'SL0', SL0, ...
-    'MatchTimeSegments', 1, 'ML', ML, 'PlotProbsOnStep', false, 'ReduceSpace', false,...
-    'OutputAtSL', 2.2, 'LSE0', 0);
+params0 = getParams([], g);
 
 %% force x velocity
 F_active = F_active_0;
 if evalParts(1)
 %%
-% save from previous run
-% FAb - F_active(j,k) 
-opts = opts0;
-opts.OutputAtSL = Inf; % this is solved by limited sim time
 params = params0;
+params.OutputAtSL = Inf; % this is solved by limited sim time
+params.Slim = 0.06;
+% update the dS
+params = getParams(params, g);
 for k = [1 2 3]
     params.MgATP = MgATP(k);
     for j = 1:length(vel)
         params.Velocity = vel(j);
         if vel(j) == 0 
-            opts.Slim = 0.06;
 %             if isfield(params, 'PU0'), params = rmfield(params, 'PU0');end
-            [F_active(j,k) out] = evaluateModel(fcn, t_ss, params, g, opts);
+            [F_active(j,k) out] = evaluateModel(fcn, t_ss, params);
             params.PU0 = out.PU(end, :);
         else
-            opts.Slim = 0.06; % make sure we have enough space
-            [F_active(j,k) out] = evaluateModel(fcn, t_sl0/abs(vel(j)), params, g, opts);
+            [F_active(j,k) out] = evaluateModel(fcn, t_sl0/abs(vel(j)), params);
         end        
     end
 end
@@ -397,27 +391,30 @@ else
 end
 %%
 % figure(102);clf;hold on;
+if evalParts(5)
+%     axes('position',[0.6 0.13 0.10 0.35]);cla;hold on;
+    axes('position',[0.6 0.13 0.35 0.35]);cla;hold on;
+    set(gca,'fontsize',14);box on;
+    title("Maximum sliding velocity, Km " + num2str(K_m));
+    fill([0.04 0.1 0.1 0.04], [0 0 4 4], [0.8 0.98 0.8], 'LineStyle', 'None');
+    fill([1.96 2.0 2.0 1.96], [2 2 8 8], [0.8 0.8 0.98], 'LineStyle', 'None');
+    plot([0, K_m, 2], [0, v_max/2, v_max], 's--', 'Color', [0 0 0.3], 'MarkerSize', 8, 'MarkerFaceColor', [0 0 0.3]);
+    plot(atp, v_atp, 'bo-', 'MarkerSize', 4, 'MarkerFaceColor', [0 0 1]);
 
-axes('position',[0.6 0.13 0.10 0.35]);cla;hold on;
-set(gca,'fontsize',14);box on;
-title("Maximum sliding velocity, Km " + num2str(K_m));
-fill([0.04 0.1 0.1 0.04], [0 0 4 4], [0.8 0.98 0.8], 'LineStyle', 'None');
-fill([1.96 2.0 2.0 1.96], [2 2 8 8], [0.8 0.8 0.98], 'LineStyle', 'None');
-plot([0, K_m, 2], [0, v_max/2, v_max], 's--', 'Color', [0 0 0.3], 'MarkerSize', 8, 'MarkerFaceColor', [0 0 0.3]);
-plot(atp, v_atp, 'bo-', 'MarkerSize', 4, 'MarkerFaceColor', [0 0 1]);
-
-plot([0, 2], [v_max/2, v_max/2], '--', 'Color', [1 0 0]);
-text(1.5, v_max/2 - 0.3, 'half-max velocity', 'Color', [1 0 0])
-xlim([0, 2]);
-xlabel('MgATP');
-ylabel('Zero force velocity ML/s');
-legend('K_m area', 'V_{max} area', 'v_{max} simplified', 'v_{max}', 'Location', 'NorthWest', 'fontsize',9)
-
+    plot([0, 2], [v_max/2, v_max/2], '--', 'Color', [1 0 0]);
+    text(1.5, v_max/2 - 0.3, 'half-max velocity', 'Color', [1 0 0])
+    xlim([0, 2]);
+    xlabel('MgATP');
+    ylabel('Zero force velocity ML/s');
+    legend('K_m area', 'V_{max} area', 'v_{max} simplified', 'v_{max}', 'Location', 'NorthWest', 'fontsize',9)
+end
 if evalParts(6)
     % Bakers step-up
-    axes('position',[0.75 0.13 0.2 0.35]);cla;hold on;
-    plot(out.t, out.Force, t_exp, datatable(:, 3), t_exp, Fi, 'x', 'Linewidth', 2, 'MarkerSize', 10);
-    yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
+%     axes('position',[0.75 0.13 0.2 0.35]);cla;hold on;
+    axes('position',[0.6 0.13 0.35 0.35]);cla;hold on;
+%     axes('position',[0.75 0.13 0.2 0.35]);cla;hold on;
+    plot(out.t, out.Force, t_exp, datatable(:, 3), t_exp, Fi, '--', 'Linewidth', 2, 'MarkerSize', 2);
+%     yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
 end
 return
 %% Eval the N

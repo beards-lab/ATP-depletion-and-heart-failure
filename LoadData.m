@@ -14,10 +14,6 @@ Data_ATP = [0		56.4048	63.6074	61.3192
 %         2		17.8025	13.5516	10.2112        
 %         6		2.212	1.1823	1.2117];
 
-% ML = 1.1; % half sarcomere length (microns)
-ML = 2.2; % reference muscle length
-
-SL0 = 2.2*1.1;
 % Non-zero velocities
 vel = (-Data_ATP(:,1)); % ML/s
 
