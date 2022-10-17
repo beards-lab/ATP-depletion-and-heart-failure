@@ -58,12 +58,16 @@ Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fracti
 
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
-g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-% g3 = MgATP/(MgATP + K_T2);
-g4 = MgATP/(MgATP + params.K_T3);
-f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
+% g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+% g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+% % g3 = MgATP/(MgATP + K_T2);
+% g4 = MgATP/(MgATP + params.K_T3);
+% f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
 
+g1 = 0;
+g2 = 0.95;
+g4 = 0.604;
+f1 = 0;f2 = 1;
 % Force model
 kstiff1 = params.kstiff1; 
 kstiff2 = params.kstiff2;

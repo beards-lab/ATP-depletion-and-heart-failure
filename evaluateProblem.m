@@ -10,6 +10,10 @@ E = zeros(4, 1);
 
 LoadData;
 
+%% Limit the ATP to single val
+Data_ATP = Data_ATP(:, 1:2);
+MgATP = MgATP(1);
+
 %% Set up environment
 MgADP = 0; 
 Pi    = 0;
