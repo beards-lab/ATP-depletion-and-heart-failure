@@ -1,4 +1,6 @@
-%% Control room for evaluating the simulations
+%% Calculates and draws force-pCa plot
+% TODO fix
+
 % init
 load gopt;
 LoadData;
@@ -12,36 +14,36 @@ t_ss = [0 0.2]; %% steady state time
 
 fcn = @dPUdTCa;
 opts = struct('N', 40, 'Slim', 0.05, 'PlotProbsOnFig', 0, 'ValuesInTime', 1);
-%% Evaluate state distribution and different speeds
-figure(1);clf;
-params = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 100,'Velocity', 0,'UseCa', true,'UseOverlap', false);
-[F, outs] = evaluateModel(fcn, t_ss, params,g, opts);
-%% Force velocity profile
+% %% Evaluate state distribution and different speeds
+% figure(1);clf;
+% params = struct('Pi', 0, 'MgATP', 2, 'MgADP', 0, 'Ca', 100,'Velocity', 0,'UseCa', true,'UseOverlap', false);
+% [F, outs] = evaluateModel(fcn, t_ss, params,g, opts);
+% %% Force velocity profile
+% 
+% figure(4);clf;
+% subplot(211);
+% plot(outs.t, outs.F);
+% title(['Force at velocity ' num2str(params.Velocity)]);
+% xlabel('time')
+% 
+% subplot(223);
+% plot(outs.t, outs.NR, outs.t,outs.NP, outs.t, outs.p1_0,outs.t, outs.p2_0, outs.t, outs.p3_0);
+% title('Zero moment to time')
+% legend('NR', 'NP', 'P1', 'P2', 'P3');
+% 
+% subplot(224);
+% plot(outs.t, outs.p1_1,outs.t, outs.p2_1, outs.t, outs.p3_1);
+% title('First moment to time');
+% 
+% 
+% if isfield(outs, 'ps0_t')
+% 
+%     figure(5);clf;
+%     plot(outs.t, outs.ps0_t);
+%     title('S(1) maximal value (checking the boundary)')
+% end
 
-figure(4);clf;
-subplot(211);
-plot(outs.t, outs.F);
-title(['Force at velocity ' num2str(params.Velocity)]);
-xlabel('time')
-
-subplot(223);
-plot(outs.t, outs.NR, outs.t,outs.NP, outs.t, outs.p1_0,outs.t, outs.p2_0, outs.t, outs.p3_0);
-title('Zero moment to time')
-legend('NR', 'NP', 'P1', 'P2', 'P3');
-
-subplot(224);
-plot(outs.t, outs.p1_1,outs.t, outs.p2_1, outs.t, outs.p3_1);
-title('First moment to time');
-
-
-if isfield(outs, 'ps0_t')
-
-    figure(5);clf;
-    plot(outs.t, outs.ps0_t);
-    title('S(1) maximal value (checking the boundary)')
-end
-
-%% draw the force-pCa plot
+%% Calculate the force-pCa plot
 % 1e-3:100
 % x axis: 10 to 2
 pRange = 4.5:0.1:7.5;
@@ -60,7 +62,7 @@ for a = 1:length(ATP)
         xbtor(a, i) = out.XB_TOR(end);
     end
 end
-%%
+%% Postprocess and plot
 figure(5);clf;hold on;
 subplot(231);cla;hold on;
 plotstyle = {'o-', '-', '-', '-', '-', '-', '-', '-', 'x-'};
@@ -153,7 +155,7 @@ xticklabels(leg);
 xtickangle(45);
 title('pCa steepness changes with ATP');
 
-%% test the hill fit
+%% test the hill fit Error
 figure(6);clf;hold on;
 % hf =  @(p, x)(1)./(1 + abs(p(1)/x)^p(2))
 c = jet(size(hf, 1));
@@ -180,6 +182,8 @@ ML = 2.2;
 dML = durVel(1:end, 1).*durVel(1:end, 2); % change in ML per each step
 MLt = [0 ; cumsum(dML)]
 
+figure(7)
 plot(timesVel(:, 1), MLt*ML)
+title('Test stepping up the SL');
 
 % timesVel(2:end,1) = durVel(1:end, 1) + durVel(2:end-1, 1) 
