@@ -37,8 +37,9 @@ end
             
             if params.ValuesInTime                
                 % reconstruct Force
-%                 out.F =  out.LSE*params.kSE;                
-                if max(out.ps0_t) > 1e-3
+%                 out.F =  out.LSE*params.kSE;
+                is = find(out.t >= ts, 1);
+                if max(out.ps0_t(is:end)) > 1e-3
                     warning("Boundary broken at vel " + num2str(params.v) + ...
                         "( " + num2str(max(out.ps0_t)) + ")" + ...
                         " Extend the Slim from " + num2str(params.Slim) );

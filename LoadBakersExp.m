@@ -26,25 +26,7 @@ dt8.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 datalabel = "8 mM";
 ts = [490, 500.25, 500.9, 509.25, 510, 519.5,539.8, 550];
 SL0 = 2.2*1.1;
-
-%% load step-up data for 2 mM
-datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
-% datafile = "data/06 21 21 Ramps 8mM ATP.xlsx";
-data_table = readtable(datafile, ...
-    "filetype", 'spreadsheet', ...
-    'VariableNamingRule', 'modify', ...
-    'Sheet', 'Sheet1', ...
-    'Range', 'A5:C10005');
-
-data_table.Properties.VariableNames = {'Time', 'L', 'F'};
-data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
-datalabel = "step-up 2 mM";
-ts = [-200, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
-% ts = ts(1:4);
-% ts(end) = 200;
-stopTime = ts(end);    
-SL0 = 2.0;
-
+stopTime = ts(end);
 %% plot
 figure(1); clf; 
 subplot(211);hold on;
@@ -66,7 +48,25 @@ title('force')
 xlabel('time')
 ylabel('force (kPa)')
 % xlim(xl);
-%%
+
+%% load step-up data for 2 mM
+% datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
+datafile = "data/06 21 21 Ramps 8mM ATP.xlsx";
+data_table = readtable(datafile, ...
+    "filetype", 'spreadsheet', ...
+    'VariableNamingRule', 'modify', ...
+    'Sheet', 'Sheet1', ...
+    'Range', 'A5:C10005');
+
+data_table.Properties.VariableNames = {'Time', 'L', 'F'};
+data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+datalabel = "step-up 2 mM";
+ts = [-200, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
+% ts = ts(1:4);
+% ts(end) = 200;
+stopTime = ts(end);    
+SL0 = 2.0;
+
 %% Proof that the velocities are in ML/s and that the ML = SL0
 poi = [506,	509, 1075	1085, 1519	1523, 2007.5, 2010.5, 2670	2690 3110.5	3115.5 3627	3635 4100, 4200];
 for i = 1:length(poi)/2
@@ -79,14 +79,19 @@ v
 % clf;plot(dt8.Time, v)
 
 %% Plot 8 mM
-subplot(211);
+clf;
+subplot(211);hold on;
 plot(data_table.Time, data_table.L);
-subplot(212);
+plot([ts;ts], repmat([min(data_table.L);max(data_table.L)], 1, length(ts)))
+subplot(212);hold on;
 plot(data_table.Time, data_table.F);
+plot([ts;ts], repmat([min(data_table.F);max(data_table.F)], 1, length(ts)))
 legend('2 mM ATP', '8 mM ATP')
+
 %% Relabel and downsample 
-dsf = 80;
-maxvel = 50;
+dsf = 1;
+% maxvel = 50;
+
 imax = find(data_table.Time >= stopTime, 1);
 t = data_table.Time(1:imax);
 td = downsample(t, dsf);
@@ -120,10 +125,11 @@ end
 vsum = vs*SL0; % 
 % time (s), velocity ML/s, velocity um/s
 velocitytable = [ts/1000;[vs 0];[vsum 0]]'; 
+
 % ts(end) = 150;
 %% Export the data into modelica-readable format and for identificatoin
 datatable = [td/1000, ld*SL0, fd];
-save data/bakers_rampup.mat datatable velocitytable;
+save data/bakers_rampup8.mat datatable velocitytable;
 %% Extract the speed
 % dL = [0;diff(ld)];
 % dT = [0;diff(td)];
@@ -202,8 +208,8 @@ opts = struct('N', 40, 'Slim', 0.025, 'PlotProbsOnFig', 0, 'ValuesInTime', 1, ..
 clf;
 subplot(211);hold on;
 % plot(t, l, '-');
-plot(out.t*1000, out.SL/ML, '|-', 'MarkerSize', 2)
-plot(out.t*1000, out.LXB/ML, '|-', 'MarkerSize', 2)
+plot(out.t*1000, out.SL/params.ML, '|-', 'MarkerSize', 2)
+plot(out.t*1000, out.LXB/params.ML, '|-', 'MarkerSize', 2)
 % plot([simulateTimes;simulateTimes]*1000, repmat([min(ld);max(ld)], [1 size(simulateTimes, 2)]))
 legend('Muscle length (-), Data', 'Muscle length (-), Simulation', 'Sarcomere length (-), Simulation')
 % xlim([0.45 0.55])
@@ -219,7 +225,7 @@ legend('Force (kPa?), Data', 'Force (mmHg), Simulation', 'XB Force (mmHg), Simul
 xlim([0 inf])
 ylim([-50, Inf])
 
-%% clf;
+%% plot states
 figure;clf; hold on;
 Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
 
@@ -241,12 +247,12 @@ PU = interp1(out.t(ut), out.PU(ut, :), times2);
 
 
 figure(1);clf;
-N = opts.N;
+% N = opts.N;
 
-params.dS = opts.Slim/opts.N;
+% params.dS = opts.Slim/opts.N;
 %     params.Slim = opts.Slim;
 %     params.s = (0:1:opts.N)*params.dS; % strain 
-    params.s = (-opts.N:opts.N)*params.dS; % strain space
+%     params.s = (-para.N:opts.N)*params.dS; % strain space
 
 for i = 1:size(PU, 1)
     

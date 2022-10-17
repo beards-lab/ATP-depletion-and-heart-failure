@@ -214,24 +214,26 @@ fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % , 'OutputFcn', @myoutput);
 
-g_selection = [1 3:21];
+g_selection = [1 3:10 12:14 16:21];
 % leftovers = setdiff(1:length(g),g_selection);
 
-gr = g(g_selection);
+gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
-
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
-optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
+% optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [1 0 0 0 0 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 1 1 0 0 1 ]);
+tic
+optimfun(gr0)
+toc
 
-    
-x = fminsearch(optimfun, gr, options)
+x = fminsearch(optimfun, gr0, options)
 % x = fminsearch(optimfun, g, options)
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
-g = [x(1) 1 x(2:end)];
-save gopt1010 g;
+g = insertAt(g, x, g_selection)
+save gopt1015 g;
 
 % to commit as plaintext
 writematrix(g, 'gopt.csv')
@@ -300,7 +302,14 @@ plot(nan, nan, '*k');
 legend('g(x) - \delta', 'baseline', 'g(x) + \delta', 'baseline', 'g(x) = 0');
 %%
 
-function stop = myoutput(gr,optimvalues,state);
+function arr = insertAt(arr, arr_ins, positions)
+    if length(arr_ins) ~= positions
+        error("Array to insert must be of the same length");
+    end
+    arr(positions) = arr_ins;
+end
+
+function stop = myoutput(gr,optimvalues,state)
     stop = false;    
     if ~isequal(state,'iter') || mod(optimvalues.iteration, 10) > 0
         return;
