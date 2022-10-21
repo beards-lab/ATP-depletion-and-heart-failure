@@ -40,10 +40,10 @@ subplot(211);cla;hold on;
 
 if isempty(g0)
     bar(g, 'b');
-    plot([1, 20], [1 1], '--r')
+    plot([1, 21], [1 1], '--r')
 else
-    bar([[g0 1];g]');
-    plot([0, 20], [1 1], '--r')
+    bar([g0;g]');
+    plot([1, 21], [1 1], '--r')
     legend('Original', 'Single-optimized')
 end
 

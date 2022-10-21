@@ -88,8 +88,16 @@ F_total = F_active + F_passive;
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
 
 % muscle model
-velHS = (params.kSE*LSE - F_total)/params.mu;% velocity of half-sarcomere
-dLSEdt = vel - velHS;
+if params.UseSerialStiffness
+    Force = params.kSE*LSE;
+    velHS = ( - F_total)/params.mu;% velocity of half-sarcomere
+    dLSEdt = vel - velHS;
+else
+    Force = F_total;
+    velHS = vel;
+    dLSEdt = 0;
+end
+    
 
 % Estimating space derivatives, upwind differencing
 if velHS > 0
@@ -158,4 +166,4 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-outputs = [F_active, F_passive];
+outputs = [Force, F_active, F_passive];

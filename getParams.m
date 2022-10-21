@@ -34,7 +34,8 @@ end
         'PlotProbsOnFig', 0, ... % 0 - false, any number: figure to plot on
         'ValuesInTime', true, ...
         'MatchTimeSegments', true, ...
-        'ReduceSpace', false,...
+        'ReduceSpace', false, ...
+        'UseSerialStiffness', true, ...
         'Terminator', false);
 
     % transition from NP to P, only when UseCa = true
@@ -86,7 +87,7 @@ end
 
     % passive force coeff
     params0.k_pas = 230*g(21); % From Kim Salla et al.
-
+        
     %% Fill in the missing input params
     
     params = fillInDefaults(params, params0);
@@ -107,6 +108,19 @@ end
         params.s_i0 = params.N + 1; % index of the origin zero strain    
     end
     params.ss = length(params.s); % strain step (number of Ns in one set)
+    
+    
+    % Reset the initialization
+    p1 = zeros(1, params.ss);
+    p2 = zeros(1, params.ss);
+    p3 = zeros(1, params.ss);
+    U_NR = 0;
+    NP = 0;
+    SL0 = params.SL0;
+    LSE = params.LSE0;
+    % State variable vector concatenates p1, p2, p2, and U_NR
+    params.PU0 = [p1, p2, p3, U_NR,NP,SL0,LSE];
+    
 end
 
 %%

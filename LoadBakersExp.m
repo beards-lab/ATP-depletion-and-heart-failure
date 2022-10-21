@@ -30,19 +30,19 @@ stopTime = ts(end);
 %% plot
 figure(1); clf; 
 subplot(211);hold on;
-plot(dt2.Time, dt2.L, '-');
+% plot(dt2.Time, dt2.L, '-');
 plot(dt8.Time, dt8.L, '-');
-yyaxis right
-plot(dt8.Time, [0;diff(dt8.L)./diff(dt8.Time)], '-');
+% yyaxis right
+% plot(dt8.Time, [0;diff(dt8.L)./diff(dt8.Time)], '-');
 title('Length')
 xlabel('time (ms)');
 ylabel('Length (ML)');
-legend('ATP 2mM', 'ATP 8mM');
+% legend('ATP 2mM', 'ATP 8mM');
 % 0.85 0.95
 
 % xlim(xl);
 subplot(212);hold on;
-plot(dt2.Time, dt2.F, '-');
+% plot(dt2.Time, dt2.F, '-');
 plot(dt8.Time, dt8.F, '-');
 title('force')
 xlabel('time')

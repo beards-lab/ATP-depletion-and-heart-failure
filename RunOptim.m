@@ -53,7 +53,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 1 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -78,8 +78,8 @@ end
 
 % Run basic sensitivity with updated cost func
 % only evaluated sensitivities
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u"};
-se1111 = calcSensitivities(fcn, g, [], g_names, true, false, [1 1 1 0 0 1]);title('Eval Optim for 1111');
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u", "kpas"};
+se1111 = calcSensitivities(fcn, g, g0, g_names, true, false, [0 0 0 0 0 1]);title('Eval Optim for 1111');
 saveas(gcf, 'sensitivities.png')
 %% extension
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');
@@ -192,22 +192,22 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % estart = evaluateProblem(fcn, g, true, [0 0 0 1])
 % toc
 
-optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 0 0 0 0]);
+optimfun = @(g)evaluateProblem(fcn, g, false, [1 1 1 1 1 1]);
 x = fminsearch(optimfun, g, options)
 g = x;
 save gopt1010 g;
 % E0 = evaluateProblem(fcn, x, true)
 %% Attempt on GA
-% parpool
+parpool
 ga_Opts = optimoptions('ga', ...
     'PopulationSize',64, ...            % 250
     'Display','iter', ...
-    'MaxStallGenerations',5, ...  % 10
+    'MaxStallGenerations',4, ...  % 10
     'UseParallel',true);
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
-    ga(optimfun,size(gr, 2), ...
-    [],[],[],[],zeros(size(gr)),Inf(size(gr)),[],ga_Opts);
+    ga(optimfun,size(g, 2), ...
+    [],[],[],[],ones(size(g))*0.001,ones(size(g))*10,[],ga_Opts);
 
 %% reduced g
 fcn = @dPUdTCa;
@@ -221,26 +221,26 @@ gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
-optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [1 0 0 0 0 1]);
-% optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 1 1 0 0 1 ]);
-tic
-optimfun(gr0)
-toc
-
-
-x = fminsearch(optimfun, gr0, options)
+% optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
+% tic
+% optimfun(gr0)
+% toc
+optimfun(g)
+% x = fminsearch(optimfun, gr0, options)
+x = fminsearch(optimfun, p_OptimGA, options)
 % x = fminsearch(optimfun, g, options)
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
 g = insertAt(g, x, g_selection)
-save gopt1015 g;
+save gopt1017_eval6 g;
 
 % to commit as plaintext
-writematrix(g, 'gopt.csv')
+writematrix(g, 'gopt_6_2.csv')
 
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 1])
 toc
 saveas(gcf, 'ProblemEval.png')
 

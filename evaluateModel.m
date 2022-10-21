@@ -6,47 +6,34 @@ function [Force, out] = evaluateModel(fcn, T, params)
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
 
-if isfield(params,'PU0')
     PU = params.PU0;
-else
-    p1 = zeros(1, params.ss);
-    p2 = zeros(1, params.ss);
-    p3 = zeros(1, params.ss);
-    U_NR = 0;
-    NP = 0;
-    SL0 = params.SL0;
-    LSE = params.LSE0;
-    % State variable vector concatenates p1, p2, p2, and U_NR
-    PU = [p1, p2, p3, U_NR,NP,SL0,LSE];
-end
-        
-        out = [];
-        
-        % vs for VelocitySegment
-        for vs = 1:length(params.Velocity)
-            ts = T(vs);
-%             et = 0; %elapsed time
-            tend = T(vs+1); % ending time of simulation in the current segment
-            
-            params.v = params.Velocity(vs);
-            params.Vums = params.v*params.ML; % velocity in um/s
+    out = [];
 
-        
-            [t,PU] = ode15s(fcn,[ts tend],PU(end,:),[], params);
-            out = storeOutputs(out, PU, params, t);
-            
-            if params.ValuesInTime                
-                % reconstruct Force
+    % vs for VelocitySegment
+    for vs = 1:length(params.Velocity)
+        ts = T(vs);
+%             et = 0; %elapsed time
+        tend = T(vs+1); % ending time of simulation in the current segment
+
+        params.v = params.Velocity(vs);
+        params.Vums = params.v*params.ML; % velocity in um/s
+
+
+        [t,PU] = ode15s(fcn,[ts tend],PU(end,:),[], params);
+        out = storeOutputs(out, PU, params, t);
+
+        if params.ValuesInTime                
+            % reconstruct Force
 %                 out.F =  out.LSE*params.kSE;
-                is = find(out.t >= ts, 1);
-                if max(out.ps0_t(is:end)) > 1e-3
-                    warning("Boundary broken at vel " + num2str(params.v) + ...
-                        "( " + num2str(max(out.ps0_t)) + ")" + ...
-                        " Extend the Slim from " + num2str(params.Slim) );
-                end
-            end      
-        
-        end % end the velocity segment
+            is = find(out.t >= ts, 1);
+            if max(out.ps0_t(is:end)) > 1e-3
+                warning("Boundary broken at vel " + num2str(params.v) + ...
+                    "( " + num2str(max(out.ps0_t)) + ")" + ...
+                    " Extend the Slim from " + num2str(params.Slim) );
+            end
+        end      
+
+    end % end the velocity segment
     
     %% Check for the length crossing IN THE LAST SEGMENT ONLY
     if params.OutputAtSL < Inf
@@ -73,12 +60,17 @@ end
 %         tc = (SL(i) - (opts.OutputAtSL))./((SL(i) - SL(i-1))/(t(i)-t(i-1))) + t(i-1);
         PUi = interp1(t, PU, tc);        
 %         SLc = PUi(:, 3*params.ss+3) % control value 
-        Force = PUi(3*params.ss+4)*params.kSE;
+%         Force = PUi(3*params.ss+4)*params.kSE;
         % importance of interp
 %         [PU(i - 1, 3*params.ss+4)*params.kSE Force PU(i, 3*params.ss+4)*params.kSE]
     else
-        Force = PU(end, 3*params.ss+4)*params.kSE;
+%         Force = PU(end, 3*params.ss+4)*params.kSE;
+        PUi = PU(end, :)';
     end
+    
+    % Use the dpudt func to get the actual force (depends on config)
+    [~, outputs] = fcn(0, PUi, params);
+    Force = outputs(1);
     
     
     if ~params.PlotProbsOnFig
@@ -151,12 +143,13 @@ end
         out.SL(i) = PU(j, 3*params.ss+3);
         out.LSE(i) = PU(j, 3*params.ss+4);
             
-        out.Force(i) = out.LSE(i)*params.kSE;
+        
         
         % get the XB force from the dpudt directly        
-        [f outputs] = dPUdTCa(0, PU(j, :)', params); 
-        out.FXB(i) = outputs(1);
-        out.FXBPassive(i) = outputs(2);
+        [~, outputs] = dPUdTCa(0, PU(j, :)', params); 
+        out.Force(i) = outputs(1);
+        out.FXB(i) = outputs(2);
+        out.FXBPassive(i) = outputs(3);
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
         
         out.LXB = out.SL - out.LSE;

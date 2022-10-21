@@ -19,8 +19,9 @@ MgADP = 0;
 Pi    = 0;
 F_active_0 = zeros(length(vel), max(length(MgATP), 3));
 t_sl0 = [0 0.1]; % time at which the SL = 2.2 at velocity of 1 ML/s - time to stop the experiment
-t_ss = [0 1]; %%  steady state time
+t_ss = [0 0.3]; %%  steady state time
 params0 = getParams([], g);
+params0.UseSerialStiffness = false;
 PU0 = [];
 
 %% force x velocity
@@ -92,7 +93,7 @@ F_iso = zeros(1, length(MgATP_iso));
 if evalParts(2)
     %%
     params = params0;
-    params.PU0 = PU0;
+%     params.PU0 = PU0;
 %     params.N = 5;
 %     params.Slim = 0.03;
 %     params.OutputAtSL = Inf;
@@ -117,12 +118,15 @@ KtrOuts = cell(length(MgATP), 2);
 if evalParts(3)
 %%     
 params = params0;
-params.PU0 = PU0;
+% if ~isempty(PU0)
+% different slim, cant use now
+%     params.PU0 = PU0;
+% end
 
 % cut all attached
 % TODO elaborate on that, inlcude length etc...
 % read about the protocol
-params.PU0(1:params.ss*3) = 0;
+% params.PU0(1:params.ss*3 + 4) = 0;
 % params.N = 20;
 params.ValuesInTime = true;
 % params.OutputAtSL = Inf;
@@ -142,7 +146,7 @@ for k = 1:length(MgATP)
   end
   
 %   Frel(k, :) = out.Force./out.Force(end);
-  Frel = out.Force./out.Force(end);
+  Frel = out.FXB./out.FXB(end);
   
   % get the time constant
 %   Ktr(k) = 1/interp1(Frel,out.t,1-exp(-1)); % time constant for Frel(1/Ktr) = 1-exp(-1)
@@ -187,7 +191,7 @@ if ~estimateVmax
     % debug only
     range = [v_max*(1/2)^(maxIter), v_max + step*(1 -(1/2)^(maxIter))];
     params = struct('N', 30, 'Slim', 0.06, 'PlotProbsOnFig', 0, 'ValuesInTime', 0);
-    params.PU0 = PU0;
+%     params.PU0 = PU0;
     params.MgATP = MgATP_vmax;
     params = getParams(params, g);
     
@@ -195,7 +199,8 @@ if ~estimateVmax
         i = i + 1;
         params.Velocity = -v_max;
         
-        e = evaluateModel(fcn, t_ss, params, g, opts);
+        [e out] = evaluateModel(fcn, t_ss, params);
+        params.PU0 = out.PU(end, :);
 %         e = 10;
     %     if i == 0 && e > 0 
     %         % not found in current range, cancelling the search
@@ -282,11 +287,6 @@ load data/bakers_rampup8.mat
 params = params0;
 params.Slim = 0.06;
 params.N = 40;
-% if ~isempty(PU0)
-%     params.PU0 = PU0;
-% end
-% update dS
-params = getParams(params, g);
 
 params.OutputAtSL = Inf;
 params.ValuesInTime = true;
@@ -296,7 +296,13 @@ params.MgATP = 8;
 params.SL0 = 2.0;
 params.ML = 2.0;
 
+% if ~isempty(PU0)
+%     params.PU0 = PU0;
+% end
+% update dS and PU0
+params = getParams(params, g);
 
+try
 [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
 t_exp = datatable(:, 1);
 
@@ -304,6 +310,9 @@ t_exp = datatable(:, 1);
 Fi = interp1(out.t, out.Force, t_exp);
 e = (datatable(:, 3) - Fi).^2;
 se = mean(e);
+catch e
+    se = NaN;
+end
 E(6) = se;
 %%
 % figure(1);clf;
@@ -330,8 +339,8 @@ end
 
 disp("With Km of " + num2str(K_m) + " at max velosity of " + v_max)
 %% Force velocity
-% figure(101); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
-figure(); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
+figure(101); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
+% figure(); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
 % figure(102);hold on;
 plot(F_active(:,1), -vel,'b-','linewidth',1.5);
 if size(Data_ATP, 2) > 2
