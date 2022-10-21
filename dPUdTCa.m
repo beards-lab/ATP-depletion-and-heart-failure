@@ -166,4 +166,4 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-outputs = [Force, F_active, F_passive];
+outputs = [Force, F_active, F_passive, N_overlap];

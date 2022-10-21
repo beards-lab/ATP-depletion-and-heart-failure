@@ -150,6 +150,7 @@ end
         out.Force(i) = outputs(1);
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
+        out.OV(i) = outputs(4);
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
         
         out.LXB = out.SL - out.LSE;
