@@ -53,7 +53,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -214,7 +214,7 @@ fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % , 'OutputFcn', @myoutput);
 
-g_selection = [1 3:10 12:14 16:21];
+g_selection = [1 3:10 12:14 16:19 21];
 % leftovers = setdiff(1:length(g),g_selection);
 
 gr0 = g(g_selection);
@@ -226,6 +226,7 @@ optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [1 0 0
 tic
 optimfun(gr0)
 toc
+
 
 x = fminsearch(optimfun, gr0, options)
 % x = fminsearch(optimfun, g, options)
@@ -302,19 +303,3 @@ plot(nan, nan, '*k');
 legend('g(x) - \delta', 'baseline', 'g(x) + \delta', 'baseline', 'g(x) = 0');
 %%
 
-function arr = insertAt(arr, arr_ins, positions)
-    if length(arr_ins) ~= positions
-        error("Array to insert must be of the same length");
-    end
-    arr(positions) = arr_ins;
-end
-
-function stop = myoutput(gr,optimvalues,state)
-    stop = false;    
-    if ~isequal(state,'iter') || mod(optimvalues.iteration, 10) > 0
-        return;
-    end
-%     g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
-    evaluateProblem(@dPUdTCa, gr, true, [1 1 1 1 0 1]);
-%     evaluateProblem(@dPUdT, [gr(1) 0.0555 gr(2) 3.6484 gr(3:end)], true);
-end
