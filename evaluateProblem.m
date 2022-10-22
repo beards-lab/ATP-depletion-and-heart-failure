@@ -138,10 +138,26 @@ params.ValuesInTime = true;
 
 for k = 1:length(MgATP)
   params.MgATP = MgATP(k);
-  % Tspan array returns F active array
-  [F_active_ktr out] = evaluateModel(fcn, t_ss, params);
   
-  if F_active_ktr(end) == 0
+  if ~params.UseKtrProtocol
+      % just an approximation
+      % Tspan array returns F active array
+      [~, out] = evaluateModel(fcn, t_ss, params);
+  else
+      v = 150; % ML/s
+%       times  = [-1e3, 0,  2, 20, 22.5, 25 , 25.5, 1e3]/1000 - 25.5e-3;
+      pos_ML = [1   , 1,0.8,0.8, 1.05,1.05,     1, 1 ];
+    
+      % putting the numbers as a difference
+      times = cumsum([0   , 1,0.2/v,0.018,0.25/v, 0.005, 0.05/v, 1]);
+      params.Velocity = diff(pos_ML)./diff(times);
+      [~, out] = evaluateModel(fcn, times - times(end-1), params);
+%       figure;hold on;
+%       plot(out.t, out.SL)
+%       plot(out.t, out.FXB/out.FXB(end))
+  end
+  
+  if out.FXB(end) == 0
       Ktr(k) = 0;
       continue;
   end

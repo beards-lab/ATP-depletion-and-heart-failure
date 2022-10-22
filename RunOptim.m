@@ -53,10 +53,22 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
+%%
+params0 = getParams([], g);
+params0.ValuesInTime  =true;
+params0.SL0 = 1.4;
+params0.Velocity = [0 0.01];
+params0 = getParams(params0, g); % need to update the init which is based on the SL0 !!!
+[~, out] = evaluateModel(fcn, [0 1 100], params0);
+
+figure(88);clf; hold on;
+plot(out.t, out.SL, out.t, out.FXB, out.t, out.OV)
+figure(89);clf; hold on;
+plot(outBase.OV, outBase.FXB,out.OV, out.FXB)
 
 %% Run through params to eval their importance
 close all;
