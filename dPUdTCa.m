@@ -65,8 +65,8 @@ Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fracti
 % f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
 
 g1 = 0;
-g2 = 0.95;
-g4 = 0.604;
+g2 = 1;%0.95;
+g4 = 1;%0.604;
 f1 = 0;f2 = 1;
 % Force model
 kstiff1 = params.kstiff1; 
@@ -93,6 +93,7 @@ if params.UseSerialStiffness
     velHS = ( - F_total)/params.mu;% velocity of half-sarcomere
     dLSEdt = vel - velHS;
 else
+    % like 10x faster, does not cause any oscillations
     Force = F_total;
     velHS = vel;
     dLSEdt = 0;
@@ -101,34 +102,13 @@ end
 
 % Estimating space derivatives, upwind differencing
 if velHS > 0
-%   dp1ds(2:2*N+1) = ( p1(2:2*N+1) - p1(1:2*N) )/dS;
-%   dp1ds(1)       = ( p1(1) - 0 )/dS;
-%   dp2ds(2:2*N+1) = ( p2(2:2*N+1) - p2(1:2*N) )/dS;
-%   dp2ds(1)       = ( p2(1) - 0 )/dS;
-%   dp3ds(2:2*N+1) = ( p3(2:2*N+1) - p3(1:2*N) )/dS;
-%   dp3ds(1)       = ( p3(1) - 0 )/dS;
-
-dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
-dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
-dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
-  
+    dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
+    dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
+    dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
 elseif velHS < 0
-%     N = params.N;
-%   dp1ds(1:2*N) = ( p1(2:2*N+1) - p1(1:2*N) )/dS;
-%   dp1ds(2*N+1) = ( 0 - p1(2*N+1) )/dS;
-%   dp2ds(1:2*N) = ( p2(2:2*N+1) - p2(1:2*N) )/dS;
-%   dp2ds(2*N+1) = ( 0 - p2(2*N+1) )/dS;
-%   dp3ds(1:2*N) = ( p3(2:2*N+1) - p3(1:2*N) )/dS;
-%   dp3ds(2*N+1) = ( 0 - p3(2*N+1) )/dS;
-
-% this is probably wrong
-  dp1ds = [p1(2:end) - p1(1:end-1); (0 - p1(end))]/dS;
-  dp2ds = [p2(2:end) - p2(1:end-1); (0 - p2(end))]/dS;    
-  dp3ds = [p3(2:end) - p3(1:end-1); (0 - p3(end))]/dS;
-
-%   dp1ds = [p1(1:end-1) - p1(2:end); (0 - p1(end))]/dS;
-%   dp2ds = [p2(1:end-1) - p2(2:end); (0 - p2(end))]/dS;    
-%   dp3ds = [p3(1:end-1) - p3(2:end); (0 - p3(end))]/dS;
+    dp1ds = [p1(2:end) - p1(1:end-1); (0 - p1(end))]/dS;
+    dp2ds = [p2(2:end) - p2(1:end-1); (0 - p2(end))]/dS;    
+    dp3ds = [p3(2:end) - p3(1:end-1); (0 - p3(end))]/dS;
 else 
     % just optim, because its multiplied by 0 anyway
     dp1ds = 0;dp2ds = 0;dp3ds = 0;
