@@ -1,5 +1,4 @@
-%% length-velocity protocol
-% load Anthony Baker's experiments
+%% load Anthony Baker's experiments
 load gopt;
 
 %% load length-force data for 2 mM
@@ -107,13 +106,6 @@ figure(1);clf;
 subplot(211);plot(t, l, t, lf, td, ld, 'x-');
 subplot(212);plot(t, f, t, ff, td, fd, 'x-', 'Linewidth', 2, 'MarkerSize', 10);
 
-% fff = fft(f);
-% clf;plot(1:length(fff), fff)
-
-% dL = [diff(data_table.L);0];
-% ddL = [diff(max(min(1000*diff(movmean(ld,[5 5])), maxvel), -maxvel));0;0];
-% dT = [diff(data_table.Time);0];
-
 %% Split it into segments with const velocities
 
 vs = [];
@@ -130,61 +122,29 @@ velocitytable = [ts/1000;[vs 0];[vsum 0]]';
 %% Export the data into modelica-readable format and for identificatoin
 datatable = [td/1000, ld*SL0, fd];
 save data/bakers_rampup8.mat datatable velocitytable;
-%% Extract the speed
-% dL = [0;diff(ld)];
-% dT = [0;diff(td)];
-% sp8 = dL./dT*1000;
-% sp8a = movmean(max(min(sp8, maxvel), -maxvel),[5 5]);
-% sp8ad = downsample(movmean(max(min(sp8, maxvel), -maxvel),[5 5]), dsf);
-% % sp8a = smooth(sp8, 1000, 'lowess');
-% % xl = [500 540];
-% % yl = [-10 10];
-% 
-% figure(1);clf;
-% % subplot(311);
-% plot(data_table.Time, data_table.L, td, ld)
-% xlim(xl);
 
-% subplot(312);plot(t, sp8a,t, sp8a, td, sp8ad, 'x-')
-% xlim(xl)
-% 
-% subplot(313);plot(td, ddL,'x-')
-% xlim(xl)
-% 
-% ddl_th = 1e-4;
-% ylim([-ddl_th ddl_th])
+%% overlap the segments on top of each other and average that
+% segle = 800;
+% segment = zeros(800, 3);
+% s = 0;
+%     segment(:, 1) = t(1:segle);
+% for it = 2:2:(length(ts)-1)
+%     ind = find(t >= ts(it), 1);
+%     segment(:, 2) = segment(:, 2) + l(ind:ind+segle-1);
+%     force = f(ind:ind+segle-1);
+%     fmi = min(force);   fma = max(force); norm = 1/fma;
+%     segment(:, 3) = segment(:, 3) + force/fma;
+%     s = s+1;
+% end
+% segment(:, 2:3) = segment(:, 2:3)./s;
+% clf;subplot(211)
+% plot(segment(:, 1), segment(:, 2));
+% subplot(212)
+% plot(segment(:, 1), segment(:, 3));
 
-%% overlap the segments on top of each other
-segle = 800;
-segment = zeros(800, 3);
-s = 0;
-    segment(:, 1) = t(1:segle);
-for it = 2:2:(length(ts)-1)
-    ind = find(t >= ts(it), 1);
-    segment(:, 2) = segment(:, 2) + l(ind:ind+segle-1);
-    force = f(ind:ind+segle-1);
-    fmi = min(force);   fma = max(force); norm = 1/fma;
-    segment(:, 3) = segment(:, 3) + force/fma;
-    s = s+1;
-end
-segment(:, 2:3) = segment(:, 2:3)./s;
-clf;subplot(211)
-plot(segment(:, 1), segment(:, 2));
-subplot(212)
-plot(segment(:, 1), segment(:, 3));
-%% get points of interests
-% ramping down
-% pif = ddl > 1e-4 && circshift(ddl, -1) < 1e-4; %inflection points
-% TODO
+%% Simulate the step-up experiment
+% TODO update this
 
-%% test velocities
-params.Velocity = [0 1];
-opts.Slim = 0.06;
-opts.N = 30;
-params.UseOverlap = false;
-[F out] = evaluateModelUpwind(fcn, [0 1 2], params, g, opts);
-
-%% Throw it into evaluateModel
 fcn = @dPUdTCa;
 simulateTimes = ts/1000;
 velocities = vs;
@@ -234,46 +194,5 @@ leg = plot(out.t, Pus, out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t,
 legend(leg)
 legend('Pu', 'P1', 'P2', 'P3', 'NR')
 
-
-
-%% Animate the probs
-% out = outs;
-
-
-% times2 = linspace(out.t(1), out.t(end), 1000);
-times2 = out.t;
-ut = find(out.t ~= circshift(out.t, 1));
-PU = interp1(out.t(ut), out.PU(ut, :), times2);
-
-
-figure(1);clf;
-% N = opts.N;
-
-% params.dS = opts.Slim/opts.N;
-%     params.Slim = opts.Slim;
-%     params.s = (0:1:opts.N)*params.dS; % strain 
-%     params.s = (-para.N:opts.N)*params.dS; % strain space
-
-for i = 1:size(PU, 1)
-    
-    ss = length(params.s);
-    p1 = PU(i, 1:ss);
-    p2 = PU(i, ss +1:2*ss);
-    p3 = PU(i, 2*ss+1:3*ss);
-    NR = PU(i, 3*ss + 1);
-    NP = PU(i, 3*ss +2);
-    SL = PU(i, 3*ss +3);    
-    LSe = PU(i, 3*ss +4);    
-    subplot(211);cla;hold on;
-    plot(params.s, p1, params.s, p2, params.s, p3);
-    plot([out.Vxb(i) out.Vxb(i)]/100, [0 max([p1, p2, p3])])
-%     ylim([0 500]);
-    subplot(212);cla;hold on;
-    plot(out.t, out.SL)
-    plot(out.t, out.LXB)
-    plot([times2(i) times2(i)], [2 2.2])
-    xlim([out.t(1), out.t(end)])
-    
-%     drawnow;
-    pause(1/30);
-end
+%% Animate states
+AnimateStateProbabilities(out);
