@@ -210,7 +210,7 @@ g = x;
 save gopt1010 g;
 % E0 = evaluateProblem(fcn, x, true)
 %% Attempt on GA
-parpool
+% parpool
 ga_Opts = optimoptions('ga', ...
     'PopulationSize',64, ...            % 250
     'Display','iter', ...
@@ -218,30 +218,35 @@ ga_Opts = optimoptions('ga', ...
     'UseParallel',true);
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
-    ga(optimfun,size(g, 2), ...
-    [],[],[],[],ones(size(g))*0.001,ones(size(g))*10,[],ga_Opts);
+    ga(optimfun,size(gr0, 2), ...
+    [],[],[],[],ones(size(gr0))*0.01,ones(size(gr0))*9,[],ga_Opts);
 
 %% reduced g
 fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+g = ones(20, 1);
+g(21) = 80/230; % fix the passive force
 % , 'OutputFcn', @myoutput);
 
-g_selection = [1 3:10 12:14 16:19 21];
+% g_selection = [1 3:10 12:14 16:19 21];
+
+exclude = [2 4 11 15 19:21]
+g_selection = setdiff(1:21, exclude);
 % leftovers = setdiff(1:length(g),g_selection);
 
 gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
-% optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 1]);
-optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), true, [1 0 0 0 0 1]);
+% optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
 % tic
 % optimfun(gr0)
 % toc
-optimfun(g)
+% optimfun(g)
 % x = fminsearch(optimfun, gr0, options)
-x = fminsearch(optimfun, p_OptimGA, options)
-% x = fminsearch(optimfun, g, options)
+% x = fminsearch(optimfun, p_OptimGA, options)
+x = fminsearch(optimfun, gr0, options)
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 

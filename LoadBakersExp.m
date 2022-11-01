@@ -29,7 +29,7 @@ stopTime = ts(end);
 %% plot
 figure(1); clf; 
 subplot(211);hold on;
-% plot(dt2.Time, dt2.L, '-');
+plot(dt2.Time, dt2.L, '-');
 plot(dt8.Time, dt8.L, '-');
 % yyaxis right
 % plot(dt8.Time, [0;diff(dt8.L)./diff(dt8.Time)], '-');
@@ -41,7 +41,7 @@ ylabel('Length (ML)');
 
 % xlim(xl);
 subplot(212);hold on;
-% plot(dt2.Time, dt2.F, '-');
+plot(dt2.Time, dt2.F, '-');
 plot(dt8.Time, dt8.F, '-');
 title('force')
 xlabel('time')
@@ -88,7 +88,7 @@ plot([ts;ts], repmat([min(data_table.F);max(data_table.F)], 1, length(ts)))
 legend('2 mM ATP', '8 mM ATP')
 
 %% Relabel and downsample 
-dsf = 1;
+dsf = 25;
 % maxvel = 50;
 
 imax = find(data_table.Time >= stopTime, 1);

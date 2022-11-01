@@ -172,6 +172,7 @@ for k = 1:length(MgATP)
   Ktr(k) = 1/out.t(i);
   KtrOuts{k, 1} = out.t;
   KtrOuts{k, 2} = Frel;
+  
 end
 
 E(3) = (sum(abs(Ktr-Ktr_mean).^2))/length(MgATP);
@@ -343,10 +344,18 @@ end
 %% Return
 
 penalty = sum(max(0, -g))*1000;
+if any(g < 1e-3) || any(g > 10)
+    penalty = Inf;
+end
 E(end+1) = penalty;
 Etot = sum(E);
 
-
+% %% save best so far?
+% load e_best;
+% if Etot < e_best
+%     save e_best Etot;
+%     writematrix([g;E], [datestr(now(), 'DD_MM_YYYY HH_mm_ss') num2str(Etot) '.csv']);
+% end
 
 %% plot?
 

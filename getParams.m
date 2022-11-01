@@ -48,17 +48,17 @@ end
     
 
     % rate constants
-    params0.ka  = g(1)*100 ;
+    params0.ka  = g(1)*50 ;
     params0.kd  = g(2)*5; 
-    params0.k1  = g(3)*500;%
-    params0.k_1 = g(4)*50;%
-    params0.k2  = g(5)*500;
+    params0.k1  = g(3)*1000;%
+    params0.k_1 = g(4)*10;%
+    params0.k2  = g(5)*1000;
     params0.k_2 = 10; % not identified
-    params0.k3  = g(10)*80;%;
+    params0.k3  = g(10)*100;%;
 
     % transitions between super relaxed state and non relaxed state
-    params0.ksr0   = g(6)*20; % 
-    params0.sigma0 = g(7)*20;
+    params0.ksr0   = g(6)*10; % 
+    params0.sigma0 = g(7)*40;
     params0.kmsr   = g(8)*20; % 
     % kmsr   = g(8)*250*(1-g3); % 
     % dissociation constants
@@ -81,7 +81,7 @@ end
     params0.alpha3 = g(9)*10000;
     params0.s3     = 0.0025;
     
-    params0.Amax = g(18)*0.5;
+    params0.Amax = g(18)*1;
     
     params0.mu = g(19)*1; % viscosity
     params0.kSE = g(20)*5000;
