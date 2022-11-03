@@ -53,7 +53,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')

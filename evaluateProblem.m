@@ -319,9 +319,12 @@ params.ML = 2.0;
 % end
 % update dS and PU0
 params = getParams(params, g);
-
+%%
 try
-[F out] = evaluateModel(fcn, velocitytable(:, 1), params);
+
+    params.alpha3 = 6.3e3;
+    params.s3 = 0.0025;
+    [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
 t_exp = datatable(:, 1);
 
 % Li = interp1(out.t, out.SL, t_exp);
@@ -332,10 +335,10 @@ catch e
     se = NaN;
 end
 E(6) = se;
-%%
-% figure(1);clf;
-% subplot(211);plot(out.t, out.SL, t_exp, datatable(:, 2), t_exp, Li, 'x-');xlim([0 t_exp(end)]);
-% subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), t_exp, Fi, 'x', 'Linewidth', 2, 'MarkerSize', 10);
+%
+figure(1);clf;
+subplot(211);plot(out.t, out.SL, t_exp, datatable(:, 2), '-');xlim([0 t_exp(end)]);
+subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
 % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
 
 

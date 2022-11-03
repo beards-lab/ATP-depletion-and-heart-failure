@@ -126,8 +126,10 @@ dp1   = -velHS/2*dp1ds - f1*params.kd*p1 - f2*params.k1*(exp(-params.alpha1*s).*
 dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     - params.k_1*(exp(+params.alpha1*s).*p2) - params.k2*(exp(-params.alpha2*s).*p2) ...
     + g1*params.k_2*p3  ;
+
+XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3)).^2).*p3;
 dp3   = -velHS/2*dp3ds + params.k2*(exp(-params.alpha2*s).*p2) ...
-    - g1*params.k_2*p3 - g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
+    - g1*params.k_2*p3 - XB_TOR;
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
 % dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 dp1(params.s_i0) = dp1(params.s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
@@ -146,4 +148,4 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-outputs = [Force, F_active, F_passive, N_overlap];
+outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];
