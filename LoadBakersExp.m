@@ -1,5 +1,7 @@
 %% load Anthony Baker's experiments
 load gopt;
+% decimation sampling (each x)
+dsf = 25;
 
 %% load length-force data for 2 mM
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
@@ -13,7 +15,14 @@ dt2.Properties.VariableNames = {'Time', 'L', 'F'};
 dt2.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 datalabel = "2 mM";
 SL0 = 2.2*1.1;
+ts = [490, 500.25, 500.9, 509.25, 510, 519.5,539.8, 550];
+ts = [950.0    1000.3    1001.0    1080.9 1081.75 1091.2    1111.6    1121.8   1150];
+
+%%
+clf;
+DownSampleAndSplit(dt2, ts, SL0, 5, 'ForceLength2mM');
 %% load length-force data for 8 mM
+datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
 dt8 = readtable(datafile, ...
     "filetype", 'spreadsheet', ...
     'VariableNamingRule', 'modify', ...
@@ -24,19 +33,28 @@ dt8.Properties.VariableNames = {'Time', 'L', 'F'};
 dt8.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 datalabel = "8 mM";
 ts = [490, 500.25, 500.9, 509.25, 510, 519.5,539.8, 550];
+ts = [950.0    1000.3    1001.0    1091.2    1101.6    1121.8   1150];
 SL0 = 2.2*1.1;
 stopTime = ts(end);
+data_table = dt8;
+%% test
+clf; hold on;
+plot(dt8.L, '|-');
+plot([ts;ts], repmat([min(dt8.L);max(dt8.L)], 1, length(ts)))
+
+
 %% plot
 figure(1); clf; 
 subplot(211);hold on;
 plot(dt2.Time, dt2.L, '-');
 plot(dt8.Time, dt8.L, '-');
+plot([ts;ts], repmat([min(dt8.L);max(dt8.L)], 1, length(ts)))
 % yyaxis right
 % plot(dt8.Time, [0;diff(dt8.L)./diff(dt8.Time)], '-');
 title('Length')
 xlabel('time (ms)');
 ylabel('Length (ML)');
-% legend('ATP 2mM', 'ATP 8mM');
+legend('ATP 2mM', 'ATP 8mM');
 % 0.85 0.95
 
 % xlim(xl);
@@ -47,7 +65,7 @@ title('force')
 xlabel('time')
 ylabel('force (kPa)')
 % xlim(xl);
-
+%%
 %% load step-up data for 2 mM
 % datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
 datafile = "data/06 21 21 Ramps 8mM ATP.xlsx";
@@ -63,14 +81,13 @@ datalabel = "step-up 2 mM";
 ts = [-200, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
 % ts = ts(1:4);
 % ts(end) = 200;
-stopTime = ts(end);    
 SL0 = 2.0;
 
 %% Proof that the velocities are in ML/s and that the ML = SL0
 poi = [506,	509, 1075	1085, 1519	1523, 2007.5, 2010.5, 2670	2690 3110.5	3115.5 3627	3635 4100, 4200];
 for i = 1:length(poi)/2
-i_pois(i) = find(dt2.Time > poi(i*2-1), 1);
-i_poie(i) = find(dt2.Time > poi(i*2), 1);
+i_pois(i) = find(dt8.Time > poi(i*2-1), 1);
+i_poie(i) = find(dt8.Time > poi(i*2), 1);
 inds = i_pois(i):i_poie(i);
 v(i) = mean([diff(dt8.L(inds))./diff(dt8.Time(inds))*1e3]);
 end
@@ -88,40 +105,12 @@ plot([ts;ts], repmat([min(data_table.F);max(data_table.F)], 1, length(ts)))
 legend('2 mM ATP', '8 mM ATP')
 
 %% Relabel and downsample 
-dsf = 25;
+
 % maxvel = 50;
+DownSampleAndSplit(dt8, ts, 2.0, dsf);
 
-imax = find(data_table.Time >= stopTime, 1);
-t = data_table.Time(1:imax);
-td = downsample(t, dsf);
-l = data_table.L(1:imax);
-lf = movmean(l,[dsf dsf]); % l filtered
-ld = downsample(lf, dsf);
-
-f = data_table.F(1:imax);
-ff = movmean(f,[5 5]); % force filtered
-fd = downsample(ff, dsf);
-
-figure(1);clf;
-subplot(211);plot(t, l, t, lf, td, ld, 'x-');
-subplot(212);plot(t, f, t, ff, td, fd, 'x-', 'Linewidth', 2, 'MarkerSize', 10);
-
-%% Split it into segments with const velocities
-
-vs = [];
-for it = 1:(length(ts)-1)
-    t1 = find(t >= ts(it), 1);
-    t2 = find(t >= ts(it + 1), 1);
-    vs(it) = round((l(t1) - l(t2))/(t(t1) - t(t2))*1000, 1);
-end
-vsum = vs*SL0; % 
-% time (s), velocity ML/s, velocity um/s
-velocitytable = [ts/1000;[vs 0];[vsum 0]]'; 
 
 % ts(end) = 150;
-%% Export the data into modelica-readable format and for identificatoin
-datatable = [td/1000, ld*SL0, fd];
-save data/bakers_rampup8.mat datatable velocitytable;
 
 %% overlap the segments on top of each other and average that
 % segle = 800;
@@ -196,3 +185,54 @@ legend('Pu', 'P1', 'P2', 'P3', 'NR')
 
 %% Animate states
 AnimateStateProbabilities(out);
+
+
+%% function definition
+function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts, SL0, dsf, saveAs)
+
+    % Relabel and downsample 
+    startTime = ts(1);
+    stopTime = ts(end);    
+
+    imin = find(data_table.Time >= startTime, 1);
+    imax = find(data_table.Time >= stopTime, 1);
+
+    t = data_table.Time(imin:imax);
+    td = downsample(t, dsf);
+    l = data_table.L(imin:imax);
+    lf = movmean(l,[dsf/2 dsf/2]); % l filtered
+    ld = downsample(lf, dsf);
+
+    f = data_table.F(imin:imax);
+    ff = movmean(f,[dsf dsf]); % force filtered
+    fd = downsample(ff, dsf);
+
+    % Split it into segments with const velocities
+
+    vs = [];
+    for it = 1:(length(ts)-1)
+        t1 = find(t >= ts(it), 1);
+        t2 = find(t >= ts(it + 1), 1);
+        vs(it) = round((l(t1) - l(t2))/(t(t1) - t(t2))*1000, 1);
+    end
+    vsum = vs*SL0; % 
+    datatable = [td/1000, ld*SL0, fd];
+    % time (s), velocity ML/s, velocity um/s
+    velocitytable = [ts/1000;[vs 0];[vsum 0]]'; 
+    
+
+    if ~isempty(saveAs)
+        % Export the data into modelica-readable format and for identificatoin
+        fn = ['data/' saveAs '.mat'];
+        save(fn,  'datatable', 'velocitytable');
+        disp(['Saved as ' fn])
+    end
+
+%     figure(1);clf;
+    subplot(211);hold on;
+    plot(t, l, t, lf, td, ld, '|-');
+    plot([ts;ts], repmat([min(data_table.L);max(data_table.L)], 1, length(ts)))
+    subplot(212);hold on;
+    plot(t, f, t, ff, td, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
+    plot([ts;ts], repmat([min(data_table.F);max(data_table.F)], 1, length(ts)))
+end

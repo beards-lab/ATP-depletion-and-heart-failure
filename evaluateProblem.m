@@ -325,12 +325,12 @@ try
     params.alpha3 = 6.3e3;
     params.s3 = 0.0025;
     [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
-t_exp = datatable(:, 1);
+    t_exp = datatable(:, 1);
 
-% Li = interp1(out.t, out.SL, t_exp);
-Fi = interp1(out.t, out.Force, t_exp);
-e = (datatable(:, 3) - Fi).^2;
-se = mean(e);
+    % Li = interp1(out.t, out.SL, t_exp);
+    Fi = interp1(out.t, out.Force, t_exp);
+    e = (datatable(:, 3) - Fi).^2;
+    se = mean(e);
 catch e
     se = NaN;
 end
@@ -341,9 +341,44 @@ subplot(211);plot(out.t, out.SL, t_exp, datatable(:, 2), '-');xlim([0 t_exp(end)
 subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
 % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
 
-
-
 end
+
+if evalParts(7)
+    %% eval ForceLength2mM
+    load data/ForceLength2mM.mat
+    params = params0;
+    params.OutputAtSL = Inf;
+    params.ValuesInTime = true;
+
+    params.Velocity = velocitytable(1:end-1, 2);
+    params.MgATP = 8;
+    params.SL0 = 2.2*1.1;
+    params.ML = 2.2;
+
+    % if ~isempty(PU0)
+    %     params.PU0 = PU0;
+    % end
+    % update dS and PU0
+    params = getParams(params, g);
+    try
+        [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
+        t_exp = datatable(:, 1);
+
+        % Li = interp1(out.t, out.SL, t_exp);
+        Fi = interp1(out.t, out.Force, t_exp);
+        e = (datatable(:, 3) - Fi).^2;
+        se = mean(e);
+    catch e
+        se = NaN;
+    end
+    E(7) = se;
+    %
+    figure(1);clf;
+    subplot(211);plot(out.t, out.SL, t_exp, datatable(:, 2), '-');xlim([0 t_exp(end)]);
+    subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
+    % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
+end
+    
 %% Return
 
 penalty = sum(max(0, -g))*1000;
