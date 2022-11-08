@@ -127,7 +127,8 @@ dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     - params.k_1*(exp(+params.alpha1*s).*p2) - params.k2*(exp(-params.alpha2*s).*p2) ...
     + g1*params.k_2*p3  ;
 
-XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3)).^2).*p3;
+         
+XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
 dp3   = -velHS/2*dp3ds + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment

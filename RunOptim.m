@@ -29,7 +29,7 @@ g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1
 g = [1.6469, 1.0000, 1.1611, 0.0053, 1.5031, 1.5605, 0.9276, 0.0220, 0.3455, 1.0114, 0.2624, 1.9307, 1.5611, 1.2518, 1.6784, 0.6298, 1.1186, 0.4442, 1.3752, 1.0959]
 g = load('gopt.csv');
 %% Eval the model at vel 0
-g = ones(1, 20)
+g = ones(1, 21)
 params0 = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
 opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
     'SL0', 2.2*1.1, ...
@@ -50,10 +50,10 @@ params = params0;opts = opts0;
 %% set up the problem
 fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0", "k_pas"};
-
+g = ones(21, 1);
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')

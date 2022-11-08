@@ -40,9 +40,9 @@ function [Force, out] = evaluateModel(fcn, T, params)
         SL = PU(:, 3*params.ss+3);
         ma = max(SL);
         mi = min(SL);
-        if ma > opts.OutputAtSL && mi < opts.OutputAtSL
+        if ma > params.OutputAtSL && mi < params.OutputAtSL
             % there is a crossing - check the directio frist
-            if opts.OutputAtSL > SL0
+            if params.OutputAtSL > SL0
                 % growing
                 i = find(SL > opts.OutputAtSL, 1);
             else
@@ -151,7 +151,8 @@ end
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
         out.OV(i) = outputs(4);
-        out.XB_TOR = outputs(5:end);
+        out.XB_TOR(i, :) = outputs(5:end);
+        out.XB_TORs(i) = params.dS*sum(outputs(5:end));
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
         
         out.LXB = out.SL - out.LSE;
