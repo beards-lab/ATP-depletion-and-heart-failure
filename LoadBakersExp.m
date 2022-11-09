@@ -60,8 +60,7 @@ datalabel = "step-up 2 mM";
 ts_d = [10, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
 ts_s = [-200 ts_d(2:end)]
 % clf;
-% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, 93/70, 'bakers_rampup8');
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [0 0], ts_s, ML, dsf*10, 1, 'bakers_rampup8');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, 93/70, 'bakers_rampup8');
 velocitytable
 
 %% Proof that the velocities are in ML/s and that the ML = SL0
