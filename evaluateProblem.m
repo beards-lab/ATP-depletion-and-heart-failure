@@ -344,9 +344,11 @@ try
         plot(out.t, out.SL, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);
         yyaxis right;
         plot(out.t, out.XB_TORs, '--');
-        legend('Sim', 'Exp', 'XB TOR');
-        xlim([0 t_exp(end)]);
+        legend('Sim', 'Exp', 'XB TOR', 'Location', 'Northwest');
+        xlim([t_exp(1) t_exp(end)]);
         subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
+        legend('Sim', 'Exp', 'Location', 'Northwest');
+        xlim([t_exp(1) t_exp(end)]);
     end
 % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
 
@@ -379,10 +381,11 @@ if evalParts(7)
 
         % Li = interp1(out.t, out.SL, t_exp);
         Fi = interp1(out.t, out.Force, t_exp);
-        e = (datatable(i_exp, 3) - Fi).^2;
+        e = (datatable(:, 3) - Fi).^2;
         se = mean(e);
     catch e
         se = NaN;
+        warning(['Some error (' e.message ') happened at ' e.stack(1).name ' at line ' num2str(e.stack(1).line)]);
     end
     E(7) = se;
     %
@@ -392,10 +395,12 @@ if evalParts(7)
         subplot(211);plot(out.t, out.SL, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);
         yyaxis right;
         plot(out.t, out.XB_TORs, '--');
-        legend('Sim', 'Exp', 'XB TOR');
+        xlim([t_exp(1) t_exp(end)]);
+        legend('Sim', 'Exp', 'XB TOR', 'Location', 'Southwest');
     %     xlim([t_exp(end) t_exp(end)]);
         subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
-        legend('Sim', 'Exp');
+        legend('Sim', 'Exp', 'Location', 'Southwest');
+        xlim([t_exp(1) t_exp(end)]);
     % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
     end
 end

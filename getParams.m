@@ -30,7 +30,7 @@ end
         'Velocity', 0,...
         'UseCa', false,...
         'UseOverlap', true, ...
-        'UsePassive', false, ... % parallel passive stiffness
+        'UsePassive', true, ... % parallel passive stiffness
         'PlotProbsOnFig', 0, ... % 0 - false, any number: figure to plot on
         'ValuesInTime', true, ... % export values in time. Outputs just last value otherwise.
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
@@ -51,9 +51,9 @@ end
     % rate constants
     params0.ka  = g(1)*50 ;
     params0.kd  = g(2)*5; 
-    params0.k1  = g(3)*1000;%
+    params0.k1  = g(3)*1000/2;%
     params0.k_1 = g(4)*10;%
-    params0.k2  = g(5)*1000;
+    params0.k2  = g(5)*100;
     params0.k_2 = 10; % not identified
     params0.k3  = g(10)*100;%;
 

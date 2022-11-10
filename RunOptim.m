@@ -50,7 +50,7 @@ params = params0;opts = opts0;
 %% set up the problem
 fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0", "k_pas"};
-g = ones(21, 1);
+% g = ones(21, 1);
 % fcn = @dPUdT_D;
 tic
 [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1 1])
@@ -223,14 +223,16 @@ ga_Opts = optimoptions('ga', ...
 
 %% reduced g
 fcn = @dPUdTCa;
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
-g = ones(20, 1);
-g(21) = 80/230; % fix the passive force
+options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 1e-3, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+% g = ones(20, 1);
+% g(21) = 80/230; % fix the passive force
+% g([3,4 5]) = 10;
 % , 'OutputFcn', @myoutput);
 
 % g_selection = [1 3:10 12:14 16:19 21];
 
-exclude = [2 4 11 15 19:21]
+exclude = [2 3 4 5 11 15 17 18 19 20 21];
+
 g_selection = setdiff(1:21, exclude);
 % leftovers = setdiff(1:length(g),g_selection);
 
@@ -238,23 +240,24 @@ gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
-optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), true, [1 0 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 1 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
 % tic
-% optimfun(gr0)
+optimfun(gr0)
 % toc
 % optimfun(g)
 % x = fminsearch(optimfun, gr0, options)
 % x = fminsearch(optimfun, p_OptimGA, options)
 x = fminsearch(optimfun, gr0, options)
+save x
 
 
 % x = fmincon(optimfun,g,[],[],[],[],ones(1, 15)*1e-3,[], [],options) 
 g = insertAt(g, x, g_selection)
-save gopt1017_eval6 g;
+% save gopt1_eval6 g;
 
 % to commit as plaintext
-writematrix(g, 'gopt_6_2.csv')
+writematrix(g, 'gopt.csv')
 
 tic
 [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 1])
