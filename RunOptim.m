@@ -224,10 +224,12 @@ ga_Opts = optimoptions('ga', ...
 %% reduced g
 fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 1e-3, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+
 % g = ones(20, 1);
 % g(21) = 80/230; % fix the passive force
 % g([3,4 5]) = 10;
 % , 'OutputFcn', @myoutput);
+g = load('gopt.csv');
 
 % g_selection = [1 3:10 12:14 16:19 21];
 
