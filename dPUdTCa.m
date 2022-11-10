@@ -86,11 +86,13 @@ F_total = F_active + F_passive;
 
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
-
+if t > 0.6
+    a = 1;
+end
 % muscle model
 if params.UseSerialStiffness
     Force = params.kSE*LSE;
-    velHS = ( - F_total)/params.mu;% velocity of half-sarcomere
+    velHS = (Force - F_total)/params.mu;% velocity of half-sarcomere
     dLSEdt = vel - velHS;
 else
     % like 10x faster, does not cause any oscillations

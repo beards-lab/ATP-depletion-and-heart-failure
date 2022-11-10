@@ -229,12 +229,12 @@ options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 
 % g(21) = 80/230; % fix the passive force
 % g([3,4 5]) = 10;
 % , 'OutputFcn', @myoutput);
-g = load('gopt.csv');
+g = load('gopt.csv')';
 
 % g_selection = [1 3:10 12:14 16:19 21];
 
 exclude = [2 3 4 5 11 15 17 18 19 20 21];
-
+exclude = [1  2   6     7     8     9    10    12    13    14    16];
 g_selection = setdiff(1:21, exclude);
 % leftovers = setdiff(1:length(g),g_selection);
 
@@ -259,7 +259,7 @@ g = insertAt(g, x, g_selection)
 % save gopt1_eval6 g;
 
 % to commit as plaintext
-writematrix(g, 'gopt.csv')
+writematrix(g, 'gopt2.csv')
 
 tic
 [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 1])

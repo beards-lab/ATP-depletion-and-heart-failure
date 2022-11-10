@@ -21,7 +21,7 @@ F_active_0 = zeros(length(vel), max(length(MgATP), 3));
 t_sl0 = [0 0.1]; % time at which the SL = 2.2 at velocity of 1 ML/s - time to stop the experiment
 t_ss = [0 0.3]; %%  steady state time
 params0 = getParams([], g);
-params0.UseSerialStiffness = false;
+% params0.UseSerialStiffness = false;
 % params0.UsePassive
 PU0 = [];
 

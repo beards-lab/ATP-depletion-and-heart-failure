@@ -35,9 +35,9 @@ end
         'ValuesInTime', true, ... % export values in time. Outputs just last value otherwise.
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
         'ReduceSpace', false, ... % use only half- to no- of the discretized space
-        'UseSerialStiffness', false, ... % serial stiffness used with dashpot viscosity
+        'UseSerialStiffness', true, ... % serial stiffness used with dashpot viscosity
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
-        'PlotEachSeparately', true, ... % show each plot on separate figure
+        'PlotEachSeparately', false , ... % show each plot on separate figure
         'Terminator', false);
 
     % transition from NP to P, only when UseCa = true
@@ -84,8 +84,8 @@ end
     
     params0.Amax = g(18)*1;
     
-    params0.mu = g(19)*1; % viscosity
-    params0.kSE = g(20)*5000;
+    params0.mu = g(19)*1e-3; % viscosity
+    params0.kSE = g(20)*1000;
 
     % passive force coeff
     params0.k_pas = 230*g(21); % From Kim Salla et al.
