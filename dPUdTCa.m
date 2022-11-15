@@ -77,7 +77,7 @@ F_active = kstiff1*p2_1 + kstiff2*p3_1;
 if params.UsePassive
     Lsc0    = 1.51;
     gamma = 7.5;
-    F_passive = params.k_pas*(SL - Lsc0)^gamma; 
+    F_passive = params.k_pas*max(SL - Lsc0, 0)^gamma; 
 else
     F_passive = 0;
 end
@@ -86,14 +86,53 @@ F_total = F_active + F_passive;
 
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
-if t > 0.6
-    a = 1;
-end
 % muscle model
 if params.UseSerialStiffness
     Force = params.kSE*LSE;
-    velHS = (Force - F_total)/params.mu;% velocity of half-sarcomere
+    velHS = (Force - F_total)/params.mu;
     dLSEdt = vel - velHS;
+elseif params.UseSlack
+    vmax = params.vmax;
+    if vel < -vmax
+        % slacking - lengthtening
+        Force = F_passive;
+        velHS = -vmax;
+        dLSEdt = vel + vmax;
+    elseif vel > -vmax && LSE < 0
+        % slacking / shortening
+        Force = F_passive;
+        velHS = -vmax;
+        dLSEdt = vel + vmax;
+    else % vel > -vmax && LSE >= 0
+        Force = F_total;
+        velHS = vel;
+        dLSEdt = 0;
+    end
+        
+        
+    
+%     if LSE > 0
+%     Force = params.kSE*LSE;
+%     velHS = (Force - F_total)/params.mu;
+%     dLSEdt = vel - velHS;
+%     else
+%     Force = params.kSE/1000*LSE;
+%     velHS = (Force - F_total)/params.mu;
+%     dLSEdt = vel - velHS;
+%     end
+    
+%     if F_active > 0 && LSE > -1e-3
+%         % normal
+%         Force = F_total;
+%         velHS = vel;
+%         % return to norm
+%         dLSEdt = -LSE*1000;
+%     else
+%         % slack - use a compliant spring
+%         Force = params.kSE/10*LSE;
+%         velHS = (Force - F_total)/params.mu;
+%         dLSEdt = vel - velHS;
+%     end
 else
     % like 10x faster, does not cause any oscillations
     Force = F_total;
@@ -151,4 +190,7 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
+if ~isreal(f)
+    a = 1;
+end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

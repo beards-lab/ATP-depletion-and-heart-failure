@@ -198,7 +198,7 @@ e = Inf;
 step = targetVel*2;
 % the loop will search up to step*2
 v_max = step;
-maxIter = 5;
+maxIter = 15;
 % real tolerance achievable:
 realTol = targetVel*2*(1/2)^maxIter;
 
@@ -339,16 +339,41 @@ try
     E(6) = se;
 
     if params.PlotEachSeparately
+        %%
         figure(6);clf;
         subplot(211);hold on;
+                title('Sarcomere length')
         plot(out.t, out.SL, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);
+        ylabel('Length (um)')
+        
         yyaxis right;
         plot(out.t, out.XB_TORs, '--');
         legend('Sim', 'Exp', 'XB TOR', 'Location', 'Northwest');
         xlim([t_exp(1) t_exp(end)]);
+                ylabel('Rate (1/s)')
+
+                
+        set(gca,'fontsize',16);
+        
         subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
         legend('Sim', 'Exp', 'Location', 'Northwest');
         xlim([t_exp(1) t_exp(end)]);
+                
+        set(gca,'fontsize',16);
+        
+        
+
+               
+    %     xlim([t_exp(end) t_exp(end)]);
+    
+        subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
+        title('Force at saturated calcium')
+        legend('Sim', 'Exp', 'Location', 'Southwest');
+        xlim([t_exp(1) t_exp(end)]);
+        ylabel('Force (kPa)');
+        xlabel('Time (ms)');
+        set(gca,'fontsize',16);
+        
     end
 % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
 
@@ -375,6 +400,7 @@ if evalParts(7)
     % end
     % update dS and PU0
     params = getParams(params, g);
+%     params.vmax = 20
     try
         [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
         t_exp = datatable(:, 1);
@@ -390,17 +416,35 @@ if evalParts(7)
     E(7) = se;
     %
     if params.PlotEachSeparately    
+        %%
         figure(7);clf;
+        
+        
         subplot(211);hold on;
-        subplot(211);plot(out.t, out.SL, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);
+        title('Sarcomere length, without slacking')
+        subplot(211);plot(out.t, out.SL - out.LSE, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);        
+        ylabel('Length (um)')
         yyaxis right;
         plot(out.t, out.XB_TORs, '--');
         xlim([t_exp(1) t_exp(end)]);
-        legend('Sim', 'Exp', 'XB TOR', 'Location', 'Southwest');
+        ylabel('Rate (1/s)')
+        legend('XB length (simulated)', 'Total length (data)', 'XB turnover rate', 'Location', 'Southwest');
+        
+        set(gca,'fontsize',16);
+        
+        
     %     xlim([t_exp(end) t_exp(end)]);
+    
         subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
+        title('Force at saturated calcium')
         legend('Sim', 'Exp', 'Location', 'Southwest');
         xlim([t_exp(1) t_exp(end)]);
+        ylabel('Force (kPa)');
+        xlabel('Time (ms)');
+        set(gca,'fontsize',16);
+        
+        subplot(211);xlim([0.5, 0.55])
+        subplot(212);xlim([0.5, 0.55])
     % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
     end
 end
@@ -409,7 +453,7 @@ end
 
 penalty = sum(max(0, -g))*1000;
 if any(g < 1e-3) || any(g > 10)
-    penalty = Inf;
+%     penalty = Inf;
 end
 E(end+1) = penalty;
 Etot = sum(E);

@@ -38,7 +38,7 @@ datalabel = "8 mM";
 ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 590];
 % ts_s = [400 ts_d(2:end)]
 ts_d = [ts_d 950.0    1000.3    1001.0    1091.2   1092 1101.6    1121.8   1150];
-ts_s = [-50 ts_d(2:end)]
+ts_s = [-50 ts_d(2:end) 10000]
 
 clf;
 [datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, 1, 'ForceLength8mM');
@@ -139,7 +139,7 @@ xlim([0 inf])
 ylim([-50, Inf])
 
 %% plot states
-figure;clf; hold on;
+figure(9);clf; hold on;
 Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
 
 leg = plot(out.t, Pus, out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t, out.NR);

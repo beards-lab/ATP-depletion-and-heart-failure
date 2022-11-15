@@ -35,9 +35,10 @@ end
         'ValuesInTime', true, ... % export values in time. Outputs just last value otherwise.
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
         'ReduceSpace', false, ... % use only half- to no- of the discretized space
-        'UseSerialStiffness', true, ... % serial stiffness used with dashpot viscosity
+        'UseSerialStiffness', false, ... % serial stiffness used with dashpot viscosity
+        'UseSlack', false, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
-        'PlotEachSeparately', false , ... % show each plot on separate figure
+        'PlotEachSeparately', true , ... % show each plot on separate figure
         'Terminator', false);
 
     % transition from NP to P, only when UseCa = true
@@ -45,7 +46,11 @@ end
     g0 = [ 1.5*0.3977    2.0478    1.4903    0.3765    0.5219    0.2726    1.25  1.0471    0.2382    0.9342];
     params0.K_coop = 5.7;
     params0.k_on   = g0(1)*100;
-    params0.k_off  = g0(2)*1.5*100;    
+    params0.k_off  = g0(2)*1.5*100; 
+    
+    
+    
+    params0.vmax = g(22)*10;
     
 
     % rate constants
