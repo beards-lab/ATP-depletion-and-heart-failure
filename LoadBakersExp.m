@@ -38,7 +38,9 @@ datalabel = "8 mM";
 ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 590];
 % ts_s = [400 ts_d(2:end)]
 ts_d = [ts_d 950.0    1000.3    1001.0    1091.2   1092 1101.6    1121.8   1150];
-ts_s = [-50 ts_d(2:end) 10000]
+% ts_d = [1500.3 1500.7  1524.1 1524.9]
+% ts_s = [-50 ts_d(2:end) dt8.Time(end-1)]
+ts_s = [-50 ts_d(2:end) 2200]
 
 clf;
 [datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, 1, 'ForceLength8mM');
@@ -63,6 +65,33 @@ ts_s = [-500 ts_d(2:end)]
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, 93/70, 'bakers_rampup8');
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, 1, 'bakers_rampup8');
 velocitytable
+
+%% Load stretch step-up data
+clf;
+data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_8');
+%%
+data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
+
+%%
+clf;
+data_table = readtable('data/2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_2');
+
+data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)-2700);
+
+%%
+clf;
+data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_02');
+
+data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)-2700 + 1280 + 20 - 5);
+
+data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_rel');
 
 %% Proof that the velocities are in ML/s and that the ML = SL0
 % poi = [506,	509, 1075	1085, 1519	1523, 2007.5, 2010.5, 2670	2690 3110.5	3115.5 3627	3635 4100, 4200];
@@ -152,12 +181,23 @@ AnimateStateProbabilities(out);
 
 
 %% function definition
-function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf, scaleF, saveAs)
+function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf, scaleF, saveAs, offset)
+% offset in ms
+if nargin < 8
+    offset = 0;
+end
+
+    data_table.Properties.VariableNames = {'Time', 'L', 'F'};
+    data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 
     if isempty(ts_d)
-        ts_d = [0 data_table.Time(end)];
+        ts_d = [data_table.Time(1) data_table.Time(end)];
     end
-
+    
+    if isempty(ts_s)
+        ts_s = [data_table.Time(1) data_table.Time(end)];
+    end
+    
     % Relabel and downsample 
     imin_d = find(data_table.Time >= ts_d(1), 1);
     imax_d = find(data_table.Time >= ts_d(end), 1);
@@ -176,7 +216,7 @@ function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s,
     ff = movmean(data_table.F(imin_d:imax_d)*scaleF,[dsf/2 dsf/2]); % force filtered
     fd = downsample(ff, dsf);
     
-    datatable = [td/1000, ld*ML, fd];
+    datatable = [td/1000  + offset/1000, ld*ML, fd];
 
     % Split it into segments with const velocities
     vs = [];
@@ -187,7 +227,7 @@ function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s,
     end
     vsum = vs*ML; % 
     % time (s), velocity ML/s, velocity um/s
-    velocitytable = [ts_s/1000;[vs 0];[vsum 0]]'; 
+    velocitytable = [(ts_s + offset)/1000;[vs 0];[vsum 0]]'; 
     
 
     if ~isempty(saveAs)
@@ -199,9 +239,9 @@ function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s,
 
 %     figure(1);clf;
     subplot(211);hold on;
-    plot(t, l, tf, lf, td, ld, '|-');
+    plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');
     plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
     subplot(212);hold on;
-    plot(t, f, tf, ff, td, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
+    plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
     plot([ts_d;ts_d], repmat([min(data_table.F);max(data_table.F)], 1, length(ts_d)))
 end
