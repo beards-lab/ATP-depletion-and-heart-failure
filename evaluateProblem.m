@@ -305,8 +305,8 @@ if evalParts(6)
     velocitytable = datastruct.velocitytable;
     datatable = datastruct.datatable;
     params = params0;
-    params.Slim = 0.06;
-    params.N = 40;
+    params.Slim = 0.1;
+    params.N = 60;
 
     params.OutputAtSL = Inf;
     params.ValuesInTime = true;
@@ -383,10 +383,15 @@ end
 if evalParts(7)
     %% eval ForceLength8mM
     datastruct = load('data/ForceLength8mM.mat');
-    velocitytable = datastruct.velocitytable;
-    datatable = datastruct.datatable;
+    velocitytable = datastruct.velocitytable(1:8, :);
+    ts = 0.45;te = 0.55;
+    is = find(datastruct.datatable(:, 1)>ts, 1);
+    ie = find(datastruct.datatable(:, 1)>te, 1);
+    datatable = datastruct.datatable(is:ie, :);
     
-    params = params0;
+    params = getParams([], g) ;
+    params.Slim = 0.1;
+    params.N = 50;
     params.OutputAtSL = Inf;
     params.ValuesInTime = true;
 
@@ -394,6 +399,7 @@ if evalParts(7)
     params.MgATP = 8;
     params.SL0 = 2.2;
     params.ML = 2.0;
+    
 
     % if ~isempty(PU0)
     %     params.PU0 = PU0;
@@ -404,11 +410,27 @@ if evalParts(7)
     try
         [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
         t_exp = datatable(:, 1);
+        
+        
 
         % Li = interp1(out.t, out.SL, t_exp);
         Fi = interp1(out.t, out.Force, t_exp);
-        e = (datatable(:, 3) - Fi).^2;
-        se = mean(e);
+        e = abs((datatable(:, 3) - Fi));
+        weights = ones(length(e), 1); weights(300:330) = 0.5;
+        we = e.*weights;
+        
+        Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
+        pms = mean(interp1(out.t, Pus, t_exp(100:180)));
+        pmse = max(pms - 0.6, 0)*5;
+        
+        xb_tor = mean(interp1(out.t, out.XB_TORs, t_exp(100:180)));
+        xb_torre = max(xb_tor-15, 0)/5;
+        
+        se = mean(we) + pmse + xb_torre;
+%         is = find(out.t > 0.52, 1);
+%         [pks, locs] = findpeaks(out.Force(is:end), 'MinPeakHeight', 20, 'NPeaks', 1);
+%         peak_data = [0.54, 64];
+%         c = (5e3*(peak_data(1) - out.t(locs(1) + is)))^2 + (peak_data(2) - pks)^2 ;
     catch e
         se = NaN;
         warning(['Some error (' e.message ') happened at ' e.stack(1).name ' at line ' num2str(e.stack(1).line)]);
@@ -420,9 +442,9 @@ if evalParts(7)
         figure(7);clf;
         
         
-        subplot(211);hold on;
-        title('Sarcomere length, without slacking')
-        subplot(211);plot(out.t, out.SL - out.LSE, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);        
+        subplot(221);hold on;
+        title('Sarcomere length, with slacking')
+        plot(out.t, out.SL - out.LSE, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);        
         ylabel('Length (um)')
         yyaxis right;
         plot(out.t, out.XB_TORs, '--');
@@ -431,20 +453,33 @@ if evalParts(7)
         legend('XB length (simulated)', 'Total length (data)', 'XB turnover rate', 'Location', 'Southwest');
         
         set(gca,'fontsize',16);
+        xlim([0.5, 0.55])   
+        
+%         xlim([0.5, 0.55])
         
         
     %     xlim([t_exp(end) t_exp(end)]);
     
-        subplot(212);plot(out.t, out.Force, t_exp, datatable(:, 3), '-', 'Linewidth', 2, 'MarkerSize', 5);
+        subplot(223);plot(out.t, out.Force, t_exp, datatable(:, 3), t_exp, we, '-', 'Linewidth', 2, 'MarkerSize', 5);
         title('Force at saturated calcium')
         legend('Sim', 'Exp', 'Location', 'Southwest');
         xlim([t_exp(1) t_exp(end)]);
         ylabel('Force (kPa)');
         xlabel('Time (ms)');
         set(gca,'fontsize',16);
+        xlim([0.5, 0.55])      
         
-        subplot(211);xlim([0.5, 0.55])
-        subplot(212);xlim([0.5, 0.55])
+%         hold on;plot(out.t(locs + is), pks, 'x-', 'MarkerSize', 12);
+
+        
+        
+        subplot(122);hold on;
+        Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
+        leg = plot(out.t, Pus, out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t, out.NR);
+        % plot([simulateTimes;simulateTimes], repmat([0; 1], [1 size(simulateTimes, 2)]))
+        xlim([0.5, 0.55])
+        legend(leg)
+        legend('Pu', 'P1', 'P2', 'P3', 'NR')        
     % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
     end
 end

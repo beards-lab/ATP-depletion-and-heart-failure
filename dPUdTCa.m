@@ -190,7 +190,7 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if ~isreal(f)
+if t > 0.52
     a = 1;
 end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

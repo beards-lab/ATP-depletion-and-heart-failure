@@ -36,9 +36,9 @@ end
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
         'ReduceSpace', false, ... % use only half- to no- of the discretized space
         'UseSerialStiffness', false, ... % serial stiffness used with dashpot viscosity
-        'UseSlack', false, ... % Enable XB slacking
+        'UseSlack', true, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
-        'PlotEachSeparately', true , ... % show each plot on separate figure
+        'PlotEachSeparately', false , ... % show each plot on separate figure
         'Terminator', false);
 
     % transition from NP to P, only when UseCa = true
@@ -93,7 +93,7 @@ end
     params0.kSE = g(20)*1000;
 
     % passive force coeff
-    params0.k_pas = 230*g(21); % From Kim Salla et al.
+    params0.k_pas = 200*g(21); % From Kim Salla et al.
         
     %% Fill in the missing input params
     
