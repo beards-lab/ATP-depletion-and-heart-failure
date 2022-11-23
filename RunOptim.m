@@ -223,6 +223,10 @@ ga_Opts = optimoptions('ga', ...
 
 save env;
 
+optimfun(p_OptimGA)
+x = fminsearch(optimfun, p_OptimGA, options)
+save x
+optimfun(x)
 %% reduced g
 fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 1e-3, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
