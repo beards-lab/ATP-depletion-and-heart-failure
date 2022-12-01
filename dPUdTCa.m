@@ -71,7 +71,7 @@ f1 = 0;f2 = 1;
 % Force model
 kstiff1 = params.kstiff1; 
 kstiff2 = params.kstiff2;
-% F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
+% F_active = kstiff2*p3_0/100 - max(-kstiff1*(p2_1 + p3_1 ), 0);
 F_active = kstiff1*p2_1 + kstiff2*p3_1;
 
 if params.UsePassive
@@ -190,7 +190,7 @@ dSL = vel;
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t > 0.52
+if t > 0.5
     a = 1;
 end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

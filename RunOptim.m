@@ -53,7 +53,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 % g = ones(21, 1);
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -219,7 +219,7 @@ ga_Opts = optimoptions('ga', ...
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
     ga(optimfun,size(gr0, 2), ...
-    [],[],[],[],ones(size(gr0))*0.01,ones(size(gr0))*15,[],ga_Opts);
+    [],[],[],[],ones(size(gr0))*0.01,ones(size(gr0))*20,[],ga_Opts);
 
 save env;
 
@@ -241,7 +241,7 @@ options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 
 
 exclude = [2 3 4 11 15 17 18 19 20 21 22];
 exclude = [2:5 11 12 15:22];
-exclude = [11 15 19:22];
+exclude = [11 12 15 19:22];
 % exclude = [1  2   6     7     8     9    10    12    13    14    16];
 g_selection = setdiff(1:length(g), exclude);
 % leftovers = setdiff(1:length(g),g_selection);
@@ -251,7 +251,7 @@ gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
-optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 0 0 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
 % tic
 optimfun(gr0)

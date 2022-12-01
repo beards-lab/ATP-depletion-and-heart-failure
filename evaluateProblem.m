@@ -375,9 +375,6 @@ try
         set(gca,'fontsize',16);
         
     end
-% yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
-
-
 end
 
 if evalParts(7)
@@ -483,12 +480,95 @@ if evalParts(7)
     % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
     end
 end
+
+if evalParts(8)
+%% eval ForceLength8mM
+    datastruct = load('data/bakers_rampup2_8_long.mat');
+    velocitytable = datastruct.velocitytable(:, :);
+    datatable = datastruct.datatable;
+    params = getParams([], g) ;
+    params.Slim = 0.1;
+    params.N = 50;
+    params.ValuesInTime = true;
+
+    params.Velocity = velocitytable(1:end-1, 2);
+    params.MgATP = 8;
+    params.SL0 = 2.0;
+    params.ML = 2.0;
     
+    params = getParams(params, g);
+%     params.vmax = 20
+    try
+        [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
+        t_exp = datatable(:, 1);
+        
+        
+
+        % Li = interp1(out.t, out.SL, t_exp);
+        Fi = interp1(out.t, out.Force, t_exp);
+        e = abs((datatable(:, 3) - Fi));
+        weights = ones(length(e), 1); 
+        we = e.*weights;
+        se = sum(we);
+        
+        
+    catch e
+        se = NaN;
+        warning(['Some error (' e.message ') happened at ' e.stack(1).name ' at line ' num2str(e.stack(1).line)]);
+    end
+    E(8) = se;
+    %
+    if params.PlotEachSeparately    
+        %%
+        figure(8);clf;
+        
+        
+        subplot(221);hold on;
+        title('Sarcomere length, with slacking')
+        plot(out.t, out.SL - out.LSE, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);        
+        ylabel('Length (um)')
+        yyaxis right;
+        plot(out.t, out.XB_TORs, '--');
+        xlim([t_exp(1) t_exp(end)]);
+        ylabel('Rate (1/s)')
+        legend('XB length (simulated)', 'Total length (data)', 'XB turnover rate', 'Location', 'Southwest');
+        
+        set(gca,'fontsize',16);
+%         xlim([0.5, 0.55])   
+        
+%         xlim([0.5, 0.55])
+        
+        
+    %     xlim([t_exp(end) t_exp(end)]);
+    
+        subplot(223);plot(out.t, out.Force, t_exp, datatable(:, 3), t_exp, we, '-', 'Linewidth', 2, 'MarkerSize', 5);
+        title('Force at saturated calcium')
+        legend('Sim', 'Exp', 'Location', 'Southwest');
+        xlim([t_exp(1) t_exp(end)]);
+        ylabel('Force (kPa)');
+        xlabel('Time (ms)');
+        set(gca,'fontsize',16);
+%         xlim([0.5, 0.55])      
+        
+%         hold on;plot(out.t(locs + is), pks, 'x-', 'MarkerSize', 12);
+
+        
+        
+        subplot(122);hold on;
+        Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
+        leg = plot(out.t, Pus, out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t, out.NR);
+        % plot([simulateTimes;simulateTimes], repmat([0; 1], [1 size(simulateTimes, 2)]))
+%         xlim([0.5, 0.55])
+        legend(leg)
+        legend('Pu', 'P1', 'P2', 'P3', 'NR')        
+    % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
+    end    
+end    
 %% Return
 
 penalty = sum(max(0, -g))*1000;
-if any(g < 1e-3) || any(g > 10)
-%     penalty = Inf;
+if any(g < 1e-6) || any(g > 1e6)
+    penalty = Inf;
 end
 E(end+1) = penalty;
 Etot = sum(E);

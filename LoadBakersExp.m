@@ -35,9 +35,9 @@ dt8.Properties.VariableNames = {'Time', 'L', 'F'};
 dt8.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 datalabel = "8 mM";
 %%
-ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 590];
+ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 650];
 % ts_s = [400 ts_d(2:end)]
-ts_d = [ts_d 950.0    1000.3    1001.0    1091.2   1092 1101.6    1121.8   1150];
+% ts_d = [ts_d 950.0    1000.3    1001.0    1091.2   1092 1101.6    1121.8   1150];
 % ts_d = [1500.3 1500.7  1524.1 1524.9]
 % ts_s = [-50 ts_d(2:end) dt8.Time(end-1)]
 ts_s = [-50 ts_d(2:end) 2200]
@@ -71,25 +71,30 @@ clf;
 data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_8');
 %%
+clf;
+tss_d = [118555, 126800]
+tss_s = [118555, 121890, 121900, 121910,121920, ts_d + (122070+710)-10, 123910, 123925, 123960, 124000, ...
+    124210, 124230, 124270, 124310, 124560, 124580, 124640, 124680, 125010, 125030, 125110, 125150, 125510, 125530, 125660, 125700, 126800]
 data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, tss_d, tss_s, ML, 1, 1, 'bakers_rampup2_8_long', 0);
 
 %%
-clf;
+% clf;
 data_table = readtable('data/2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_2');
-
+%%
 data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)-2700);
 
 %%
-clf;
+% clf;
 data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_02');
-
+%%
 data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)-2700 + 1280 + 20 - 5);
-
+%%
 data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_rel');
 
@@ -182,6 +187,10 @@ AnimateStateProbabilities(out);
 
 %% function definition
 function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf, scaleF, saveAs, offset)
+% ts_d - time segment data for cost function
+% ts_s - time segment simulation - broke by constant velocity segments
+% dsf - downsample factor
+
 % offset in ms
 if nargin < 8
     offset = 0;
@@ -220,14 +229,16 @@ end
 
     % Split it into segments with const velocities
     vs = [];
+    pos = [data_table.L(find(t >= ts_s(1), 1))]*ML;
     for it = 1:(length(ts_s)-1)
         t1 = find(t >= ts_s(it), 1);
         t2 = find(t >= ts_s(it + 1), 1);
         vs(it) = round((l(t1) - l(t2))/(t(t1) - t(t2))*1000, 1);
+        pos(it+1) = pos(it) + vs(it)*ML*(t(t2)-t(t1))/1000;
     end
     vsum = vs*ML; % 
     % time (s), velocity ML/s, velocity um/s
-    velocitytable = [(ts_s + offset)/1000;[vs 0];[vsum 0]]'; 
+    velocitytable = [(ts_s + offset)/1000;[vs 0];[vsum 0];pos(1:end)]'; 
     
 
     if ~isempty(saveAs)
@@ -239,7 +250,8 @@ end
 
 %     figure(1);clf;
     subplot(211);hold on;
-    plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');
+    plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
+    plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
     plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
     subplot(212);hold on;
     plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
