@@ -3,6 +3,8 @@ load gopt;
 % decimation sampling (each x)
 dsf = 10;
 ML = 2.0;
+% normalized force multiplier
+nf = 56;
 %% load length-force data for 2 mM
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
 dt2 = readtable(datafile, ...
@@ -42,8 +44,11 @@ ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 650];
 % ts_s = [-50 ts_d(2:end) dt8.Time(end-1)]
 ts_s = [-50 ts_d(2:end) 2200]
 
-clf;
-[datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, 1, 'ForceLength8mM');
+
+% figure(202);clf
+[datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, nf/67, 'ForceLength8mM');
+% [datatable, velocitytable] = DownSampleAndSplit(dt8, [], [], ML, 5, nf/67, '');
+
 subplot(211);title('Length (ML)');xlabel('Time (ms)');ylabel('ML');
 subplot(212);title('Force (kPa)');xlabel('Time (ms)');ylabel('kPa');
 velocitytable
@@ -62,22 +67,24 @@ datalabel = "step-up 2 mM";
 ts_d = [10, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
 ts_s = [-500 ts_d(2:end)]
 % clf;
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, 93/70, 'bakers_rampup8');
-% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, 1, 'bakers_rampup8');
+% figure
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, 'bakers_rampup8');
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, '');
 velocitytable
 
 %% Load stretch step-up data
 clf;
 data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_8');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, 1, 'bakers_rampup2_8');
 %%
-clf;
+% figure(101);clf;
 tss_d = [118555, 126800]
-tss_s = [118555, 121890, 121900, 121910,121920, ts_d + (122070+710)-10, 123910, 123925, 123960, 124000, ...
+tss_s = [118555, 121890, 121900, 121910,121920, ts_d(1) + (122070+710)-10, ts_d(end-1) + (122070+710), 123910, 123930, 123960, 124000, ...
     124210, 124230, 124270, 124310, 124560, 124580, 124640, 124680, 125010, 125030, 125110, 125150, 125510, 125530, 125660, 125700, 126800]
 data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, tss_d, tss_s, ML, 1, 1, 'bakers_rampup2_8_long', 0);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, tss_d, tss_s, ML, 1, nf/54, 'bakers_rampup2_8_long', 0);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', 0);
 
 %%
 % clf;
@@ -182,7 +189,7 @@ legend(leg)
 legend('Pu', 'P1', 'P2', 'P3', 'NR')
 
 %% Animate states
-AnimateStateProbabilities(out);
+animateStateProbabilities(out, params);
 
 
 %% function definition
