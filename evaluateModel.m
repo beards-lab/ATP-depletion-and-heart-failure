@@ -109,7 +109,7 @@ function out = storeOutputs(out, PU, params, T)
 
     if ~params.ValuesInTime
         out.PU = PU(end, :);
-        T = T(end)
+        T = T(end);
 %         return;
     end  
 

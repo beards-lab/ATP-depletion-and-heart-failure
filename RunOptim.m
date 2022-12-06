@@ -53,7 +53,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 % g = ones(21, 1);
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0 0 1 1 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -230,7 +230,7 @@ optimfun(x)
 %% reduced g
 fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 1e-3, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
-
+g = load('gopt.csv');
 % g = ones(20, 1);
 % g(21) = 80/230; % fix the passive force
 % g([3,4 5]) = 10;
@@ -251,7 +251,7 @@ gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
-optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 1 0 0 1 1 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
 % tic
 optimfun(gr0)
@@ -268,10 +268,11 @@ g = insertAt(g, x, g_selection)
 % save gopt1_eval6 g;
 
 % to commit as plaintext
-writematrix(g, 'gopt_slack.csv')
+writematrix(g, 'gopt.csv')
 
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 1 1 0 0 0 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 0 0 1])
 toc
 saveas(gcf, 'ProblemEval.png')
 
