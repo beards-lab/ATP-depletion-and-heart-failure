@@ -48,12 +48,21 @@ for k = 3:3
 end
 params = params0;opts = opts0;
 %% set up the problem
+% original fit from tuesday
+g = [0.542876541225473,0.914586975331451,0.147826886651247,7.16847703087333,2.59787534877577,0.0322817577373749,0.794984662510472,0.00676842719352362,0.050540767958257,0.617238554706245,1,2.08884046119593,2.0054310807672,0.921193092113734,1,1.00122403975111e-06,2.27995446259569,0.864010537605939,1,1.0463623046875,0.347826086956522,1.8];
+% refit for SL length based sim
+% g = load('gopt.csv');
+% Test the increased dr
+% g = [0.5429    0.9146    0.1478    7.1685    2.5979    0.0323    0.7950    0.0068 0.0505    0.6172    1.0000    6.0000    2.0054    0.3067    1.0000    0.0000    2.2800    0.8640    1.0000    1.0464    0.3478    1.8000]
+
 fcn = @dPUdTCa;
 g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", "k3", "K_{T1}", "s3", "k_{stiff1}", "k_{stiff2}", "K_{T3}", "\alpha_1", "\alpha_2" ,"A_{max0}", "\mu_{v0}", "\mu_h0", "k_pas"};
 % g = ones(21, 1);
 % fcn = @dPUdT_D;
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 1 0 0 1 1 1])
+% [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1 1 1 1])
+% [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 1 1 1 1])
+[Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 0 1 0])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -230,7 +239,7 @@ optimfun(x)
 %% reduced g
 fcn = @dPUdTCa;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 1e-3, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
-g = load('gopt.csv');
+% g = load('gopt.csv');
 % g = ones(20, 1);
 % g(21) = 80/230; % fix the passive force
 % g([3,4 5]) = 10;
@@ -241,7 +250,7 @@ g = load('gopt.csv');
 
 exclude = [2 3 4 11 15 17 18 19 20 21 22];
 exclude = [2:5 11 12 15:22];
-exclude = [11 12 15 19:22];
+exclude = [11 15 19:21];
 % exclude = [1  2   6     7     8     9    10    12    13    14    16];
 g_selection = setdiff(1:length(g), exclude);
 % leftovers = setdiff(1:length(g),g_selection);
@@ -251,7 +260,8 @@ gr0 = g(g_selection);
 % g_all = [gr(1) 3 gr(2) 0.8 gr(3:end)];
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
-optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 1 0 0 1 1 1]);
+% optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 1 0 0 1 1 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 0 0 0 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
 % tic
 optimfun(gr0)
@@ -268,11 +278,11 @@ g = insertAt(g, x, g_selection)
 % save gopt1_eval6 g;
 
 % to commit as plaintext
-writematrix(g, 'gopt.csv')
+writematrix(g, 'gopt.csv_ds9')
 
 tic
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 1 1 0 0 0 0])
-[Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 0 0 1])
+% [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 1 1 0 0 0 0])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 0 0 0 1])
 toc
 saveas(gcf, 'ProblemEval.png')
 

@@ -10,7 +10,7 @@ function [Force, out] = evaluateModel(fcn, T, params)
     out = [];
 
     % vs for VelocitySegment
-    for vs = 1:length(params.Velocity)
+    for vs = 1:length(T) - 1
         ts = T(vs);
 %             et = 0; %elapsed time
         tend = T(vs+1); % ending time of simulation in the current segment
@@ -18,8 +18,16 @@ function [Force, out] = evaluateModel(fcn, T, params)
         params.v = params.Velocity(vs);
         params.Vums = params.v*params.ML; % velocity in um/s
 
-
-        [t,PU] = ode15s(fcn,[ts tend],PU(end,:),[], params);
+        opts = odeset('AbsTol',1e-4, 'RelTol', 1e-3);
+        [t,PU] = ode15s(fcn,[ts tend],PU(end,:), opts, params);
+        if params.RescaleOutputDt
+            t_n = t(1):params.RescaleOutputDt:t(end);
+            if t_n(end) < t(end)
+                t_n = [t_n t(end)];
+            end
+            PU = interp1(t, PU, t_n);
+            t = t_n;
+        end
         out = storeOutputs(out, PU, params, t);
 
         if params.ValuesInTime                

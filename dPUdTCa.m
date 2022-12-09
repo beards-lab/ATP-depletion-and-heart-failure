@@ -28,7 +28,29 @@ if params.UseCa
 else
     NP = 0;
 end
-SL = PU(3*ss + 3);
+if ~params.UseSLInput
+    SL = PU(3*ss + 3);
+    dSL = vel;
+else
+    % TODO make it faster in sorted list
+    % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
+    if t >= params.datatable(end-1, 1)
+        % if the sim time is over the datatable length, hold the SL
+        SL = params.datatable(end, 1);
+        dSL = 0;
+    else
+        i = find(params.datatable(:, 1) >= t,1,'First');    
+    %     i = min(length(params.datatable(:, 1))-1, i);
+        SL = params.datatable(i, 2);
+        if i == 1
+            dSL = (params.datatable(i+1, 2) - params.datatable(i, 2))/((params.datatable(i+1, 1) - params.datatable(i, 1)));
+        else
+            dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
+        end
+    end
+    vel = dSL;
+end
+    
 U_SR = 1 - U_NR;
 LSE = PU(3*ss + 4);
 
@@ -185,12 +207,10 @@ else
     dNP = 0;
 end
 
-dSL = vel;
-
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t > 0.5
+if t > 0.46
     a = 1;
 end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

@@ -393,14 +393,24 @@ if evalParts(7)
     is = find(datastruct.datatable(:, 1)>ts, 1);
     ie = find(datastruct.datatable(:, 1)>te, 1);
     datatable = datastruct.datatable(is:ie, :);
+    datatable(:, 2) = round(datatable(:, 2), 3);
+    params = params0;
+
+    params.datatable = datatable;
+    params.UseSLInput = true;
+%     datatable(1, 1) = -5;
+    T = [datatable(1, 1) - 5, datatable(end, 1)];
+%     T = velocitytable(:, 1);
+%     params.Velocity = velocitytable(1:end-1, 2);    
+%     params.UseSLInput = false; 
     
-    params = getParams([], g) ;
+    
     params.Slim = 0.1;
     params.N = 50;
     params.OutputAtSL = Inf;
     params.ValuesInTime = true;
 
-    params.Velocity = velocitytable(1:end-1, 2);
+
     params.MgATP = 8;
     params.SL0 = 2.2;
     params.ML = 2.0;
@@ -411,9 +421,12 @@ if evalParts(7)
     % end
     % update dS and PU0
     params = getParams(params, g);
+    
+    params.UseSlack = true;
 %     params.vmax = 20
     try
-        [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
+%         [F out] = evaluateModel(fcn, velocitytable(:, 1), params);
+        [F out] = evaluateModel(fcn, T, params);
         t_exp = datatable(:, 1);
         
         
@@ -449,7 +462,8 @@ if evalParts(7)
         
         subplot(221);hold on;
         title('Sarcomere length, with slacking')
-        plot(out.t, out.SL - out.LSE, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);        
+%         plot(out.t, out.SL - out.LSE, t_exp, datatable(:, 2), '-', 'Linewidth', 2, 'MarkerSize', 5);        
+        plot(out.t, out.SL, 'o-', t_exp, datatable(:, 2), '|-', 'Linewidth', 2, 'MarkerSize', 5);        
         ylabel('Length (um)')
         yyaxis right;
         plot(out.t, out.XB_TORs, '--');
@@ -490,7 +504,7 @@ if evalParts(7)
 end
 
 if evalParts(8)
-%% eval ForceLength8mM
+%% eval slack experiment
     datastruct = load('data/bakers_rampup2_8_long.mat');
     velocitytable = datastruct.velocitytable(:, :);
     datatable = datastruct.datatable;
@@ -573,7 +587,98 @@ if evalParts(8)
         legend('Pu', 'P1', 'P2', 'P3', 'NR')        
     % yyaxis right;plot(t_exp, e,[0 t_exp(end)],[se se],'Linewidth', 1);xlim([0 t_exp(end)]);
     end    
-end    
+end
+
+if evalParts(9)
+    %% Force-velocity but simulating the whole protocol
+    datastruct = load('data/ForceLength8mM_all.mat');
+    velocitytable = datastruct.velocitytable(:, :);
+    datatable = datastruct.datatable;
+    params = params0;
+    params.Velocity = velocitytable(:, 2);
+    params.datatable = datatable;
+    params.Slim = 0.1;
+    params.N = 50;
+    params.ValuesInTime = true;
+    params.UseSLInput = true;
+    params.MgATP = 8;
+    params.SL0 = 2.2;
+    params.ML = 2.0;
+    datatable(:, 2) = round(datatable(:, 2), 3);
+
+
+    params.datatable = datatable;
+    params.UseSLInput = true;
+%     datatable(1, 1) = -5;
+    T = velocitytable(:, 1);
+    
+    params = getParams(params, g);
+%     params.vmax = 20
+    try
+        [F out] = evaluateModel(fcn, T, params);
+        
+        t_exp = datatable(:, 1);
+        Fi = interp1(out.t, out.Force, t_exp);
+        Fi(isnan(Fi)) = 0;
+%         Fi = circshift(Fi, 1);
+        e = movmean(abs(datatable(:, 3) - abs(Fi)), 3).^2;
+        weights = ones(length(e), 1); 
+        we = e.*weights;
+        se = mean(we);
+                
+    catch e
+        se = NaN;
+        warning(['Some error (' e.message ') happened at ' e.stack(1).name ' at line ' num2str(e.stack(1).line)]);
+    end
+    E(9) = se;
+    %
+    if params.PlotEachSeparately    
+        %%
+        figure(9);clf;
+        
+        
+        subplot(211);hold on;
+        title('Sarcomere length, with slacking')
+        plot(out.t, out.SL, 'x-', out.t, out.SL - out.LSE, 'o-', t_exp, datatable(:, 2), '|-', 'Linewidth', 1, 'MarkerSize', 5);        
+        ylabel('Length (um)')
+        yyaxis right;
+        plot(out.t, out.XB_TORs, '--');
+        xlim([t_exp(1) t_exp(end)]);
+        ylabel('Rate (1/s)')
+        legend('Mus length (simulated)', 'SL length', 'Total length (data)', 'XB turnover rate', 'Location', 'Southwest');
+        
+        set(gca,'fontsize',16);
+%         xlim([0.5, 0.55])   
+        
+%         xlim([0.5, 0.55])
+        
+        
+    %     xlim([t_exp(end) t_exp(end)]);
+        
+        subplot(212);hold on;plot(out.t, out.Force, t_exp, datatable(:, 3), '|-', t_exp, Fi, 'o-', 'Linewidth', 2, 'MarkerSize', 5);
+        yyaxis right;
+        plot(t_exp, we, '-', 'Linewidth', 1, 'MarkerSize', 5);
+        title('Force at saturated calcium')
+        legend('Sim', 'Exp', 'Error*', 'Location', 'best');
+        xlim([t_exp(1) t_exp(end)]);
+        ylabel('Force (kPa)');
+        xlabel('Time (ms)');
+        set(gca,'fontsize',16);
+%         xlim([0.5, 0.55])      
+        
+%         hold on;plot(out.t(locs + is), pks, 'x-', 'MarkerSize', 12);
+
+        
+        
+%         subplot(122);hold on;
+%         Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
+%         leg = plot(out.t, Pus, out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t, out.NR);
+%         % plot([simulateTimes;simulateTimes], repmat([0; 1], [1 size(simulateTimes, 2)]))
+% %         xlim([0.5, 0.55])
+%         legend(leg)
+%         legend('Pu', 'P1', 'P2', 'P3', 'NR')       
+    end
+end
 %% Return
 
 penalty = sum(max(0, -g))*1000;

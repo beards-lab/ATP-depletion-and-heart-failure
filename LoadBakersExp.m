@@ -44,10 +44,10 @@ ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 650];
 % ts_s = [-50 ts_d(2:end) dt8.Time(end-1)]
 ts_s = [-50 ts_d(2:end) 2200]
 
-
+clf
 % figure(202);clf
-[datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, nf/67, 'ForceLength8mM');
-% [datatable, velocitytable] = DownSampleAndSplit(dt8, [], [], ML, 5, nf/67, '');
+% [datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, nf/67, 'ForceLength8mM');
+[datatable, velocitytable] = DownSampleAndSplit(dt8, [0 4250], [-5000, 500, 2000, 4250], ML, dsf*2, nf/67, 'ForceLength8mM_all');
 
 subplot(211);title('Length (ML)');xlabel('Time (ms)');ylabel('ML');
 subplot(212);title('Force (kPa)');xlabel('Time (ms)');ylabel('kPa');
