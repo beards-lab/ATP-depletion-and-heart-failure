@@ -5,26 +5,7 @@ dsf = 10;
 ML = 2.0;
 % normalized force multiplier
 nf = 56;
-%% load length-force data for 2 mM
-datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
-dt2 = readtable(datafile, ...
-    "filetype", 'spreadsheet', ...
-    'VariableNamingRule', 'modify', ...
-    'Sheet', '2 mM', ...
-    'Range', 'A5:C86004');
-
-dt2.Properties.VariableNames = {'Time', 'L', 'F'};
-dt2.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
-datalabel = "2 mM";
-%%
-% time segment data
-% ts_d = [490, 500.25, 500.9, 502, 509, 509.25, 510, 519.5,539.8, 550];
-ts_d = [950.0    1000.3    1001.0    1080.9 1081.75 1091.2    1111.6    1121.8   1200];
-% time segment simulation
-ts_s = [500 ts_d(2:end)];
-clf;
-[datatable, velocitytable] = DownSampleAndSplit(dt2, ts_d, ts_s, ML, dsf, 1, 'ForceLength2mM');
-velocitytable
+clf;close all;
 %% load length-force data for 8 mM
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
 dt8 = readtable(datafile, ...
@@ -44,13 +25,13 @@ ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 650];
 % ts_s = [-50 ts_d(2:end) dt8.Time(end-1)]
 ts_s = [-50 ts_d(2:end) 2200]
 
-clf
+% clf
 % figure(202);clf
 % [datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, nf/67, 'ForceLength8mM');
 [datatable, velocitytable] = DownSampleAndSplit(dt8, [0 4250], [-5000, 500, 2000, 4250], ML, dsf*2, nf/67, 'ForceLength8mM_all');
 
-subplot(211);title('Length (ML)');xlabel('Time (ms)');ylabel('ML');
-subplot(212);title('Force (kPa)');xlabel('Time (ms)');ylabel('kPa');
+% subplot(211);title('Length (ML)');xlabel('Time (ms)');ylabel('ML');
+% subplot(212);title('Force (kPa)');xlabel('Time (ms)');ylabel('kPa');
 velocitytable
 %% load step-up data for 8 mM
 % datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
@@ -63,48 +44,94 @@ data_table = readtable(datafile, ...
 
 data_table.Properties.VariableNames = {'Time', 'L', 'F'};
 data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
-datalabel = "step-up 2 mM";
+datalabel = "step-up 8 mM";
 ts_d = [10, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 221.9, 241.9, 261.9, 281.9, 300.5, 321.9, 500];
 ts_s = [-500 ts_d(2:end)]
 % clf;
 % figure
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, 'bakers_rampup8');
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, '');
-velocitytable
+% velocitytable
 
 %% Load stretch step-up data
-clf;
+% clf;
 data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, 1, 'bakers_rampup2_8');
-%%
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
+
+%% slack 8 mM
+clf;
+data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+o = 1150 - 100 + 9.4;
+ts_s = [1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
+% ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf/10, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
+
+%% 8 mM long scope data
 % figure(101);clf;
-tss_d = [118555, 126800]
-tss_s = [118555, 121890, 121900, 121910,121920, ts_d(1) + (122070+710)-10, ts_d(end-1) + (122070+710), 123910, 123930, 123960, 124000, ...
-    124210, 124230, 124270, 124310, 124560, 124580, 124640, 124680, 125010, 125030, 125110, 125150, 125510, 125530, 125660, 125700, 126800]
+% tss_d = [118555, 126800]
+% tss_s = [118555, 121890, 121900, 121910,121920, ts_d(1) + (122070+710)-10, ts_d(end-1) + (122070+710), 123910, 123930, 123960, 124000, ...
+%     124210, 124230, 124270, 124310, 124560, 124580, 124640, 124680, 125010, 125030, 125110, 125150, 125510, 125530, 125660, 125700, 126800]
 data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, tss_d, tss_s, ML, 1, nf/54, 'bakers_rampup2_8_long', 0);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', 0);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_8_long', -(122070+710)+20);
 
+legend('ForceLength8mM_all', 'bakers_rampup8', 'bakers_rampup2_8', 'bakers_rampup2_8_long', 'nevim', 'Interpreter', 'None')
+% xlim([1800, 2000])
+%% 8mM ATP
+clf;
+data_table = readtable('data/8mM ATP 2ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
 %%
+data_table = readtable('data/2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
+
+data_table = readtable('data/0.2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
+
+%% load length-force data for 2 mM
+figure('2 mM');
+datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
+dt2 = readtable(datafile, ...
+    "filetype", 'spreadsheet', ...
+    'VariableNamingRule', 'modify', ...
+    'Sheet', '2 mM', ...
+    'Range', 'A5:C86004');
+
+dt2.Properties.VariableNames = {'Time', 'L', 'F'};
+dt2.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+datalabel = "2 mM";
+%%
+% time segment data
+% ts_d = [490, 500.25, 500.9, 502, 509, 509.25, 510, 519.5,539.8, 550];
+ts_d = [950.0    1000.3    1001.0    1080.9 1081.75 1091.2    1111.6    1121.8   1200];
+% time segment simulation
+ts_s = [500 ts_d(2:end)];
+% clf;
+[datatable, velocitytable] = DownSampleAndSplit(dt2, ts_d, ts_s, ML, dsf, nf/65, 'ForceLength2mM');
+% [datatable, velocitytable] = DownSampleAndSplit(dt2, [], [], ML, dsf, nf/65, '');
+velocitytable
+
+%% same preparation as 8mM, using the same scale
 % clf;
 data_table = readtable('data/2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_2');
-%%
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_2');
+%% same preparation as 8mM, using the same scale
 data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)-2700);
-
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_2_long', -(122070+710)-2700);
 %%
 % clf;
 data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_02');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_02');
 %%
 data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)-2700 + 1280 + 20 - 5);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_02_long', -(122070+710)-2700 + 1280 + 20 - 5);
 %%
 data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, 'bakers_rampup2_rel');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_rel');
 
+return;
 %% Proof that the velocities are in ML/s and that the ML = SL0
 % poi = [506,	509, 1075	1085, 1519	1523, 2007.5, 2010.5, 2670	2690 3110.5	3115.5 3627	3635 4100, 4200];
 % for i = 1:length(poi)/2
@@ -138,25 +165,25 @@ data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeade
 
 %% Simulate the step-up experiment
 % TODO update this
-
-fcn = @dPUdTCa;
-simulateTimes = velocitytable(:, 1);
-velocities = velocitytable(1:end-1, 2);
-
-params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
-    'Velocity', velocities, ...
-    'UseCa', false,'UseOverlap', false,'kSE', 1000, 'mu', 10,...
-    'N', 40, 'Slim', 0.025, 'ValuesInTime', 1, ...
-    'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', 2.0, ...
-    'MatchTimeSegments', 1, 'ML', ML, 'PlotProbsOnStep', false, ...
-    'ReduceSpace', false...
-    );
-
-params = getParams(params, g)
-% figure(1);clf;
-
-[F out] = evaluateModel(fcn, simulateTimes, params);
-
+% 
+% fcn = @dPUdTCa;
+% simulateTimes = velocitytable(:, 1);
+% velocities = velocitytable(1:end-1, 2);
+% 
+% params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
+%     'Velocity', velocities, ...
+%     'UseCa', false,'UseOverlap', false,'kSE', 1000, 'mu', 10,...
+%     'N', 40, 'Slim', 0.025, 'ValuesInTime', 1, ...
+%     'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', 2.0, ...
+%     'MatchTimeSegments', 1, 'ML', ML, 'PlotProbsOnStep', false, ...
+%     'ReduceSpace', false...
+%     );
+% 
+% params = getParams(params, g)
+% % figure(1);clf;
+% 
+% [F out] = evaluateModel(fcn, simulateTimes, params);
+% 
 
 %% Plot the lengths and forces
 clf;
@@ -226,7 +253,11 @@ end
     td = downsample(tf, dsf);
     l = data_table.L(imin_s:imax_s);
     lf = movmean(data_table.L(imin_d:imax_d),[dsf/2 dsf/2]); % l filtered
+    % round to limit the oscillations
+    lf = round(lf, 3);
+    
     ld = downsample(lf, dsf);
+
 
     f = data_table.F(imin_s:imax_s)*scaleF;
     ff = movmean(data_table.F(imin_d:imax_d)*scaleF,[dsf/2 dsf/2]); % force filtered
@@ -255,12 +286,18 @@ end
         disp(['Saved as ' fn])
     end
 
-%     figure(1);clf;
-    subplot(211);hold on;
-    plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
+%     figure();clf;
+    subplot(211);hold on;title(saveAs, 'Interpreter', 'none');
+    plot(td + offset, ld, '|-');
+    
+%     plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
     plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
-    plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
+%     plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
+    
     subplot(212);hold on;
-    plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
-    plot([ts_d;ts_d], repmat([min(data_table.F);max(data_table.F)], 1, length(ts_d)))
+    plot(td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
+    
+%     plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
+%     plot([ts_d;ts_d], repmat([min(data_table.F);max(data_table.F)], 1, length(ts_d)))
+    
 end

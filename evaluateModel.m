@@ -18,15 +18,23 @@ function [Force, out] = evaluateModel(fcn, T, params)
         params.v = params.Velocity(vs);
         params.Vums = params.v*params.ML; % velocity in um/s
 
-        opts = odeset('AbsTol',1e-4, 'RelTol', 1e-3);
+        opts = [];%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
         [t,PU] = ode15s(fcn,[ts tend],PU(end,:), opts, params);
         if params.RescaleOutputDt
-            t_n = t(1):params.RescaleOutputDt:t(end);
-            if t_n(end) < t(end)
-                t_n = [t_n t(end)];
-            end
-            PU = interp1(t, PU, t_n);
-            t = t_n;
+             %%
+%              params.RescaleOutputDt = 1e-5;
+             i = find(diff(t) > params.RescaleOutputDt);
+%              clf;hold on;plot(t);plot(i, t(i), '*');
+%              plot(diff(i), 'd-');
+%              clf;
+%              plot(out.t(i), out.SL(i), '|')
+%             t_n = t(1):params.RescaleOutputDt:t(end);
+%             if t_n(end) < t(end)
+%                 t_n = [t_n t(end)];
+%             end
+%             PU = interp1(t, PU, t_n);
+%             t = t_n;
+        t = t(i);PU = PU(i, :);
         end
         out = storeOutputs(out, PU, params, t);
 

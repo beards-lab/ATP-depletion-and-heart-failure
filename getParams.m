@@ -38,9 +38,9 @@ end
         'UseSerialStiffness', true, ... % serial stiffness used with dashpot viscosity
         'UseSlack', true, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
-        'PlotEachSeparately', true , ... % show each plot on separate figure
+        'PlotEachSeparately', false , ... % show each plot on separate figure
         'UseSLInput', false, ... % Use SL as a driving instead of velocities, provide input in datatable
-        'RescaleOutputDt', 0.001,... % downsamples unnecessary complex output vector
+        'RescaleOutputDt', 1e-5,... % downsamples unnecessary complex output vector
         'Terminator', false);
 
     % transition from NP to P, only when UseCa = true

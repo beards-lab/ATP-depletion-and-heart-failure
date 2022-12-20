@@ -29,27 +29,46 @@ g = [0.4156    0.0600    5.3243    2.7286 0.5186    3.9465    0.5116   10.6276 1
 g = [1.6469, 1.0000, 1.1611, 0.0053, 1.5031, 1.5605, 0.9276, 0.0220, 0.3455, 1.0114, 0.2624, 1.9307, 1.5611, 1.2518, 1.6784, 0.6298, 1.1186, 0.4442, 1.3752, 1.0959]
 g = load('gopt.csv');
 %% Eval the model at vel 0
-g = ones(1, 21)
-params0 = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
-opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
-    'SL0', 2.2*1.1, ...
-    'MatchTimeSegments', 1, 'ML', 2.2, 'PlotProbsOnStep', false, 'ReduceSpace', false,...
-    'OutputAtSL', Inf, 'LSE0', 0.0);
-A = [8 4 2];
-params0.Velocity = -6;
+g = ones(1, 22);
+% params0 = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,'Velocity', 0,'UseCa', false,'UseOverlap', false);
+% opts0 = struct('N', 20, 'Slim', 0.04, 'PlotProbsOnFig', 0, 'ValuesInTime', true, ...
+%     'SL0', 2.2*1.1, ...
+%     'MatchTimeSegments', 1, 'ML', 2.2, 'PlotProbsOnStep', false, 'ReduceSpace', false,...
+%     'OutputAtSL', Inf, 'LSE0', 0.0);
+% A = [8 4 2];
+% params0.Velocity = -6;
+g(19) = 10;g(20) = 10;
+params0 = getParams(struct('SL0', 1.1*2.0), g);
+t_change = 1e-5;
+changePercent = -[8, 10, 12, 14, 16];
+changeSL = params0.SL0*(changePercent/100);
+velocity = changeSL/t_change;
 
-for k = 3:3
-    params0.MgATP = A(k);
-    params0.Velocity = 0;
-    [F(k), out] = evaluateModel(fcn, [0 1], params0, g, opts0);
-    params0.Velocity = -6;
-    params0.PU0 = out.PU(end, :);
-    [F(k) out] = evaluateModel(fcn, [0 0.20/abs(params0.Velocity*2.2)], params0, g, opts0);
+
+params0.ValuesInTime = true;
+params0.UseSlack = true;
+params0.UseSerialStiffness = true;
+[F, out] = evaluateModel(@dPUdTCa, [0 3], params0);
+% out.Force(end)
+PU0 = out.PU(end, :);
+params0.PU0 = PU0;
+%
+k = 1;
+figure(10);clf;
+subplot(211);hold on;
+subplot(212);hold on;
+for k = 1:length(velocity)
+%     params0.MgATP = A(k);
+    params0.Velocity = [velocity(k), 0, 0]/params0.ML;
+    [F(k), out] = evaluateModel(@dPUdTCa, [0 t_change, 0.5], params0);
+    subplot(211);plot(out.t, out.SL, out.t, out.LXB, ':', 'Linewidth', 2);
+    subplot(212);plot(out.t, out.Force, ':', 'Linewidth', 2);
 end
-params = params0;opts = opts0;
+
+
 %% set up the problem
 % original fit from tuesday
-g = [0.542876541225473,0.914586975331451,0.147826886651247,7.16847703087333,2.59787534877577,0.0322817577373749,0.794984662510472,0.00676842719352362,0.050540767958257,0.617238554706245,1,2.08884046119593,2.0054310807672,0.921193092113734,1,1.00122403975111e-06,2.27995446259569,0.864010537605939,1,1.0463623046875,0.347826086956522,1.8];
+% g = [0.542876541225473,0.914586975331451,0.147826886651247,7.16847703087333,2.59787534877577,0.0322817577373749,0.794984662510472,0.00676842719352362,0.050540767958257,0.617238554706245,1,2.08884046119593,2.0054310807672,0.921193092113734,1,1.00122403975111e-06,2.27995446259569,0.864010537605939,1,1.0463623046875,0.347826086956522,1.8];
 % refit for SL length based sim
 % g = load('gopt.csv');
 % Test the increased dr
@@ -62,7 +81,7 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 tic
 % [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1 1 1 1])
 % [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 1 1 1 1])
-[Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 0 1 0])
+[Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 0 0 0 1])
 toc
 E1
 % writematrix(g, 'gopt.csv')
@@ -250,7 +269,7 @@ options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 
 
 exclude = [2 3 4 11 15 17 18 19 20 21 22];
 exclude = [2:5 11 12 15:22];
-exclude = [11 15 19:21];
+exclude = [11 15 21:22];
 % exclude = [1  2   6     7     8     9    10    12    13    14    16];
 g_selection = setdiff(1:length(g), exclude);
 % leftovers = setdiff(1:length(g),g_selection);
@@ -261,12 +280,12 @@ gr0 = g(g_selection);
 % optimfun = @(gr)evaluateProblem(fcn, g_all, false);
 % optimfun = @(gr)evaluateProblem(fcn, [gr(1) 1 gr(2:end)], false, [1 1 0 0 0 1]);
 % optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 1 0 0 1 1 1]);
-optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 0 0 0 1]);
+optimfun = @(gr)evaluateProblem(fcn, insertAt(g, gr, g_selection), false, [0 0 0 0 0 0 0 0 0 1]);
 % optimfun = @(gr)evaluateProblem(fcn, gr, false, [1 0 0 0 0 1]);
 % tic
-optimfun(gr0)
+% optimfun(gr0)
 % toc
-% optimfun(g)
+%% optimfun(g)
 % x = fminsearch(optimfun, gr0, options)
 % x = fminsearch(optimfun, p_OptimGA, options)
 x = fminsearch(optimfun, gr0, options)
@@ -278,11 +297,11 @@ g = insertAt(g, x, g_selection)
 % save gopt1_eval6 g;
 
 % to commit as plaintext
-writematrix(g, 'gopt.csv_ds9')
-
+writematrix(g, 'gopt.csv_slack')
+%%
 tic
 % [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 1 1 0 0 0 0])
-[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 0 0 0 1])
+[Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 0 0 0 1 1])
 toc
 saveas(gcf, 'ProblemEval.png')
 

@@ -23,9 +23,9 @@ end
 subplot(211);
 yyaxis left;cla;hold on;
 Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
-plot(out.t, out.LXB/params.ML , 'o-', 'MarkerSize', 4, 'Linewidth', 2)
+plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '--', 'MarkerSize', 4, 'Linewidth', 2)
 leg = plot(out.t, Pus, 'b-',out.t, out.p1_0, 'r-',out.t, out.p2_0, 'g-',out.t, out.p3_0, 'b-',out.t, out.NR, 'm-');
-legend(leg); legend('Pu', 'P1', 'P2', 'P3', 'NR');
+legend('SL','LXB', 'Pu', 'P1', 'P2', 'P3', 'NR');
 % xlim([0 inf])
 % ylim([-50, Inf])
 plot([t t], [0 1]);

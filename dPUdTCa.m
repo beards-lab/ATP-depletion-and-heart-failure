@@ -110,7 +110,17 @@ F_total = F_active + F_passive;
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
 % muscle model
 if params.UseSerialStiffness
-    Force = params.kSE*LSE;
+    
+    if ~params.UseSlack
+        Force = params.kSE*LSE;
+    elseif LSE >= 0
+        Force = params.kSE*LSE;
+    else
+        % soft slack spring
+%         Force = LSE/params.kSE;
+        Force = 0;
+    end
+        
     velHS = (Force - F_total)/params.mu;
     dLSEdt = vel - velHS;
 elseif params.UseSlack
@@ -210,7 +220,7 @@ end
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t > 0.46
+if t > 0.1
     a = 1;
 end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];
