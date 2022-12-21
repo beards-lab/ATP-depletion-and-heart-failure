@@ -28,7 +28,7 @@ ts_s = [-50 ts_d(2:end) 2200]
 % clf
 % figure(202);clf
 % [datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, nf/67, 'ForceLength8mM');
-[datatable, velocitytable] = DownSampleAndSplit(dt8, [0 4250], [-5000, 500, 2000, 4250], ML, dsf*2, nf/67, 'ForceLength8mM_all');
+[datatable, velocitytable] = DownSampleAndSplit(dt8, [0 4250], [-5000, 500, 2000, 4250], ML, dsf/10, nf/67, 'ForceLength8mM_all');
 
 % subplot(211);title('Length (ML)');xlabel('Time (ms)');ylabel('ML');
 % subplot(212);title('Force (kPa)');xlabel('Time (ms)');ylabel('kPa');
@@ -63,9 +63,12 @@ clf;
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
 ts_s = [1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
-% ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
-% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf/10, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
+ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, '', o);
+% get the ktr of the zones
+zones = [1162, 1209;1464 1519;1816 1889;2269 2355;2774 2900];
+fitRecovery(datatable, zones);
 
 %% 8 mM long scope data
 % figure(101);clf;
@@ -83,13 +86,15 @@ legend('ForceLength8mM_all', 'bakers_rampup8', 'bakers_rampup2_8', 'bakers_rampu
 clf;
 data_table = readtable('data/8mM ATP 2ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
+fitRecovery(datatable, [100, 700;]); 
 %%
 data_table = readtable('data/2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
-
+fitRecovery(datatable, [100, 700;]); 
+%%
 data_table = readtable('data/0.2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
-
+fitRecovery(datatable, [100, 700;]); 
 %% load length-force data for 2 mM
 figure('2 mM');
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
@@ -300,4 +305,39 @@ end
 %     plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
 %     plot([ts_d;ts_d], repmat([min(data_table.F);max(data_table.F)], 1, length(ts_d)))
     
+end
+
+function [ktr, df] = fitRecovery(datatable, zones)
+
+    clf; subplot(1, 4, [1 3]);hold on;
+    plot(datatable(:, 1), datatable(:, 3))
+
+    % zones = [1180, 1209;1485 1519;1839 1889;2290 2355;2794 2900];
+    for z = 1:size(zones, 1)
+        bt = 10; % buffer time (ms)
+        z1 = zones(z, :);
+        i1 = find(datatable(:, 1) > (z1(1) + bt)/1000, 1);
+        i2 = find(datatable(:, 1) > z1(2)/1000, 1);
+        z1 = [i1:i2];
+
+        to = datatable(z1(1), 1); % time offset
+        timebase = datatable(z1, 1)-to;
+
+    %     df = diff(datatable(z1([1 end]), 3)) ;
+    %     df = 80;
+    %     ktr = 40;
+        y = @(df, ktr, s, x)df*(1-exp(-(x+s)*ktr));
+        [a b] = fit(timebase, datatable(z1, 3), y, 'StartPoint', [50, 20, bt/1000]);
+        ktr(z) = a.ktr;
+        df(z) = a.df;
+
+        timebase_fit = (-bt/1000:0.01:0.3);
+        plot(timebase+to, datatable(z1, 3), 'x', timebase_fit + to, y(a.df, a.ktr, a.s, timebase_fit));
+        text(to + 0.001, datatable(z1(1), 3), sprintf('ktr = %1.1f, fm=%0.1f,\n with rmse %0.3f', a.ktr, a.df, b.rmse), 'Color', [1 0 0])
+
+    end
+    title('1-exp(-x) exponential recovery identification')
+    subplot(1, 4, 4);hold on;
+    plot(ktr, 'o-');plot(df, 'x-');legend('ktr', 'max force')
+% plot(df, ktr, 'o-');
 end
