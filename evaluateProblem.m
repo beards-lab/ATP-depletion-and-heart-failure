@@ -692,15 +692,23 @@ if evalParts(10)
 
     params.Velocity = velocitytable(1:end-1, 2);
     params.UseSLInput = true;
+    params.UseSlack = true;
     params.MgATP = 8;
     params.SL0 = 2.2;
     params.ML = 2.0;
+    params.RescaleOutputDt = 0;
     
     params = getParams(params, g);
+    params.PlotEachSeparately = true;
 %     params.vmax = 20
 
+% test
+% params.alpha3 = 40000;
+
     try
+        tic
     [F out] = evaluateModel(@dPUdTCa, [0 velocitytable(2:end, 1)'], params);
+    toc
 % tic 
 %     [F out] = evaluateModel(@dPUdTCa, [0.5 2], params);
 %     toc
@@ -712,6 +720,13 @@ if evalParts(10)
         weights = ones(length(e), 1); 
         we = e.*weights;
         se = mean(we);
+        
+        % calculate vmax at slack
+        is = find(out.t > params.datatable(1, 1) & out.SL < out.LXB, 1); % index of start slack
+        ies = find(out.t > out.t(is) & out.LXB < out.SL, 1); % index of slack end - simulation
+        ied = find(out.t > out.t(is) & )
+        slackVel_sim = (out.SL(is)-out.SL(ie))/(out.t(ie) - out.t(is));
+        
                 
     catch e
         se = NaN;
@@ -721,7 +736,7 @@ if evalParts(10)
     %
     if params.PlotEachSeparately    
         %%
-        figure(10);clf;
+        figure(101);clf;
         
         
         subplot(211);hold on;

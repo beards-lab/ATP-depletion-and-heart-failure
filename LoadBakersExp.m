@@ -59,15 +59,19 @@ data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLi
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
 
 %% slack 8 mM
-clf;
-data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% clf;
+data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
-ts_s = [1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
+ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
 ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, '', o);
-% get the ktr of the zones
-zones = [1162, 1209;1464 1519;1816 1889;2269 2355;2774 2900];
+% subplot(211)
+% title('Slack experiment for different ATP concentrations')
+% legend('8 mM', '2 mM', '0.2 mM')
+%% get the ktr of the zones
+zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
+clf;
 fitRecovery(datatable, zones);
 
 %% 8 mM long scope data
@@ -293,28 +297,34 @@ end
 
 %     figure();clf;
     subplot(211);hold on;title(saveAs, 'Interpreter', 'none');
-    plot(td + offset, ld, '|-');
+    plot(td + offset, ld, '-');
+    
     
 %     plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
-    plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
+%     plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
 %     plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
+    xlabel('time (ms)');
+    ylabel('Length (ML)')
+
     
     subplot(212);hold on;
-    plot(td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
+    plot(td + offset, fd, '-', 'Linewidth', 2, 'MarkerSize', 10);
     
 %     plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
 %     plot([ts_d;ts_d], repmat([min(data_table.F);max(data_table.F)], 1, length(ts_d)))
+    xlabel('time (ms)');
+    ylabel('Force (kPa)')
     
 end
 
-function [ktr, df] = fitRecovery(datatable, zones)
+function [ktr, df, st] = fitRecovery(datatable, zones)
 
     clf; subplot(1, 4, [1 3]);hold on;
     plot(datatable(:, 1), datatable(:, 3))
 
     % zones = [1180, 1209;1485 1519;1839 1889;2290 2355;2794 2900];
     for z = 1:size(zones, 1)
-        bt = 10; % buffer time (ms)
+        bt = 5; % buffer time (ms)
         z1 = zones(z, :);
         i1 = find(datatable(:, 1) > (z1(1) + bt)/1000, 1);
         i2 = find(datatable(:, 1) > z1(2)/1000, 1);
@@ -326,18 +336,45 @@ function [ktr, df] = fitRecovery(datatable, zones)
     %     df = diff(datatable(z1([1 end]), 3)) ;
     %     df = 80;
     %     ktr = 40;
-        y = @(df, ktr, s, x)df*(1-exp(-(x+s)*ktr));
+        y = @(df, ktr, s, x)df*(1-exp(-(x-s)*ktr));
         [a b] = fit(timebase, datatable(z1, 3), y, 'StartPoint', [50, 20, bt/1000]);
-        ktr(z) = a.ktr;
-        df(z) = a.df;
+        ktr(z) = a.ktr; 
+        df(z) = a.df; % difference in force
+        del(z) = a.s; % delay time [s]
+        
 
         timebase_fit = (-bt/1000:0.01:0.3);
-        plot(timebase+to, datatable(z1, 3), 'x', timebase_fit + to, y(a.df, a.ktr, a.s, timebase_fit));
-        text(to + 0.001, datatable(z1(1), 3), sprintf('ktr = %1.1f, fm=%0.1f,\n with rmse %0.3f', a.ktr, a.df, b.rmse), 'Color', [1 0 0])
-
+        plot(timebase+to, datatable(z1, 3), 'x', timebase_fit + to, y(a.df, a.ktr, a.s, timebase_fit), '--', 'Linewidth', 2);
+        
+        
+        plot([datatable(i1, 1) datatable(i1, 1);datatable(i2, 1) datatable(i2, 1)]', [0, 2.2; 0 100]')
+        % find max slack velocity from data
+        si = 100;% search indices
+        [~, imin] = min(diff(datatable(i1-si:i1, 2))); % SL reached the bottom;
+        datatable(imin + i1 - si, 1);
+        sc = find(...
+            datatable(i1:-1:i1-si, 2) > datatable(i1-si, 2)*0.99 & ... % one percent drop
+            (si:-1:0 < imin)', ... % search until the bottom is reached
+            1, 'first') -1;
+%         datatable(i1 - si, 1)
+%         plot([datatable(i1- si + imin, 1) datatable(i1-si + imin, 1)], [0, 100])
+        plot([datatable(i1- sc, 1) datatable(i1-sc, 1)], [0, 100], 'r')
+        % get the velocity
+        i_del = find(datatable(i1-si:i1+si, 1) >= datatable(i1) + del(z), 1);
+        plot([datatable(i1- si + i_del, 1) datatable(i1-si + i_del, 1)], [0, 100], 'r')
+        vel = datatable(i1- sc, 2) - datatable(i1 - si + i_del, 2)/(datatable(i1- sc, 1) - datatable(i1 - si + i_del, 1));
+        sv(z) = vel; % slack velocity
+        text(to + 0.001, datatable(z1(1), 3), sprintf('ktr = %1.1f, fm=%0.1f,\n with rmse %0.3f \n, vel = %0.1f', a.ktr, a.df, b.rmse, vel), 'Color', [1 0 0])
+        xlabel('Time (s)');
+        ylabel('Force (kPa)')
     end
     title('1-exp(-x) exponential recovery identification')
     subplot(1, 4, 4);hold on;
-    plot(ktr, 'o-');plot(df, 'x-');legend('ktr', 'max force')
+    plot(ktr, 'o-', 'Linewidth', 2);plot(df, 'x-', 'Linewidth', 2);
+    ylabel('Ktr and max force');
+    yyaxis right;plot(sv, '|-', 'Linewidth', 2)
+    legend('ktr (s^{-1})', 'max force (kPa)', 'slack velocity (um/s)*');
+    ylabel('Velocity (um/s)');
+    xlabel('Experiment nr')
 % plot(df, ktr, 'o-');
 end
