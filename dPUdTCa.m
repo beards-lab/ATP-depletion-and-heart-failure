@@ -32,18 +32,21 @@ if ~params.UseSLInput
     SL = PU(3*ss + 3);
     dSL = vel;
 else
-    % TODO make it faster in sorted list
-    % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
     if t >= params.datatable(end-1, 1)
         % if the sim time is over the datatable length, hold the SL
-        SL = params.datatable(end, 1);
+        SL = params.datatable(end, 2);
+        dSL = 0;
+    elseif t <= params.datatable(1, 1)
+        SL = params.datatable(1, 2);
         dSL = 0;
     else
+        % TODO make it faster in sorted list
+        % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
         i = find(params.datatable(:, 1) >= t,1,'First');    
     %     i = min(length(params.datatable(:, 1))-1, i);
         SL = params.datatable(i, 2);
         if i == 1
-            dSL = (params.datatable(i+1, 2) - params.datatable(i, 2))/((params.datatable(i+1, 1) - params.datatable(i, 1)));
+            dSL = 0;
         else
             dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
         end
@@ -201,7 +204,11 @@ dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     + g1*params.k_2*p3  ;
 
          
+% XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
 XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
+if any(XB_TOR < -1) 
+    a = 1;
+end
 dp3   = -velHS/2*dp3ds + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
