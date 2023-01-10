@@ -205,7 +205,9 @@ dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
 
          
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
-XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
+XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2));
+XB_TOR(1:params.N) = XB_TOR(params.N+1);
+XB_TOR = XB_TOR.*p3;
 if any(XB_TOR < -1) 
     a = 1;
 end
@@ -227,7 +229,7 @@ end
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t > 0.1
+if t > 2.5
     a = 1;
 end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

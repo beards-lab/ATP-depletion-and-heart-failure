@@ -390,9 +390,9 @@ if evalParts(7)
     velocitytable = datastruct.velocitytable(1:8, :);
     velocitytable(1, 1) = -2;
     ts = 0.45;te = 0.6;
-    is = find(datastruct.datatable(:, 1)>ts, 1);
+    iss = find(datastruct.datatable(:, 1)>ts, 1);
     ie = find(datastruct.datatable(:, 1)>te, 1);
-    datatable = datastruct.datatable(is:ie, :);
+    datatable = datastruct.datatable(iss:ie, :);
     datatable(:, 2) = round(datatable(:, 2), 3);
     params = params0;
 
@@ -722,10 +722,10 @@ if evalParts(10)
         se = mean(we);
         
         % calculate vmax at slack
-        is = find(out.t > params.datatable(1, 1) & out.SL < out.LXB, 1); % index of start slack
-        ies = find(out.t > out.t(is) & out.LXB < out.SL, 1); % index of slack end - simulation
-        ied = find(out.t > out.t(is) & )
-        slackVel_sim = (out.SL(is)-out.SL(ie))/(out.t(ie) - out.t(is));
+        iss = find(out.t > params.datatable(1, 1) & out.SL < out.LXB, 1); % index of start slack
+        ise = find(out.t > out.t(iss) & out.LXB < out.SL, 1); % index of slack end - simulation
+%         ied = find(out.t > out.t(is) & )
+        slackVel_sim = (out.SL(iss)-out.SL(ise))/(out.t(ise) - out.t(iss));
         
                 
     catch e
