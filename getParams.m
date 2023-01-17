@@ -13,7 +13,7 @@ end
 %% Build default params0
     ML = 2.0; % reference muscle length
 
-    SL0 = 2.0*1.1;
+    SL0 = 2.0*1.0;
     
     params0 = struct(...
         'N', 30, ...
@@ -30,14 +30,17 @@ end
         'Velocity', 0,...
         'UseCa', false,...
         'UseOverlap', true, ...
-        'UsePassive', false, ... % parallel passive stiffness
+        'UsePassive', true, ... % parallel passive stiffness
         'PlotProbsOnFig', 0, ... % 0 - false, any number: figure to plot on
         'ValuesInTime', true, ... % export values in time. Outputs just last value otherwise.
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
         'ReduceSpace', false, ... % use only half- to no- of the discretized space
-        'UseSerialStiffness', false, ... % serial stiffness used with dashpot viscosity
+        'UseSerialStiffness', true, ... % serial stiffness used with dashpot viscosity
+        'UseSlack', true, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
-        'PlotEachSeparately', true, ... % show each plot on separate figure
+        'PlotEachSeparately', false , ... % show each plot on separate figure
+        'UseSLInput', false, ... % Use SL as a driving instead of velocities, provide input in datatable
+        'RescaleOutputDt', 1e-5,... % downsamples unnecessary complex output vector
         'Terminator', false);
 
     % transition from NP to P, only when UseCa = true
@@ -45,15 +48,20 @@ end
     g0 = [ 1.5*0.3977    2.0478    1.4903    0.3765    0.5219    0.2726    1.25  1.0471    0.2382    0.9342];
     params0.K_coop = 5.7;
     params0.k_on   = g0(1)*100;
-    params0.k_off  = g0(2)*1.5*100;    
+    params0.k_off  = g0(2)*1.5*100;
+    params0.datatable = [];
+    
+    
+    
+    params0.vmax = g(22)*10;
     
 
     % rate constants
     params0.ka  = g(1)*50 ;
     params0.kd  = g(2)*5; 
-    params0.k1  = g(3)*1000;%
+    params0.k1  = g(3)*1000/2;%
     params0.k_1 = g(4)*10;%
-    params0.k2  = g(5)*1000;
+    params0.k2  = g(5)*100;
     params0.k_2 = 10; % not identified
     params0.k3  = g(10)*100;%;
 
@@ -84,11 +92,11 @@ end
     
     params0.Amax = g(18)*1;
     
-    params0.mu = g(19)*1; % viscosity
-    params0.kSE = g(20)*5000;
+    params0.mu = g(19)*1e-3; % viscosity
+    params0.kSE = g(20)*1000;
 
     % passive force coeff
-    params0.k_pas = 230*g(21); % From Kim Salla et al.
+    params0.k_pas = 200*g(21); % From Kim Salla et al.
         
     %% Fill in the missing input params
     

@@ -28,7 +28,32 @@ if params.UseCa
 else
     NP = 0;
 end
-SL = PU(3*ss + 3);
+if ~params.UseSLInput
+    SL = PU(3*ss + 3);
+    dSL = vel;
+else
+    if t >= params.datatable(end-1, 1)
+        % if the sim time is over the datatable length, hold the SL
+        SL = params.datatable(end, 2);
+        dSL = 0;
+    elseif t <= params.datatable(1, 1)
+        SL = params.datatable(1, 2);
+        dSL = 0;
+    else
+        % TODO make it faster in sorted list
+        % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
+        i = find(params.datatable(:, 1) >= t,1,'First');    
+    %     i = min(length(params.datatable(:, 1))-1, i);
+        SL = params.datatable(i, 2);
+        if i == 1
+            dSL = 0;
+        else
+            dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
+        end
+    end
+    vel = dSL;
+end
+    
 U_SR = 1 - U_NR;
 LSE = PU(3*ss + 4);
 
@@ -71,13 +96,13 @@ f1 = 0;f2 = 1;
 % Force model
 kstiff1 = params.kstiff1; 
 kstiff2 = params.kstiff2;
-% F_active = kstiff2*p3_0 - max(-kstiff1*(p2_1 + p3_1 ), 0);
+% F_active = kstiff2*p3_0/100 - max(-kstiff1*(p2_1 + p3_1 ), 0);
 F_active = kstiff1*p2_1 + kstiff2*p3_1;
 
 if params.UsePassive
     Lsc0    = 1.51;
     gamma = 7.5;
-    F_passive = params.k_pas*(SL - Lsc0)^gamma; 
+    F_passive = params.k_pas*max(SL - Lsc0, 0)^gamma; 
 else
     F_passive = 0;
 end
@@ -86,12 +111,63 @@ F_total = F_active + F_passive;
 
 % we do nont know the velocity here, so we do that up a level
 % Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
-
 % muscle model
 if params.UseSerialStiffness
-    Force = params.kSE*LSE;
-    velHS = ( - F_total)/params.mu;% velocity of half-sarcomere
+    
+    if ~params.UseSlack
+        Force = params.kSE*LSE;
+    elseif LSE >= 0
+        Force = params.kSE*LSE;
+    else
+        % soft slack spring
+%         Force = LSE/params.kSE;
+        Force = 0;
+    end
+        
+    velHS = (Force - F_total)/params.mu;
     dLSEdt = vel - velHS;
+elseif params.UseSlack
+    vmax = params.vmax;
+    if vel < -vmax
+        % slacking - lengthtening
+        Force = F_passive;
+        velHS = -vmax;
+        dLSEdt = vel + vmax;
+    elseif vel > -vmax && LSE < 0
+        % slacking / shortening
+        Force = F_passive;
+        velHS = -vmax;
+        dLSEdt = vel + vmax;
+    else % vel > -vmax && LSE >= 0
+        Force = F_total;
+        velHS = vel;
+        dLSEdt = 0;
+    end
+        
+        
+    
+%     if LSE > 0
+%     Force = params.kSE*LSE;
+%     velHS = (Force - F_total)/params.mu;
+%     dLSEdt = vel - velHS;
+%     else
+%     Force = params.kSE/1000*LSE;
+%     velHS = (Force - F_total)/params.mu;
+%     dLSEdt = vel - velHS;
+%     end
+    
+%     if F_active > 0 && LSE > -1e-3
+%         % normal
+%         Force = F_total;
+%         velHS = vel;
+%         % return to norm
+%         dLSEdt = -LSE*1000;
+%     else
+%         % slack - use a compliant spring
+%         Force = params.kSE/10*LSE;
+%         velHS = (Force - F_total)/params.mu;
+%         dLSEdt = vel - velHS;
+%     end
 else
     % like 10x faster, does not cause any oscillations
     Force = F_total;
@@ -128,7 +204,13 @@ dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     + g1*params.k_2*p3  ;
 
          
-XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
+% XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
+XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2));
+% XB_TOR(1:params.N) = XB_TOR(params.N+1);
+% XB_TOR = XB_TOR.*p3;
+if any(XB_TOR < -1) 
+    a = 1;
+end
 dp3   = -velHS/2*dp3ds + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
 % dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
@@ -144,9 +226,10 @@ else
     dNP = 0;
 end
 
-dSL = vel;
-
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
+if t > 2.5
+    a = 1;
+end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];
