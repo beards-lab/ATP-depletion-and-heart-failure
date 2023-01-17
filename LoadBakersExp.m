@@ -72,7 +72,7 @@ ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large int
 %% get the ktr of the zones
 zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 clf;    
-fitRecovery(datatable, zones, 2);
+fitRecovery(datatable, zones, 0);
 
 %% 8 mM long scope data
 % figure(101);clf;

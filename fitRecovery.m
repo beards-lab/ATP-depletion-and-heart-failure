@@ -49,7 +49,7 @@ function [ktr, df, st] = fitRecovery(datatable, zones, zeroTreshold)
         % find max slack velocity from data
         si = 100;% search indices
         [~, imin] = min(diff(datatable(i1-si:i1, 2))); % SL reached the bottom;
-        datatable(imin + i1 - si, 1);
+%         datatable(imin + i1 - si, 1);
         sc = find(...
             datatable(i1:-1:i1-si, 2) > datatable(i1-si, 2)*0.99 & ... % one percent drop
             (si:-1:0 < imin)', ... % search until the bottom is reached
@@ -64,17 +64,17 @@ function [ktr, df, st] = fitRecovery(datatable, zones, zeroTreshold)
         plot([datatable(ise, 1) datatable(ise, 1)], [0, 100], 'r')
 %         plot([datatable(i1- si + i_del2, 1) datatable(i1-si + i_del2, 1)], [0, 100], ':r', 'Linewidth', 3)
         dSL =  datatable(i1, 2) - datatable(iss, 2);
-        dSLpc(z) = dSL/2.0*100; % dSL in percent of ML
-        dT =  datatable(ise, 1) - datatable(iss, 1);
-        vel(z) = dSL/dT;
+        dSLpc(z) = dSL/datatable(iss, 2)*100; % dSL in percent of ML
+        dT(z) =  datatable(ise, 1) - datatable(iss, 1);
+        vel(z) = dSL/dT(z);% um/s
         
 %         i_del_lin = find(datatable(iss:i2, 1) >= ix0lin(z), 1);
-        dTlin = x0lin(z) - datatable(iss, 1);
-        vel_lin(z) = dSL/dTlin;
+        dTlin(z) = x0lin(z) - datatable(iss, 1);
+        vel_lin(z) = dSL/dTlin(z);
         plot([x0lin(z) x0lin(z)], [0, 100], 'm--');
         
         fprintf('At ML %1.2f, and time %1.2f: ' , datatable(i1- sc, 2), datatable(i1- sc, 1));
-        fprintf(' dSL = %1.3f (%1.1f pct), dT = %1.1f ms and vel is %1.1f (%1.1f) \n', dSL, dSLpc(z), dT*1000, -vel(z), -vel_lin(z));
+        fprintf(' dSL = %1.3f (%1.1f pct), dT = %1.1f ms and vel is %1.1f (%1.1f) \n', dSL, dSLpc(z), dT(z)*1000, -vel(z), -vel_lin(z));
         
         text(to + 0.001, datatable(z1(1), 3), sprintf('ktr = %1.1f, fm=%0.1f,\n with rmse %0.3f \n, vel = %0.1f', ae.ktr, ae.df, be.rmse, -vel(z)), 'Color', [1 0 0])
         xlabel('Time (s)');
@@ -88,10 +88,19 @@ function [ktr, df, st] = fitRecovery(datatable, zones, zeroTreshold)
     plot(-dSLpc, ktr, 'o-', 'Linewidth', 2);plot(-dSLpc, df, 'x-', 'Linewidth', 2);
     ylabel('Ktr and max force');
     yyaxis right;
-    plot(-dSLpc, -vel, '|-', 'Linewidth', 2);
-    plot(-dSLpc, -vel_lin, 'x--', 'Linewidth', 2)
+    plot(-dSLpc, -vel/2.0, '|-', 'Linewidth', 2);
+    plot(-dSLpc, -vel_lin/2.0, 'x--', 'Linewidth', 2)
     legend('ktr (s^{-1})', 'max force (kPa)', 'slack velocity - exp fit (um/s)*', 'slack velocity - lin fit(um/s)*');
-    ylabel('Velocity (um/s)');
+    ylabel('Velocity (ML/s)');
     xlabel('Experiment nr')
 % plot(df, ktr, 'o-');
+
+figure;
+plot(dT*1000, -dSLpc, 'o-', dTlin*1000, -dSLpc, 'x-');
+xlabel('dt (ms)')
+ylabel('dsl (%)')
+ylim([0, 20])
+
+vel = (dSLpc/100 + 1)./dT
+
 end
