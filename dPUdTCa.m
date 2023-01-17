@@ -206,8 +206,8 @@ dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
          
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
 XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2));
-XB_TOR(1:params.N) = XB_TOR(params.N+1);
-XB_TOR = XB_TOR.*p3;
+% XB_TOR(1:params.N) = XB_TOR(params.N+1);
+% XB_TOR = XB_TOR.*p3;
 if any(XB_TOR < -1) 
     a = 1;
 end

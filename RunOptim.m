@@ -79,6 +79,9 @@ g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma_0", "kmsr", "\alpha_3", 
 % g = ones(21, 1);
 % fcn = @dPUdT_D;
 tic
+g(20) = 0.5;
+g(19) = 500;
+
 % [Etot, E1] = evaluateProblem(fcn, g, true, [0 0 0 0 0 1 1 1 1])
 % [Etot, E1] = evaluateProblem(fcn, g, true, [1 0 0 0 0 1 1 1 1])
 [Etot, E1] = evaluateProblem(fcn, g, false, [0 0 0 0 0 0 0 0 0 1])

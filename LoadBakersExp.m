@@ -63,16 +63,16 @@ data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLi
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
 ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
-ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
+% ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, '', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
 % subplot(211)
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')
 %% get the ktr of the zones
 zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 clf;    
-fitRecovery(datatable, zones);
+fitRecovery(datatable, zones, 2);
 
 %% 8 mM long scope data
 % figure(101);clf;

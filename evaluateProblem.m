@@ -707,7 +707,8 @@ if evalParts(10)
 
     try
         tic
-    [F out] = evaluateModel(@dPUdTCa, [0 velocitytable(2:end, 1)'], params);
+    [F out] = evaluateModel(@dPUdTCa, [0 1.4], params);
+%     [F out] = evaluateModel(@dPUdTCa, [0 velocitytable(2:end, 1)'], params);
     toc
 % tic 
 %     [F out] = evaluateModel(@dPUdTCa, [0.5 2], params);
