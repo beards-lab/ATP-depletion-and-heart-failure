@@ -160,20 +160,20 @@ data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeader
 legend('ForceLength8mM_all', 'bakers_rampup8', 'bakers_rampup2_8', 'bakers_rampup2_8_long', 'nevim', 'Interpreter', 'None')
 % xlim([1800, 2000])
 %% 8mM ATP
-clf;
+% clf;
 data_table = readtable('data/8mM ATP 2ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
-fitRecovery(datatable, [100, 700;]); 
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -870-85 + 4.5);
+% fitRecovery(datatable, [100, 700;], 0); 
 %%
 data_table = readtable('data/2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
-fitRecovery(datatable, [100, 700;]); 
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -870-85 + 4.5);
+% fitRecovery(datatable, [100, 700;],0); 
 %%
 data_table = readtable('data/0.2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '');
-fitRecovery(datatable, [100, 700;]); 
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -870-85 + 4.5);
+% fitRecovery(datatable, [100, 700;],0); 
 %% load length-force data for 2 mM
-figure('2 mM');
+% figure(2);
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
 dt2 = readtable(datafile, ...
     "filetype", 'spreadsheet', ...
@@ -191,8 +191,8 @@ ts_d = [950.0    1000.3    1001.0    1080.9 1081.75 1091.2    1111.6    1121.8  
 % time segment simulation
 ts_s = [500 ts_d(2:end)];
 % clf;
-[datatable, velocitytable] = DownSampleAndSplit(dt2, ts_d, ts_s, ML, dsf, nf/65, 'ForceLength2mM');
-% [datatable, velocitytable] = DownSampleAndSplit(dt2, [], [], ML, dsf, nf/65, '');
+% [datatable, velocitytable] = DownSampleAndSplit(dt2, ts_d, ts_s, ML, dsf, nf/65, 'ForceLength2mM');
+[datatable, velocitytable] = DownSampleAndSplit(dt2, [], [], ML, dsf, nf/67, '');
 velocitytable
 
 %% same preparation as 8mM, using the same scale
@@ -209,6 +209,20 @@ data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeader
 %%
 data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_02_long', -(122070+710)-2700 + 1280 + 20 - 5);
+%%
+timepoints = [-1020, 0, 3300:4100];
+% indx = [];
+for i = 1:length(timepoints)
+    indx_1(i) = find(datatable(:, 1) >= timepoints(i)/1000, 1);
+end
+plot(datatable(indx_1, 1)*1000, datatable(indx_1, 3), '*', 'Linewidth', 2)
+
+timepoints = [800, 1000, 1305, 1664, 2105, 2613];
+% indx = [];
+for i = 1:length(timepoints)
+    indx_1_1(i) = find(datatable(:, 1) >= timepoints(i)/1000, 1);
+end
+plot(datatable(indx_1_1, 1)*1000, datatable(indx_1_1, 3), '^', 'Linewidth', 2)
 %%
 data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_rel');
