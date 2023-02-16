@@ -74,6 +74,79 @@ zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 clf;    
 fitRecovery(datatable, zones, 0);
 
+%%
+
+% %% Summary graph    
+% 8mM	
+% X dT (ms),	Y dML (% ML)
+bp8 = [2.735152222	8;
+4.380311224	10;
+6.466291958	12;
+9.056710864	14;
+12.05655714	16];
+
+% 2mM	
+% X dT (ms),	Y dML (% ML)
+bp2 = [1.191034575	7.954971857;
+3.025150961	9.981238274;
+5.552426411	11.96998124;
+7.953651442	13.9587242;
+11.48933025	15.94746717];
+
+% 02mM	
+% X dT (ms),	Y dML (% ML)
+bp02 = [-9.491620288	7.99249531
+-6.018966686	9.981238274
+-3.302497359	12.00750469
+-1.090347959	13.99624765
+0.2394485	15.98499062];
+
+% figure;
+clf;hold on;
+plot(bp8(:, 2), bp8(:, 1),'o', 'linewidth', 2);
+plot(bp2(:, 2), bp2(:, 1),'s', 'linewidth', 2);
+plot(bp02(:, 2), bp02(:, 1),'d', 'linewidth', 2);
+
+bp = bp8;
+
+
+y_line = @(k, x0, x)k.*(x-x0);
+% [ae be] = fit(bp(:, 2), bp(:, 1), y_line, 'StartPoint', [1, 0]);
+% 
+timebase = (0:0.1:20);
+% plot(timebase, y_line(ae.k, ae.x0, timebase), '--', 'Linewidth', 2);
+        
+% y_exp = @(df, ktr, s, x)df*(1-exp(-(x-s)*ktr));        
+% y_line = @(k, x0, x)k.*(x-x0);
+    y_exp = @(a, b, c, x)a.*x.^2 +b.*x + c;        
+    [ae be] = fit(bp(:, 2), bp(:, 1), y_exp, 'StartPoint', [1, 1, 0]);        
+    plot(timebase, y_exp(ae.a, ae.b, ae.c, timebase), '--', 'Linewidth', 2);
+    disp('8 mM exp');disp(ae);
+    [ael bel] = fit(bp(:, 2), bp(:, 1), y_line, 'StartPoint', [1, 0]);
+    plot(timebase, y_line(ael.k, ael.x0, timebase), '--', 'Linewidth', 2);
+
+    
+    bp = bp2;
+    [ae be] = fit(bp(:, 2), bp(:, 1), y_exp, 'StartPoint', [1, 1, 0]);        
+    plot(timebase, y_exp(ae.a, ae.b, ae.c, timebase), '--', 'Linewidth', 2);
+    disp('2 mM');disp(ae);
+    [ael bel] = fit(bp(:, 2), bp(:, 1), y_line, 'StartPoint', [1, 0]);
+    plot(timebase, y_line(ael.k, ael.x0, timebase), '--', 'Linewidth', 2);
+    
+    bp = bp02;
+%     y_exp = @(a, b, c, x)(a.*x-b).^2 + c;
+    [ae be] = fit(bp(:, 2), bp(:, 1), y_exp, 'StartPoint', [-1, -20, 0]);        
+    plot(timebase, y_exp(ae.a, ae.b, ae.c, timebase), '--', 'Linewidth', 2);
+    disp('0.2 mM');disp(ae);
+    [ael bel] = fit(bp(:, 2), bp(:, 1), y_line, 'StartPoint', [1, 0]);
+    plot(timebase, y_line(ael.k, ael.x0, timebase), '--', 'Linewidth', 2);
+    
+    xlabel('Step down size (% ML)')
+    ylabel('Time delay (ms)')
+    
+    %zero crossing with linear at stepdown of ML%
+    sd = [6, 7.3, 15];
+    
 %% 8 mM long scope data
 % figure(101);clf;
 % tss_d = [118555, 126800]
