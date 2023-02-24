@@ -51,6 +51,9 @@ else
             dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
         end
     end
+    if t > 2.76
+        a = 1;
+    end
     vel = dSL;
 end
     
@@ -77,27 +80,38 @@ s = params.s';%(-N:1:0)'*dS;
 dS = params.dS;
 p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
-p3_0 = dS*sum(p3); p3_1 = dS*sum((s+params.dr).*p3);
+p3_0 = dS*sum(p3); 
+
+if params.UseP31Shift
+    p3_1 = dS*sum((s+params.dr).*p3);
+else
+    p3_1 = dS*sum(s.*p3);
+end
 
 Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
 
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
-% g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-% g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-% % g3 = MgATP/(MgATP + K_T2);
-% g4 = MgATP/(MgATP + params.K_T3);
-% f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
+g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+% g3 = MgATP/(MgATP + K_T2);
+g4 = MgATP/(MgATP + params.K_T3);
+f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
 
-g1 = 0;
-g2 = 1;%0.95;
-g4 = 1;%0.604;
-f1 = 0;f2 = 1;
+% g1 = 0;
+% g2 = 1;%0.95;
+% g4 = 1;%0.604;
+% f1 = 0;f2 = 1;
 % Force model
-kstiff1 = params.kstiff1; 
-kstiff2 = params.kstiff2;
+
 % F_active = kstiff2*p3_0/100 - max(-kstiff1*(p2_1 + p3_1 ), 0);
-F_active = kstiff1*p2_1 + kstiff2*p3_1;
+if params.F_act_UseP31
+    % together with UseP31Shift
+    F_active = params.kstiff1*p2_1 + params.kstiff2*p3_1;
+else
+    % the dr shift is used here instead of UseP31Shift
+    F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1); 
+end
 
 if params.UsePassive
     Lsc0    = 1.51;
@@ -109,9 +123,6 @@ end
 
 F_total = F_active + F_passive;
 
-% we do nont know the velocity here, so we do that up a level
-% Force = kstiff2*p3_0 + kstiff1*(( p2_1 + p3_1 )^g(20)) + mu*vel;
-% muscle model
 if params.UseSerialStiffness
     
     if ~params.UseSlack
@@ -191,12 +202,18 @@ else
 end
 
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-dU_NR = + g4*params.ksr0*exp(F_total/params.sigma0)*U_SR - params.kmsr*U_NR*Pu; 
+if params.UseAtpOnUNR
+    dU_NR = + g4*params.ksr0*exp(F_total/params.sigma0)*U_SR - params.kmsr*U_NR*Pu; 
+else
+    dU_NR = params.ksr0*(exp(F_active/params.sigma0))*U_SR - params.kmsr*U_NR*Pu;
+end
 % dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
 % dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
 % dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
 % dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
+
+
 dp1   = -velHS/2*dp1ds - f1*params.kd*p1 - f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     + params.k_1*(exp(+params.alpha1*s).*p2);
 dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
@@ -205,18 +222,20 @@ dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
 
          
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
-XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2));
-% XB_TOR(1:params.N) = XB_TOR(params.N+1);
-% XB_TOR = XB_TOR.*p3;
-if any(XB_TOR < -1) 
-    a = 1;
+if params.UseTORNegShift
+    XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
+else
+    XB_TOR = g2*params.k3*(exp(params.alpha3*(s+params.s3).^2).*p3);
 end
+
 dp3   = -velHS/2*dp3ds + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
-% dp1(N+1) = dp1(N+1) + ka*Pu*U_NR/dS; % attachment
-% dp1(N+1) = dp1(N+1) + ka*Pu*(1.0 - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
-dp1(params.s_i0) = dp1(params.s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
-% dp1(params.s_i0) = dp1(params.s_i0) + ka*Pu*U_NR/dS; % attachment
+
+if params.UseMutualPairingAttachment
+    dp1(params.s_i0) = dp1(params.s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+else
+    dp1(params.s_i0) = dp1(params.s_i0) + params.ka*Pu*U_NR/dS; % attachment
+end
 
 if params.UseCa
     Jon  = params.k_on*Ca_i*NP*(1 + params.K_coop*(1 - NP));
@@ -229,7 +248,9 @@ end
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t > 2.5
+if t > 0.5
+    % just for placing a breakpoint here
     a = 1;
 end
+
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

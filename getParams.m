@@ -1,4 +1,8 @@
 function params = getParams(params, g, updateInit)
+% Updated from
+% https://github.com/beards-lab/Cardiac-Crossbridge-Explicit-Space-Discretization
+% Beard, Daniel A., et al. "Reduced cardiac muscle power with low ATP simulating heart failure." Biophysical Journal 121.17 (2022): 3213-3223.
+% https://wwwhttps://www.sciencedirect.com/science/article/pii/S0006349522006026.sciencedirect.com/science/article/pii/S0006349522006026
 if nargin == 0 || isempty(params)
     params = struct();
 end
@@ -127,6 +131,18 @@ end
     params.ss = length(params.s); % strain step (number of Ns in one set)
     
     
+    % Build the initialization
+    if ~isfield(params, 'PU0') || updateInit
+        p1 = zeros(1, params.ss);
+        p2 = zeros(1, params.ss);
+        p3 = zeros(1, params.ss);
+        U_NR = 0;
+        NP = 0;
+        SL0 = params.SL0;
+        LSE = params.LSE0;
+        % State variable vector concatenates p1, p2, p2, and U_NR
+        params.PU0 = [p1, p2, p3, U_NR,NP,SL0,LSE];
+    end
     
 end
 

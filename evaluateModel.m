@@ -19,12 +19,43 @@ function [Force, out] = evaluateModel(fcn, T, params)
         params.v = params.Velocity(vs);
         params.Vums = params.v*params.ML; % velocity in um/s
 
-        opts = [];%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
+        opts = odeset();%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
+        
+        % test odess
+%         tic
+%         [t,PU] = ode45(fcn,[ts tend],PU(end,:), opts, params);
+%         save('ode45', 'PU');
+%         disp(['Ode45: ' num2str(length(t))])
+%         toc
+%         tic
+%         [t,PU] = ode23(fcn,[ts tend],PU(end,:), opts, params);
+%         save('ode23', 'PU');
+%         disp(['Ode45: ' num2str(length(t))])
+%         toc
+%         tic        
+%         [t,PU] = ode23s(fcn,[ts tend],PU(end,:), opts, params);
+%         save('ode23s', 'PU');
+%         disp(['Ode45: ' num2str(length(t))])
+%         toc
+%         tic        
+%         [t,PU] = ode23t(fcn,[ts tend],PU(end,:), opts, params);
+%         save('ode23t', 'PU');
+%         disp(['Ode45: ' num2str(length(t))])
+%         toc
+%         tic        
         [t,PU] = ode15s(fcn,[ts tend],PU(end,:), opts, params);
+%         save('ode15s', 'PU');
+%         disp(['Ode45: ' num2str(length(t))])
+%         toc
+%         tic        
+        
         if params.RescaleOutputDt
              %%
 %              params.RescaleOutputDt = 1e-5;
              i = find(diff(t) > params.RescaleOutputDt);
+             if isempty(i)
+                 i = length(t);
+             end
 %              clf;hold on;plot(t);plot(i, t(i), '*');
 %              plot(diff(i), 'd-');
 %              clf;
