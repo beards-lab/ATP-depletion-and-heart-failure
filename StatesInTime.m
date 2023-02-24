@@ -24,18 +24,19 @@ subplot(211);
 yyaxis left;cla;hold on;
 Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
 plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '--', 'MarkerSize', 4, 'Linewidth', 2)
-leg = plot(out.t, Pus, 'b-',out.t, out.p1_0, 'r-',out.t, out.p2_0, 'g-',out.t, out.p3_0, 'b-',out.t, out.NR, 'm-');
-legend('SL','LXB', 'Pu', 'P1', 'P2', 'P3', 'NR');
+plot(out.t, Pus, 'b-',out.t, out.p1_0, 'r-',out.t, out.p2_0, 'g-',out.t, out.p3_0, 'k-',out.t, out.NR, 'm-');
+% legend('SL','LXB', 'Pu', 'P1', 'P2', 'P3', 'NR');
 % xlim([0 inf])
 % ylim([-50, Inf])
 plot([t t], [0 1]);
 text(t,0.5, num2str(t));
 % hold on;
-yyaxis right;cla;
-plot(out.t, out.Force, '-', 'Linewidth', 2)
+yyaxis right;
+plot(out.t, out.Force, 'b-', 'Linewidth', 2)
+legend('SL','LXB', 'Pu', 'P1', 'P2', 'P3', 'NR', 'Force','AutoUpdate','off');
 
 % plot([simulateTimes;simulateTimes]*1000, repmat([min([fd;out.F']);max([fd;out.F'])], [1 size(simulateTimes, 2)]))
-yyaxis left;
+% yyaxis left;
 
 
 subplot(212);cla;hold on;

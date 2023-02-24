@@ -59,13 +59,13 @@ data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLi
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
 
 %% slack 8 mM
-% clf;
+ clf;
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
-ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
+ts_s = [0 1070 1159 2259 2759.6 2760.4 2910 2930 3058]; % to prevent skipping events with large integrator step
 % ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
 % subplot(211)
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')
@@ -162,7 +162,10 @@ legend('ForceLength8mM_all', 'bakers_rampup8', 'bakers_rampup2_8', 'bakers_rampu
 %% 8mM ATP
 % clf;
 data_table = readtable('data/8mM ATP 2ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -870-85 + 4.5);
+% match to the scope
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_ktr_8', -870-85 + 4.5);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_ktr_8', -100);
+
 % fitRecovery(datatable, [100, 700;], 0); 
 %%
 data_table = readtable('data/2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
@@ -389,7 +392,7 @@ end
     
 %     plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
 %     plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
-%     plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
+    plot([ts_s;ts_s]+offset, repmat([min(data_table.L);max(data_table.L)], 1, length(ts_s)))
     xlabel('time (ms)');
     ylabel('Length (ML)')
 
