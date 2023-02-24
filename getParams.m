@@ -47,7 +47,7 @@ end
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
         'PlotEachSeparately', false , ... % show each plot on separate figure
         'UseSLInput', false, ... % Use SL as a driving instead of velocities, provide input in datatable
-        'RescaleOutputDt', 1e-5,... % downsamples unnecessary complex output vector. False or value (e.g. 1e-5)
+        'RescaleOutputDt', 0,... % downsamples unnecessary complex output vector. False or value (e.g. 1e-5)
         'UseP31Shift', false, ... % Shifts the s by dr in p3_1
         'F_act_UseP31', false, ... Use kstiff2*p3_1 instead of p3_0*dr
         'UseAtpOnUNR', false, ... Enables ATP effect via g4 from SR to NR

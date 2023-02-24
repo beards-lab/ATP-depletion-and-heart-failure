@@ -1,21 +1,32 @@
 % driver code
 g = ones(30, 1);
+LoadData;
+
 params = getParams();
 params.g = g;
 params.SL0 = 2.2;
 % params.Slim = 0.18;
 params.Slim = 0.2;
 params.N = 80;
-% update the dS
-params = getParams(params, g);
-params.RescaleOutputDt = 0;
-LoadData;
 params.MgATP = 8;
 t_ss = [0 1];
 t_sl0 = [0 0.1];
+
 figure(1);clf;
 % ghostSave = 'beardsOrig';
-% ghostLoad = 'beardsOrig';
+% ghostSave = 'beardsOrig_passive';
+ghostSave = '';
+ghostLoad = 'beardsOrig';
+% ghostLoad = '';
+
+% testing setup
+% params.UseOverlap = true;
+% params.UsePassive = true;
+
+params.UseTORNegShift = false;
+params.UseMutualPairingAttachment = true;
+% set as a default to be modified
+% params0 = params;
 %% Compare the dudts
 % params.ReduceSpace = true;
 % params.Velocity = -150;
@@ -56,7 +67,7 @@ end
 axes('position',[0.05 0.6 0.4 0.35]); 
 hold on;
 if ~isempty(ghostLoad)
-    ghost = load(['Ghost_' ghostSave '_FV']);
+    ghost = load(['Ghost_' ghostLoad '_FV']);
     ghost = ghost.ghost;
     gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
 end
@@ -79,7 +90,7 @@ plot(Data_ATP(:,2),Data_ATP(:,1),'bo','linewidth',1.5,'Markersize',8,'markerface
 % plot(Data_ATP(:,4),Data_ATP(:,1),'ro','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 
 if exist('gp', 'var') && isvalid(gp)
-    legend(['Ghost ' ghostSave], 'Sim', 'Data');
+    legend(['Ghost ' ghostLoad], 'Sim', 'Data');
 else
     legend('Sim', 'Data');
 end
@@ -111,7 +122,7 @@ yyaxis left;
 
 % manage GHOST
 if ~isempty(ghostLoad)
-    ghost = load(['Ghost_' ghostSave '_ktr']);
+    ghost = load(['Ghost_' ghostLoad '_ktr']);
     ghost = ghost.ghost;
     gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
 end
@@ -140,7 +151,7 @@ datastruct = load('data/bakers_rampup2_8.mat');
 datatable = datastruct.datatable;    
 velocitytable = datastruct.velocitytable;
 velocitytable(1, 1) = -1; % enough time to get to steady state
-params.Slim = 0.1;
+params.Slim = 0.2;
 params.Velocity = velocitytable(1:end-1, 2);
 params.SL0 = 2.0;
 % update params with new N and Slims
@@ -148,7 +159,7 @@ params = getParams(params, g, true);
 
 [F out] = evaluateModel(@dPUdTCa, velocitytable(:, 1), params);
 
-%%
+%
 axes('position',[0.05 0.1 0.4 0.35]); hold on;
 yyaxis right;
 plot(datatable(:, 1),datatable(:, 2), out.t, out.SL);
@@ -156,7 +167,7 @@ yyaxis left;
 
 % manage GHOST
 if ~isempty(ghostLoad)
-    ghost = load(['Ghost_' ghostSave '_rampup']);
+    ghost = load(['Ghost_' ghostLoad '_rampup']);
     ghost = ghost.ghost;
     gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
 end
@@ -202,7 +213,7 @@ yyaxis left;hold on;
 
 % manage GHOST
 if ~isempty(ghostLoad)
-    ghost = load(['Ghost_' ghostSave '_slack']);
+    ghost = load(['Ghost_' ghostLoad '_slack']);
     ghost = ghost.ghost;
     gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
 end
@@ -227,5 +238,8 @@ end
 
 %% SAVE FIG
 fig = gcf;
-saveas(fig, 'XBBakersDataFit.png');
+% saveas(fig, ['XBBakersDataFit.png']);
+if ~isempty(ghostSave)
+ saveas(fig, ['XBBakersDataFit_' ghostSave '.png']);
+end
 
