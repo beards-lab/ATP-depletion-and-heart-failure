@@ -5,7 +5,8 @@ function [Force, out] = evaluateModel(fcn, T, params)
 % default: opts = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, 'ValuesInTime', 0);
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
-
+    
+    params = getParams(params, params.g,false); % update the init vectors
     PU = params.PU0;
     out = [];
 
