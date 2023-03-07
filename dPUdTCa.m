@@ -76,7 +76,7 @@ else
 end
 
 % calculation of moments of strain distributions
-s = params.s';%(-N:1:0)'*dS;
+s = params.s' + (SL - LSE) - params.LXBpivot;%(-N:1:0)'*dS;
 dS = params.dS;
 p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
@@ -187,19 +187,19 @@ else
 end
     
 
-% Estimating space derivatives, upwind differencing
-if velHS > 0
-    dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
-    dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
-    dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
-elseif velHS < 0
-    dp1ds = [p1(2:end) - p1(1:end-1); (0 - p1(end))]/dS;
-    dp2ds = [p2(2:end) - p2(1:end-1); (0 - p2(end))]/dS;    
-    dp3ds = [p3(2:end) - p3(1:end-1); (0 - p3(end))]/dS;
-else 
-    % just optim, because its multiplied by 0 anyway
-    dp1ds = 0;dp2ds = 0;dp3ds = 0;
-end
+% % Estimating space derivatives, upwind differencing
+% if velHS > 0
+%     dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
+%     dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
+%     dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
+% elseif velHS < 0
+%     dp1ds = [p1(2:end) - p1(1:end-1); (0 - p1(end))]/dS;
+%     dp2ds = [p2(2:end) - p2(1:end-1); (0 - p2(end))]/dS;    
+%     dp3ds = [p3(2:end) - p3(1:end-1); (0 - p3(end))]/dS;
+% else 
+%     % just optim, because its multiplied by 0 anyway
+%     dp1ds = 0;dp2ds = 0;dp3ds = 0;
+% end
 
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
 if params.UseAtpOnUNR
@@ -214,9 +214,9 @@ end
 % dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
 
 
-dp1   = -velHS/2*dp1ds - f1*params.kd*p1 - f2*params.k1*(exp(-params.alpha1*s).*p1) ...
+dp1   = - f1*params.kd*p1 - f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     + params.k_1*(exp(+params.alpha1*s).*p2);
-dp2   = -velHS/2*dp2ds + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
+dp2   = + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
     - params.k_1*(exp(+params.alpha1*s).*p2) - params.k2*(exp(-params.alpha2*s).*p2) ...
     + g1*params.k_2*p3  ;
 
@@ -228,13 +228,28 @@ else
     XB_TOR = g2*params.k3*(exp(params.alpha3*(s+params.s3).^2).*p3);
 end
 
-dp3   = -velHS/2*dp3ds + params.k2*(exp(-params.alpha2*s).*p2) ...
+dp3   = + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
 
+% what is the actual index of zero strain?
+% IMPORTANT: s MUST cross 0!
+s_i0 = find(s >= -1e-6, 1);
+if isempty(s_i0)
+    error('Out of bounds');
+    if s(1) > 0
+        s_i0 = 1;
+    elseif s(end) < 0
+        s_i0 = length(s);
+    end
+end
+if s_i0 > 1 && abs(s(s_i0-1)) < abs(s(s_i0))
+    % the previous was closer to zero
+    s_i0 = s_i0 - 1;
+end
 if params.UseMutualPairingAttachment
-    dp1(params.s_i0) = dp1(params.s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+    dp1(s_i0) = dp1(s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 else
-    dp1(params.s_i0) = dp1(params.s_i0) + params.ka*Pu*U_NR/dS; % attachment
+    dp1(s_i0) = dp1(s_i0) + params.ka*Pu*U_NR/dS; % attachment
 end
 
 if params.UseCa

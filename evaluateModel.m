@@ -68,6 +68,7 @@ function [Force, out] = evaluateModel(fcn, T, params)
 %             t = t_n;
         t = t(i);PU = PU(i, :);
         end
+        %%
         out = storeOutputs(out, PU, params, t);
 
         if params.ValuesInTime                
@@ -176,9 +177,11 @@ end
         i = length(out.t) + 1;
         out.PU(i, :) = PU(j, :);
         p1 = PU(j, 1:params.ss); p2 = PU(j, 1*params.ss+1:2*params.ss); p3 = PU(j, 2*params.ss+1:3*params.ss);
-        out.p1_0(i) = params.dS*sum(p1); out.p1_1(i) = params.dS*sum(params.s.*p1);
-        out.p2_0(i) = params.dS*sum(p2); out.p2_1(i) = params.dS*sum(params.s.*p2);
-        out.p3_0(i) = params.dS*sum(p3); out.p3_1(i) = params.dS*sum((params.s+params.dr).*p3); 
+
+        % first moments invalid due to shifting in strain s        
+%         out.p1_0(i) = params.dS*sum(p1); out.p1_1(i) = params.dS*sum(params.s.*p1);
+%         out.p2_0(i) = params.dS*sum(p2); out.p2_1(i) = params.dS*sum(params.s.*p2);
+%         out.p3_0(i) = params.dS*sum(p3); out.p3_1(i) = params.dS*sum((params.s+params.dr).*p3); 
 
         % calculated post-process
         %     out.F(i) = kstiff2*out.p3_0(i) ...

@@ -24,7 +24,8 @@ end
     
     params0 = struct(...
         'N', 30, ...
-        'Slim', 0.06, ...    
+        'Slim', 0.2, ...    
+        'LXBpivot', 2.1, ... % reference starting point for the probability distribution dicretization (um)
         'SL0', SL0, ... % initial SL length
         'LSE0', 0, ... % initial length of the spring    
         'SLmax', Inf, ...
@@ -115,10 +116,10 @@ end
     
     % refresh these
     params.dS = params.Slim/(params.N+1);
-    if params.ReduceSpace && all(params.Velocity == 0)
-        params.s = [-params.N 0 params.N]*params.dS; % strain space
-        params.s_i0 = 1; % index of the origin zero strain    
-    elseif params.ReduceSpace && all(params.Velocity >= 0)
+%     if params.ReduceSpace && all(params.Velocity == 0)
+%         params.s = [-params.N 0 params.N]*params.dS; % strain space
+%         params.s_i0 = 1; % index of the origin zero strain    
+    if params.ReduceSpace && all(params.Velocity > 0)
         params.s = (0:params.N)*params.dS; % strain space
         params.s_i0 = 1; % index of the origin zero strain    
     elseif params.ReduceSpace && all(params.Velocity <= 0)
