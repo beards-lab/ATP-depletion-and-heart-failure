@@ -103,14 +103,14 @@ plot(outBase.OV, outBase.FXB,out.OV, out.FXB)
 
 %% Run through params to eval their importance
 close all;
-evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+evaluateBakersExp(g, params)
 set(gcf, 'Name', 'Baseline' , 'NumberTitle', 'off')
 
 for i = 1:length(g)
     disp(i)
     gt = g(i);
-    g(i) = g(i)*2;
-    evaluateProblem(fcn, g, true, [1 1 1 1 0 1])
+    g(i) = g(i)*1.1;
+    evaluateProblem(g, params)
     g(i) = gt;
     set(gcf, 'Name', ['Param ' num2str(i) ' to 150%'], 'NumberTitle', 'off')
 end
@@ -121,8 +121,11 @@ end
 
 % Run basic sensitivity with updated cost func
 % only evaluated sensitivities
-g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u", "kpas"};
-se1111 = calcSensitivities(fcn, g, g0, g_names, true, false, [0 0 0 0 0 1]);title('Eval Optim for 1111');
+g = ones(1, 22);
+g_names = {"ka", "kd", "k1", "k_1", "k2", "ksr", "sigma0", "kmsr", "alpha3", "k3", "K_T1", "s3", "kstiff1", "kstiff2", "K_T3", "16", "17" ,"18", "19", "u", "kpas", "vmax"};
+sebe = calcSensitivities(g, params, [], g_names);
+title('Sensitivities');
+
 saveas(gcf, 'sensitivities.png')
 %% extension
 se0001 = calcSensitivities(fcn, g, g, g_names, true, false, [0 0 0 1]);title('Eval Optim for 0001');

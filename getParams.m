@@ -2,15 +2,13 @@ function params = getParams(params, g, updateInit)
 % Updated from
 % https://github.com/beards-lab/Cardiac-Crossbridge-Explicit-Space-Discretization
 % Beard, Daniel A., et al. "Reduced cardiac muscle power with low ATP simulating heart failure." Biophysical Journal 121.17 (2022): 3213-3223.
-% https://wwwhttps://www.sciencedirect.com/science/article/pii/S0006349522006026.sciencedirect.com/science/article/pii/S0006349522006026
+% https://www.sciencedirect.com/science/article/pii/S0006349522006026
 if nargin == 0 || isempty(params)
     params = struct();
 end
 
-if nargin < 2 && ~isfield(params, 'g')
-    g = ones(1, 30); % better longer than sorry
-elseif isfield(params, 'g')
-    g = params.g;
+if nargin < 2 
+    g = ones(1, 30); % better longer than sorry    
 end
 
 if nargin < 3
@@ -54,8 +52,9 @@ end
         'UseAtpOnUNR', false, ... Enables ATP effect via g4 from SR to NR
         'UseTORNegShift', false, ... XB TOR uses s - s3 instead of s + s3
         'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
-        'Terminator', false);
+        'ghostSave', '', 'ghostLoad', '');
 
+    params0.g = g;
     % transition from NP to P, only when UseCa = true
     % g0 params from cross bridge model identrification
     g0 = [ 1.5*0.3977    2.0478    1.4903    0.3765    0.5219    0.2726    1.25  1.0471    0.2382    0.9342];
