@@ -6,10 +6,11 @@ params.g = g;
 params.SL0 = 2.2;
 % params.Slim = 0.18;
 params.Slim = 0.3;
+params.dS = 10e-3;
 params.N = 30;
 params.MgATP = 8;
 
-figure(11);clf;
+figure(12);clf;
 ghostSave = '';
 % ghostSave = 'beardsOrig_passive';
 % ghostSave = 'ShiftingStrain40_Slim0_3';
@@ -39,6 +40,7 @@ ghostLoad = 'ShiftingStrainTest40';
 % ghostLoad = 'ShiftingStrainTest240';
 % ghostLoad = 'beardsOrig_all30';
 ghostLoad = 'beardsOrig_all60';
+ghostLoad = 'operatorSplittingPU0';% N = 40
 % ghostLoad = '';
 
 % testing setup
@@ -49,7 +51,7 @@ params.UseTORNegShift = false;
 params.UseMutualPairingAttachment = false;
 params.UseOverlap = false;
 params.UsePassive = false;
-params.UseSerialStiffness = true;
+params.UseSerialStiffness = false;
 % set as a default to be modified
 % params0 = params;
 params.PlotEachSeparately = true;

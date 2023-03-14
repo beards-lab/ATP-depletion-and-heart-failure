@@ -215,15 +215,16 @@ end
 
         % check the overflow
         % TODO repair the overflow for both directions
-        if params.s_i0 == 1 
-            % positive velocities, right side only
-            out.ps0_t(i) = max([p1(end), p2(end), p3(end)]);
-        elseif params.s_i0 == params.ss
-            % negative velocities, left side only
-            out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);
-        else
-            % whole space, mixed velocities, better check both sides
-            out.ps0_t(i) = max([[p1(1), p2(1), p3(1)], p1(end), p2(end), p3(end)]);
-        end
+        out.ps0_t(i) = 0;
+%         if params.s_i0 == 1 
+%             % positive velocities, right side only
+%             out.ps0_t(i) = max([p1(end), p2(end), p3(end)]);
+%         elseif params.s_i0 == params.ss
+%             % negative velocities, left side only
+%             out.ps0_t(i) = max([p1(1), p2(1), p3(1)]);
+%         else
+%             % whole space, mixed velocities, better check both sides
+%             out.ps0_t(i) = max([[p1(1), p2(1), p3(1)], p1(end), p2(end), p3(end)]);
+%         end
     end
 end

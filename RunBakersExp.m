@@ -1,4 +1,5 @@
 %% FORCE VELOCITY
+params.Slim_l = 2.0;
 params = getParams(params);
 F_active = [];
 % params.UseSerialStiffness = false;
@@ -73,12 +74,14 @@ end
 
 %% KTR EXPERIMENT
 params.SL0 = 2.0;
-params.UseSlack = true;
+params.Slim_l = 2.0;
+% params.UseSlack = true;
 % takes like 20mins
 % params.UseSerialStiffness = true;
 % params.UseSerialStiffness = false;
-params.N = 40;
-params.LXBpivot = 1.8;
+% params.N = 40;
+params.Slim = 0.4;
+params.LXBpivot = 1.7;
 params = getParams(params, params.g, true);
 
 % replicate the ktr protocol
@@ -201,7 +204,6 @@ params.UseSLInput = false;
 params.UseSlack = true;
 params.SL0 = 2.2;
 params.Slim = 0.3;
-params.UseSlack = true;
 params.LXBpivot = 2.0;
 if isfield(params, 'PU0')
     params = rmfield(params, 'PU0');

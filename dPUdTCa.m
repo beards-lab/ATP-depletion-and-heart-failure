@@ -76,7 +76,8 @@ else
 end
 
 % calculation of moments of strain distributions
-s = params.s' + (SL - LSE) - params.LXBpivot;%(-N:1:0)'*dS;
+% s = params.s' + (SL - LSE) - params.LXBpivot;%(-N:1:0)'*dS;
+s = params.s' - (SL - LSE) + params.LXBpivot;
 dS = params.dS;
 p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
@@ -232,24 +233,36 @@ dp3   = + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
 
 % what is the actual index of zero strain?
-% IMPORTANT: s MUST cross 0!
-s_i0 = find(s >= -1e-6, 1);
-if isempty(s_i0)
-    error('Out of bounds');
-    if s(1) > 0
-        s_i0 = 1;
-    elseif s(end) < 0
-        s_i0 = length(s);
-    end
+% IMPORTANT: s MUST be around 0 somewhere!
+
+% estimate the position
+s_i0 = 1 + round(-s(1)/params.dS, 6);
+
+if isnan(s_i0)
+    s_i0 = 1; % just hold on..
+elseif ceil(s_i0) < 0
+    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
+elseif ceil(s_i0) == 0
+    s_i0 = 1;
+elseif floor(s_i0) == params.ss
+    s_i0 = params.ss;    
+elseif floor(s_i0) > params.ss
+    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
+% elseif ceil(s_i0) > 1 && abs(s(ceil(s_i0)-1)) < abs(s(ceil(s_i0)))
+%     % the lower one was closer to zero, otherwise keep the upper one
+%     s_i0 = s_i0 - 1;
+else
+    s_i0 = round(s_i0);
 end
-if s_i0 > 1 && abs(s(s_i0-1)) < abs(s(s_i0))
-    % the previous was closer to zero
-    s_i0 = s_i0 - 1;
-end
+
+try
 if params.UseMutualPairingAttachment
     dp1(s_i0) = dp1(s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 else
     dp1(s_i0) = dp1(s_i0) + params.ka*Pu*U_NR/dS; % attachment
+end
+catch e
+    disp('vole')
 end
 
 if params.UseCa
@@ -263,7 +276,7 @@ end
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t > 0.5
+if t  > 0.09 | any(isnan(PU))
     % just for placing a breakpoint here
     a = 1;
 end

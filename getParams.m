@@ -21,9 +21,12 @@ end
     SL0 = 2.0*1.0;
     
     params0 = struct(...
-        'N', 30, ...
-        'Slim', 0.2, ...    
+        'N', 30, ... % number of bins. Could be overwritten when UseCalculatedN = 1
+        'Slim', 0.2, ... % left and right distance. Overridden by Slim_l/r when UseCalculatedN = 1
         'LXBpivot', 2.1, ... % reference starting point for the probability distribution dicretization (um)
+        'dS', 50e-3, ... % default distance between strain bins (um)
+        'Slim_l', 1.6, ... % minimal XB length (left bound)
+        'Slim_r', 2.2, ... % maximal XB length (right bound)
         'SL0', SL0, ... % initial SL length
         'LSE0', 0, ... % initial length of the spring    
         'SLmax', Inf, ...
@@ -34,6 +37,7 @@ end
         'MgADP', 0, ...
         'Ca', 1000,...
         'Velocity', 0,...
+        'UseCalculatedN', 1, ... % Use dS and Slim_m / Slim_p
         'UseCa', false,...
         'UseOverlap', false, ...
         'UsePassive', false, ... % parallel passive stiffness
@@ -54,6 +58,7 @@ end
         'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
         'ghostSave', '', 'ghostLoad', '');
 
+%% SARCOMERE PARAMETERS
     params0.g = g;
     % transition from NP to P, only when UseCa = true
     % g0 params from cross bridge model identrification
@@ -112,23 +117,33 @@ end
     %% Fill in the missing input params
     
     params = fillInDefaults(params, params0);
-    
-    % refresh these
-    params.dS = params.Slim/(params.N+1);
-%     if params.ReduceSpace && all(params.Velocity == 0)
-%         params.s = [-params.N 0 params.N]*params.dS; % strain space
-%         params.s_i0 = 1; % index of the origin zero strain    
-    if params.ReduceSpace && all(params.Velocity > 0)
-        params.s = (0:params.N)*params.dS; % strain space
-        params.s_i0 = 1; % index of the origin zero strain    
-    elseif params.ReduceSpace && all(params.Velocity <= 0)
-        params.s = (-params.N:0)*params.dS; % strain space
-        params.s_i0 = length(params.s); % index of the origin zero strain    
+
+    %% SIMULATION PARAMETERS
+    if params.UseCalculatedN
+        N = ceil((params.Slim_r - params.Slim_l)/params.dS);
+        params.LXBpivot = params.SL0;
+        params.ss = N;
+        params.s = (params.Slim_l:params.dS:params.Slim_r) - params.LXBpivot;
+%         params.s_i0 = 0; % not used in this context, searched for in each iteration
     else
-        params.s = (-params.N:params.N).*params.dS; % strain space
-        params.s_i0 = params.N + 1; % index of the origin zero strain    
+    
+        % refresh these
+        params.dS = params.Slim/(params.N+1);
+    %     if params.ReduceSpace && all(params.Velocity == 0)
+    %         params.s = [-params.N 0 params.N]*params.dS; % strain space
+    %         params.s_i0 = 1; % index of the origin zero strain    
+        if params.ReduceSpace && all(params.Velocity > 0)
+            params.s = (0:params.N)*params.dS; % strain space
+            params.s_i0 = 1; % index of the origin zero strain    
+        elseif params.ReduceSpace && all(params.Velocity <= 0)
+            params.s = (-params.N:0)*params.dS; % strain space
+            params.s_i0 = length(params.s); % index of the origin zero strain    
+        else
+            params.s = (-params.N:params.N).*params.dS; % strain space
+            params.s_i0 = params.N + 1; % index of the origin zero strain    
+        end
+        params.ss = length(params.s); % strain step (number of Ns in one set)
     end
-    params.ss = length(params.s); % strain step (number of Ns in one set)
     
     
     % Build the initialization
