@@ -3,7 +3,9 @@ figure(11);
 clf;
 makeplot([], [], out, params);
 h = uicontrol('style','slider','units','pixel','position',[20 20 500 20], 'SliderStep', [1e-3 0.1]);
+hb = uicontrol('style','pushbutton','units','pixel','position',[540 20 120 20], 'String', 'Rescale Y');
 h.Callback = @(hObject, event) makeplot(hObject, event,out, params);
+hb.Callback = @(hObject, event) rescalePlot(event);
 % addListener(h, 'ContinuousValueChange', @(hObject, event) makeplot(hObject, event,out));
 
 function makeplot(hObject, event,out, params)
@@ -50,7 +52,8 @@ cla;hold on;
 % ss = 101; % params.ss;
 % s = -0.1:0.002:0.1;%params.s;
 ss = params.ss;
-s = params.s + (out.SL(ti) - out.LSE(ti)) - params.LXBpivot;
+% s = params.s + (out.SL(ti) - out.LSE(ti)) - params.LXBpivot;
+s = params.s - (out.SL(ti) - out.LSE(ti)) + params.LXBpivot;
 % s = params.s + (out.SL(ti) - out.LSE(ti));
 % zer = (out.SL(ti) - out.LSE(ti));
 zer = 0;
@@ -59,11 +62,17 @@ zer = 0;
 p1 = out.PU(ti, 1:ss);
 p2 = out.PU(ti, ss+1:2*ss);
 p3 = out.PU(ti, 2*ss+1:3*ss);
-plot(s, p1, '<-b', s, p2, '^-r', s, p3,'>-g', [zer zer], [0 1], '--k');
+m = max([p1, p2, p3]);
+plot(s, p1, '<-b', s, p2, '^-r', s, p3,'>-g', [zer zer], [0 m], '--k');
 xlim([s(1), s(end)]);
 if ~isequal(yl, [0, 1])
     ylim(yl);
 end
 
 
+end
+
+function rescalePlot(event)
+    g = gca;
+    ylim('auto');
 end
