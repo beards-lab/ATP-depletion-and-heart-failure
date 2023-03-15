@@ -56,8 +56,10 @@ end
         'F_act_UseP31', false, ... Use kstiff2*p3_1 instead of p3_0*dr
         'UseAtpOnUNR', false, ... Enables ATP effect via g4 from SR to NR
         'UseTORNegShift', false, ... XB TOR uses s - s3 instead of s + s3
-        'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
+        'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2        
         'ghostSave', '', 'ghostLoad', '');
+ 
+    params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
 
 %% SARCOMERE PARAMETERS
     params0.g = g;
@@ -71,53 +73,60 @@ end
     
     
     
-    params0.vmax = g(22)*10;
+    params0.vmax = 10;
     
     % rate constants
-    params0.ka  = g(1)*373.23;
-    params0.kd  = g(2)*102.94; 
-    params0.k1  = g(3)*40.116;%
-    params0.k_1 = g(4)*17.103;%
-    params0.k2  = g(5)*419.39;
+    params0.ka  = 373.23;
+    params0.kd  = 102.94; 
+    params0.k1  = 40.116;%
+    params0.k_1 = 17.103;%
+    params0.k2  = 419.39;
     params0.k_2 = 2.7901; 
-    params0.k3  = g(10)*44.255;%;
+    params0.k3  = 44.255;%;
 
     % transitions between super relaxed state and non relaxed state
-    params0.ksr0   = g(6)*9.0853; % 
-    params0.sigma0 = g(7)*33.125;
-    params0.kmsr   = g(8)*250; % 
+    params0.ksr0   = 9.0853; % 
+    params0.sigma0 = 33.125;
+    params0.kmsr   = 250; % 
 
     % dissociation constants
     params0.K_Pi = 4.007;
-    params0.K_T1 = g(11)*0.5; % (mM) ATP binding for detachment
+    params0.K_T1 = 0.5; % (mM) ATP binding for detachment
 %     K_T2 = 0.05; % (mM) ATP binding to P state
 
 
     % moments and force
-    params0.dr = +g(12)*0.01; % Power-stroke Size; Units: um
-    params0.kstiff1 = g(13)*1393.2; 
-    params0.kstiff2 = g(14)*13275;
+    params0.dr = 0.01; % Power-stroke Size; Units: um
+    params0.kstiff1 = 1393.2; 
+    params0.kstiff2 = 13275;
 
-    params0.K_T3 = g(15)*4; % (mM)
+    params0.K_T3 = 4; % (mM)
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
     
     % strain-associated parameters
-    params0.alpha1 = g(16)*15.14;
-    params0.alpha2 = g(17)*10.06;
-    params0.alpha3 = g(9)*276.67;
+    params0.alpha1 = 15.14;
+    params0.alpha2 = 10.06;
+    params0.alpha3 = 276.67;
     params0.s3     = 0.0099383;
     
-    params0.Amax = g(18)*1;
+    params0.Amax = 1;
     
-    params0.mu = g(19)*1e-3; % viscosity
-    params0.kSE = g(20)*500;
+    params0.mu = 1e-3; % viscosity
+    params0.kSE = 500;
 
     % passive force coeff
-    params0.k_pas = 200*g(21); % From Kim Salla et al.
-        
+    params0.k_pas = 200; % From Kim Salla et al.
+            
     %% Fill in the missing input params
     
     params = fillInDefaults(params, params0);
+    
+    %% MODIFIERS
+%     mods = {'kstiff1', 'kstiff2'};
+    for i = 1:length(params.mods)
+        params.(params.mods{i}) = params.(params.mods{i})*g(i);
+    end
+        
 
     %% SIMULATION PARAMETERS
     if params.UseCalculatedN

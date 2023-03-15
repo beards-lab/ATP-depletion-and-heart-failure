@@ -1,23 +1,23 @@
-function [Et E] = evaluateBakersExp(g, params)
+function [Et E] = evaluateBakersExp(g, params0)
 % Evaluate Bakers' problem
 
 % important to start with the g!!
-params = getParams([], g);
+params0 = getParams(params0, g);
 
-params.SL0 = 2.2;
-% params.Slim = 0.18;
-params.Slim = 0.3;
-params.N = 30;
-params.MgATP = 8;
-
-params.UseTORNegShift = false;
-params.UseMutualPairingAttachment = false;
-params.UseOverlap = true;
-params.UsePassive = true;
-params.UseSerialStiffness = true;
-% params = getParams
-params.PlotEachSeparately = true;
-
+% params0.SL0 = 2.2;
+% % params.Slim = 0.18;
+% params0.Slim = 0.3;
+% params0.N = 30;
+% params0.MgATP = 8;
+% 
+% params0.UseTORNegShift = false;
+% params0.UseMutualPairingAttachment = false;
+% params0.UseOverlap = true;
+% params0.UsePassive = true;
+% params0.UseSerialStiffness = true;
+% % params = getParams
+% params0.PlotEachSeparately = true;
+% 
 
 try
 %     Et = 1;

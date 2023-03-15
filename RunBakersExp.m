@@ -76,82 +76,82 @@ if params.PlotEachSeparately
 end                            
 
 %% KTR EXPERIMENT
-params = params0;
-params.SL0 = 2.0;
-params.dS = 0.01;
-params.Slim_l = 1.4;
-% params.UseSlack = true;
-% params.PlotFullscreen = true;
-params.LXBpivot = 2.0;
-params = getParams(params, params.g, true);
-
-% replicate the ktr protocol
-v = 150; % ML/s
-%       times  = [-1e3, 0,  2, 20, 22.5, 25 , 25.5, 1e3]/1000 - 25.5e-3;
-pos_ML = [1   , 1,0.8,0.8, 1.05,1.05,     1, 1 ];
-
-% putting the numbers as a difference
-times = cumsum([0 , 1,0.2/v,0.01 - 0.2/v,0.25/v, 0.005 - 0.25/v, 0.05/v, 1]);
-params.Velocity = diff(pos_ML)./diff(times);
-[t, out] = evaluateModel(@dPUdTCa, times - times(end-1), params);
-
-% calculate ktr
-i_0 = find(out.t > 0 & out.FXB > 0, 1);
-Frel = out.FXB(i_0:end)./out.FXB(end);
-% relative to max value from data to run optimizer faster
-% Frel = out.FXB(i_0:end)./55;
-i = find(Frel >= 1-exp(-1), 1);
-Ktr = 1/out.t(i+i_0);
-E(2) = abs(Ktr-Ktr_mean(1)).^2;
-
-if ~isempty(params.ghostSave)
-    ghost = [out.t;out.Force/out.Force(end)]';
-    save(['Ghost_' params.ghostSave '_ktr'], 'ghost');
-end
-if params.PlotEachSeparately
+% params = params0;
+% params.SL0 = 2.0;
+% params.dS = 0.01;
+% params.Slim_l = 1.4;
+% % params.UseSlack = true;
+% % params.PlotFullscreen = true;
+% params.LXBpivot = 2.0;
+% params = getParams(params, params.g, true);
 % 
-    if ~params.PlotFullscreen
-        axes('position',[0.55 0.6 0.4 0.35]); 
-    end
-    hold on;
-    datastruct = load('data/bakers_ktr_8.mat');
-    datatable = datastruct.datatable;
-    yyaxis right;
-    plot(datatable(:, 1),datatable(:, 2), 'k-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
-    yyaxis left;
-
-    % manage GHOST
-    if ~isempty(params.ghostLoad) && exist(['Ghost_' params.ghostLoad '_ktr.mat'],'file')
-        ghost = load(['Ghost_' params.ghostLoad '_ktr']);
-        ghost = ghost.ghost;
-        gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
-    else
-        clear gp;
-    end
-
-    plot(datatable(:, 1),datatable(:, 3)/datatable(end, 3),'k-','linewidth',1);
-
-    plot(out.t,out.Force/out.Force(end),'b-','linewidth',1.5);
-    % plot(Tspan,F_active,'linewidth',1.5);
-    xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
-    ylabel('Force (rel.)','interpreter','latex','fontsize',16);
-    set(gca,'fontsize',14,'ylim',[0 1.1], 'xlim', [-0.05 0.45]);  box on;
-    title(sprintf('Speed of the transient: %1.1f s^{-1}', Ktr));
-
-    if exist('gp', 'var') && isvalid(gp)
-        legend(['Ghost ' params.ghostLoad], 'F data', 'F sim','SL data*', 'SL sim*', 'LXB sim*', 'Location', 'southeast');
-    else
-        legend('F data', 'F sim','SL data*', 'SL sim*', 'LXB sim*', 'Location', 'southeast');
-    end
-end
+% % replicate the ktr protocol
+% v = 150; % ML/s
+% %       times  = [-1e3, 0,  2, 20, 22.5, 25 , 25.5, 1e3]/1000 - 25.5e-3;
+% pos_ML = [1   , 1,0.8,0.8, 1.05,1.05,     1, 1 ];
+% 
+% % putting the numbers as a difference
+% times = cumsum([0 , 1,0.2/v,0.01 - 0.2/v,0.25/v, 0.005 - 0.25/v, 0.05/v, 1]);
+% params.Velocity = diff(pos_ML)./diff(times);
+% [t, out] = evaluateModel(@dPUdTCa, times - times(end-1), params);
+% 
+% % calculate ktr
+% i_0 = find(out.t > 0 & out.FXB > 0, 1);
+% Frel = out.FXB(i_0:end)./out.FXB(end);
+% % relative to max value from data to run optimizer faster
+% % Frel = out.FXB(i_0:end)./55;
+% i = find(Frel >= 1-exp(-1), 1);
+% Ktr = 1/out.t(i+i_0);
+% E(2) = abs(Ktr-Ktr_mean(1)).^2;
+% 
+% if ~isempty(params.ghostSave)
+%     ghost = [out.t;out.Force/out.Force(end)]';
+%     save(['Ghost_' params.ghostSave '_ktr'], 'ghost');
+% end
+% if params.PlotEachSeparately
+% % 
+%     if ~params.PlotFullscreen
+%         axes('position',[0.55 0.6 0.4 0.35]); 
+%     end
+%     hold on;
+%     datastruct = load('data/bakers_ktr_8.mat');
+%     datatable = datastruct.datatable;
+%     yyaxis right;
+%     plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+%     yyaxis left;
+% 
+%     % manage GHOST
+%     if ~isempty(params.ghostLoad) && exist(['Ghost_' params.ghostLoad '_ktr.mat'],'file')
+%         ghost = load(['Ghost_' params.ghostLoad '_ktr']);
+%         ghost = ghost.ghost;
+%         gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
+%     else
+%         clear gp;
+%     end
+% 
+%     plot(datatable(:, 1),datatable(:, 3)/datatable(end, 3),'k-','linewidth',1);
+% 
+%     plot(out.t,out.Force/out.Force(end),'b-','linewidth',1.5);
+%     % plot(Tspan,F_active,'linewidth',1.5);
+%     xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
+%     ylabel('Force (rel.)','interpreter','latex','fontsize',16);
+%     set(gca,'fontsize',14,'ylim',[0 1.1], 'xlim', [-0.05 0.45]);  box on;
+%     title(sprintf('Speed of the transient: %1.1f s^{-1}', Ktr));
+% 
+%     if exist('gp', 'var') && isvalid(gp)
+%         legend(['Ghost ' params.ghostLoad], 'F data', 'F sim','SL data*', 'SL sim*', 'LXB sim*', 'Location', 'southeast');
+%     else
+%         legend('F data', 'F sim','SL data*', 'SL sim*', 'LXB sim*', 'Location', 'southeast');
+%     end
+% end
 %% RAMP UP
 params = params0;
 datastruct = load('data/bakers_rampup2_8.mat');
 datatable = datastruct.datatable;    
 velocitytable = datastruct.velocitytable;
 velocitytable(1, 1) = -1; % enough time to get to steady state
-% params.Slim = 0.25;
 params.Velocity = velocitytable(1:end-1, 2);
+
 params.SL0 = 2.0;
 params.LXBpivot = 2.0;
 params.Slim_l = 1.8;
@@ -209,8 +209,7 @@ datatable = datastruct.datatable;
 velocitytable = datastruct.velocitytable(4:end, :);
 params.Velocity = velocitytable(:, 2);
 params.datatable = datatable;
-params.UseSLInput = false;
-params.UseSlack = true;
+
 params.SL0 = 2.2;
 params.Slim_l = 1.5;
 params.Slim_r = 2.2;
@@ -241,7 +240,7 @@ end
 if params.PlotEachSeparately
     axes('position',[0.55 0.1 0.4 0.35]); hold on;
     yyaxis right;
-    plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL,'|--', 'linewidth',1);
+    plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
     yyaxis left;hold on;
 
     % manage GHOST

@@ -24,7 +24,7 @@ ghostSave = 'beardsOrig_OV_Pas_SS';
 
 % ghostSave = 'beardsOrig50'; % strain shifting dS 50 nm
 % ghostSave = 'beardsOrig5'; % strain shifting dS 5 nm
-ghostSave = '';
+% ghostSave = 'beardsOrig5_BW';%bells and whistles :)
 
 ghostLoad = '';
 % ghostLoad = 'beardsOrig';
@@ -45,6 +45,7 @@ ghostLoad = 'ShiftingStrainTest40';
 ghostLoad = 'beardsOrig_all60';
 ghostLoad = 'operatorSplittingPU0';% N = 40
 ghostLoad = 'beardsOrig5';% N = 40
+ghostLoad = 'beardsOrig5_BW';% N = 40
 % ghostLoad = '';
 
 % testing setup
@@ -53,17 +54,27 @@ ghostLoad = 'beardsOrig5';% N = 40
 
 params.UseTORNegShift = false;
 params.UseMutualPairingAttachment = false;
-params.UseOverlap = false;
-params.UsePassive = false;
-params.UseSerialStiffness = false;
-% set as a default to be modified
-% params0 = params;
+params.UseSlack = true;
+params.UseOverlap = true;
+params.UsePassive = true;
+params.UseSerialStiffness = true;
+
+% params.alpha1 = 0;
+% params.alpha2 = 0;
+
+% need a ksttiff1 and kstiff2 parameter retune
+params.F_act_UseP31 = true;
+params.UseP31Shift = true;
+
+
 params.PlotEachSeparately = true;
 params.ghostLoad = ghostLoad;
 params.ghostSave = ghostSave;
 
 % save as default
 params0 = getParams(params);
+params0.N
+
 %% init
 LoadData;
 t_ss = [0 1];
@@ -72,3 +83,13 @@ tic
 
 RunBakersExp;
 toc
+
+%% OPTIM
+% return
+params0.mods = {"kstiff1", "kstiff2"};
+
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+g = [1, 1];
+optimfun = @(g)evaluateBakersExp(g, params0);
+x = fminsearch(optimfun, g, options)
+g = x;
