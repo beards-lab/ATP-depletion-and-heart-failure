@@ -1,4 +1,5 @@
 %% FORCE VELOCITY
+params = params0;
 params.Slim_l = 1.8;
 params = getParams(params);
 F_active = [];
@@ -41,7 +42,9 @@ end
 
 if params.PlotEachSeparately
 %     figure(102);hold on;
-    axes('position',[0.05 0.6 0.4 0.35]); 
+    if ~params.PlotFullscreen
+        axes('position',[0.05 0.6 0.4 0.35]); 
+    end
     hold on;
 
     if ~isempty(params.ghostLoad) && exist(['Ghost_' params.ghostLoad '_FV.mat'],'file')
@@ -73,15 +76,13 @@ if params.PlotEachSeparately
 end                            
 
 %% KTR EXPERIMENT
+params = params0;
 params.SL0 = 2.0;
-params.Slim_l = 1.6;
+params.dS = 0.01;
+params.Slim_l = 1.4;
 % params.UseSlack = true;
-% takes like 20mins
-% params.UseSerialStiffness = true;
-% params.UseSerialStiffness = false;
-% params.N = 40;
-params.Slim = 0.4;
-params.LXBpivot = 1.7;
+% params.PlotFullscreen = true;
+params.LXBpivot = 2.0;
 params = getParams(params, params.g, true);
 
 % replicate the ktr protocol
@@ -108,12 +109,15 @@ if ~isempty(params.ghostSave)
     save(['Ghost_' params.ghostSave '_ktr'], 'ghost');
 end
 if params.PlotEachSeparately
-    
-    axes('position',[0.55 0.6 0.4 0.35]); hold on;
+% 
+    if ~params.PlotFullscreen
+        axes('position',[0.55 0.6 0.4 0.35]); 
+    end
+    hold on;
     datastruct = load('data/bakers_ktr_8.mat');
     datatable = datastruct.datatable;
     yyaxis right;
-    plot(datatable(:, 1),datatable(:, 2), out.t, out.SL, out.t, out.LXB);
+    plot(datatable(:, 1),datatable(:, 2), 'k-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
     yyaxis left;
 
     % manage GHOST
@@ -132,7 +136,7 @@ if params.PlotEachSeparately
     xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
     ylabel('Force (rel.)','interpreter','latex','fontsize',16);
     set(gca,'fontsize',14,'ylim',[0 1.1], 'xlim', [-0.05 0.45]);  box on;
-    title('Speed of the transient');
+    title(sprintf('Speed of the transient: %1.1f s^{-1}', Ktr));
 
     if exist('gp', 'var') && isvalid(gp)
         legend(['Ghost ' params.ghostLoad], 'F data', 'F sim','SL data*', 'SL sim*', 'LXB sim*', 'Location', 'southeast');
@@ -141,14 +145,16 @@ if params.PlotEachSeparately
     end
 end
 %% RAMP UP
+params = params0;
 datastruct = load('data/bakers_rampup2_8.mat');
 datatable = datastruct.datatable;    
 velocitytable = datastruct.velocitytable;
 velocitytable(1, 1) = -1; % enough time to get to steady state
-params.Slim = 0.25;
+% params.Slim = 0.25;
 params.Velocity = velocitytable(1:end-1, 2);
 params.SL0 = 2.0;
-params.LXBpivot = 2.1;
+params.LXBpivot = 2.0;
+params.Slim_l = 1.8;
 % params.N = 30;
 % update params with new N and Slims
 params = getParams(params, g, true);
@@ -164,8 +170,11 @@ if ~isempty(params.ghostSave)
     save(['Ghost_' params.ghostSave '_rampup'], 'ghost');
 end
 if params.PlotEachSeparately
-
-    axes('position',[0.05 0.1 0.4 0.35]); hold on;
+    if ~params.PlotFullscreen
+        axes('position',[0.05 0.1 0.4 0.35]); 
+    end
+    
+    hold on;
     yyaxis right;
     plot(datatable(:, 1),datatable(:, 2), out.t, out.SL);
     yyaxis left;
@@ -194,7 +203,7 @@ if params.PlotEachSeparately
     end
 end
 %% SLACK
-
+params = params0;
 datastruct = load('data/bakers_slack8mM.mat');
 datatable = datastruct.datatable;    
 velocitytable = datastruct.velocitytable(4:end, :);
@@ -204,7 +213,7 @@ params.UseSLInput = false;
 params.UseSlack = true;
 params.SL0 = 2.2;
 params.Slim_l = 1.5;
-params.Slim_r = 2.4;
+params.Slim_r = 2.2;
 params.LXBpivot = 2.2;
 if isfield(params, 'PU0')
     params = rmfield(params, 'PU0');

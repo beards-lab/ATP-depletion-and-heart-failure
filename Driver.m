@@ -7,7 +7,7 @@ params.SL0 = 2.2;
 % params.Slim = 0.18;
 params.Slim = 0.3;
 params.dS = 10e-3;
-params.N = 30;
+% params.N = 30;
 params.MgATP = 8;
 
 figure(12);clf;
@@ -21,7 +21,9 @@ ghostSave = 'operatorSplittingPU080';
 ghostSave = 'ShiftingStrain160_Slim0_3';
 ghostSave = 'beardsOrig_all60';
 ghostSave = 'beardsOrig_OV_Pas_SS';
-% ghostSave = 'beardsOrigAll';
+
+% ghostSave = 'beardsOrig50'; % strain shifting dS 50 nm
+% ghostSave = 'beardsOrig5'; % strain shifting dS 5 nm
 ghostSave = '';
 
 ghostLoad = '';
@@ -42,6 +44,7 @@ ghostLoad = 'ShiftingStrainTest40';
 % ghostLoad = 'beardsOrig_all30';
 ghostLoad = 'beardsOrig_all60';
 ghostLoad = 'operatorSplittingPU0';% N = 40
+ghostLoad = 'beardsOrig5';% N = 40
 % ghostLoad = '';
 
 % testing setup
@@ -58,6 +61,9 @@ params.UseSerialStiffness = false;
 params.PlotEachSeparately = true;
 params.ghostLoad = ghostLoad;
 params.ghostSave = ghostSave;
+
+% save as default
+params0 = getParams(params);
 %% init
 LoadData;
 t_ss = [0 1];

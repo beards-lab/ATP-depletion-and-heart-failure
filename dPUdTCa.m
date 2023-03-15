@@ -80,11 +80,17 @@ end
 % need to cut the change in two because half-sarcomere means half the speed
 % and half the space change
 s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
+% s = params.s' - (-(SL - LSE) + params.LXBpivot)/2;
+s = flipud(-s);
 dS = params.dS;
 % calculation of moments of strain distributions
+try
 p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); 
+catch e
+    disp(e.message);
+end
 
 if params.UseP31Shift
     p3_1 = dS*sum((s+params.dr).*p3);

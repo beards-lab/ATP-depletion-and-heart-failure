@@ -49,6 +49,7 @@ end
         'UseSlack', false, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
         'PlotEachSeparately', false , ... % show each plot on separate figure
+        'PlotFullscreen', false, ... % Each plot is in fullscreen instead on common figure
         'UseSLInput', false, ... % Use SL as a driving instead of velocities, provide input in datatable
         'RescaleOutputDt', 0,... % downsamples unnecessary complex output vector. False or value (e.g. 1e-5)
         'UseP31Shift', false, ... % Shifts the s by dr in p3_1
@@ -120,10 +121,10 @@ end
 
     %% SIMULATION PARAMETERS
     if params.UseCalculatedN
-        params.N = ceil((params.Slim_r - params.Slim_l)/params.dS);
+        params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
         params.LXBpivot = params.SL0;
         params.ss = params.N;
-        params.s = (params.Slim_l:params.dS:params.Slim_r) - params.LXBpivot;
+        params.s = ((params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot)/2;
 %         params.s_i0 = 0; % not used in this context, searched for in each iteration
     else
     
