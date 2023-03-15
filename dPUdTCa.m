@@ -1,5 +1,5 @@
 function [f, outputs] = dPUdTCa(t,PU,params)
-% ODE function for the d/dt operator for the cross-bridge mode.
+% ODE function for the d/dt operator for the cross-bridge model of half-sarcomere.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
 %  third 2N-1 entries represent p3(s,t)
@@ -51,14 +51,14 @@ else
             dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
         end
     end
-    if t > 2.76
-        a = 1;
-    end
+%     if t > 2.76
+%         a = 1;
+%     end
     vel = dSL;
 end
     
 U_SR = 1 - U_NR;
-LSE = PU(3*ss + 4);
+LSE = PU(3*ss + 4); % length of the serial stiffness
 
 
 % Sarcomere geometry
@@ -75,10 +75,13 @@ else
     N_overlap = 1;
 end
 
-% calculation of moments of strain distributions
-% s = params.s' + (SL - LSE) - params.LXBpivot;%(-N:1:0)'*dS;
-s = params.s' - (SL - LSE) + params.LXBpivot;
+% strain - above the myosin heads is zero. 
+% Negative - shorter, Positive - longer
+% need to cut the change in two because half-sarcomere means half the speed
+% and half the space change
+s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
 dS = params.dS;
+% calculation of moments of strain distributions
 p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); 
@@ -232,10 +235,8 @@ end
 dp3   = + params.k2*(exp(-params.alpha2*s).*p2) ...
     - g1*params.k_2*p3 - XB_TOR;
 
-% what is the actual index of zero strain?
+% estimate the position of the actual index of zero strain
 % IMPORTANT: s MUST be around 0 somewhere!
-
-% estimate the position
 s_i0 = 1 + round(-s(1)/params.dS, 6);
 
 if isnan(s_i0)
@@ -248,9 +249,6 @@ elseif floor(s_i0) == params.ss
     s_i0 = params.ss;    
 elseif floor(s_i0) > params.ss
     error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
-% elseif ceil(s_i0) > 1 && abs(s(ceil(s_i0)-1)) < abs(s(ceil(s_i0)))
-%     % the lower one was closer to zero, otherwise keep the upper one
-%     s_i0 = s_i0 - 1;
 else
     s_i0 = round(s_i0);
 end
@@ -276,9 +274,9 @@ end
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-if t  > 0.09 | any(isnan(PU))
-    % just for placing a breakpoint here
-    a = 1;
-end
+% if t  > 0.09 | any(isnan(PU))
+%     % just for placing a breakpoint here
+%     a = 1;
+% end
 
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

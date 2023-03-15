@@ -120,9 +120,9 @@ end
 
     %% SIMULATION PARAMETERS
     if params.UseCalculatedN
-        N = ceil((params.Slim_r - params.Slim_l)/params.dS);
+        params.N = ceil((params.Slim_r - params.Slim_l)/params.dS);
         params.LXBpivot = params.SL0;
-        params.ss = N;
+        params.ss = params.N;
         params.s = (params.Slim_l:params.dS:params.Slim_r) - params.LXBpivot;
 %         params.s_i0 = 0; % not used in this context, searched for in each iteration
     else

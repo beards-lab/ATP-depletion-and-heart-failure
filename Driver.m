@@ -21,6 +21,7 @@ ghostSave = 'operatorSplittingPU080';
 ghostSave = 'ShiftingStrain160_Slim0_3';
 ghostSave = 'beardsOrig_all60';
 ghostSave = 'beardsOrig_OV_Pas_SS';
+% ghostSave = 'beardsOrigAll';
 ghostSave = '';
 
 ghostLoad = '';
