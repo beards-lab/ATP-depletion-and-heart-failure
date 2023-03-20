@@ -6,19 +6,14 @@ function [f, outputs] = dPUdTCa(t,PU,params)
 %  third-last entry is U_NR, the fraction of myosin heads in not-relaxed state
 % then second last NP and last SL 
 
-MgATP = params.MgATP;
-Pi = params.Pi;
-MgADP = params.MgADP;
 vel = params.Vums;
 Ca_i = params.Ca;
-ss = params.ss; % space size (length of the s for each of p1-p3)
-
-
 
 freq = 1;
 T = 1/freq;
 
 % Decompose State Variables from PU vector
+ss = params.ss; % space size (length of the s for each of p1-p3)
 p1 = PU(1:ss);
 p2 = PU(ss+1:2*ss);
 p3 = PU(2*ss +1:3*ss);
@@ -102,6 +97,10 @@ Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fracti
 
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
+MgATP = params.MgATP;
+Pi = params.Pi;
+MgADP = params.MgADP;
+
 g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
 g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
 % g3 = MgATP/(MgATP + K_T2);
@@ -164,52 +163,12 @@ elseif params.UseSlack
         velHS = vel;
         dLSEdt = 0;
     end
-        
-        
-    
-%     if LSE > 0
-%     Force = params.kSE*LSE;
-%     velHS = (Force - F_total)/params.mu;
-%     dLSEdt = vel - velHS;
-%     else
-%     Force = params.kSE/1000*LSE;
-%     velHS = (Force - F_total)/params.mu;
-%     dLSEdt = vel - velHS;
-%     end
-    
-%     if F_active > 0 && LSE > -1e-3
-%         % normal
-%         Force = F_total;
-%         velHS = vel;
-%         % return to norm
-%         dLSEdt = -LSE*1000;
-%     else
-%         % slack - use a compliant spring
-%         Force = params.kSE/10*LSE;
-%         velHS = (Force - F_total)/params.mu;
-%         dLSEdt = vel - velHS;
-%     end
 else
     % like 10x faster, does not cause any oscillations
     Force = F_total;
     velHS = vel;
     dLSEdt = 0;
 end
-    
-
-% % Estimating space derivatives, upwind differencing
-% if velHS > 0
-%     dp1ds = [(p1(1) - 0); p1(2:end) - p1(1:end-1)]/dS;
-%     dp2ds = [(p2(1) - 0); p2(2:end) - p2(1:end-1)]/dS;
-%     dp3ds = [(p3(1) - 0); p3(2:end) - p3(1:end-1)]/dS;
-% elseif velHS < 0
-%     dp1ds = [p1(2:end) - p1(1:end-1); (0 - p1(end))]/dS;
-%     dp2ds = [p2(2:end) - p2(1:end-1); (0 - p2(end))]/dS;    
-%     dp3ds = [p3(2:end) - p3(1:end-1); (0 - p3(end))]/dS;
-% else 
-%     % just optim, because its multiplied by 0 anyway
-%     dp1ds = 0;dp2ds = 0;dp3ds = 0;
-% end
 
 % dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
 if params.UseAtpOnUNR
@@ -223,14 +182,26 @@ end
 % dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
 % dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
 
+%% TRANSITIONS
+if exist('plotTransitions', 'var')
+    % debug the transitions
+    s = -0.2:0.02:0.2; p1 = ones(size(s)); p2 = p1;p3 = p1;
+end
 
-dp1   = - f1*params.kd*p1 - f2*params.k1*(exp(-params.alpha1*s).*p1) ...
-    + params.k_1*(exp(+params.alpha1*s).*p2);
-dp2   = + f2*params.k1*(exp(-params.alpha1*s).*p1) ...
-    - params.k_1*(exp(+params.alpha1*s).*p2) - params.k2*(exp(-params.alpha2*s).*p2) ...
-    + g1*params.k_2*p3  ;
+p12PU = f1*params.kd*p1; % p1 to PU
+p12p2 = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
+p12p2_r = 0*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
+p22p3 = params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
+p22p3_r = 0*g1*params.k_2*p3; % reverse flow from p3 to p2
 
-         
+% p12PU = f1*params.kd*p1; % p1 to PU
+% p12p2 = f2*params.k1*(p1); % P1 to P2
+% p12p2_r = 0*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
+% p22p3 = params.k2*(p2); % P2 to P3
+% p22p3_r = 0*g1*params.k_2*p3; % reverse flow from p3 to p2
+% 
+% 
+
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
 if params.UseTORNegShift
     XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
@@ -238,8 +209,25 @@ else
     XB_TOR = g2*params.k3*(exp(params.alpha3*(s+params.s3).^2).*p3);
 end
 
-dp3   = + params.k2*(exp(-params.alpha2*s).*p2) ...
-    - g1*params.k_2*p3 - XB_TOR;
+if exist('plotTransitions', 'var')
+    % debug transitions only
+    figure(87);
+    plot(s, p12PU, s, p12p2, s, p12p2_r,'--', s, p22p3, s,  p22p3_r, '--', s, XB_TOR, 'Linewidth', 2);
+    legend(...
+    'p12PU',... = f1*params.kd*p1; % p1 to PU
+    'p12p2',... = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
+    'p12p2_r',..._r = params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
+    'p22p3',... = params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
+    'p22p3_r',... = g1*params.k_2*p3; % reverse flow from p3 to p2
+    'TOR'...
+    );
+ylim([0, 5000]);
+end
+%%
+% governing flows
+dp1   = - p12PU -  p12p2 + p12p2_r;
+dp2   = + p12p2 - p12p2_r  - p22p3 +  p22p3_r;
+dp3   = + p22p3 - p22p3_r - XB_TOR;
 
 % estimate the position of the actual index of zero strain
 % IMPORTANT: s MUST be around 0 somewhere!

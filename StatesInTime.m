@@ -34,7 +34,8 @@ plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '--', 'MarkerSize
 % xlim([0 inf])
 % ylim([-50, Inf])
 plot([t t], [0 1]);
-text(t,0.5, num2str(t));
+printtext = sprintf('%0.6fs \n%0.2f um\n%0.2f kPa\n%0.2f s^{-1}', t, out.SL(ti), out.Force(ti), out.XB_TORs(ti));
+text(t,0.5, printtext);
 % hold on;
 yyaxis right;
 plot(out.t, out.Force, 'b-', 'Linewidth', 2)

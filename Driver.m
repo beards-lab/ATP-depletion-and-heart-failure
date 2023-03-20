@@ -47,7 +47,7 @@ ghostLoad = 'beardsOrig';
 % ghostLoad = 'operatorSplittingPU0';% N = 40
 % ghostLoad = 'beardsOrig5';% N = 40
 % ghostLoad = 'beardsOrig5_BW';% N = 40
-ghostLoad = 'bO_Fp31';
+% ghostLoad = 'bO_Fp31';
 
 % testing setup
 % params.UseOverlap = true;
@@ -64,21 +64,25 @@ params.UseSerialStiffness = false;
 % params.alpha2 = 0;
 
 % need a ksttiff1 and kstiff2 parameter retune
-params.F_act_UseP31 = true;
-params.UseP31Shift = true;
-% params.kstiff1 = -100000;
-% params.kstiff2 = 14000;
-params.kstiff1 = 10000;
-params.kstiff2 = 13000;
-% params.dr = -0.01;
+% params.F_act_UseP31 = true;
+% params.UseP31Shift = true;
+% % params.kstiff1 = -100000;
+% % params.kstiff2 = 14000;
+% params.kstiff1 = 10000;
+% params.kstiff2 = 10000;
+% params.k1 = 1000;
+% params.k2 = 400;
+% params.dr = 0.010;
 
 params.PlotEachSeparately = true;
 params.PlotFullscreen = false;
 params.ghostLoad = ghostLoad;
 params.ghostSave = ghostSave;
-params.UseSpeedHalving = true;
+% params.UseSpeedHalving = true;
 
-%% init
+plotTransitions = true;
+params.PlotFullscreen = true;
+% init
 clf;
 
 % save as default
@@ -86,6 +90,7 @@ params0 = getParams(params);
 params0.N
 
 LoadData;
+% vel = vel(1:6);
 t_ss = [0 1];
 t_sl0 = [0 0.1];
 tic

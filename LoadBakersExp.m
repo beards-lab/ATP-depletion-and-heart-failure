@@ -27,6 +27,13 @@ ts_s = [-50 ts_d(2:end) 2200]
 
 % clf
 % figure(202);clf
+
+% [datatable, velocitytable] = DownSampleAndSplit(dt8, [], [], ML, 10, nf/67, '');
+% % gwet the velocities
+% dSL = [0;diff(datatable(:, 2))]; dT = [-datatable(2, 1);diff(datatable(:, 1))]; dSLdT = dSL./dT;
+% subplot(211);hold on;yyaxis right;plot(datatable(:, 1)*1000, dSLdT/2);ylim([-10, 10]);
+% velocities = [-6, -1, -3, -5, -0.5, -4, -2]
+
 % [datatable, velocitytable] = DownSampleAndSplit(dt8, ts_d, ts_s, ML, 5, nf/67, 'ForceLength8mM');
 [datatable, velocitytable] = DownSampleAndSplit(dt8, [0 4250], [-5000, 500, 2000, 4250], ML, dsf/10, nf/67, 'ForceLength8mM_all');
 
