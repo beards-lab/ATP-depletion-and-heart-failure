@@ -80,6 +80,7 @@ s = flipud(-s);
 dS = params.dS;
 % calculation of moments of strain distributions
 try
+% sum of all probabilities
 p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum(s.*p2);
 p3_0 = dS*sum(p3); 
@@ -88,6 +89,7 @@ catch e
 end
 
 if params.UseP31Shift
+    % mean of p3 probability with shifted centre by the contraction dr
     p3_1 = dS*sum((s+params.dr).*p3);
 else
     p3_1 = dS*sum(s.*p3);
@@ -190,17 +192,10 @@ end
 
 p12PU = f1*params.kd*p1; % p1 to PU
 p12p2 = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
-p12p2_r = 0*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
+p12p2_r = params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
 p22p3 = params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
-p22p3_r = 0*g1*params.k_2*p3; % reverse flow from p3 to p2
+p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 
-% p12PU = f1*params.kd*p1; % p1 to PU
-% p12p2 = f2*params.k1*(p1); % P1 to P2
-% p12p2_r = 0*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
-% p22p3 = params.k2*(p2); % P2 to P3
-% p22p3_r = 0*g1*params.k_2*p3; % reverse flow from p3 to p2
-% 
-% 
 
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
 if params.UseTORNegShift
@@ -221,7 +216,7 @@ if exist('plotTransitions', 'var')
     'p22p3_r',... = g1*params.k_2*p3; % reverse flow from p3 to p2
     'TOR'...
     );
-ylim([0, 5000]);
+% ylim([0, 5000]);
 end
 %%
 % governing flows

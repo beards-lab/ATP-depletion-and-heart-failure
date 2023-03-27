@@ -1,4 +1,5 @@
 %% FORCE VELOCITY
+E = [];
 params = params0;
 params.Slim_l = 1.8;
 params = getParams(params);
@@ -7,14 +8,16 @@ F_active = [];
 if isfield(params, 'PU0')
     params = rmfield(params, 'PU0');
 end
-for j = 1:length(vel)
+for j = 1:length(vel)    
     if vel(j) == 0 
         params.SL0 = 2.0;
         params.Velocity = 0;
         [F_active(j) out] = evaluateModel(@dPUdTCa, t_ss, params);        
     else
         params.SL0 = 2.2;
-        if ~isfield(params, 'PU0')
+        % true to start from 2.2um steady state isntead from scratch.
+        % Neither is perfect though
+        if false & ~isfield(params, 'PU0')
             % speed things up by storing the initialization
             params.Velocity = 0;
             [~, out] = evaluateModel(@dPUdTCa, t_ss, params);
