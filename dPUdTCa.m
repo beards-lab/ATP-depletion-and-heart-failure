@@ -78,6 +78,50 @@ s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
 % s = params.s' - (-(SL - LSE) + params.LXBpivot)/2;
 s = flipud(-s);
 dS = params.dS;
+
+% estimate the position of the actual index of zero strain
+% IMPORTANT: s MUST be around 0 somewhere!
+s_p0 = 1 + round(-s(1)/params.dS, 6); % strain position in space at 0
+
+if isnan(s_p0)
+    s_i0 = 1; % just hold on..
+    s_i1 = 1;
+    s_i0k = 0;
+elseif floor(s_p0) < 0
+    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
+elseif floor(s_p0) == 0
+    s_i0 = 1;
+    s_i1 = 1;
+    s_i0k = 0;
+elseif ceil(s_p0) == params.ss
+    s_i0 = params.ss;
+    s_i1 = 1;
+    s_i0k = 0;
+elseif ceil(s_p0) > params.ss
+    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
+else
+    if params.UseSpaceInterpolation
+        s_i0 = floor(s_p0);
+        s_i1 = ceil(s_p0);
+        s_i0k = s_i1 - s_p0;
+    else
+        s_i0 = round(s_p0);
+        s_i1 = 0;
+    end
+end
+
+if params.UseSpaceDiscretization
+    try
+    s = s - s(s_i0); % subtrck the space difference
+    catch e
+        disp('wat')
+    end
+    if abs(s(s_i0)) > 1e-4
+        disp('')
+    end
+end
+
+
 % calculation of moments of strain distributions
 try
 % sum of all probabilities
@@ -224,29 +268,16 @@ dp1   = - p12PU -  p12p2 + p12p2_r;
 dp2   = + p12p2 - p12p2_r  - p22p3 +  p22p3_r;
 dp3   = + p22p3 - p22p3_r - XB_TOR;
 
-% estimate the position of the actual index of zero strain
-% IMPORTANT: s MUST be around 0 somewhere!
-s_i0 = 1 + round(-s(1)/params.dS, 6);
-
-if isnan(s_i0)
-    s_i0 = 1; % just hold on..
-elseif ceil(s_i0) < 0
-    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
-elseif ceil(s_i0) == 0
-    s_i0 = 1;
-elseif floor(s_i0) == params.ss
-    s_i0 = params.ss;    
-elseif floor(s_i0) > params.ss
-    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
-else
-    s_i0 = round(s_i0);
-end
-
 try
 if params.UseMutualPairingAttachment
     dp1(s_i0) = dp1(s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
 else
-    dp1(s_i0) = dp1(s_i0) + params.ka*Pu*U_NR/dS; % attachment
+    if params.UseSpaceInterpolation
+        dp1(s_i0) = dp1(s_i0) + s_i0k*(params.ka*Pu*U_NR/dS); % attachment
+        dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(params.ka*Pu*U_NR/dS); % attachment
+    else
+        dp1(s_i0) = dp1(s_i0) + (params.ka*Pu*U_NR/dS); % attachment
+    end
 end
 catch e
     disp('vole')
@@ -267,5 +298,7 @@ f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
 %     % just for placing a breakpoint here
 %     a = 1;
 % end
-
+if SL > 2.01 & t > 0.05
+    a = 3;
+end
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];

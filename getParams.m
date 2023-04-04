@@ -56,7 +56,9 @@ end
         'F_act_UseP31', false, ... Use kstiff2*p3_1 instead of p3_0*dr
         'UseAtpOnUNR', false, ... Enables ATP effect via g4 from SR to NR
         'UseTORNegShift', false, ... XB TOR uses s - s3 instead of s + s3
-        'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2        
+        'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
+        'UseSpaceDiscretization', false, ...
+        'UseSpaceInterpolation', false, ...
         'ghostSave', '', 'ghostLoad', '');
  
     params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
