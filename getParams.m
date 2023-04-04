@@ -1,4 +1,4 @@
-function params = getParams(params, g, updateInit)
+function params = getParams(params, g, updateInit, updateModifiers)
 % Updated from
 % https://github.com/beards-lab/Cardiac-Crossbridge-Explicit-Space-Discretization
 % Beard, Daniel A., et al. "Reduced cardiac muscle power with low ATP simulating heart failure." Biophysical Journal 121.17 (2022): 3213-3223.
@@ -13,6 +13,10 @@ end
 
 if nargin < 3
     updateInit = true;
+end
+
+if nargin < 4
+    updateModifiers = false;
 end
 
 %% Build default params0
@@ -124,9 +128,12 @@ end
     params = fillInDefaults(params, params0);
     
     %% MODIFIERS
-%     mods = {'kstiff1', 'kstiff2'};
-    for i = 1:length(params.mods)
-        params.(params.mods{i}) = params.(params.mods{i})*g(i);
+
+    if updateModifiers
+        %     mods = {'kstiff1', 'kstiff2'};
+        for i = 1:length(params.mods)
+            params.(params.mods{i}) = params.(params.mods{i})*g(i);
+        end
     end
         
 

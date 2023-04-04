@@ -2,7 +2,7 @@ function [Et E] = evaluateBakersExp(g, params0)
 % Evaluate Bakers' problem
 
 % important to start with the g!!
-params0 = getParams(params0, g);
+params0 = getParams(params0, g, true, true);
 
 % params0.SL0 = 2.2;
 % % params.Slim = 0.18;
