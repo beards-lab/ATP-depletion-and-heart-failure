@@ -1,17 +1,31 @@
 % driver code
-% g = ones(30, 1);
+g = ones(30, 1);
+
+
 
 params = getParams();
-params.g = g;
+
+% optimized
+params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
+% g = x2;
+% g = p_OptimGA;
+% g = ones(30, 1);
+% params.g = x;
+
 params.SL0 = 2.2;
 % params.Slim = 0.18;
 params.Slim = 0.3;
-params.dS = 1e-3;
+params.dS = 10e-3;
 % params.N = 30;
 params.MgATP = 8;
-
+params.SimTitle = '';
 figure(12);clf;
+
 ghostSave = '';
+ghostSave = '';
+ghostSave = 'gaOutput2';
+% ghostSave = 'prev';
+% ghostSave = 'mybase';
 % ghostSave = 'beardsOrig_passive';
 % ghostSave = 'ShiftingStrain40_Slim0_3';
 % ghostSave = 'ShiftingStrain80_Slim0_3';
@@ -27,7 +41,9 @@ ghostSave = '';
 % ghostSave = 'beardsOrig5'; % strain shifting dS 5 nm
 % ghostSave = 'beardsOrig5_BW';%bells and whistles :)
 
-ghostLoad = 'bestGAFit';
+
+ghostLoad = '';
+% ghostLoad = 'InterpolateBins';
 % ghostLoad = 'beardsOrig';
 % ghostLoad = 'ShiftingStrain40';
 % ghostLoad = 'operatorSplitting'
@@ -58,7 +74,8 @@ params.UseMutualPairingAttachment = false;
 params.UseSlack = false;
 params.UseOverlap = true;
 params.UsePassive = true;
-params.UseSerialStiffness = true;
+params.UseSerialStiffness = false;
+params.UseKstiff3 = true;
 
 % params.alpha1 = 0;
 % params.alpha2 = 0;
@@ -66,20 +83,23 @@ params.UseSerialStiffness = true;
 % need a ksttiff1 and kstiff2 parameter retune
 params.F_act_UseP31 = true;
 params.UseP31Shift = true;
-% params.kstiff1 = -100000;
-% params.kstiff2 = 14000;
-% params.kstiff2 = 20000;
-% params.kstiff1 = params.kstiff2;
-% params.k1 = 10000;
-% params.k2 = 10000;
-% params.dr = 0.01;
-% params.mu = 1e-6;
+params.kstiff1 = 1000;
+params.kstiff2 = 14000;
+params.kstiff3 = 1400;
+% params.kstiff2 = 7000;
+% params.kstiff1 = 700000;
+params.k1 = 4000;
+params.k2 = 10000;
+params.k3 = 100;
+params.dr = 0.01;
+params.mu = 1e-6;
 
 % set zero transition slopes
 params.alpha1 = 0;
 params.alpha2 = 0;
+params.alpha3 = 300;
 % zero reverse-flows
-params.k_1 = 0;
+% params.k_1 = 10000;
 % params.k_2 = 0;
 
 params.PlotEachSeparately = true;
@@ -94,14 +114,16 @@ params.PlotFullscreen = true;
 clf;
 
 % save as default
-params0 = getParams(params);
+params0 = getParams(params, params.g, false, true);
 
-params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k3"};
-params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
-params0.g = load('p_OptimGa.mat').p_OptimGA;
-params0.g(1) = params0.g(1)*2;
+% params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k3"};
+% params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
+% params0.g = load('p_OptimGa.mat').p_OptimGA;
+% params0.g(1) = params0.g(1)*2;
 % params0.g(2) = 40;
-params0.dr = 0.01;
+% params0.dr = 0.01;
+params0.UseSpaceDiscretization = false;
+params0.UseSpaceInterpolation = true;
 % g = x;
 
 LoadData;
@@ -110,11 +132,15 @@ t_ss = [0 1];
 t_sl0 = [0 0.1];
 tic
 
+% params0 = load('bestParams.mat').params;
+% params0.PlotEachSeparately = true;
+
 RunBakersExp;
 toc
 E
 xlim('auto')
 ylim('auto')
+
 return
 %% SA
 E = [];
@@ -130,11 +156,12 @@ end
 
 %% OPTIM
 % return
-params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
+params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
+g = ones(size(params0.mods))
 % g = x;
 
 params0.PlotEachSeparately = false;
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
 optimfun = @(g)evaluateBakersExp(g, params0);
@@ -150,15 +177,31 @@ ga_Opts = optimoptions('ga', ...
     'MaxStallGenerations',4, ...  % 10
     'UseParallel',true);
 
+
+params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3", "sigma0"};
+Ng = length(params0.mods);
+
+params0.PlotEachSeparately = false;
+% evaluateBakersExp(g, params0)
+
 optimfun = @(g)evaluateBakersExp(g, params0);
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
-    ga(optimfun,size(g, 1), ...
-    [],[],[],[],ones(size(g))*0.01,ones(size(g))*50,[],ga_Opts);
+    ga(optimfun,Ng, ...
+    [],[],[],[],ones(Ng, 1)*0.01,ones(Ng, 1)*100,[],ga_Opts);
 
-% save env;
+save env;
 
 optimfun(p_OptimGA)
-x = fminsearch(optimfun, p_OptimGA, options)
-save x
-optimfun(x)
+
+x2 = fminsearch(optimfun, p_OptimGA, options)
+save x2
+optimfun(x2)
+
+%% Calculation of max speed
+dr = params.dr; % um
+v = 10; % ML/s = um/s in half-sarcomere
+% to produce F we need to have sum < dr, so we need to unbind the rest
+% thus, zero force at sum = dr and all binded are unbinded
+% tor = ; 
+

@@ -63,6 +63,8 @@ end
         'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
         'UseSpaceDiscretization', false, ...
         'UseSpaceInterpolation', false, ...
+        'UseKstiff3', false, ... % uses additional parameter kstiff3 for overstroke stifness (=kstiff2 otherwise)
+        'SaveBest', true, ... % save g on each iter, if better than previous
         'ghostSave', '', 'ghostLoad', '');
  
     params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
@@ -105,6 +107,7 @@ end
     params0.dr = 0.01; % Power-stroke Size; Units: um
     params0.kstiff1 = 1393.2; 
     params0.kstiff2 = 13275;
+    params0.kstiff3 = params0.kstiff2;
 
     params0.K_T3 = 4; % (mM)
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).

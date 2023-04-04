@@ -134,9 +134,15 @@ end
 
 if params.UseP31Shift
     % mean of p3 probability with shifted centre by the contraction dr
-    p3_1 = dS*sum((s+params.dr).*p3);
+    if params.UseKstiff3
+        p3_1_stroke = dS*sum((s+params.dr).*p3.*(s+params.dr >= 0));
+        p3_1_overstroke = dS*sum((s+params.dr).*p3.*(s+params.dr < 0));
+    else
+        p3_1_stroke = dS*sum((s+params.dr).*p3);   
+        p3_1_overstroke = 0;
+    end
 else
-    p3_1 = dS*sum(s.*p3);
+    p3_1_stroke = dS*sum(s.*p3);
 end
 
 Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
@@ -162,10 +168,10 @@ f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi);
 % F_active = kstiff2*p3_0/100 - max(-kstiff1*(p2_1 + p3_1 ), 0);
 if params.F_act_UseP31
     % together with UseP31Shift
-    F_active = params.kstiff1*p2_1 + params.kstiff2*p3_1;
+    F_active = params.kstiff1*p2_1 + params.kstiff2*p3_1_stroke + params.kstiff3*p3_1_overstroke;
 else
     % the dr shift is used here instead of UseP31Shift
-    F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1); 
+    F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1_stroke); 
 end
 
 if params.UsePassive

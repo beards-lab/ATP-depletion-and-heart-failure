@@ -1,7 +1,7 @@
 %% FORCE VELOCITY
 E = [];
 params = params0;
-params.Slim_l = 1.8;
+params.Slim_l = 1.6;
 params = getParams(params);
 F_active = [];
 % params.UseSerialStiffness = false;
@@ -25,25 +25,36 @@ for j = 1:length(vel)
         end
         params.Velocity = vel(j);
         [F_active(j) out] = evaluateModel(@dPUdTCa, t_sl0/abs(vel(j)), params);
+        if abs(vel(j)) >= 3
+            a = 1;
+        end
     end        
 end
 
 % cost function
-E(1) = sum(abs(F_active(:,1)-Data_ATP(:,1+1)).^2);
+E(1) = sum((F_active(1,:) - Data_ATP(:,1+1)').^2);
 % normalize by number of data points
 E(1) = E(1)/size(Data_ATP, 1);
-  
+
+better = false;
+if params.SaveBest
+    e0 = Inf;
+    if exist([params.ghostSave '_params.mat'], 'file')
+        e0 = load([params.ghostSave '_params.mat']).E;
+    end
+    if sum(E) < e0
+        ss.params = params; % save struct
+        ss.E = sum(E);
+        save([params.ghostSave '_params.mat'], 'params', 'E');
+        better = true;
+    end
+end
 
 %
 % figure(101); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
 % figure(); clf; axes('position',[0.1 0.6 0.35 0.35]); hold on;
 
-if ~isempty(params.ghostSave)
-    ghost = [F_active(:), -vel(:)];
-    save(['Ghost_' params.ghostSave '_FV'], 'ghost');
-end
-
-if params.PlotEachSeparately
+if params.PlotEachSeparately || better
 %     figure(102);hold on;
     if ~params.PlotFullscreen
         axes('position',[0.05 0.6 0.4 0.35]); 
@@ -72,11 +83,16 @@ if params.PlotEachSeparately
     % plot(Data_ATP(:,4),Data_ATP(:,1),'ro','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 
     if exist('gp', 'var') && isvalid(gp)
-        legend(['Ghost ' params.ghostLoad], 'Sim', 'Data');
+        legend(['Ghost ' params.ghostLoad], ['Sim'  params.SimTitle] , 'Data', 'interpreter','none');
     else
-        legend('Sim', 'Data');
+        legend(['Sim'  params.SimTitle] , 'Data');
     end
-end                            
+end
+
+if ~isempty(params.ghostSave)
+    ghost = [F_active(:), -vel(:)];
+    save(['Ghost_' params.ghostSave '_FV'], 'ghost');
+end
 
 return;
 %% KTR EXPERIMENT
