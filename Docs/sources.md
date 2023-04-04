@@ -12,6 +12,12 @@
 - The Rates of Ca2+ Dissociation and Cross-bridge Detachment from Ventricular Myofibrils as Reported by a Fluorescent Cardiac Troponin C\* (Little 2012)
   - https://www.jbc.org/article/S0021-9258(20)47816-0/fulltext
   - human 40/s, rat 150/s, with decrease to about 1/3 while ADP present
+- **Tewari:** 
+  - positive strain (stretching) inhibits the transition from loosely bound A1 to strongly bound A2. Positive strain also inhibits the ratcheting step from A2 to A3. 
+  - negative strain or (contraction) increases the rates of these transitions. 
+  - Crossbridge Mechanism(s) Examined by Temperature Perturbation Studies on Muscle (Ranatunga 2010)
+    - https://link.springer.com/chapter/10.1007/978-1-4419-6366-6_14 
+	- 5 state kinetics model
 
 ## Another mechanisms
 - Force-Dependent Recruitment from the Myosin Off State Contributes to Length-Dependent Activation (Campbell 2018)
@@ -72,6 +78,7 @@ SARCOMERE SHORTENING IN RAT MYOCARDIUM (Tombe 1991)
   - https://www.sciencedirect.com/science/article/abs/pii/S0022282817300639?casa_token=-l6ckz5kjc8AAAAA:9TVS0ZRG4TU5YSGdUeh9mazkkqFWqxOMecEfKDhJUezv4smPccz6QXpy22_E_ybRGGYhIRgm_s8#bb0315
   - human cardiomyocyte at 37deC, 3 state XB model, velocity dependent transitions, pCa - tension fitting to 1.8, 2.0 and 2.2 um SL
   - dashpot with serial stiffness
+  - transition from W to S resets distortion
   
 ## super relaxed state
 - The role of super-relaxed myosin in skeletal and cardiac muscle (McNamara 2015)
