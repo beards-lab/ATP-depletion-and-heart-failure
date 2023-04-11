@@ -251,7 +251,14 @@ p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 if params.UseTORNegShift
     XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
 else
+%     % test using interp
+%     try
+%     p3i = interp1(s, p3, s+params.s3, 'linear');
+%     p3i(isnan(p3i)) = 0;
     XB_TOR = g2*params.k3*(exp(params.alpha3*(s+params.s3).^2).*p3);
+%     catch e
+%         disp('vile');
+%     end
 end
 
 if exist('plotTransitions', 'var')
@@ -300,10 +307,10 @@ end
 % dLse = Kse*Lse
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-% if t  > 0.09 | any(isnan(PU))
-%     % just for placing a breakpoint here
-%     a = 1;
-% end
+if t  > 0.18 | any(isnan(PU)) | any(isnan(f))
+    % just for placing a breakpoint here
+    a = 1;
+end
 if SL > 2.01 & t > 0.05
     a = 3;
 end

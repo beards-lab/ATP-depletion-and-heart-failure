@@ -22,8 +22,8 @@ params.SimTitle = '';
 figure(12);clf;
 
 ghostSave = '';
-ghostSave = '';
-ghostSave = '';
+% ghostSave = 'ones';
+% ghostSave = 'ga2';
 % ghostSave = 'prev';
 % ghostSave = 'mybase';
 % ghostSave = 'beardsOrig_passive';
@@ -42,7 +42,7 @@ ghostSave = '';
 % ghostSave = 'beardsOrig5_BW';%bells and whistles :)
 
 
-ghostLoad = '';
+ghostLoad = 'ones';
 % ghostLoad = 'InterpolateBins';
 % ghostLoad = 'beardsOrig';
 % ghostLoad = 'ShiftingStrain40';
@@ -132,8 +132,13 @@ t_ss = [0 1];
 t_sl0 = [0 0.1];
 tic
 
-params0 = load('gaOutput2_params.mat').params;
+% params0 = load('gaOutput2_params.mat').params;
+% params0 = load('bestParams.mat').params;
 params0.PlotEachSeparately = true;
+% params0.UseKstiff3 = false;
+params0.dS = 0.01;
+params0.ksr0 = params0.ksr0;
+params0.sigma0 = params0.sigma0;
 
 RunBakersExp;
 toc
@@ -178,17 +183,37 @@ ga_Opts = optimoptions('ga', ...
     'UseParallel',true);
 
 
-params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3", "sigma0"};
-Ng = length(params0.mods);
+params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3", "sigma0", "ksr0"};
+params0.UseKstiff3 = false;
+params0.SaveBest = true;
+params0.ghostSave = false;
+
 
 params0.PlotEachSeparately = false;
+
 % evaluateBakersExp(g, params0)
 
 optimfun = @(g)evaluateBakersExp(g, params0);
 
+% default bounds struct - based on the mods
+upp = 100; lwr = 0.01;
+p_lb = params0; for i = 1:length(params0.mods), p_lb.(params0.mods{i}) = params0.(params0.mods{i})*lwr; end
+p_ub = params0; for i = 1:length(params0.mods), p_ub.(params0.mods{i}) = params0.(params0.mods{i})*upp; end
+
+% specific bounds - this is universal and non-blocking. 
+% Might not be used, if not within 'mods' - this is the whole reason to make all this mess
+p_lb.dr = 0.005; p_ub.dr = 0.015;
+p_lb.s3 = 0.005; p_ub.s3 = 0.015;
+
+% convert back to vector of ratios
+for i = 1:length(params0.mods)
+    lb(i) = p_lb.(params0.mods{i})/params0.(params0.mods{i});
+    ub(i) = p_ub.(params0.mods{i})/params0.(params0.mods{i});
+end
+
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
     ga(optimfun,Ng, ...
-    [],[],[],[],ones(Ng, 1)*0.01,ones(Ng, 1)*100,[],ga_Opts);
+    [],[],[],[],lb,ub,[],ga_Opts);
 
 save env;
 

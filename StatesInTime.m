@@ -29,6 +29,7 @@ yyaxis left;cla;hold on;
 plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '--', 'MarkerSize', 4, 'Linewidth', 2)
 % plot(out.t, Pus, 'b-',out.t, out.p1_0, 'r-',out.t, out.p2_0, 'g-',out.t, out.p3_0, 'k-',out.t, out.NR, 'm-');
 % plot(out.t, Pus, 'b-', out.t, out.NR, 'm-');
+plot(out.t, out.NR, 'k-');
 
 % legend('SL','LXB', 'Pu', 'P1', 'P2', 'P3', 'NR');
 % xlim([0 inf])
@@ -62,9 +63,11 @@ s = flipud(-s);
 zer = 0;
 % s_i0 = find(params.s == 0, 1);
 % ti = 1;
-p1 = out.PU(ti, 1:ss);
-p2 = out.PU(ti, ss+1:2*ss);
-p3 = out.PU(ti, 2*ss+1:3*ss);
+dS = params.dS;
+p1 = out.PU(ti, 1:ss)*dS;
+p2 = out.PU(ti, ss+1:2*ss)*dS;
+p3 = out.PU(ti, 2*ss+1:3*ss)*dS;
+
 
 % p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 % p2_0 = dS*sum(p2); 
@@ -79,7 +82,8 @@ end
 
 m = max([p1, p2, p3]);
 plot(s, p1, '<-b', s, p2, '^-r', s, p3,'>-g', [zer zer], [0 m], '--k');
-text(0 + params.dS/2, m, sprintf('p2\\_1: %1.2e\np3\\_1: %1.2e', p2_1, p3_1));
+text(0 + params.dS/2, m, ...
+    sprintf('p2\\_1: %1.2e\np3\\_1: %1.2e', p2_1, p3_1));
 xlim([s(1), s(end)]);
 if ~isequal(yl, [0, 1])
     ylim(yl);
