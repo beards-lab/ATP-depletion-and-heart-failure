@@ -235,94 +235,29 @@ end
 plot(datatable(indx_1_1, 1)*1000, datatable(indx_1_1, 3), '^', 'Linewidth', 2)
 %%
 data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_rel');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf, nf/54, 'bakers_rampup2_rel');
 
 return;
-%% Proof that the velocities are in ML/s and that the ML = SL0
-% poi = [506,	509, 1075	1085, 1519	1523, 2007.5, 2010.5, 2670	2690 3110.5	3115.5 3627	3635 4100, 4200];
-% for i = 1:length(poi)/2
-% i_pois(i) = find(dt8.Time > poi(i*2-1), 1);
-% i_poie(i) = find(dt8.Time > poi(i*2), 1);
-% inds = i_pois(i):i_poie(i);
-% v(i) = mean([diff(dt8.L(inds))./diff(dt8.Time(inds))*1e3]);
-% end
-% v
-% % clf;plot(dt8.Time, v)
-% ts(end) = 150;
 
-%% overlap the segments on top of each other and average that
-% segle = 800;
-% segment = zeros(800, 3);
-% s = 0;
-%     segment(:, 1) = t(1:segle);
-% for it = 2:2:(length(ts)-1)
-%     ind = find(t >= ts(it), 1);
-%     segment(:, 2) = segment(:, 2) + l(ind:ind+segle-1);
-%     force = f(ind:ind+segle-1);
-%     fmi = min(force);   fma = max(force); norm = 1/fma;
-%     segment(:, 3) = segment(:, 3) + force/fma;
-%     s = s+1;
-% end
-% segment(:, 2:3) = segment(:, 2:3)./s;
-% clf;subplot(211)
-% plot(segment(:, 1), segment(:, 2));
-% subplot(212)
-% plot(segment(:, 1), segment(:, 3));
 
-%% Simulate the step-up experiment
-% TODO update this
-% 
-% fcn = @dPUdTCa;
-% simulateTimes = velocitytable(:, 1);
-% velocities = velocitytable(1:end-1, 2);
-% 
-% params = struct('Pi', 0, 'MgATP', 8, 'MgADP', 0, 'Ca', 1000,...
-%     'Velocity', velocities, ...
-%     'UseCa', false,'UseOverlap', false,'kSE', 1000, 'mu', 10,...
-%     'N', 40, 'Slim', 0.025, 'ValuesInTime', 1, ...
-%     'BreakingVelocity', -10, 'SlackVelocity', 10, 'SL0', 2.0, ...
-%     'MatchTimeSegments', 1, 'ML', ML, 'PlotProbsOnStep', false, ...
-%     'ReduceSpace', false...
-%     );
-% 
-% params = getParams(params, g)
-% % figure(1);clf;
-% 
-% [F out] = evaluateModel(fcn, simulateTimes, params);
-% 
-
-%% Plot the lengths and forces
+%% New stretch experiments
 clf;
-subplot(211);hold on;
-% plot(t, l, '-');
-plot(out.t*1000, out.SL/params.ML, '|-', 'MarkerSize', 2)
-plot(out.t*1000, out.LXB/params.ML, '|-', 'MarkerSize', 2)
-% plot([simulateTimes;simulateTimes]*1000, repmat([min(ld);max(ld)], [1 size(simulateTimes, 2)]))
-legend('Muscle length (-), Data', 'Muscle length (-), Simulation', 'Sarcomere length (-), Simulation')
-% xlim([0.45 0.55])
-xlim([0 inf])
+data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
 
-subplot(212);hold on;
-% plot(td, fd);
-plot(out.t*1000, out.Force, '|-', 'MarkerSize', 2)
-plot(out.t*1000, out.FXB, '|-', 'MarkerSize', 2)
-% plot([simulateTimes;simulateTimes]*1000, repmat([min([fd;out.F']);max([fd;out.F'])], [1 size(simulateTimes, 2)]))
-legend('Force (kPa?), Data', 'Force (mmHg), Simulation', 'XB Force (mmHg), Simulation')
+data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
 
-xlim([0 inf])
-ylim([-50, Inf])
+data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
 
-%% plot states
-figure(9);clf; hold on;
-Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
+data_table = readtable('data/10s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
 
-leg = plot(out.t, Pus, out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t, out.NR);
-% plot([simulateTimes;simulateTimes], repmat([0; 1], [1 size(simulateTimes, 2)]))
-legend(leg)
-legend('Pu', 'P1', 'P2', 'P3', 'NR')
-
+data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
 %% Animate states
-animateStateProbabilities(out, params);
+% animateStateProbabilities(out, params);
 
 
 %% function definition
@@ -336,8 +271,20 @@ if nargin < 8
     offset = 0;
 end
 
-    data_table.Properties.VariableNames = {'Time', 'L', 'F'};
-    data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+    if length(data_table.Properties.VariableNames) > 3
+        % passive recording with SL
+        data_table.Properties.VariableNames = {'Time', 'L', 'F', 'SL'};
+%         data_table.Properties.VariableUnits = {'s', 'Lo', 'kPa', 'um'};
+        % fix the unit
+        data_table.Time = data_table.Time * 1000;
+        data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa', 'um'};
+        SL = true;
+    else
+        % active recording without SL
+        data_table.Properties.VariableNames = {'Time', 'L', 'F'};
+        data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+        SL = false;
+    end
 
     if isempty(ts_d)
         ts_d = [data_table.Time(1) data_table.Time(end)];
@@ -357,17 +304,22 @@ end
     t = data_table.Time(imin_s:imax_s);
     tf = data_table.Time(imin_d:imax_d);
     td = downsample(tf, dsf);
+    
     l = data_table.L(imin_s:imax_s);
     lf = movmean(data_table.L(imin_d:imax_d),[dsf/2 dsf/2]); % l filtered
     % round to limit the oscillations
     lf = round(lf, 3);
-    
     ld = downsample(lf, dsf);
-
 
     f = data_table.F(imin_s:imax_s)*scaleF;
     ff = movmean(data_table.F(imin_d:imax_d)*scaleF,[dsf/2 dsf/2]); % force filtered
     fd = downsample(ff, dsf);
+    
+    if SL
+        SL = data_table.SL(imin_s:imax_s);
+        SLf = movmean(data_table.SL(imin_d:imax_d),[dsf/2 dsf/2]); % l filtered
+        SLd = downsample(SL, dsf);
+    end
     
     datatable = [td/1000  + offset/1000, ld*ML, fd];
 
@@ -396,10 +348,16 @@ end
     subplot(211);hold on;title(saveAs, 'Interpreter', 'none');
     plot(td + offset, ld, '-');
     
+    if SL
+        plot(td + offset, SLd, '-');
+        legend('ML', 'SL','AutoUpdate','off');
+    end
+    
     
 %     plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
 %     plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
     plot([ts_s;ts_s]+offset, repmat([min(data_table.L);max(data_table.L)], 1, length(ts_s)))
+    
     xlabel('time (ms)');
     ylabel('Length (ML)')
 
