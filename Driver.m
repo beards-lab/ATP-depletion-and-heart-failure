@@ -23,7 +23,7 @@ figure(12);clf;
 
 ghostSave = '';
 ghostSave = '';
-ghostSave = 'gaOutput2';
+ghostSave = '';
 % ghostSave = 'prev';
 % ghostSave = 'mybase';
 % ghostSave = 'beardsOrig_passive';
@@ -132,8 +132,8 @@ t_ss = [0 1];
 t_sl0 = [0 0.1];
 tic
 
-% params0 = load('bestParams.mat').params;
-% params0.PlotEachSeparately = true;
+params0 = load('gaOutput2_params.mat').params;
+params0.PlotEachSeparately = true;
 
 RunBakersExp;
 toc
