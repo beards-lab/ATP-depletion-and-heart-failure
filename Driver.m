@@ -184,6 +184,7 @@ ga_Opts = optimoptions('ga', ...
 
 
 params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3", "sigma0", "ksr0"};
+Ng = length(params0.mods);
 params0.UseKstiff3 = false;
 params0.SaveBest = true;
 params0.ghostSave = false;
