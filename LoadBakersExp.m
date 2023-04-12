@@ -241,30 +241,79 @@ return;
 
 
 %% New stretch experiments
-clf;
+figure(12);clf;
+subplot(121);hold on;xlabel('ML');ylabel('Tension');title('Tension on Muscle length')
+subplot(122);hold on;xlabel('ML (um)');ylabel('SL (um)');title('SL on Muscle length')
+
+figure(11);clf;
+
+el = 20; % experiment length in ms
+ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_20ms');
 
+figure(12); 
+subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
+subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(11);
+
+el = 100; % experiment length in ms
+ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_100ms');
 
+figure(12); 
+subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
+subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(11);
+
+el = 1000; % experiment length in ms
+ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 1, 1, 'bakers_passiveStretch_1000ms');
 
+figure(12); 
+subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
+subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(11);
+
+el = 10000; % experiment length in ms
+ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*15];
 data_table = readtable('data/10s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 1, 1, 'bakers_passiveStretch_10000ms');
 
+figure(12); 
+subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
+subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(11);
+
+el = 100000; % experiment length in ms
+ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el];
 data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 20, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 10, 1, 'bakers_passiveStretch_100000ms');
+
+figure(12); 
+subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
+subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(11);
+
+figure(12); 
+subplot(121); legend('20 ms', '100 ms', '1000 ms', '10 s', '100 s', 'location', 'Northwest')
+
 %% Animate states
 % animateStateProbabilities(out, params);
 
 
 %% function definition
-function [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf, scaleF, saveAs, offset)
-% ts_d - time segment data for cost function
+function [datatable, velocitytable] = DownSampleAndSplit(data_table, dwnsmpl, ts_s, ML, dsf, scaleF, saveAs, offset)
+% df / ts_d - empty: no downsampling. 
+%             Scalar: downsampling by said scalar
+%             vector: time segment data points for cost function, filtered by dsf.
+%
 % ts_s - time segment simulation - broke by constant velocity segments
-% dsf - downsample factor
+% dsf - data smoothing factor (if ts_d is a two-point vector) factor
 
 % offset in ms
 if nargin < 8
@@ -285,43 +334,60 @@ end
         data_table.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
         SL = false;
     end
-
-    if isempty(ts_d)
-        ts_d = [data_table.Time(1) data_table.Time(end)];
+    
+    % Downsample 
+    if isempty(dwnsmpl)
+        % no downsampling
+        dwnsmpl = [data_table.Time(1) data_table.Time(end)];
+        imin_d = find(data_table.Time >= dwnsmpl(1), 1);
+        imax_d = find(data_table.Time >= dwnsmpl(end), 1);
+        i_data = imin_d:imax_d;
+        % Oh, Hi, Mark! We should not use marker unless they provide datapoitns
+        hiMark = '-';
+    elseif length(dwnsmpl) == 1
+        % downsample by a factor
+        dwnsmpl = 1:dwnsmpl:data_table.Time(end);
+        i_data = interp1(data_table.Time, 1:length(data_table.Time), dwnsmpl, 'nearest');
+        % Oh, Hi, Mark!
+        hiMark = '|-';
+    else
+        % get the nearest neighbors to prevent missing the data
+        i_data = interp1(data_table.Time, 1:length(data_table.Time), dwnsmpl, 'nearest');
+        % Oh, Hi, Mark!
+        hiMark = '|-';
     end
     
     if isempty(ts_s)
         ts_s = [data_table.Time(1) data_table.Time(end)];
     end
     
-    % Relabel and downsample 
-    imin_d = find(data_table.Time >= ts_d(1), 1);
-    imax_d = find(data_table.Time >= ts_d(end), 1);
-
     imin_s = find(data_table.Time >= ts_s(1), 1);
     imax_s = find(data_table.Time >= ts_s(end), 1);    
 
     t = data_table.Time(imin_s:imax_s);
-    tf = data_table.Time(imin_d:imax_d);
-    td = downsample(tf, dsf);
+    tf = data_table.Time; % we do not filter time
+    td = tf(i_data);
     
     l = data_table.L(imin_s:imax_s);
-    lf = movmean(data_table.L(imin_d:imax_d),[dsf/2 dsf/2]); % l filtered
+    lf = movmean(data_table.L,[dsf/2 dsf/2]); % l filtered
     % round to limit the oscillations
     lf = round(lf, 3);
-    ld = downsample(lf, dsf);
+    ld = lf(i_data);
 
     f = data_table.F(imin_s:imax_s)*scaleF;
-    ff = movmean(data_table.F(imin_d:imax_d)*scaleF,[dsf/2 dsf/2]); % force filtered
-    fd = downsample(ff, dsf);
+    ff = movmean(data_table.F*scaleF,[dsf/2 dsf/2]); % force filtered
+    fd = ff(i_data);
     
     if SL
         SL = data_table.SL(imin_s:imax_s);
-        SLf = movmean(data_table.SL(imin_d:imax_d),[dsf/2 dsf/2]); % l filtered
-        SLd = downsample(SL, dsf);
+        SLf = movmean(data_table.SL,[dsf/2 dsf/2]); % l filtered
+        SLd = SLf(i_data);
+        datatable = [td/1000  + offset/1000, ld*ML, fd, SLd];
+    else
+        datatable = [td/1000  + offset/1000, ld*ML, fd];
     end
     
-    datatable = [td/1000  + offset/1000, ld*ML, fd];
+    
 
     % Split it into segments with const velocities
     vs = [];
@@ -346,7 +412,7 @@ end
 
 %     figure();clf;
     subplot(211);hold on;title(saveAs, 'Interpreter', 'none');
-    plot(td + offset, ld, '-');
+    plot(td + offset, ld, hiMark);
     
     if SL
         plot(td + offset, SLd, '-');
@@ -363,7 +429,7 @@ end
 
     
     subplot(212);hold on;
-    plot(td + offset, fd, '-', 'Linewidth', 2, 'MarkerSize', 10);
+    plot(td + offset, fd, hiMark, 'Linewidth', 2, 'MarkerSize', 10);
     
 %     plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
 %     plot([ts_d;ts_d], repmat([min(data_table.F);max(data_table.F)], 1, length(ts_d)))
