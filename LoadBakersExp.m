@@ -248,7 +248,7 @@ subplot(122);hold on;xlabel('ML (um)');ylabel('SL (um)');title('SL on Muscle len
 figure(11);clf;
 
 el = 20; % experiment length in ms
-ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_20ms');
@@ -259,7 +259,7 @@ subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
 
 el = 100; % experiment length in ms
-ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_100ms');
@@ -270,7 +270,7 @@ subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
 
 el = 1000; % experiment length in ms
-ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 1, 1, 'bakers_passiveStretch_1000ms');
 
@@ -280,7 +280,7 @@ subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
 
 el = 10000; % experiment length in ms
-ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*15];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*15];
 data_table = readtable('data/10s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 1, 1, 'bakers_passiveStretch_10000ms');
 
@@ -288,11 +288,12 @@ figure(12);
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
-
+%%
 el = 100000; % experiment length in ms
-ts_d = [0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el];
+ts_d = [-500000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el];
 data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 10, 1, 'bakers_passiveStretch_100000ms');
+slowest = datatable(:, 3)
 
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
@@ -352,7 +353,11 @@ end
         hiMark = '|-';
     else
         % get the nearest neighbors to prevent missing the data
-        i_data = interp1(data_table.Time, 1:length(data_table.Time), dwnsmpl, 'nearest');
+        i_data = interp1(data_table.Time, 1:length(data_table.Time), dwnsmpl, 'nearest', 'extrap');
+        
+        % make sure the bounds are where neeeded 
+        % TODO FIX ME OR KILL ME
+        data_table.Time(1) = dwnsmpl(1);data_table.Time(end) = dwnsmpl(end);
         % Oh, Hi, Mark!
         hiMark = '|-';
     end
@@ -365,7 +370,7 @@ end
     imax_s = find(data_table.Time >= ts_s(end), 1);    
 
     t = data_table.Time(imin_s:imax_s);
-    tf = data_table.Time; % we do not filter time
+    tf = data_table.Time; % we do not filter time    
     td = tf(i_data);
     
     l = data_table.L(imin_s:imax_s);
@@ -407,7 +412,10 @@ end
         % Export the data into modelica-readable format and for identificatoin
         fn = ['data/' saveAs '.mat'];
         save(fn,  'datatable', 'velocitytable');
-        disp(['Saved as ' fn])
+        T = array2table(datatable);
+        T.Properties.VariableNames(1:3) = {'Time','ML','Force'};
+        writetable(T, ['data/' saveAs '.csv']);
+        disp(['Saved as ' fn ' and csv'])
     end
 
 %     figure();clf;
