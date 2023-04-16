@@ -234,6 +234,7 @@ for i = 1:length(timepoints)
 end
 plot(datatable(indx_1_1, 1)*1000, datatable(indx_1_1, 3), '^', 'Linewidth', 2)
 %%
+figure
 data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf, nf/54, 'bakers_rampup2_rel');
 
@@ -248,9 +249,8 @@ subplot(122);hold on;xlabel('ML (um)');ylabel('SL (um)');title('SL on Muscle len
 figure(11);clf;
 
 el = 20; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_20ms');
 
 figure(12); 
@@ -269,10 +269,11 @@ subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
 
+ts_s = [];
 el = 1000; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/20):data_table{end-1, 1}*1000];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 1, 1, 'bakers_passiveStretch_1000ms');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 5, 1, '');
 
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
@@ -288,9 +289,9 @@ figure(12);
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
-%%
+
 el = 100000; % experiment length in ms
-ts_d = [-500000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el];
 data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 10, 1, 'bakers_passiveStretch_100000ms');
 slowest = datatable(:, 3)
@@ -302,6 +303,64 @@ figure(11);
 
 figure(12); 
 subplot(121); legend('20 ms', '100 ms', '1000 ms', '10 s', '100 s', 'location', 'Northwest')
+
+%% Fit decay of the strecth
+% start with the slowest one
+
+clf;
+% ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el):200000];
+el = 100000; % experiment length in ms
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
+data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
+[~, i_peak] = max(datatable(:, 3));
+zone = i_peak:length(datatable(:, 1));
+timebase = datatable(zone, 1) - datatable(zone(1), 1);
+fbase = datatable(zone, 3) - datatable(end, 3);
+y_dec = @(a, b, x)a*(1-b).^x;
+
+
+[ae be] = fit(timebase, fbase, y_dec, 'StartPoint', [1, 0.05]);
+plot(datatable(zone, 1)*1000, y_dec(ae.a, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
+ae
+a = ae.a;b = ae.b;
+% fix the 'a' param
+% [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
+% plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
+
+
+%% Fit the fast one
+clf;
+el = 100; % experiment length in ms
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*3, 2000 + el*3:ceil(el):200000];
+data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
+[~, i_peak] = max(datatable(:, 3));
+zone = i_peak:length(datatable(:, 1));
+timebase = datatable(zone, 1) - datatable(zone(1), 1);
+fbase = datatable(zone, 3) - datatable(end, 3);
+
+y_dec = @(a, b, a2, b2, x)a*max(1-b, 0).^x + (a2)*max(1-b2, 0).^x;
+
+% all params free
+% [ae be] = fit(timebase, fbase, @(a, b, a2, b2,x)y_dec(a, b, a2, b2, x), 'StartPoint', [3, 0.05, 5, 0.5]);
+% plot(datatable(zone, 1)*1000, y_dec(ae.a, ae.b, ae.a2, ae.b2, timebase) + datatable(end, 3),'o-', 'Linewidth', 2)
+
+% fix the slow decay
+% got from the slow ramp
+% a = ae.a;b = ae.b;
+[ae be] = fit(timebase, fbase, @(a2, b2,x)y_dec(a, b, a2, b2, x), 'StartPoint', [0.05, 0.5]);
+% together
+plot(datatable(zone, 1)*1000, y_dec(a, b, ae.a2, ae.b2, timebase) + datatable(end, 3), 'o-', 'Linewidth', 2);
+% slow
+plot(datatable(zone, 1)*1000, y_dec(a, b, 0, 0, timebase) + datatable(end, 3), '--', 'Linewidth', 1);
+% fast
+plot(datatable(zone, 1)*1000, y_dec(0, 0, ae.a2, ae.b2, timebase) + datatable(end, 3), '--', 'Linewidth', 1);
+
+
+ae
 
 %% Animate states
 % animateStateProbabilities(out, params);
