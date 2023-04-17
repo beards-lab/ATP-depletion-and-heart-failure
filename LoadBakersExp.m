@@ -5,6 +5,7 @@ dsf = 10;
 ML = 2.0;
 % normalized force multiplier
 nf = 56;
+ts_s = []; ts_d = [];
 clf;close all;
 %% load length-force data for 8 mM
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
@@ -268,13 +269,13 @@ figure(12);
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
-
+%%
 ts_s = [];
 el = 1000; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/20):data_table{end-1, 1}*1000];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 5, 1, '');
-
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 5, 1, 'bakers_passiveStretch_1000ms');
+%%
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
