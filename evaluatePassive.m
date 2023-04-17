@@ -32,9 +32,10 @@ k1 = opt_mods(5)*0.2;
 c=opt_mods(6)*13.1; % titin linear koefficient
 gamma=opt_mods(7)*4.7; % titin exponent
 alpha1 = opt_mods(8)*10;
+e = opt_mods(9)*2;
   
 Tend = 60; % length of steady-state simulation - get rid of all transients
-[t,x] = ode15s(@dadt,[0 Tend],a,[],N,ds,r_d,r_a);
+[t,x] = ode15s(@dadt,[0 Tend],a,[],N,ds,r_d,r_a, e);
 a = x(end,:);
 
 % figure(1); plot(s,a); pause
@@ -52,7 +53,7 @@ aN = zeros(1,N); % new updated a vector for upwind diff.
 
 for i = 1:Tend_ramp/dt 
 %   a0 = ds*sum(a); % 0th moment
-  [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a);
+  [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
   a = x(end,:);
 
   a1 = ds*sum(s.*a);
@@ -93,7 +94,7 @@ end
 Tend_relax = rd*100; % length of relaxation time
 dt = rd/10;
 for i = 1:Tend_relax/dt 
-  [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a);
+  [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
   a = x(end,:);
   a1 = ds*sum((exp(alpha1*s)-1).*a); 
 
