@@ -292,11 +292,11 @@ subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(11);
 
 el = 100000; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/10):2000+el*2 + el*0.9];
 data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 10, 1, 'bakers_passiveStretch_100000ms');
-slowest = datatable(:, 3)
-
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 40, 1, 'bakers_passiveStretch_100000ms');
+slowest = datatable(:, 3);
+%%
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
@@ -319,7 +319,7 @@ data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4
 zone = i_peak:length(datatable(:, 1));
 timebase = datatable(zone, 1) - datatable(zone(1), 1);
 fbase = datatable(zone, 3) - datatable(end, 3);
-y_dec = @(a, b, x)a*(1-b).^x;
+y_dec = @(a, b, x)a*exp(-b.*x);
 
 
 [ae be] = fit(timebase, fbase, y_dec, 'StartPoint', [1, 0.05]);
@@ -329,7 +329,25 @@ a = ae.a;b = ae.b;
 % fix the 'a' param
 % [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
 % plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
+%% plot semilog
 
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
+data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
+datatable_slow = datatable;
+
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/1):2000 + el*3, 2000 + el*3:ceil(el/10):200000];
+data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
+datatable_fast = datatable;
+%%
+figure(2); clf;hold on;
+plot(datatable_slow(:, 1), log10(datatable_slow(:, 3)));
+plot(datatable_fast(:, 1), log10(datatable_fast(:, 3)));
+semilogy(datatable_slow(:, 1), (datatable_slow(:, 3)));
+semilogy(datatable_fast(:, 1), (datatable_fast(:, 3)));
 
 %% Fit the fast one
 clf;
