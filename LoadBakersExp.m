@@ -243,24 +243,31 @@ return;
 
 
 %% New stretch experiments
+dsf = 10;
+ML = 2.0;
+% normalized force multiplier
+nf = 56;
+ts_s = []; ts_d = [];
+%%
 figure(12);clf;
 subplot(121);hold on;xlabel('ML');ylabel('Tension');title('Tension on Muscle length')
 subplot(122);hold on;xlabel('ML (um)');ylabel('SL (um)');title('SL on Muscle length')
-
+figure(13);clf;hold on;title('Semilog axis');ylabel('log T');xlabel('time');
 figure(11);clf;
 
 el = 20; % experiment length in ms
 data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_20ms');
 
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(13);semilogy(datatable(:, 1), datatable(:, 3));
 figure(11);
 
 el = 100; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*20];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
 data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 10, 1, 'bakers_passiveStretch_100ms');
@@ -268,17 +275,20 @@ data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(13);semilogy(datatable(:, 1), datatable(:, 3));
 figure(11);
 %%
-ts_s = [];
 el = 1000; % experiment length in ms
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
+% ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el, 2000 + el:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 5, 1, 'bakers_passiveStretch_1000ms');
 %%
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(13);semilogy(datatable(:, 1), datatable(:, 3));
 figure(11);
 
 el = 10000; % experiment length in ms
@@ -289,10 +299,11 @@ data_table = readtable('data/10s_4.txt', 'filetype', 'text', 'NumHeaderLines',4)
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(13);semilogy(datatable(:, 1), datatable(:, 3));
 figure(11);
-
+%%
 el = 100000; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/10):2000+el*2 + el*0.9];
+ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el, 2000+el:ceil(el/100):2000 + el*1.1,2000 + el*1.1:ceil(el/10):2000+el*2 + el*0.9];
 data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 40, 1, 'bakers_passiveStretch_100000ms');
 slowest = datatable(:, 3);
@@ -300,6 +311,7 @@ slowest = datatable(:, 3);
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
+figure(13);semilogy(datatable(:, 1), datatable(:, 3));
 figure(11);
 
 figure(12); 
