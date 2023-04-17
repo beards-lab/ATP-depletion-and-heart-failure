@@ -10,27 +10,28 @@ X = [0 0]; % initial length and L1
 
 
 % rampup duration (s)
-rd = 1.00;
+% rd = 1.00;
 dl = (2.4-1.6)/2; % delta L of half-sarcomere (um)
 V = dl/rd; % highest half-sarcomere velocity
 % V = 40/2; % highest half-sarcomere velocity
 % k = 10; % series spring constant
 % Lo = 0.10;
 
-if ~ exist('opt_mod')
-    opt_mod = ones(1, 10);
+if ~exist('opt_mods', 'var')
+    opt_mods = ones(1, 10);
 end
 % Model parameters
-r_a = opt_mod(1);
-r_d = opt_mod(2)*(1).*ones(1,N) ;
+r_a = opt_mods(1);
+r_d = opt_mods(2)*(1).*ones(1,N) ;
 % r_d = (1/50).*(s./0.2).^4;
 % r_d = (1/50).ones(1,N) + (1/25)*ones(1,N).(s>0.25);
 % plot(s,r_d)
-mu = opt_mod(3)*10;
-ks = opt_mod(4)*4;
-k1 = opt_mod(5)*0.2;
-c=opt_mod(6)*13.1; % titin linear koefficient
-gamma=opt_mod(7)*4.7; % titin exponent
+mu = opt_mods(3)*10;
+ks = opt_mods(4)*4;
+k1 = opt_mods(5)*0.2;
+c=opt_mods(6)*13.1; % titin linear koefficient
+gamma=opt_mods(7)*4.7; % titin exponent
+alpha1 = opt_mods(8)*10;
   
 Tend = 60; % length of steady-state simulation - get rid of all transients
 [t,x] = ode15s(@dadt,[0 Tend],a,[],N,ds,r_d,r_a);
@@ -66,16 +67,16 @@ for i = 1:Tend_ramp/dt
   L = i*dt*V;
 %   plot(s,a); pause
 
-Fv = 0;
-%   [t,X] = ode15s(@dL1dT,[0 dt],X,[],V);
-%   X = X(end,:);
-%   L = X(1);
-%   L1 = X(2);
-%   Fv = ks*(L - L1); % dashpot viscous force
+   % Fv = 0;
+  [t,X] = ode15s(@dL1dT,[0 dt],X,[],V, ks/mu);
+  X = X(end,:);
+  L = X(1);
+  L1 = X(2);
+  Fv = ks*(L - L1); % dashpot viscous force
   
   Ftit = c*(L*2)^gamma; % nonlinear titin stiffness
 
-  a1 = ds*sum((exp(4*s/0.4)-1).*a); 
+  a1 = ds*sum((exp(alpha1*s)-1).*a); 
   Tsim = [Tsim, i*dt];
   Fsim = [Fsim, k1*a1];
   Ftits = [Ftits, Ftit];
@@ -90,17 +91,24 @@ end
 % plot(s,a); pause
 % steady time course after ramp
 Tend_relax = rd*100; % length of relaxation time
-dt = 0.1;
+dt = rd/10;
 for i = 1:Tend_relax/dt 
   [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a);
   a = x(end,:);
-  a1 = ds*sum((exp(4*s/0.4)-1).*a); 
+  a1 = ds*sum((exp(alpha1*s)-1).*a); 
+
+  [t,X] = ode15s(@dL1dT,[0 dt],X,[],0, ks/mu);
+  X = X(end,:);
+  L = X(1);
+  L1 = X(2);
+  Fv = ks*(L - L1); % dashpot viscous force
+  
   Tsim = [Tsim, Tend_ramp + i*dt];
   Fsim = [Fsim, k1*a1];
   % the length stays constant
   Ftits = [Ftits, Ftits(end)];
   % TODO fix the viscous dynamics
-  Fvs = [Fvs, Fvs(end)];
+  Fvs = [Fvs, Fv];
   Ls = [Ls, Ls(end)];
 %   plot(s,a); pause 
 end
@@ -124,6 +132,6 @@ if plotEach
     % plot interpolated to data
     plot(datatable(:, 1),Ftot_int, 'x-', 'Linewidth', 1.5)
     plot(datatable(:, 1), E, '--');
-    
-    legend('Data', 'Ls', 'Fbinded', 'Ftitin passive', 'Viscous', 'Ftot passive', 'Error') 
+    xlim([0, datatable(end, 1)])
+    legend('Data', 'Ls', 'Fbinded', 'Ftitin passive', 'Viscous', 'Ftot passive', 'Error', 'Location', 'NorthWest') 
 end
