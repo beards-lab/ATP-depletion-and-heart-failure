@@ -64,6 +64,7 @@ end
         'UseSpaceDiscretization', false, ...
         'UseSpaceInterpolation', false, ...
         'UseKstiff3', false, ... % uses additional parameter kstiff3 for overstroke stifness (=kstiff2 otherwise)
+        'EvalAtp', [1],... % which ATPs should be evaluated from the range [8 4 2] mM - so [1 3] evals 8mM and 2mM and [1] evals 8mM only 
         'SaveBest', true, ... % save g on each iter, if better than previous
         'ghostSave', '', 'ghostLoad', '');
  
@@ -137,6 +138,10 @@ end
         for i = 1:length(params.mods)
             params.(params.mods{i}) = params.(params.mods{i})*g(i);
         end
+
+        % ensure we delete the modifiers right after
+        params.mods = {};
+        params.g = [];
     end
         
 

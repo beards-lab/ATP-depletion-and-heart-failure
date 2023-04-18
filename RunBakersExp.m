@@ -8,33 +8,35 @@ F_active = [];
 if isfield(params, 'PU0')
     params = rmfield(params, 'PU0');
 end
-for j = 1:length(vel)    
-    if vel(j) == 0 
-        params.SL0 = 2.0;
-        params.Velocity = 0;
-        [F_active(j) out] = evaluateModel(@dPUdTCa, t_ss, params);        
-    else
-        params.SL0 = 2.2;
-        % true to start from 2.2um steady state isntead from scratch.
-        % Neither is perfect though
-        if false & ~isfield(params, 'PU0')
-            % speed things up by storing the initialization
+for a = params.EvalAtp
+    params.MgATP = ATP_c(a);
+    for j = 1:length(vel)    
+        if vel(j) == 0 
+            params.SL0 = 2.0;
             params.Velocity = 0;
-            [~, out] = evaluateModel(@dPUdTCa, t_ss, params);
-            params.PU0 = out.PU(end, :);
-        end
-        params.Velocity = vel(j);
-        [F_active(j) out] = evaluateModel(@dPUdTCa, t_sl0/abs(vel(j)), params);
-        if abs(vel(j)) >= 3
-            a = 1;
-        end
-    end        
+            [F_active(a, j) out] = evaluateModel(@dPUdTCa, t_ss, params);        
+        else
+            params.SL0 = 2.2;
+            % true to start from 2.2um steady state isntead from scratch.
+            % Neither is perfect though
+            if false & ~isfield(params, 'PU0')
+                % speed things up by storing the initialization
+                params.Velocity = 0;
+                [~, out] = evaluateModel(@dPUdTCa, t_ss, params);
+                params.PU0 = out.PU(end, :);
+            end
+            params.Velocity = vel(j);
+            [F_active(a, j) out] = evaluateModel(@dPUdTCa, t_sl0/abs(vel(j)), params);
+            if abs(vel(j)) >= 3
+                breakpointIsHappening = 1; % only to place a bp
+            end
+        end        
+    end
 end
-
 % cost function
-E(1) = sum((F_active(1,:) - Data_ATP(:,1+1)').^2);
+E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
 % normalize by number of data points
-E(1) = E(1)/size(Data_ATP, 1);
+E(1) = E(1)/size(Data_ATP, 1)/length(params.EvalAtp);
 
 better = false;
 if params.SaveBest
@@ -70,7 +72,13 @@ if params.PlotEachSeparately || better
     end
 
     %
-    plot(F_active(:), -vel,'b-^','linewidth',1);
+    for a = params.EvalAtp
+        set(gca,'ColorOrderIndex',a);
+        plot(F_active(a, :), -vel,'-^','linewidth',1);
+        set(gca,'ColorOrderIndex',a);
+        plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
+    end
+    legend('8mM', '4mM', '2mM');
     ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
     xlabel('Force (kPa)','interpreter','latex','fontsize',16);
     set(gca,'fontsize',14); 
@@ -78,7 +86,7 @@ if params.PlotEachSeparately || better
     axis([-10 65 0 6]);
     title('Force-velocity')
     box on;grid on;
-    plot(Data_ATP(:,2),Data_ATP(:,1),'bo','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
+    
     % plot(Data_ATP(:,3),Data_ATP(:,1),'go','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
     % plot(Data_ATP(:,4),Data_ATP(:,1),'ro','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
 
@@ -90,7 +98,7 @@ if params.PlotEachSeparately || better
 end
 
 if ~isempty(params.ghostSave)
-    ghost = [F_active(:), -vel(:)];
+    ghost = [F_active(1, :), -vel(:)];
     save(['Ghost_' params.ghostSave '_FV'], 'ghost');
 end
 

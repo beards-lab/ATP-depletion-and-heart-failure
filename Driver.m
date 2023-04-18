@@ -143,6 +143,8 @@ params0.PlotEachSeparately = true;
 params0.dS = 0.01;
 params0.ksr0 = params0.ksr0;
 params0.sigma0 = params0.sigma0;
+params0.EvalAtp = [1 2 3]
+params0.UseAtpOnUNR = true;
 
 RunBakersExp;
 toc
@@ -176,9 +178,11 @@ figure;bar(err_1);hold on;plot([1 length(paramsfn)], [e0 e0])
 
 %% OPTIM
 % return
-params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'};
+% params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'}; % tune everything
+params0.mods = {"K_T1", "K_T3"};
 g = ones(size(params0.mods))
-% g = x;
+% optimized
+g = [1.4054    0.7373];
 
 params0.PlotEachSeparately = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
@@ -187,6 +191,9 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, g, options)
 % g = x;
+
+params0.PlotEachSeparately = true;
+optimfun(x)
 %% GA
 
 %% Attempt on GA
