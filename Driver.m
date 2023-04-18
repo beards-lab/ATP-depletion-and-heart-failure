@@ -1,12 +1,16 @@
 % driver code
 g = ones(30, 1);
-
+g = x;
 
 
 params = getParams();
-
+params.g = x;
 % optimized
-params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
+params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'};
+
+% optimized for force-velocity only
+params.g = [1.3581    1.0578    0.0299    0.4113    1.1269    0.5243    3.3260    1.0322    0.0274    1.7252    1.6593    0.0212];
+
 % g = x2;
 % g = p_OptimGA;
 % g = ones(30, 1);
@@ -149,19 +153,30 @@ ylim('auto')
 return
 %% SA
 E = [];
-paramsfn = fieldnames(params)
+params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'};
+paramsfn = params0.mods;
+% paramsfn = fieldnames(params)
 params_d = params0;
-for i = 41:length(paramsfn)
+RunBakersExp; e0 = E;
+for i = 1:length(paramsfn)
+    disp(['Computing ' char(paramsfn{i}) '..'])
     params0 = params_d;
     params0.(paramsfn{i}) = params0.(paramsfn{i})*0.95;
     RunBakersExp;
-    err_1(i) = E;
+    e_d = E; % E -- delta
+    params0 = params_d;
+    params0.(paramsfn{i}) = params0.(paramsfn{i})*1.05;
+    RunBakersExp;
+    epd = E;% e + delta 
+
+    err_1(i) = min(e_d, epd);
 end
-    
+params0 = params_d;
+figure;bar(err_1);hold on;plot([1 length(paramsfn)], [e0 e0])    
 
 %% OPTIM
 % return
-params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
+params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'};
 g = ones(size(params0.mods))
 % g = x;
 
