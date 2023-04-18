@@ -1,6 +1,7 @@
 %% loads data for fitting
 
 %% Data ([ATP] = 8, 4, 2 mM)
+ATP_c = [8, 4, 2]; % mM for each column
 Data_ATP = [0		56.4048	63.6074	61.3192
         0.5		51.812	51.8626	47.4794
         1		37.4459	35.9182	31.387
