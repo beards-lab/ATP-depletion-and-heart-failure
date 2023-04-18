@@ -50,6 +50,44 @@ tic
 evaluatePassive;
 Es
 toc
+%% compare peaks and steady state to data
+peaks_sim = [];ss_sim = []; % sim peaks and sim steady state
+peaks_data = [];ss_data = []; % data peaks and steady state
+
+rds = [0.02, 0.1, 1, 10, 100];
+rd_i = 1;
+ft_sim = cell(length(rds), 1);ft_data = cell(length(rds), 1);
+for rd = rds
+    disp(['Processing ' num2str(rd*1000) 'ms...'])
+    datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
+    datatable = datastruct.datatable; time_end = 200;
+    evaluatePassive;
+    peaks_sim = [peaks_sim, max(Ftot)]; ss_sim = [ss_sim, Ftot(end)];
+    peaks_data = [peaks_data, max(datatable(:, 3))]; ss_data = [ss_data, datatable(end, 3)];
+    
+    ft_sim{rd_i} = Ftot_int;
+    ft_data{rd_i} = datatable;
+    rd_i = rd_i + 1;
+end
+
+figure(14);clf;
+Np = length(peaks_sim); % number of peaks
+x = 1:Np; % xaxis
+set(gca,'ColorOrderIndex',1)
+semilogx(rds, peaks_data, 'o-', rds, peaks_sim, '+-', 'LineWidth',1, 'MarkerSize',8);
+hold on;set(gca,'ColorOrderIndex',1)
+semilogx(rds, ss_data, 's-', rds, ss_sim, 'x-', 'LineWidth',1, 'MarkerSize',8);
+legend('Peak (data)', 'Peak (simulation)', 'Steady state (data)', 'Steady state (simulation)');
+xlabel('Ramp-up time (s)');ylabel('Tension (kPa)');
+%%
+figure(15);clf;
+for rd_i = 1:length(rds)
+    set(gca,'ColorOrderIndex',rd_i)
+    semilogx(ft_data{rd_i}(:, 1), ft_data{rd_i}(:, 3), ':', 'Linewidth', 2);
+    hold on;
+    set(gca,'ColorOrderIndex',rd_i)
+    semilogx(ft_data{rd_i}(:, 1), ft_sim{rd_i}(:, 1), '-', 'Linewidth', 2);
+end
 %% gradient search
 figure(1010);clf;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
