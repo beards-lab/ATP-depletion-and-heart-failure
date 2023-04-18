@@ -1,5 +1,9 @@
 function [Et E] = evaluateBakersExp(g, params0)
 % Evaluate Bakers' problem
+if any(g<0) 
+    Et = NaN;
+    return;
+end
 
 % important to start with the g!!
 params0 = getParams(params0, g, true, true);
