@@ -88,6 +88,7 @@ for rd_i = 1:length(rds)
     set(gca,'ColorOrderIndex',rd_i)
     semilogx(ft_data{rd_i}(:, 1), ft_sim{rd_i}(:, 1), '-', 'Linewidth', 2);
 end
+title('Tension response on ramp');
 %% gradient search
 figure(1010);clf;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
