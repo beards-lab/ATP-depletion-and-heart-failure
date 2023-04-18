@@ -125,7 +125,8 @@ Es = sum(E);
 
 
 if plotEach
-    figure(2); clf; hold on;    
+    % figure(2); clf; hold on;    
+    cla;hold on;
     plot(datatable(:, 1), datatable(:, 3), 'o-', 'Linewidth', 1.5);
     % plot(Tsims,Ftot, '-', 'Linewidth', 1)
     plot(Tsims, Ls, Tsims, Fsim, Tsims, Ftits, Tsims, Fvs);
