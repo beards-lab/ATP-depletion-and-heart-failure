@@ -69,26 +69,44 @@ for rd = rds
     ft_data{rd_i} = datatable;
     rd_i = rd_i + 1;
 end
-
+%%
 figure(14);clf;
 Np = length(peaks_sim); % number of peaks
 x = 1:Np; % xaxis
 set(gca,'ColorOrderIndex',1)
-semilogx(rds, peaks_data, 'o-', rds, peaks_sim, '+-', 'LineWidth',1, 'MarkerSize',8);
+semilogx(rds, peaks_data, 'o-', rds, peaks_sim, '+-', 'LineWidth',2, 'MarkerSize',8);
 hold on;set(gca,'ColorOrderIndex',1)
-semilogx(rds, ss_data, 's-', rds, ss_sim, 'x-', 'LineWidth',1, 'MarkerSize',8);
-legend('Peak (data)', 'Peak (simulation)', 'Steady state (data)', 'Steady state (simulation)');
-xlabel('Ramp-up time (s)');ylabel('Tension (kPa)');
+semilogx(rds, ss_data, 's-', rds, ss_sim, 'x-', 'LineWidth',2, 'MarkerSize',8);
+legend('Peak (data)', 'Peak (model)', 'End (data)', 'End (model)');
+xlabel('Ramp-up time (s)');ylabel('Passive tension (kPa)');
+title({"Peak and steady state","during passive stretch"})
+set(gca,'fontsize',16);
 %%
 figure(15);clf;
+ldat = [];lsim = [];
 for rd_i = 1:length(rds)
     set(gca,'ColorOrderIndex',rd_i)
-    semilogx(ft_data{rd_i}(:, 1), ft_data{rd_i}(:, 3), ':', 'Linewidth', 2);
+    ldat = [ldat semilogx(ft_data{rd_i}(:, 1), ft_data{rd_i}(:, 3), '-', 'Linewidth', 2)];
     hold on;
-    set(gca,'ColorOrderIndex',rd_i)
-    semilogx(ft_data{rd_i}(:, 1), ft_sim{rd_i}(:, 1), '-', 'Linewidth', 2);
+%     set(gca,'ColorOrderIndex',rd_i)
+%     semilogx(ft_data{rd_i}(:, 1), ft_sim{rd_i}(:, 1), ':', 'Linewidth', 2);
 end
-title('Tension response on ramp');
+
+for rd_i = 1:length(rds)
+%     set(gca,'ColorOrderIndex',rd_i)
+%     l = [l semilogx(ft_data{rd_i}(:, 1), ft_data{rd_i}(:, 3), '-', 'Linewidth', 1)];
+%     hold on;
+    set(gca,'ColorOrderIndex',rd_i)
+    lsim = [lsim semilogx(ft_data{rd_i}(:, 1), ft_sim{rd_i}(:, 1), ':', 'Linewidth', 2)];
+end
+
+title({" ","Tension response to ramp-up"});
+xlabel('time (s)')
+ylabel('Passive tension (kPa)')
+ylim([0 15])
+xlim([1.9 200])
+legend([lsim(1) ldat], 'Ramp-up 20ms model', 'Ramp-up 20ms data', 'Ramp-up 100ms', 'Ramp-up 1s', 'Ramp-up 10s', 'Ramp-up 100s');
+set(gca,'fontsize',16);
 %% gradient search
 figure(1010);clf;
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);

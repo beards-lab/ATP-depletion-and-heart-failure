@@ -243,6 +243,8 @@ return;
 
 
 %% New stretch experiments
+
+
 dsf = 10;
 ML = 2.0;
 % normalized force multiplier
@@ -279,13 +281,25 @@ subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
 figure(13);semilogy(datatable(:, 1), datatable(:, 3));
 figure(11);
-
+%%
 el = 1000; % experiment length in ms
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
 % ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el, 2000 + el:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 5, 1, 'bakers_passiveStretch_1000ms');
+% explanatory figure
+figure(10);clf;hold on;
+plot(datatable(:, 1), datatable(:, 2), '-', 'Linewidth', 2); title({"Stretching ramp", "protocol"});
+xlabel('Time (s)');ylabel('Sarcomere length (um)');
+plot([2 2], [1.5 2.5], 'r--');
+plot([3 3], [1.5 2.5], 'r--');
+plot([4.95,4.75],[2.44 2.36], 'k', 'Linewidth', 4)
+plot([5.2, 5.00],[2.444 2.36], 'k', 'Linewidth', 4)
+xlim([0, 6]);
+set(gca,'fontsize',16);
+%%
+
 
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
