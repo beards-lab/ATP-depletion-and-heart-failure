@@ -218,6 +218,16 @@ data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeade
 data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_02');
 %%
+legend('ATP 8mM', 'ATP 2mM', 'ATP 0.2mM')
+set(gca,'fontsize',16);
+%%
+title('Active force ramp-up')
+ylabel('Muscle length(um)')
+figure(1);
+yyaxis right;
+plot(datatable(:, 1)*1000, datatable(:, 2), 'r--');
+
+%%
 data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_02_long', -(122070+710)-2700 + 1280 + 20 - 5);
 %%
