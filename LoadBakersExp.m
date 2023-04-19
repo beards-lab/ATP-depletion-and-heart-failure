@@ -65,6 +65,7 @@ ts_s = [-500 ts_d(2:end)]
 data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
 
+
 %% slack 8 mM
  clf;
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
@@ -72,10 +73,31 @@ o = 1150 - 100 + 9.4;
 ts_s = [0 1070 1159 2259 2759.6 2760.4 2910 2930 3058]; % to prevent skipping events with large integrator step
 % ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack8mM', o);
 % subplot(211)
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')
+
+data_table = readtable('data/2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack2mM', o);
+
+data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack02mM', o);
+
+
+yyaxis right;
+plot(datatable(:, 1)*1000, datatable(:, 2));
+
+title('Slack experiment')
+xlabel('Time (ms)')
+ylabel('Sarcomere length (um)')
+xlim([2250, 2500]);
+set(gca, 'fontsize', 22);
+xt = xticks;
+% xticks(xt);
+xticklabels(xt-xt(1));
+legend('8mM', '2mM', '0.2mM', 'Musc. L*');
+
 %% get the ktr of the zones
 zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 clf;    
