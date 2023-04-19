@@ -71,12 +71,15 @@ if params.PlotEachSeparately || better
         clear gp;
     end
 
-    %
+    %%
+    ls = [];ld = []; % line legend for sim and for data
     for a = params.EvalAtp
         set(gca,'ColorOrderIndex',a);
-        plot(F_active(a, :), -vel,'-^','linewidth',1);
+        ld = [ld plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1])];
+    end
+    for a = params.EvalAtp
         set(gca,'ColorOrderIndex',a);
-        plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
+        ls = [ls plot(F_active(a, :), -vel,'-','linewidth',1)];
     end
     legend('8mM', '4mM', '2mM');
     ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
@@ -85,7 +88,11 @@ if params.PlotEachSeparately || better
     % axis([0 65 0 6]);
     axis([-10 65 0 6]);
     title('Force-velocity')
+    % presentation stuff
+    set(gca,'fontsize',16);xlim([0 70])
+    
     box on;grid on;
+    
     
     % plot(Data_ATP(:,3),Data_ATP(:,1),'go','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
     % plot(Data_ATP(:,4),Data_ATP(:,1),'ro','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1]);
@@ -93,7 +100,8 @@ if params.PlotEachSeparately || better
     if exist('gp', 'var') && isvalid(gp)
         legend(['Ghost ' params.ghostLoad], ['Sim'  params.SimTitle] , 'Data', 'interpreter','none');
     else
-        legend(['Sim'  params.SimTitle] , 'Data');
+%         legend(['Sim'  params.SimTitle] , 'Data');
+        legend([ld ls(1)], '8mM ATP', '4mM ATP', '2mM ATP', 'model');
     end
 end
 
@@ -102,7 +110,7 @@ if ~isempty(params.ghostSave)
     save(['Ghost_' params.ghostSave '_FV'], 'ghost');
 end
 
-return;
+% return;
 %% KTR EXPERIMENT
 params = params0;
 params.SL0 = 2.0;

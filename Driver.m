@@ -46,7 +46,7 @@ ghostSave = '';
 % ghostSave = 'beardsOrig5_BW';%bells and whistles :)
 
 
-ghostLoad = 'ones';
+ghostLoad = '';
 % ghostLoad = 'InterpolateBins';
 % ghostLoad = 'beardsOrig';
 % ghostLoad = 'ShiftingStrain40';
@@ -113,12 +113,16 @@ params.ghostSave = ghostSave;
 % params.UseSpeedHalving = true;
 
 plotTransitions = true;
-params.PlotFullscreen = true;
+params.PlotFullscreen = false;
 % init
 clf;
 
-% save as default
+% save as default, applying the modifiers
 params0 = getParams(params, params.g, false, true);
+% % add some more modifiers, optimized for ATP
+% params0.mods = {"K_T1", "K_T3"}; g = [1.4054    0.7373];
+% params0 = getParams(params0, g, false, true);
+
 
 % params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k3"};
 % params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3"};
