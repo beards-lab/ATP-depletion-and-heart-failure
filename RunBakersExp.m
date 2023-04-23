@@ -110,7 +110,7 @@ if ~isempty(params.ghostSave)
     save(['Ghost_' params.ghostSave '_FV'], 'ghost');
 end
 
-% return;
+return;
 %% KTR EXPERIMENT
 params = params0;
 params.SL0 = 2.0;

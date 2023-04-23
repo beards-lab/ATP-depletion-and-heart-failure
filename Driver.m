@@ -1,10 +1,10 @@
 % driver code
 g = ones(30, 1);
-g = x;
+% g = x;
 
 
 params = getParams();
-params.g = x;
+% params.g = x;
 % optimized
 params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'};
 
@@ -113,7 +113,7 @@ params.ghostSave = ghostSave;
 % params.UseSpeedHalving = true;
 
 plotTransitions = true;
-params.PlotFullscreen = false;
+params.PlotFullscreen = true;
 % init
 clf;
 
