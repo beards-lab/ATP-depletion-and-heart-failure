@@ -98,7 +98,7 @@ xt = xticks;
 % xticks(xt);
 xticklabels(xt-xt(1));
 legend('8mM', '2mM', '0.2mM', 'Musc. L*');
-
+set(gca,'YColor',[0.49 0.18 0.56])
 %% get the ktr of the zones
 zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 clf;    
