@@ -78,6 +78,11 @@ for i = 1:Tend_ramp/dt
   Ftit = c*(L*2)^gamma; % nonlinear titin stiffness
 
   a1 = ds*sum((exp(alpha1*s)-1).*a); 
+
+if Tsim(end)  > 0.8
+  breakpointhere = true;
+end
+
   Tsim = [Tsim, i*dt];
   Fsim = [Fsim, k1*a1];
   Ftits = [Ftits, Ftit];
@@ -99,6 +104,9 @@ for i = 1:Tend_relax/dt
   a1 = ds*sum((exp(alpha1*s)-1).*a); 
 
   [t,X] = ode15s(@dL1dT,[0 dt],X,[],0, ks/mu);
+  if Tsim(end) + dt > 4
+      breakpointhere = true;
+  end
   X = X(end,:);
   L = X(1);
   L1 = X(2);

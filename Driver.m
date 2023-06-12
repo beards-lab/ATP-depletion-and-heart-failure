@@ -149,6 +149,8 @@ params0.ksr0 = params0.ksr0;
 params0.sigma0 = params0.sigma0;
 params0.EvalAtp = [1 2 3]
 params0.UseAtpOnUNR = true;
+params0.kstiff3 = params0.kstiff2;
+params0.UseOverlap = true;
 
 RunBakersExp;
 toc

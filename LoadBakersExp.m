@@ -1,4 +1,4 @@
-%% load Anthony Baker's experiments
+g%% load Anthony Baker's experiments
 load gopt;
 % decimation sampling (each x)
 dsf = 10;
@@ -67,13 +67,15 @@ data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLi
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
 
 %% slack 8 mM
- clf;
-data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+ % clf;hold on;
+
+data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
 ts_s = [0 1070 1159 2259 2759.6 2760.4 2910 2930 3058]; % to prevent skipping events with large integrator step
 % ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, '', o);
 % subplot(211)
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')
@@ -164,8 +166,8 @@ data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeader
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, tss_d, tss_s, ML, 1, nf/54, 'bakers_rampup2_8_long', 0);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_8_long', -(122070+710)+20);
-
-legend('ForceLength8mM_all', 'bakers_rampup8', 'bakers_rampup2_8', 'bakers_rampup2_8_long', 'nevim', 'Interpreter', 'None')
+datatable8s = datatable;
+% legend('ForceLength8mM_all', 'bakers_rampup8', 'bakers_rampup2_8', 'bakers_rampup2_8_long', 'nevim', 'Interpreter', 'None')
 % xlim([1800, 2000])
 %% 8mM ATP
 % clf;
@@ -213,6 +215,7 @@ data_table = readtable('data/2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLi
 %% same preparation as 8mM, using the same scale
 data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_2_long', -(122070+710)-2700);
+datatable2s = datatable;
 %%
 % clf;
 data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
@@ -230,7 +233,8 @@ plot(datatable(:, 1)*1000, datatable(:, 2), 'r--');
 %%
 data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_02_long', -(122070+710)-2700 + 1280 + 20 - 5);
-%%
+datatable02s = datatable;
+%% Show timepoints for ??? reasons
 timepoints = [-1020, 0, 3300:4100];
 % indx = [];
 for i = 1:length(timepoints)
@@ -244,13 +248,38 @@ for i = 1:length(timepoints)
     indx_1_1(i) = find(datatable(:, 1) >= timepoints(i)/1000, 1);
 end
 plot(datatable(indx_1_1, 1)*1000, datatable(indx_1_1, 3), '^', 'Linewidth', 2)
-%%
-figure
+
+%% passive stretch
+
 data_table = readtable('data/relaxed stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf, nf/54, 'bakers_rampup2_rel');
 
 return;
+%% plot active scope
+% Atp 0.2 is shifted. Extend before 0 and after 1000ms by x
+% datatable8s = datatable;
+i0 = find(datatable8s(:, 1) > 0, 1);
+datatable8s(1:i0, 1) = datatable8s(1:i0, 1) - 0.14;
+datatable2s(1:i0, 1) = datatable2s(1:i0, 1) - 0.14;
+% datatable02s; stays
+% Extend after 800ms
+datatable02s = datatable;
+i0 = find(datatable02s(:, 1) > 0.8, 1);
+% 8 and 2 stays
+datatable02s(i0:end, 1) = datatable02s(i0:end, 1) + 0.13;
 
+%%
+clf;subplot(211);
+plot(datatable8s(1:end, 1), datatable8s(1:end, 2)/ML, 'Linewidth', 2);
+xlim([-1.2, 4]);
+xlabel('Time'); ylabel('Muscle length (-)')
+set(gca,'fontsize',16);
+subplot(212);hold on;
+plot(datatable8s(1:end, 1), datatable8s(1:end, 3),    datatable2s(:, 1), datatable2s(:, 3), datatable02s(:, 1), datatable02s(:, 3), 'Linewidth', 2);
+xlim([-1.2, 4]);
+xlabel('Time'); ylabel('Tension (kPa)');
+set(gca,'fontsize',16);
+legend('8 mM ATP', '2 mM ATP','0.2 mM ATP');
 
 %% New stretch experiments
 
@@ -264,7 +293,8 @@ ts_s = []; ts_d = [];
 figure(12);clf;
 subplot(121);hold on;xlabel('ML');ylabel('Tension');title('Tension on Muscle length')
 subplot(122);hold on;xlabel('ML (um)');ylabel('SL (um)');title('SL on Muscle length')
-figure(13);clf;hold on;title('Semilog axis');ylabel('log T');xlabel('time');
+figure(13);clf;hold on;title('Semilog axis');ylabel('log (Tension)');xlabel('time');
+figure(14);clf;hold on;
 figure(11);clf;
 
 el = 20; % experiment length in ms
@@ -276,7 +306,8 @@ ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
-figure(13);semilogy(datatable(:, 1), datatable(:, 3));
+figure(13);semilogy(datatable(:, 1), datatable(:, 3), 'LInewidth', 2);
+figure(14);plot(datatable(1:end-1, 1), diff(abs(log10(datatable(:, 3)))), 'LInewidth', 2);
 figure(11);
 
 el = 100; % experiment length in ms
@@ -289,9 +320,10 @@ data_table = readtable('data/100ms_4.txt', 'filetype', 'text', 'NumHeaderLines',
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
-figure(13);semilogy(datatable(:, 1), datatable(:, 3));
+figure(13);semilogy(datatable(:, 1), datatable(:, 3), 'LInewidth', 2);
+figure(14);plot(datatable(1:end-1, 1), diff(abs(log10(datatable(:, 3)))), 'LInewidth', 2);
 figure(11);
-%%
+
 el = 1000; % experiment length in ms
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
@@ -308,13 +340,14 @@ plot([4.95,4.75],[2.44 2.36], 'k', 'Linewidth', 4)
 plot([5.2, 5.00],[2.444 2.36], 'k', 'Linewidth', 4)
 xlim([0, 6]);
 set(gca,'fontsize',16);
-%%
+
 
 
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
-figure(13);semilogy(datatable(:, 1), datatable(:, 3));
+figure(13);semilogy(datatable(:, 1), datatable(:, 3), 'LInewidth', 2);
+figure(14);plot(datatable(1:end-1, 1), diff(abs(log10(datatable(:, 3)))), 'LInewidth', 2);
 figure(11);
 
 el = 10000; % experiment length in ms
@@ -326,7 +359,8 @@ data_table = readtable('data/10s_4.txt', 'filetype', 'text', 'NumHeaderLines',4)
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
-figure(13);semilogy(datatable(:, 1), datatable(:, 3));
+figure(13);semilogy(datatable(:, 1), datatable(:, 3), 'LInewidth', 2);
+figure(14);plot(datatable(1:end-1, 1), diff(abs(log10(datatable(:, 3)))), 'LInewidth', 2);
 figure(11);
 
 el = 100000; % experiment length in ms
@@ -339,7 +373,8 @@ slowest = datatable(:, 3);
 figure(12); 
 subplot(121); plot(datatable(:, 2), datatable(:, 3), 'o-');
 subplot(122); plot(datatable(:, 2), datatable(:, 4), 'o-');
-figure(13);semilogy(datatable(:, 1), datatable(:, 3));
+figure(13);semilogy(datatable(:, 1), datatable(:, 3), 'LInewidth', 2);
+figure(14);plot(datatable(1:end-1, 1), diff(abs(log10(datatable(:, 3)))), 'LInewidth', 2);
 figure(11);
 
 figure(12); 
@@ -363,7 +398,7 @@ y_dec = @(a, b, x)a*exp(-b.*x);
 
 
 [ae be] = fit(timebase, fbase, y_dec, 'StartPoint', [1, 0.05]);
-plot(datatable(zone, 1)*1000, y_dec(ae.a, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
+plot(datatable(zone, 1)*1000, y_dec(ae.a, ae.b, timebase) + datatable(end, 3), 'Linewidth', 4)
 ae
 a = ae.a;b = ae.b;
 % fix the 'a' param
@@ -401,7 +436,8 @@ zone = i_peak:length(datatable(:, 1));
 timebase = datatable(zone, 1) - datatable(zone(1), 1);
 fbase = datatable(zone, 3) - datatable(end, 3);
 
-y_dec = @(a, b, a2, b2, x)a*max(1-b, 0).^x + (a2)*max(1-b2, 0).^x;
+y_dec = @(a, b, a2, b2, x)a*exp(-max(b, 0).*x) + (a2)*exp(-max(b2, 0).^x);
+
 
 % all params free
 % [ae be] = fit(timebase, fbase, @(a, b, a2, b2,x)y_dec(a, b, a2, b2, x), 'StartPoint', [3, 0.05, 5, 0.5]);
