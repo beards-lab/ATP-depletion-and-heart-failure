@@ -1,4 +1,5 @@
-% clear;
+%% Evaluates passive model - script
+% Expects input parameters in the workspace
 
 % setting up problem
 N = 50; % number of space step

@@ -6,7 +6,10 @@
 % let it optim
 clear;
 
-mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
+% Documentation use
+% mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
+
+
 % optimized for 1s
 opt_mods = [  1.1797,     0.6314,    1.1477,    0.5181,    0.5833,    1.9550,    1.6055, 1];
 % optimized for 100s
