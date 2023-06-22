@@ -34,10 +34,12 @@ if ~(exist('simInit', 'var') && ~simInit)
     c=opt_mods(6)*13.1; % titin linear koefficient
     gamma=opt_mods(7)*4.7; % titin exponent
     alpha1 = opt_mods(8)*10;
-    e = opt_mods(9)*2;
+    beta = opt_mods(9)*2;
+    s0 = opt_mods(10)*1;
+    L0 = opt_mods(11)*0.2;
       
     Tend = 60; % length of steady-state simulation - get rid of all transients
-    [t,x] = ode15s(@dadt,[0 Tend],a,[],N,ds,r_d,r_a, e);
+    [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
     a = x(end,:);
     
     
@@ -50,8 +52,9 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     V = dl/rd; % highest half-sarcomere velocity
     p_a = ds*sum(a); % probability (fraction) of attached
     p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = p_u*c*(L*2)^gamma; % nonlinear titin stiffness of unattached
-    Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
+    Ftit = p_u*c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
+    Fatt = p_a*k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
+    p_as = [p_a];
 
     % ramp sretch time course
     Tend_ramp = rd; % length of ramp
@@ -65,7 +68,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
 
     for i = 1:Tend_ramp/dt 
     %   a0 = ds*sum(a); % 0th moment
-      [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
+    [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
       a = x(end,:);
     
       Fatt = ds*sum(s.*a);
@@ -89,8 +92,8 @@ if ~(exist('simRamp', 'var') && ~simRamp)
       
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-      Ftit = c*(L*2)^gamma; % nonlinear titin stiffness of unattached
-      Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
+      Ftit = p_u*c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
+      Fatt = p_a*k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
     
     if Tsim(end)  > 0.8
       breakpointhere = true;
@@ -101,6 +104,8 @@ if ~(exist('simRamp', 'var') && ~simRamp)
       Ftits = [Ftits, Ftit]; % titin alon
       Fvs = [Fvs, Fv];
       Ls = [Ls, L];
+      p_as = [p_as, p_a];
+
     end
 end % end ramp
 
@@ -121,7 +126,7 @@ else
 end
 
     for i = 1:Tend_relaxDt
-      [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
+      [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
       a = x(end,:);
     
       [t,X] = ode15s(@dL1dT,[0 dt],X,[],0, ks/mu);
@@ -135,8 +140,8 @@ end
     
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-      Ftit = c*(L*2)^gamma; % nonlinear titin stiffness of unattached
-      Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
+    Ftit = p_u*c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
+    Fatt = p_a*k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
       
       
       Tsim = [Tsim, Tend_ramp + i*dt];
@@ -146,6 +151,7 @@ end
       % TODO fix the viscous dynamics
       Fvs = [Fvs, Fv];
       Ls = [Ls, Ls(end)];
+      p_as = [p_as, p_a];      
     %   plot(s,a); pause 
     end
 %% calc error and plot

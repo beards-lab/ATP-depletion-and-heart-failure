@@ -52,14 +52,19 @@ rd = .1;
 mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
 opt_mods = [0.05081    15.2012   19.9710    0.14491    0.013239    0.3479    0.401    2.3739    0.7189];
 
+% enlarge the struct
+on = ones(1, 11);
+on(1:length(opt_mods)) = opt_mods;
+opt_mods = on;
 
+%%
+figure(10101)
 tic
 datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
 datatable = datastruct.datatable;
 time_end = datatable(end, 1);
 toc 
 tic
-
 evaluatePassive;
 Es
 toc
@@ -130,12 +135,21 @@ options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 
 % g = [1.2539    0.4422];
 opt_mods =    [0.0022    0.0403    0.5058     0.0003    3.7887    1.5490     3.1429    1.0322    2]
 opt_mods = ones(1, 9);
+%%
 datatables = [];rds = [];
 % ident all params
 x0 = opt_mods;
 optimfun = @(g)evalPassiveCost(g, datatables, rds);
 
+% pick some vars only
+mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'beta', 's0', 'L0'};
+sel = [1 2 5 6 7 8 9 10 11]
+x0 = opt_mods(sel);
 
+optimfun = @(g)evalPassiveCost([g(1:2) opt_mods([3, 4]) g(3:end)], datatables, rds);
+
+optimfun(x0)
+%%
 % ident just a subset
 % ps = [1:2, 5, 6, 7, 8, 9];
 % disp('Optimizing for ') 
@@ -145,6 +159,9 @@ optimfun = @(g)evalPassiveCost(g, datatables, rds);
 %
 x = fminsearch(optimfun, x0, options);
 x
+
+%%
+opt_mods(sel) = x
 
 %% EvalPassive test
 evalPassiveCost(ones(1, 9), [], [])
