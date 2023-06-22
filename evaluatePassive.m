@@ -1,145 +1,164 @@
 %% Evaluates passive model - script
 % Expects input parameters in the workspace
 
-% setting up problem
-N = 50; % number of space step
-L = 0.60; % domain size (micros)
-ds = L / N;
-s  = 0:ds:(L-ds);
-a = zeros(1,N); % initial p.d.f of attached positions
-X = [0 0]; % initial length and L1
+% use simInit, simRamp, simRecover to run just parts of the code for faster
+% optim
 
+if ~(exist('simInit', 'var') && ~simInit)
+    % setting up problem
+    N = 50; % number of space step
+    L = 0.60; % domain size (micros)
+    ds = L / N;
+    s  = 0:ds:(L-ds);
+    a = zeros(1,N); % initial p.d.f of attached positions    
+    
+    % rampup duration (s)
+    % rd = 1.00;
+    dl = (2.4-1.6)/2; % delta L of half-sarcomere (um)
+    % V = 40/2; % highest half-sarcomere velocity
+    % k = 10; % series spring constant
+    % Lo = 0.10;
+    
+    if ~exist('opt_mods', 'var')
+        opt_mods = ones(1, 10);
+    end
+    % Model parameters
+    r_a = opt_mods(1);
+    r_d = opt_mods(2)*(1).*ones(1,N) ;
+    % r_d = (1/50).*(s./0.2).^4;
+    % r_d = (1/50).ones(1,N) + (1/25)*ones(1,N).(s>0.25);
+    % plot(s,r_d)
+    mu = opt_mods(3)*10;
+    ks = opt_mods(4)*4;
+    k1 = opt_mods(5)*0.2;
+    c=opt_mods(6)*13.1; % titin linear koefficient
+    gamma=opt_mods(7)*4.7; % titin exponent
+    alpha1 = opt_mods(8)*10;
+    e = opt_mods(9)*2;
+      
+    Tend = 60; % length of steady-state simulation - get rid of all transients
+    [t,x] = ode15s(@dadt,[0 Tend],a,[],N,ds,r_d,r_a, e);
+    a = x(end,:);
+    
+    
+    % figure(1); plot(s,a); pause    
+    Tsim = 0;Fatts = 0;Ftits = 0; Fvs = 0;
+end % end init phase
 
-% rampup duration (s)
-% rd = 1.00;
-dl = (2.4-1.6)/2; % delta L of half-sarcomere (um)
-V = dl/rd; % highest half-sarcomere velocity
-% V = 40/2; % highest half-sarcomere velocity
-% k = 10; % series spring constant
-% Lo = 0.10;
+if ~(exist('simRamp', 'var') && ~simRamp)
+    X = [0 0]; % initial length and L1
+    V = dl/rd; % highest half-sarcomere velocity
+    p_a = ds*sum(a); % probability (fraction) of attached
+    p_u = 1 - p_a; % probability (fraction) of unattached
+    Ftit = p_u*c*(L*2)^gamma; % nonlinear titin stiffness of unattached
+    Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
 
-if ~exist('opt_mods', 'var')
-    opt_mods = ones(1, 10);
-end
-% Model parameters
-r_a = opt_mods(1);
-r_d = opt_mods(2)*(1).*ones(1,N) ;
-% r_d = (1/50).*(s./0.2).^4;
-% r_d = (1/50).ones(1,N) + (1/25)*ones(1,N).(s>0.25);
-% plot(s,r_d)
-mu = opt_mods(3)*10;
-ks = opt_mods(4)*4;
-k1 = opt_mods(5)*0.2;
-c=opt_mods(6)*13.1; % titin linear koefficient
-gamma=opt_mods(7)*4.7; % titin exponent
-alpha1 = opt_mods(8)*10;
-e = opt_mods(9)*2;
-  
-Tend = 60; % length of steady-state simulation - get rid of all transients
-[t,x] = ode15s(@dadt,[0 Tend],a,[],N,ds,r_d,r_a, e);
-a = x(end,:);
+    % ramp sretch time course
+    Tend_ramp = rd; % length of ramp
+    Fatts = [Fatt];
+    Ls = 0;
+    Fvs = 0; % viscous force set
+    Ftits = 0; % TITIN passive force set
+    Tsim = 0;
+    dt = ds/V; % numerical time step
+    aN = zeros(1,N); % new updated a vector for upwind diff.
 
-p_a = ds*sum(a); % probability (fraction) of attached
-p_u = 1 - p_a; % probability (fraction) of unattached
-Ftit = p_u*c*(L*2)^gamma; % nonlinear titin stiffness of unattached
-Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
-
-% figure(1); plot(s,a); pause
-
-% ramp sretch time course
-Tend_ramp = rd; % length of ramp
-Fatts = [Fatt];
-Ls = 0;
-Fvs = 0; % viscous force set
-Ftits = 0; % TITIN passive force set
-Tsim = 0;
-dt = ds/V; % numerical time step
-aN = zeros(1,N); % new updated a vector for upwind diff.
-
-for i = 1:Tend_ramp/dt 
-%   a0 = ds*sum(a); % 0th moment
-  [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
-  a = x(end,:);
-
-  Fatt = ds*sum(s.*a);
-  F1 = k1*Fatt;
-%   V1 = V - F1/mu;
-  % UPWIND differencing for sliding
-  aN(1) = a(1) - (dt*V/ds)*a(1);
-  for j = 2:length(s)
-     aN(j) = a(j) - (dt*V/ds)*a(j) + (dt*V/ds)*a(j-1);
-  end
-  a = aN;
-  % L = i*dt*V;
-%   plot(s,a); pause
-
-   % Fv = 0;
-  [t,X] = ode15s(@dL1dT,[0 dt],X,[],V, ks/mu);
-  X = X(end,:);
-  L = X(1);
-  L1 = X(2);
-  Fv = ks*(L - L1); % dashpot viscous force
-  
-  p_a = ds*sum(a); % probability (fraction) of attached
-  p_u = 1 - p_a; % probability (fraction) of unattached
-  Ftit = p_u*c*(L*2)^gamma; % nonlinear titin stiffness of unattached
-  Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
-
-if Tsim(end)  > 0.8
-  breakpointhere = true;
-end
-
-  Tsim = [Tsim, i*dt];
-  Fatts = [Fatts, Fatt]; % attached
-  Ftits = [Ftits, Ftit]; % titin alon
-  Fvs = [Fvs, Fv];
-  Ls = [Ls, L];
-end
-% clf;hold on;
-% plot(Tsim, Fsim + Ftits + Fvs, 'Linewidth', 2)
-% plot(Tsim, Ls, Tsim, Fsim, Tsim, Ftits, Tsim, Fvs);
-%
-% plot(s,a); pause
-% steady time course after ramp
-Tend_relax = rd*100; % length of relaxation time
-dt = rd/10;
-for i = 1:Tend_relax/dt 
-  [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
-  a = x(end,:);
-
-  [t,X] = ode15s(@dL1dT,[0 dt],X,[],0, ks/mu);
-  if Tsim(end) + dt > 4
+    for i = 1:Tend_ramp/dt 
+    %   a0 = ds*sum(a); % 0th moment
+      [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
+      a = x(end,:);
+    
+      Fatt = ds*sum(s.*a);
+      F1 = k1*Fatt;
+    %   V1 = V - F1/mu;
+      % UPWIND differencing for sliding
+      aN(1) = a(1) - (dt*V/ds)*a(1);
+      for j = 2:length(s)
+         aN(j) = a(j) - (dt*V/ds)*a(j) + (dt*V/ds)*a(j-1);
+      end
+      a = aN;
+      % L = i*dt*V;
+    %   plot(s,a); pause
+    
+       % Fv = 0;
+      [t,X] = ode15s(@dL1dT,[0 dt],X,[],V, ks/mu);
+      X = X(end,:);
+      L = X(1);
+      L1 = X(2);
+      Fv = ks*(L - L1); % dashpot viscous force
+      
+      p_a = ds*sum(a); % probability (fraction) of attached
+      p_u = 1 - p_a; % probability (fraction) of unattached
+      Ftit = c*(L*2)^gamma; % nonlinear titin stiffness of unattached
+      Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
+    
+    if Tsim(end)  > 0.8
       breakpointhere = true;
-  end
-  X = X(end,:);
-  L = X(1);
-  L1 = X(2);
-  Fv = ks*(L - L1); % dashpot viscous force
+    end
+    
+      Tsim = [Tsim, i*dt];
+      Fatts = [Fatts, Fatt]; % attached
+      Ftits = [Ftits, Ftit]; % titin alon
+      Fvs = [Fvs, Fv];
+      Ls = [Ls, L];
+    end
+end % end ramp
 
-  p_a = ds*sum(a); % probability (fraction) of attached
-  p_u = 1 - p_a; % probability (fraction) of unattached
-  Ftit = p_u*c*(L*2)^gamma; % nonlinear titin stiffness of unattached
-  Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
-  
-  
-  Tsim = [Tsim, Tend_ramp + i*dt];
-  Fatts = [Fatts, Fatt];
-  % the length stays constant
-  Ftits = [Ftits, Ftit];
-  % TODO fix the viscous dynamics
-  Fvs = [Fvs, Fv];
-  Ls = [Ls, Ls(end)];
-%   plot(s,a); pause 
+
+% steady time course after ramp
+if rd ~= 0
+    dt = rd/10;
+else
+    % do not simulate here at all, just defensive
+    dt = 1;
 end
+
+if ~(exist('simRecover', 'var') && ~simRecover)
+    Tend_relaxDt = rd*100/dt; % length of relaxation time
+else
+    % if not simRecover, simulate just a minor peak
+    Tend_relaxDt = rd/dt; % length of relaxation time
+end
+
+    for i = 1:Tend_relaxDt
+      [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a, e);
+      a = x(end,:);
+    
+      [t,X] = ode15s(@dL1dT,[0 dt],X,[],0, ks/mu);
+      if Tsim(end) + dt > 4
+          breakpointhere = true;
+      end
+      X = X(end,:);
+      L = X(1);
+      L1 = X(2);
+      Fv = ks*(L - L1); % dashpot viscous force
+    
+      p_a = ds*sum(a); % probability (fraction) of attached
+      p_u = 1 - p_a; % probability (fraction) of unattached
+      Ftit = c*(L*2)^gamma; % nonlinear titin stiffness of unattached
+      Fatt = p_a*k1*ds*sum((exp(alpha1*s)-1).*a); % Force of attached
+      
+      
+      Tsim = [Tsim, Tend_ramp + i*dt];
+      Fatts = [Fatts, Fatt];
+      % the length stays constant
+      Ftits = [Ftits, Ftit];
+      % TODO fix the viscous dynamics
+      Fvs = [Fvs, Fv];
+      Ls = [Ls, Ls(end)];
+    %   plot(s,a); pause 
+    end
 %% calc error and plot
 
 % interp to data points
 Tsims = Tsim + 2; % time shifted
 Ftot = Fatts + Ftits + Fvs;
-Ftot_int = interp1(Tsims, Ftot, datatable(:,1));    
-E = (Ftot_int - datatable(:,3)).^2;
-E(isnan(E)) = 0; % zero outside bounds
-Es = sum(E);
+if ~(exist('calcInterpE', 'var') && ~calcInterpE)
+    Ftot_int = interp1(Tsims, Ftot, datatable(:,1));    
+    E = (Ftot_int - datatable(:,3)).^2;
+    E(isnan(E)) = 0; % zero outside bounds
+    Es = sum(E);
+end
 
 
 if plotEach

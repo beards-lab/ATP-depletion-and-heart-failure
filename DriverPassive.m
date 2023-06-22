@@ -36,12 +36,22 @@ opt_mods = [1.1568    0.7497    2.0208    0.2414  0.5852    1.0600    1.1421    
 % handtuned
 opt_mods = [1.1568    0.7497    .20208    2.414/5  0.5852    1.0600    1.1421    1.6024    1.0790];
 
+% optimized for peaks
+opt_mods = [1.1021    2.0296    1.3551    0.2645    0.2657   1.0506    0.9401    2.3257    0.7581];
+
+% optimized for peaks with some overshoot
+% opt_mods = [0.9081    3.2012   19.9710    1.4491    0.3239    0.3479    0.0401    2.3739    0.7189];
+
 % optimized for 
 plotEach = true;
 figure(101);clf;
 
 % ramp duration
-rd = 1; 
+rd = .1; 
+
+mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
+opt_mods = [0.05081    15.2012   19.9710    0.14491    0.013239    0.3479    0.401    2.3739    0.7189];
+
 
 tic
 datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
@@ -64,6 +74,7 @@ for rd = rds
     disp(['Processing ' num2str(rd*1000) 'ms...'])
     datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
     datatable = datastruct.datatable; time_end = 200;
+    figure;
     evaluatePassive;
     peaks_sim = [peaks_sim, max(Ftot)]; ss_sim = [ss_sim, Ftot(end)];
     peaks_data = [peaks_data, max(datatable(:, 3))]; ss_data = [ss_data, datatable(end, 3)];
@@ -72,7 +83,9 @@ for rd = rds
     ft_data{rd_i} = datatable;
     rd_i = rd_i + 1;
 end
-%%
+
+% save('passiveData.mat', 'peaks_data', 'ss_data');
+%
 figure(14);clf;
 Np = length(peaks_sim); % number of peaks
 x = 1:Np; % xaxis
@@ -136,6 +149,14 @@ x
 %% EvalPassive test
 evalPassiveCost(ones(1, 9), [], [])
 
+%%
+
+evalPassivePeaks(opt_mods, rds)
+
+optimfun = @(g)evalPassivePeaks(g, rds);
+x = fminsearch(optimfun, opt_mods, options);
+
+
 %% GA
 ga_Opts = optimoptions('ga', ...
     'PopulationSize',100, ...            % 250
@@ -150,8 +171,8 @@ Ng = length(mods);
 optimfun = @(g)evalPassiveCost(g, datatable, rd);
 
 % default bounds struct - based on the mods
-upp = 4; lwr = 0.05;
-lb = upp*ones(1, Ng);
+upp = 5; lwr = 0.05;
+lb = lwr*ones(1, Ng);
 ub = upp*ones(1, Ng);
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
@@ -162,7 +183,7 @@ save env;
 %% PSO
 pso_opts = optimoptions('particleswarm', ...    
     'Display','iter', ...
-    'UseParallel',true);
+    'UseParallel',true, 'InitialSwarmMatrix', opt_mods);
 x = particleswarm(optimfun, Ng, lb, ub, pso_opts)
 %% optimfun(p_OptimGA)
 options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
@@ -172,6 +193,63 @@ optimfun(x2)
 
 
 %%
+function Ep = evalPassivePeaks(opt_mods, rds)
+    if any(opt_mods<0)
+        Ep = Inf;
+        return;
+    end
+%%    
+    load('passiveData.mat'); % 'peaks_data', 'ss_data'
+    plotEach = false;
+    calcInterpE = false;
+
+    Es = zeros(1, length(rds)); % error set
+    peaks_sim = zeros(1, length(rds)); % peak values
+    ss_sim = 0; %% steady state val
+    
+    % init sim
+    % figure(1);clf;hold on;
+    tic
+    simInit = true;simRamp = false;simRecover = false;
+    rd = 0;
+    evaluatePassive;
+    aInit = a;
+    % toc
+
+    for i_rd = 1:length(rds)-1
+        % ramp 10 - take peak
+        a = aInit;
+        rd = rds(i_rd);
+        simInit = false;simRamp = true;simRecover = false;
+        % figure;
+        % plotEach = true;
+        evaluatePassive;
+        % plot(Tsim,Ftot)
+        peaks_sim(i_rd) = max(Ftot);
+        % toc
+    end
+
+    % longest ramp - take peak and steady state
+    a = aInit;
+    rd = rds(end);
+    simInit = false;simRamp = true;simRecover = true;
+    % figure;
+    evaluatePassive;
+    peaks_sim(end) = max(Ftot);
+    ss_sim = Ftot(end); % steady state value
+    Es(end) = max(Ftot); % TODO error error peak
+    toc
+
+    Ep = sum((peaks_sim - peaks_data).^2) + length(rds)*(ss_sim - mean(ss_data))^2
+    
+%%
+    figure(15);cla;hold on;
+    plot(1:length(rds), peaks_data, 'o-', 'LineWidth',2)
+    plot(1:length(rds), peaks_sim, 'x--', 'LineWidth',2)
+    plot([1 length(rds)], mean(ss_data)*ones(2, 1), '-', 'LineWidth',2);
+    plot([1 length(rds)], ss_sim*ones(2, 1), '--', 'LineWidth',2);
+end
+
 function Es = evalPassiveCost(opt_mods, datatable, rd)
 if any(opt_mods<0)
     Es = Inf;
