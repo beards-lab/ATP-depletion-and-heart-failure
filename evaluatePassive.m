@@ -37,6 +37,9 @@ if ~(exist('simInit', 'var') && ~simInit)
     beta = opt_mods(9)*2;
     s0 = opt_mods(10)*1;
     L0 = opt_mods(11)*0.2;
+    
+    Ftitfun = @(L)c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
+    Fattfun = @(a)k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
       
     Tend = 60; % length of steady-state simulation - get rid of all transients
     [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
