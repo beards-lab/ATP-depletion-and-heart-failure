@@ -34,12 +34,13 @@ if ~(exist('simInit', 'var') && ~simInit)
     c=opt_mods(6)*13.1; % titin linear koefficient
     gamma=opt_mods(7)*4.7; % titin exponent
     alpha1 = opt_mods(8)*10;
-    beta = opt_mods(9)*2;
-    s0 = opt_mods(10)*1;
+    beta = opt_mods(9)*1;
+    s0 = NaN;% opt_mods(10)*1;
+    phi = opt_mods(10)*1;
     L0 = opt_mods(11)*0.2;
     
-    Ftitfun = @(L)c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
-    Fattfun = @(a)k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
+    FtitFun = @(L)c*max(((L+2) - L0), 0)^gamma; % nonlinear titin stiffness of unattached
+    FattFun = @(a)ds*sum((max(a, 0).*(s*k1).^phi)); % Force of attached
       
     Tend = 60; % length of steady-state simulation - get rid of all transients
     [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
@@ -55,9 +56,10 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     V = dl/rd; % highest half-sarcomere velocity
     p_a = ds*sum(a); % probability (fraction) of attached
     p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = p_u*c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
-    Fatt = p_a*k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
+    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
+    Fatt = p_a*FattFun(a); % Force of attached
     p_as = [p_a];
+    catts = [0];
 
     % ramp sretch time course
     Tend_ramp = rd; % length of ramp
@@ -74,8 +76,8 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
       a = x(end,:);
     
-      Fatt = ds*sum(s.*a);
-      F1 = k1*Fatt;
+      % Fatt = ds*sum(s.*a);
+      % F1 = k1*Fatt;
     %   V1 = V - F1/mu;
       % UPWIND differencing for sliding
       aN(1) = a(1) - (dt*V/ds)*a(1);
@@ -95,8 +97,8 @@ if ~(exist('simRamp', 'var') && ~simRamp)
       
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-      Ftit = p_u*c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
-      Fatt = p_a*k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
+    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
+    Fatt = p_a*FattFun(a); % Force of attached
     
     if Tsim(end)  > 0.8
       breakpointhere = true;
@@ -108,6 +110,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
       Fvs = [Fvs, Fv];
       Ls = [Ls, L];
       p_as = [p_as, p_a];
+      catts = [catts, ds*sum(s.*a)]; % center of attached
 
     end
 end % end ramp
@@ -143,8 +146,8 @@ end
     
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = p_u*c*max(L - L0, 0)^gamma; % nonlinear titin stiffness of unattached
-    Fatt = p_a*k1*ds*sum(max(a, 0).*beta.^(s/s0)); % Force of attached
+    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
+    Fatt = p_a*FattFun(a); % Force of attached
       
       
       Tsim = [Tsim, Tend_ramp + i*dt];
@@ -155,6 +158,8 @@ end
       Fvs = [Fvs, Fv];
       Ls = [Ls, Ls(end)];
       p_as = [p_as, p_a];      
+      catts = [catts, ds*sum(s.*a)]; % center of attached
+      
     %   plot(s,a); pause 
     end
 %% calc error and plot
@@ -179,7 +184,12 @@ if plotEach
 
     % plot interpolated to data
     plot(datatable(:, 1),Ftot_int, 'x-', 'Linewidth', 1.5)
-    plot(datatable(:, 1), E, '--');
-    xlim([0, datatable(end, 1)])
-    legend('Data', 'Ls', 'Fbinded', 'Ftitin passive', 'Viscous', 'Ftot passive', 'Error', 'Location', 'NorthWest') 
+    % yl = ylim;
+    % plot(datatable(:, 1), E, '--');
+    plot(Tsims, p_as, '--');
+    plot(Tsims, catts, ':', 'Linewidth', 1.5);
+    xlim([0, Tsims(end)])
+    % ylim(yl);
+    ylim('auto');
+    legend('Data', 'Ls', 'Fbinded', 'Ftitin passive', 'Viscous', 'Ftot passive', 'Attached (1)', 'Center of attached', 'Location', 'NorthWest') 
 end

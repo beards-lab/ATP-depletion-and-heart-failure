@@ -4,7 +4,7 @@
 
 % set the modifiers
 % let it optim
-clear;
+% clear;
 
 % Documentation use
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
@@ -37,7 +37,7 @@ opt_mods = [1.1568    0.7497    2.0208    0.2414  0.5852    1.0600    1.1421    
 opt_mods = [1.1568    0.7497    .20208    2.414/5  0.5852    1.0600    1.1421    1.6024    1.0790];
 
 % optimized for peaks
-opt_mods = [1.1021    2.0296    1.3551    0.2645    0.2657   1.0506    0.9401    2.3257    0.7581];
+% opt_mods = [1.1021    2.0296    1.3551    0.2645    0.2657   1.0506    0.9401    2.3257    0.7581];
 
 % optimized for peaks with some overshoot
 % opt_mods = [0.9081    3.2012   19.9710    1.4491    0.3239    0.3479    0.0401    2.3739    0.7189];
@@ -47,17 +47,28 @@ plotEach = true;
 figure(101);clf;
 
 % ramp duration
-rd = .1; 
+rd = 10; 
 
-mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
-opt_mods = [0.05081    15.2012   19.9710    0.14491    0.013239    0.3479    0.401    2.3739    0.7189];
+% mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e', 'phi', L0};
+% opt_mods = [0.05081    15.2012   19.9710    0.14491    0.013239    0.3479    0.401    2.3739    0.7189];
+opt_mods = [.001    .002        1    1      1  0.01    2.8        1        1   20     5.5];
+
+% optim result
+opt_mods = [0.0007    0.0013    0.8387    2.1727    2.0435    0.0133 4.1448    0.0010    0.0043   23.8029    5.9188];
+
+% optim result handtuned
+opt_mods = [0.0007    0.0013    0.018387    0.21727    50.435    0.0133 4.1448    0.0010    0.0043   4.8029    5.9188];
+
+% optim result again, handtuned again
+% mods = {'r_a',      'r_d',     'mu',     'ks',     'k1',     'c', 'gamma', 'alpha1',    'beta',   'phi',    L0};
+opt_mods = [0.0007    0.0015    0.0184    0.2173   48.1429    0.010019 4.2373    0.0010    0.0046    3.5433    5.9446]
 
 % enlarge the struct
 on = ones(1, 11);
 on(1:length(opt_mods)) = opt_mods;
 opt_mods = on;
 
-%%
+%
 figure(10101)
 tic
 datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
@@ -68,6 +79,7 @@ tic
 evaluatePassive;
 Es
 toc
+% xlim([2 2.2])
 %% compare peaks and steady state to data
 peaks_sim = [];ss_sim = []; % sim peaks and sim steady state
 peaks_data = [];ss_data = []; % data peaks and steady state
@@ -139,14 +151,17 @@ opt_mods = ones(1, 9);
 datatables = [];rds = [];
 % ident all params
 x0 = opt_mods;
-optimfun = @(g)evalPassiveCost(g, datatables, rds);
+% optimfun = @(g)evalPassiveCost(g, datatables, rds);
 
 % pick some vars only
 mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'beta', 's0', 'L0'};
-sel = [1 2 5 6 7 8 9 10 11]
+sel = [1 2 5 8 9 10 11]
 x0 = opt_mods(sel);
 
-optimfun = @(g)evalPassiveCost([g(1:2) opt_mods([3, 4]) g(3:end)], datatables, rds);
+% use only selected subset
+optimfun = @(g)evalPassiveCost(insertAt(opt_mods, g, sel) , datatables, rds);
+%%
+% optimfun = @(g)evalPassiveCost(g, datatables, rds);
 
 optimfun(x0)
 %%
@@ -157,6 +172,7 @@ optimfun(x0)
 % x0 = opt_mods(ps);
 % optimfun = @(x0)evalPassiveCost([x0(1, [1, 2]), 1, 0, x0(1, [3, 4, 5, 6, 7])], datatable, rd); % optim just a subset
 %
+% x0 = [0.0008    0.0017    1.0000    1.0000    1.0095    0.0119 3.6611    0.9297    1.0620   17.3403    5.7232];
 x = fminsearch(optimfun, x0, options);
 x
 
@@ -176,16 +192,16 @@ x = fminsearch(optimfun, opt_mods, options);
 
 %% GA
 ga_Opts = optimoptions('ga', ...
-    'PopulationSize',100, ...            % 250
+    'PopulationSize',180, ...            % 250
     'Display','iter', ...
-    'MaxStallGenerations',4, ...  % 10
+    'MaxStallGenerations',5, ...  % 10
     'UseParallel',true);
 
 mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
 
-Ng = length(mods);
+Ng = length(sel);
 
-optimfun = @(g)evalPassiveCost(g, datatable, rd);
+% optimfun = @(g)evalPassiveCost(g, datatable, rd);
 
 % default bounds struct - based on the mods
 upp = 5; lwr = 0.05;
@@ -272,6 +288,8 @@ if any(opt_mods<0)
     Es = Inf;
     return;
 end
+% normalize to ones as input
+opt_mods = opt_mods.*[ 0.0007    0.0014    0.0184    0.2173   45.3794    0.0100 4.2373    0.0009    0.0048    3.4744    5.8306];
 plotEach = true;
 figure(1);
 

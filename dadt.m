@@ -7,7 +7,8 @@ u = 1 - ds*sum(a);
 ddt = zeros(N, 1);
 ddt(1) = + (r_a/ds)*u ; % attach rate
 s = (0:length(ddt)-1)'*ds;
-ddt = ddt - (r_d'.*max(a, 0).*beta.^(s/s0)); % de-attach rate
+% function so that the beta is 1 as a default modifier
+ddt = ddt - (r_d'.*max(a, 0).*((s+1).^(beta-1))); % de-attach rate
 
 if ~isreal(ddt)
     breakpointhere = 1;
