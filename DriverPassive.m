@@ -47,7 +47,7 @@ plotEach = true;
 figure(101);clf;
 
 % ramp duration
-rd = 10; 
+rd = 1; 
 
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e', 'phi', L0};
 % opt_mods = [0.05081    15.2012   19.9710    0.14491    0.013239    0.3479    0.401    2.3739    0.7189];
@@ -62,6 +62,10 @@ opt_mods = [0.0007    0.0013    0.018387    0.21727    50.435    0.0133 4.1448  
 % optim result again, handtuned again
 % mods = {'r_a',      'r_d',     'mu',     'ks',     'k1',     'c', 'gamma', 'alpha1',    'beta',   'phi',    L0};
 opt_mods = [0.0007    0.0015    0.0184    0.2173   48.1429    0.010019 4.2373    0.0010    0.0046    3.5433    5.9446]
+
+r = 1;
+% second round of handtuning
+opt_mods = [0.2*r    0.0514*r    0.0184    0.2173   120.1429*r    0.010019 4.2373    0.0010    2.6    3.5433    5.9446]
 
 % enlarge the struct
 on = ones(1, 11);
@@ -79,7 +83,11 @@ tic
 evaluatePassive;
 Es
 toc
+xlim([0, 2+min(rd*3, 200)])
 % xlim([2 2.2])
+% ylim([0, 0.02])
+%%
+figure(10102);semilogy(Tsim, Fatts);
 %% compare peaks and steady state to data
 peaks_sim = [];ss_sim = []; % sim peaks and sim steady state
 peaks_data = [];ss_data = []; % data peaks and steady state
@@ -91,8 +99,9 @@ for rd = rds
     disp(['Processing ' num2str(rd*1000) 'ms...'])
     datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
     datatable = datastruct.datatable; time_end = 200;
-    figure;
+    figure(rd_i + 40);
     evaluatePassive;
+    xlim([0, 2+min(rd*3, 200)])
     peaks_sim = [peaks_sim, max(Ftot)]; ss_sim = [ss_sim, Ftot(end)];
     peaks_data = [peaks_data, max(datatable(:, 3))]; ss_data = [ss_data, datatable(end, 3)];
     

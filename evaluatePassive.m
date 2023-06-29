@@ -42,13 +42,17 @@ if ~(exist('simInit', 'var') && ~simInit)
     FtitFun = @(L)c*max(((L+2) - L0), 0)^gamma; % nonlinear titin stiffness of unattached
     FattFun = @(a)ds*sum((max(a, 0).*(s*k1).^phi)); % Force of attached
       
-    Tend = 60; % length of steady-state simulation - get rid of all transients
+    Tend = 100; % length of steady-state simulation - get rid of all transients
     [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
     a = x(end,:);
     
     
     % figure(1); plot(s,a); pause    
-    Tsim = 0;Fatts = 0;Ftits = 0; Fvs = 0;
+    % Tsim = 0;Fatts = 0;Ftits = 0; Fvs = 0;
+    Fvs = 0; % viscous force set
+    Ftits = 0; % TITIN passive force set
+    Tsim = -2;
+
 end % end init phase
 
 if ~(exist('simRamp', 'var') && ~simRamp)
@@ -65,9 +69,6 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     Tend_ramp = rd; % length of ramp
     Fatts = [Fatt];
     Ls = 0;
-    Fvs = 0; % viscous force set
-    Ftits = 0; % TITIN passive force set
-    Tsim = 0;
     dt = ds/V; % numerical time step
     aN = zeros(1,N); % new updated a vector for upwind diff.
 
@@ -100,7 +101,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
     
-    if Tsim(end)  > 0.8
+    if Tsim(end)  > 1
       breakpointhere = true;
     end
     
