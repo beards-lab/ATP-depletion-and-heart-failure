@@ -23,26 +23,28 @@ if ~(exist('simInit', 'var') && ~simInit)
         opt_mods = ones(1, 10);
     end
     % Model parameters
-    r_a = opt_mods(1);
-    r_d = opt_mods(2)*(1).*ones(1,N) ;
+    r_a = opt_mods(1)*(1/250);
+    r_d = opt_mods(2)*(1/25);
     % r_d = (1/50).*(s./0.2).^4;
     % r_d = (1/50).ones(1,N) + (1/25)*ones(1,N).(s>0.25);
     % plot(s,r_d)
-    mu = opt_mods(3)*10;
-    ks = opt_mods(4)*4;
-    k1 = opt_mods(5)*0.2;
-    c=opt_mods(6)*13.1; % titin linear koefficient
-    gamma=opt_mods(7)*4.7; % titin exponent
-    alpha1 = opt_mods(8)*10;
-    beta = opt_mods(9)*1;
-    s0 = NaN;% opt_mods(10)*1;
-    phi = opt_mods(10)*1;
-    L0 = opt_mods(11)*0.2;
+    mu = opt_mods(3)*3;
+    ks = opt_mods(4)*6;
+    k1 = opt_mods(5)*2;
+    c=opt_mods(6)*2; % titin linear koefficient
     
-    FtitFun = @(L)c*max(((L+2) - L0), 0)^gamma; % nonlinear titin stiffness of unattached
-    FattFun = @(a)ds*sum((max(a, 0).*(s*k1).^phi)); % Force of attached
+    gamma=opt_mods(7)*4.7*1.6; % titin exponent
+    beta = NaN;
+    s0 = opt_mods(8)*0.4;
+    alpha1 = opt_mods(9)*4;
+
+    % phi = opt_mods(10)*1;
+    L0 = opt_mods(10)*0.2*5.9446;
+    
+    FtitFun = @(L)c*(L*2)^gamma; % nonlinear titin stiffness of unattached
+    FattFun = @(a)k1*ds*sum((exp(alpha1*s/s0)-1).*a); % Force of attached
       
-    Tend = 100; % length of steady-state simulation - get rid of all transients
+    Tend = 10000; % length of steady-state simulation - get rid of all transients
     [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
     a = x(end,:);
     
@@ -60,7 +62,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     V = dl/rd; % highest half-sarcomere velocity
     p_a = ds*sum(a); % probability (fraction) of attached
     p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
+    Ftit = FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
     p_as = [p_a];
     catts = [0];
@@ -74,7 +76,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
 
     for i = 1:Tend_ramp/dt 
     %   a0 = ds*sum(a); % 0th moment
-    [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
+    [t,x] = ode15s(@dadt,[0 dt],a,[],N,s, ds,r_a,r_d, beta, s0);
       a = x(end,:);
     
       % Fatt = ds*sum(s.*a);
@@ -98,10 +100,10 @@ if ~(exist('simRamp', 'var') && ~simRamp)
       
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
+    Ftit = FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
     
-    if Tsim(end)  > 1
+    if Tsim(end)  > 0.8
       breakpointhere = true;
     end
     
@@ -126,14 +128,14 @@ else
 end
 
 if ~(exist('simRecover', 'var') && ~simRecover)
-    Tend_relaxDt = rd*100/dt; % length of relaxation time
+    Tend_relaxDt = min(rd*100, 300)/dt; % length of relaxation time
 else
     % if not simRecover, simulate just a minor peak
     Tend_relaxDt = rd/dt; % length of relaxation time
 end
 
     for i = 1:Tend_relaxDt
-      [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
+      [t,x] = ode15s(@dadt,[0 dt],a,[],N,s, ds,r_a,r_d, beta, s0);
       a = x(end,:);
     
       [t,X] = ode15s(@dL1dT,[0 dt],X,[],0, ks/mu);
@@ -147,7 +149,7 @@ end
     
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
+    Ftit = FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
       
       
@@ -172,7 +174,7 @@ if ~(exist('calcInterpE', 'var') && ~calcInterpE)
     Ftot_int = interp1(Tsims, Ftot, datatable(:,1));    
     E = (Ftot_int - datatable(:,3)).^2;
     E(isnan(E)) = 0; % zero outside bounds
-    Es = sum(E);
+    Es = 1e3*sum(E)/length(E);
 end
 
 

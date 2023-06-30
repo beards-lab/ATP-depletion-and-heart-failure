@@ -7,70 +7,18 @@
 % clear;
 
 % Documentation use
-% mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e'};
-
-
-% optimized for 1s
-opt_mods = [  1.1797,     0.6314,    1.1477,    0.5181,    0.5833,    1.9550,    1.6055, 1];
-% optimized for 100s
-opt_mods =   [  0.0298    0.0290    0.3837    1.2774    1.0610    2.0034     1.7758, 1, 1];
-% reoptimized for 100s with faster sampling around the peak
-opt_mods =   [   0.0051    0.0379    0        1         2.3957    2.1260    1.8250    1.3943   0.4839];
-
-% opt tuned for 1s
-opt_mods =   [  0.1032    0.0339    1         0         1.0787    1.0346    1.2138    1.2506    1.1316];
-
-% reopt for 100s, incl the exponent
-opt_mods =   [0.0108    0.0338    0.1         10    2.2214    1.8489    1.7039    1.1048    0.5377];
-% opt_mods =   [  0.0298    0.10290    0.006837    8.2774    1.0610    2.0034     1.7758, 1];
-% opt_mods =   [  0.06298    0.060    0.3837    1.2774    4.0610    2.0034     1.7758, 1];
-
-% optimized for 0.1s
-% opt_mods = [0.0298    0.0290    200   0.1   1.0610    2.0034    1.7758, 1];
-
-% optimized for 100ms and 100s
-% opt_mods = [ 0.0022    0.0403    0.5058 0.0003    3.7887    1.5490 3.1429    1.0322    0.6723];
-
-% optimized for 100ms and 100s
-opt_mods = [1.1568    0.7497    2.0208    0.2414  0.5852    1.0600    1.1421    1.6024    1.0790];
-% handtuned
-opt_mods = [1.1568    0.7497    .20208    2.414/5  0.5852    1.0600    1.1421    1.6024    1.0790];
-
-% optimized for peaks
-% opt_mods = [1.1021    2.0296    1.3551    0.2645    0.2657   1.0506    0.9401    2.3257    0.7581];
-
-% optimized for peaks with some overshoot
-% opt_mods = [0.9081    3.2012   19.9710    1.4491    0.3239    0.3479    0.0401    2.3739    0.7189];
+% mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 's0', 'alpha1', 'L0'};
+    
+opt_mods = [2      1      1     0    .1    8     0.8        0.9      1         1];
 
 % optimized for 
 plotEach = true;
 figure(101);clf;
 
 % ramp duration
-rd = 1; 
+rd = 100; 
 
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e', 'phi', L0};
-% opt_mods = [0.05081    15.2012   19.9710    0.14491    0.013239    0.3479    0.401    2.3739    0.7189];
-opt_mods = [.001    .002        1    1      1  0.01    2.8        1        1   20     5.5];
-
-% optim result
-opt_mods = [0.0007    0.0013    0.8387    2.1727    2.0435    0.0133 4.1448    0.0010    0.0043   23.8029    5.9188];
-
-% optim result handtuned
-opt_mods = [0.0007    0.0013    0.018387    0.21727    50.435    0.0133 4.1448    0.0010    0.0043   4.8029    5.9188];
-
-% optim result again, handtuned again
-% mods = {'r_a',      'r_d',     'mu',     'ks',     'k1',     'c', 'gamma', 'alpha1',    'beta',   'phi',    L0};
-opt_mods = [0.0007    0.0015    0.0184    0.2173   48.1429    0.010019 4.2373    0.0010    0.0046    3.5433    5.9446]
-
-r = 1;
-% second round of handtuning
-opt_mods = [0.2*r    0.0514*r    0.0184    0.2173   120.1429*r    0.010019 4.2373    0.0010    2.6    3.5433    5.9446]
-
-% enlarge the struct
-on = ones(1, 11);
-on(1:length(opt_mods)) = opt_mods;
-opt_mods = on;
 
 %
 figure(10101)
@@ -80,15 +28,20 @@ datatable = datastruct.datatable;
 time_end = datatable(end, 1);
 toc 
 tic
-evaluatePassive;
-Es
+% evaluatePassive;
+evalPassiveCost(opt_mods, [], [])
+% Es
 toc
-xlim([0, 2+min(rd*3, 200)])
+% xlim([0, 2+min(rd*3, 200)])
 % xlim([2 2.2])
 % ylim([0, 0.02])
 %%
 figure(10102);semilogy(Tsim, Fatts);
+%
 %% compare peaks and steady state to data
+opt_mods = [7.6893    0.3479    1.0000         1    0*0.1559    8.0000 0.8000    0.1366    0.0849    0.0459];
+opt_mods = [7.6893    0.3479    1.0000         0    0.3    8.0000 0.8000    0.1366    0.0849    0.0459];
+
 peaks_sim = [];ss_sim = []; % sim peaks and sim steady state
 peaks_data = [];ss_data = []; % data peaks and steady state
 
@@ -164,7 +117,7 @@ x0 = opt_mods;
 
 % pick some vars only
 mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'beta', 's0', 'L0'};
-sel = [1 2 5 8 9 10 11]
+sel = [1 2 5 8 9 10]
 x0 = opt_mods(sel);
 
 % use only selected subset
@@ -298,7 +251,7 @@ if any(opt_mods<0)
     return;
 end
 % normalize to ones as input
-opt_mods = opt_mods.*[ 0.0007    0.0014    0.0184    0.2173   45.3794    0.0100 4.2373    0.0009    0.0048    3.4744    5.8306];
+% opt_mods = opt_mods.*[ 0.0007    0.0014    0.0184    0.2173   45.3794    0.0100 4.2373    0.0009    0.0048    3.4744    5.8306];
 plotEach = true;
 figure(1);
 
