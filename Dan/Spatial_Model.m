@@ -1,4 +1,4 @@
-clear
+% clear
 
 % setting up problem
 N = 50; % number of space step
@@ -91,7 +91,7 @@ for i = 1:Tend_relax/dt
   c_a = [c_a ds*sum(a.*s)];  
 
 end
-
-figure(1); plot(s,a)
-figure(2); plot(Tsim,Fsim, Tsim, p_a, Tsim, c_a);
-figure(3); semilogy(Tsim,Fsim, Tsim, p_a, Tsim, c_a);
+%%
+figure(1); clf;plot(s,a);title('Profile of attached');xlabel('distance from attached');ylabel('Attached fraction');
+figure(2); plot(Tsim,Fsim, Tsim, p_a, Tsim, c_a);xlabel('time'); legend('Force', 'Fracrtion attached', 'center of attached');
+figure(3); semilogy(Tsim,Fsim, Tsim, p_a, Tsim, c_a);xlabel('time'); legend('Force', 'Fracrtion attached', 'center of attached');

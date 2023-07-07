@@ -9,14 +9,14 @@
 % Documentation use
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 's0', 'alpha1', 'L0'};
     
-opt_mods = [2      1      1     0    .1    8     0.8        0.9      1         1];
+opt_mods = [2      10     1     0    .1    8     0.8        0.9      1         1];
 
 % optimized for 
 plotEach = true;
 figure(101);clf;
 
 % ramp duration
-rd = 100; 
+rd = 1; 
 
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e', 'phi', L0};
 
@@ -39,8 +39,8 @@ toc
 figure(10102);semilogy(Tsim, Fatts);
 %
 %% compare peaks and steady state to data
-opt_mods = [7.6893    0.3479    1.0000         1    0*0.1559    8.0000 0.8000    0.1366    0.0849    0.0459];
-opt_mods = [7.6893    0.3479    1.0000         0    0.3    8.0000 0.8000    0.1366    0.0849    0.0459];
+% opt_mods = [7.6893    0.3479    1.0000         1    0*0.1559    8.0000 0.8000    0.1366    0.0849    0.0459];
+% opt_mods = [7.6893    0.3479    1.0000         0    0.3    8.0000 0.8000    0.1366    0.0849    0.0459];
 
 peaks_sim = [];ss_sim = []; % sim peaks and sim steady state
 peaks_data = [];ss_data = []; % data peaks and steady state
@@ -54,7 +54,9 @@ for rd = rds
     datatable = datastruct.datatable; time_end = 200;
     figure(rd_i + 40);
     evaluatePassive;
-    xlim([0, 2+min(rd*3, 200)])
+
+    xlim([0, 2+min(rd*4, 200)])
+    title(sprintf('Force response on passive ramp %2.2fs', rds(rd_i)));
     peaks_sim = [peaks_sim, max(Ftot)]; ss_sim = [ss_sim, Ftot(end)];
     peaks_data = [peaks_data, max(datatable(:, 3))]; ss_data = [ss_data, datatable(end, 3)];
     
