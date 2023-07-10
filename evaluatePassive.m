@@ -62,7 +62,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     V = dl/rd; % highest half-sarcomere velocity
     p_a = ds*sum(a); % probability (fraction) of attached
     p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = FtitFun(L); % nonlinear titin stiffness of unattached
+    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
     p_as = [p_a];
     catts = [0];
@@ -100,7 +100,7 @@ if ~(exist('simRamp', 'var') && ~simRamp)
       
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = FtitFun(L); % nonlinear titin stiffness of unattached
+    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
     
     if Tsim(end)  > 0.8
@@ -118,6 +118,9 @@ if ~(exist('simRamp', 'var') && ~simRamp)
     end
 end % end ramp
 
+% figure(0405);hold on;
+% plot(s, a*ds);
+% title('Attached distribution at the end of the ramp');
 
 % steady time course after ramp
 if rd ~= 0
@@ -149,7 +152,7 @@ end
     
       p_a = ds*sum(a); % probability (fraction) of attached
       p_u = 1 - p_a; % probability (fraction) of unattached
-    Ftit = FtitFun(L); % nonlinear titin stiffness of unattached
+    Ftit = p_u*FtitFun(L); % nonlinear titin stiffness of unattached
     Fatt = p_a*FattFun(a); % Force of attached
       
       

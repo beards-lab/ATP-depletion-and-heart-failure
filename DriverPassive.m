@@ -9,7 +9,7 @@
 % Documentation use
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 's0', 'alpha1', 'L0'};
     
-opt_mods = [2      10     1     0    .1    8     0.8        0.9      1         1];
+opt_mods = [2      500     1     0    .1    8     0.8        0.9      1         1];
 
 % optimized for 
 plotEach = true;
@@ -19,6 +19,8 @@ figure(101);clf;
 rd = 1; 
 
 % mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'e', 'phi', L0};
+opt_mods = [4      0.0521     1     0    .1    8     0.8        0.9      1         1];
+opt_mods = [8      2.6370     1     0    .1    8     0.8        0.9      1         1];
 
 %
 figure(10101)
@@ -38,6 +40,31 @@ toc
 %%
 figure(10102);semilogy(Tsim, Fatts);
 %
+%% find steady state balance
+A = 0.2;
+opt_mods = [8      5000     1     0    .1    8     0.8        0.9      1         1];
+
+Tend = 10000; % length of steady-state simulation - get rid of all transients
+pas = [];
+for i = 1:1000
+    N = 50; L = 0.60; ds = L / N;  s  = 0:ds:(L-ds);
+    r_a = opt_mods(1)*(1/250);  r_d = opt_mods(2)*(1/25);
+    beta = NaN;    s0 = opt_mods(8)*0.4;
+
+    a = zeros(1,N); % initial p.d.f of attached positions    
+    [t,x] = ode15s(@dadt,[0 Tend],a,[],N,s, ds,r_a,r_d, beta, s0);
+    a = x(end,:);
+    p_a = ds*sum(a); % probability (fraction) of attached
+    pas = [pas, p_a];
+    E = A - p_a;
+    if E > 0, % too high detachment, attached is too low
+        opt_mods(2) = opt_mods(2)/2;
+    else % attached is to high, we need to increase the detachment
+        opt_mods(2) = opt_mods(2)*4/3;
+    end
+end
+
+
 %% compare peaks and steady state to data
 % opt_mods = [7.6893    0.3479    1.0000         1    0*0.1559    8.0000 0.8000    0.1366    0.0849    0.0459];
 % opt_mods = [7.6893    0.3479    1.0000         0    0.3    8.0000 0.8000    0.1366    0.0849    0.0459];
