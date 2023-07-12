@@ -40,6 +40,31 @@ toc
 %%
 figure(10102);semilogy(Tsim, Fatts);
 %
+
+%% Testing the new model
+
+modnames = {"c1", "c2", "g1", "g2", "r_a", "r_d","k_Fbr"};
+modvals = [1 1 1 1 1 1 1];
+modvals = [0.9784    0.5283    2.0420    1.7948    0.3595    0.8351    0.8122];
+evaluatePassiveTheSecond(0.02, modnames, modvals);
+
+modvals = [1.1500    0.4337    2.0535    1.4046    0.4004 0.6148    0.6476]; % for both 10 and 0.1, CF = $75
+%%
+modvals = [1.1500    0.4337    1    1    0.4004  0   0.6476]; % for both 10 and 0.1, CF = $75
+
+modvals = [1.1500    0.4337    2.0535    1.4046    0.4004 0.06148    0.6476]; % for both 10 and 0.1, CF = $75
+
+modvals = [1.1500    0.4337    1.0  1.0    0.4004 0.06148    0.6476]; % for both 10 and 0.1, CF = $75
+
+optimfun(modvals);
+%%
+options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
+optimfun = @(g)evaluatePassiveTheSecond(0.01, modnames, g);
+optimfun = @(g)evaluatePassiveTheSecond(10, modnames, g) + evaluatePassiveTheSecond(0.1, modnames, g);
+optimfun(modvals)
+x0 = modvals;
+
+x = fminsearch(optimfun, x0, options);
 %% find steady state balance
 A = 0.2;
 opt_mods = [8      5000     1     0    .1    8     0.8        0.9      1         1];
@@ -79,8 +104,8 @@ for rd = rds
     disp(['Processing ' num2str(rd*1000) 'ms...'])
     datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
     datatable = datastruct.datatable; time_end = 200;
-    figure(rd_i + 40);
-    evaluatePassive;
+    % figure(rd_i + 40);
+    % evaluatePassive;
 
     xlim([0, 2+min(rd*4, 200)])
     title(sprintf('Force response on passive ramp %2.2fs', rds(rd_i)));
