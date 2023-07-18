@@ -1,12 +1,13 @@
-g%% load Anthony Baker's experiments
-load gopt;
+%% load Anthony Baker's experiments
+% load gopt;
 % decimation sampling (each x)
 dsf = 10;
 ML = 2.0;
 % normalized force multiplier
 nf = 56;
 ts_s = []; ts_d = [];
-clf;close all;
+clear;
+close all;
 %% load length-force data for 8 mM
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
 dt8 = readtable(datafile, ...
@@ -410,24 +411,60 @@ subplot(121); legend('20 ms', '100 ms', '1000 ms', '10 s', '100 s', 'location', 
 %% Fit decay of the strecth
 % start with the slowest one
 
-clf;
+
 % ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el):200000];
-el = 100000; % experiment length in ms
-ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
-data_table = readtable('data/100s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
-% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
+rd = 0.02; % experiment length in s
+% ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
+% data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
+
+rds = [0.02, 0.1, 1, 10, 100];
+colors = colormap(lines(length(rds)));
+ss_rmse = [];
+sa= [2:0.01:2.1];
+for ss = sa
+    %%
+figure(1);clf;
+rmse = [];
+    for rd_i = 1:length(rds)
+    rd = rds(rd_i);
+datatable = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']).datatable;
 [~, i_peak] = max(datatable(:, 3));
+dataplotpoints = 1:1:length(datatable(:, 1));
 zone = i_peak:length(datatable(:, 1));
 timebase = datatable(zone, 1) - datatable(zone(1), 1);
-fbase = datatable(zone, 3) - datatable(end, 3);
-y_dec = @(a, b, x)a*exp(-b.*x);
+fbase = datatable(zone, 3);
+% this fits the fastest one pretty well
+% y_dec = @(a, b, c, d, e, x)a*x.^(-b) + c + 0*a*b*c*d*e;
+
+y_dec = @(a, b, c, d, e, x)a*x.^(-b) +ss+ 0*c*d*e;
 
 
-[ae be] = fit(timebase, fbase, y_dec, 'StartPoint', [1, 0.05]);
-plot(datatable(zone, 1)*1000, y_dec(ae.a, ae.b, timebase) + datatable(end, 3), 'Linewidth', 4)
-ae
-a = ae.a;b = ae.b;
+
+[ae be] = fit(timebase(2:end), fbase(2:end), y_dec, 'StartPoint', [1, 1, 3.750, -1, 0.01]);
+% loglog(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
+% loglog(datatable(zone, 1), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, timebase), '--','Linewidth', 4, 'Color', colors(rd_i, :));
+rmse(rd_i) = be.rmse;
+fitparam.a(rd_i) = ae.a;fitparam.b(rd_i) = ae.b;fitparam.c(rd_i) = ae.c;
+
+end
+legend('0.02s data', sprintf('0.02s fit, rmse %0.2f', rmse(1)),...
+    '0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(2)),...
+    '1s data', sprintf('1s fit, rmse %0.2f', rmse(3)),...
+    '10s data', sprintf('10s fit, rmse %0.2f', rmse(4)),...
+    '100s data', sprintf('100s fit, rmse %0.2f', rmse(5))...
+    );
+figure(2);clf;
+semilogx(rds, fitparam.a, 'o-',rds, fitparam.b, 'o-',rds, fitparam.c, 'o-');
+legend('Optimized a', 'Optimized b', 'Optimized c')
+xlabel('Ramp duration');
+ss_rmse = [ss_rmse sum(rmse)];
+ss
+sum(rmse)
+end
+figure(3);clf;
+plot(sa, ss_rmse, 'x-', 'LineWidth',2);
 % fix the 'a' param
 % [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
 % plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
