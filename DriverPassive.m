@@ -22,16 +22,17 @@ rd = 1;
 opt_mods = [4      0.0521     1     0    .1    8     0.8        0.9      1         1];
 opt_mods = [8      2.6370     1     0    .1    8     0.8        0.9      1         1];
 
+% Dan's model
+opt_mods = [0.0051    1.7224    0.1669    1.7320    1.2198   0.0847    0.8094    1.7798    1.4036];
 %
 figure(10101)
 tic
 datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
 datatable = datastruct.datatable;
 time_end = datatable(end, 1);
-toc 
-tic
-% evaluatePassive;
-evalPassiveCost(opt_mods, [], [])
+% opt_mods = [1 1 1 1 1 1 1 1 1];
+evaluatePassive;
+% evalPassiveCost(opt_mods, [], [])
 % Es
 toc
 % xlim([0, 2+min(rd*3, 200)])
@@ -100,12 +101,13 @@ peaks_data = [];ss_data = []; % data peaks and steady state
 rds = [0.02, 0.1, 1, 10, 100];
 rd_i = 1;
 ft_sim = cell(length(rds), 1);ft_data = cell(length(rds), 1);
+opt_mods = ones(9, 1);
 for rd = rds
     disp(['Processing ' num2str(rd*1000) 'ms...'])
     datastruct = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']);
     datatable = datastruct.datatable; time_end = 200;
-    % figure(rd_i + 40);
-    % evaluatePassive;
+    figure(rd_i + 40);clf;
+    evaluatePassive;
 
     xlim([0, 2+min(rd*4, 200)])
     title(sprintf('Force response on passive ramp %2.2fs', rds(rd_i)));
@@ -117,7 +119,6 @@ for rd = rds
     rd_i = rd_i + 1;
 end
 
-% save('passiveData.mat', 'peaks_data', 'ss_data');
 %
 figure(14);clf;
 Np = length(peaks_sim); % number of peaks
@@ -130,6 +131,15 @@ legend('Peak (data)', 'Peak (model)', 'End (data)', 'End (model)');
 xlabel('Ramp-up time (s)');ylabel('Passive tension (kPa)');
 title({"Peak and steady state","during passive stretch"})
 set(gca,'fontsize',16);
+%% save and load the peaks
+peaksTable = table(rds(:), peaks_data(:), ss_data(:));
+peaksTable.Properties.VariableNames = {'RampDuration', 'Peak', 'SteadyState'};
+writetable(peaksTable, "data/bakers_passiveStretch_Peaks.csv");
+
+clear;clf;
+peakTable = readtable("data/bakers_passiveStretch_Peaks.csv");
+semilogx(peakTable.RampDuration, peakTable.Peak, 'o-', peakTable.RampDuration, peakTable.SteadyState, 'x-')
+
 %%
 figure(15);clf;
 ldat = [];lsim = [];
@@ -174,12 +184,15 @@ mods = {'r_a', 'r_d', 'mu', 'ks', 'k1', 'c', 'gamma', 'alpha1', 'beta', 's0', 'L
 sel = [1 2 5 8 9 10]
 x0 = opt_mods(sel);
 
+%% use all
+optimfun = @(g)evalPassiveCost(g, datatables, rds);
+
 % use only selected subset
-optimfun = @(g)evalPassiveCost(insertAt(opt_mods, g, sel) , datatables, rds);
+% optimfun = @(g)evalPassiveCost(insertAt(opt_mods, g, sel) , datatables, rds);
 %%
 % optimfun = @(g)evalPassiveCost(g, datatables, rds);
 
-optimfun(x0)
+optimfun(opt_mods)
 %%
 % ident just a subset
 % ps = [1:2, 5, 6, 7, 8, 9];

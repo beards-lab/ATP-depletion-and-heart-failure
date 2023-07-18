@@ -10,7 +10,7 @@ s = (0:length(ddt)-1)'*ds;
 % function so that the beta is 1 as a default modifier
 % ddt = ddt - (r_d'.*(max(a, 0).^beta).*((s+1).^(beta-1))); % de-attach rate
 % ddt = ddt - (r_d'.*max(a, 0).*((s+1).^(beta-1))); % de-attach rate
-ddt = ddt - r_d.*(max(a, 0).^1).*exp(s/s0); % de-attach rate
+ddt = ddt - r_d.*(a.^beta).*(s/0.4).^s0; % de-attach rate
 
 
 % balance

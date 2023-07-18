@@ -5,16 +5,22 @@ N = 100; % number of space step
 L = 0.60; % domain size (micros)
 ds = L / N;
 s  = 0:ds:(L-ds);
+
+% figure(1);clf;hold on;figure(2);clf;hold on;
+% figure(3);clf;hold on;figure(4);clf;hold on;
+
+rds = [100, 10, 1];
+for rd_i = 1:length(rds)
+rd = rds(rd_i);
 a = zeros(1,N); % initial p.d.f of attached positions
 X = [0 0]; % initial length and L1
-
+clear aN;
 % V = 1*0.40/100; % slowest half-sarcomere velocity
 % V = 1000*0.40/100; % slowest half-sarcomere velocity
-
-V = 1000*0.40/100; % slowest half-sarcomere velocity
+V = rd*0.40/100; % slowest half-sarcomere velocity
 
 r_a = 100;
-r_d = 0.01 ;
+r_d = 0.01;
 
 k1 = 0.1; % titin force constant
 kp = 200; % parallel nonlinear force constant
@@ -36,7 +42,7 @@ for i = 1:Tend_ramp/dt
   [t,x] = ode15s(@dadt,[0 dt],a,[],N,ds,r_d,r_a);
   a = x(end,:);
 
-  % UPWIND differencing for sliding
+  % UPWIND differencing for sliding 
   aN(1) = a(1) - (dt*V/ds)*a(1);
   for j = 2:length(s)
      aN(j) = a(j) - (dt*V/ds)*a(j) + (dt*V/ds)*a(j-1);
@@ -53,7 +59,7 @@ for i = 1:Tend_ramp/dt
   Lsim = [Lsim, L];
 
 end
-figure(2); clf; hold on; plot(s,a); % plotting the a distribution after ramp
+figure(2); plot(s,a); % plotting the a distribution after ramp
 
 % steady time course after ramp
 Tend_relax = 100; % length of relaxation time
@@ -73,8 +79,9 @@ for i = 1:Tend_relax/dt
 
 end
 
-figure(1); plot(Tsim, Fsim,'g','LineWidth',2)
-figure(2); plot(s,a)
-figure(3); semilogx(Tsim,Fsim,'r','LineWidth',2); 
-figure(4); semilogy(Tsim,Fsim);
+figure(1); plot(Tsim, Fsim,'LineWidth',2)
+figure(2); plot(s,a,'LineWidth',2)
+figure(3); semilogx(Tsim,Fsim,'LineWidth',2); 
+figure(4); semilogy(Tsim,Fsim,'LineWidth',2);
+end
 
