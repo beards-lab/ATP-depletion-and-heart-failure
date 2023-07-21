@@ -1,36 +1,37 @@
 clear
-
-load Data\bakers_passiveStretch_20ms.mat
-datatable5 = datatable;
-load Data\bakers_passiveStretch_100ms.mat
-datatable4 = datatable;
-load Data\bakers_passiveStretch_1000ms.mat
-datatable3 = datatable;
-load Data\bakers_passiveStretch_10000ms.mat
-datatable2 = datatable;
-load Data\bakers_passiveStretch_100000ms.mat
-datatable1 = datatable;
-
-
-figure(1); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
-plot(datatable1(:,1),datatable1(:,3),'bo','linewidth',2);
-set(gca,'Xtick',[],'Ytick',[])
-
-figure(2); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
-plot(datatable2(:,1),datatable2(:,3),'bo','linewidth',2);
-set(gca,'Xtick',[],'Ytick',[])
-
-figure(3); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
-plot(datatable3(:,1),datatable3(:,3),'bo','linewidth',2);
-set(gca,'Xtick',[],'Ytick',[])
-
-figure(4); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
-plot(datatable4(:,1),datatable4(:,3),'bo','linewidth',2);
-set(gca,'Xtick',[],'Ytick',[])
-
-figure(5); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
-plot(datatable5(:,1),datatable5(:,3),'bo','linewidth',2);
-set(gca,'Xtick',[],'Ytick',[])
+figure(1);clf;
+colors = colormap(lines(5)) ;
+% load ..\Data\bakers_passiveStretch_20ms.mat
+% datatable5 = datatable;
+% load ..\Data\bakers_passiveStretch_100ms.mat
+% datatable4 = datatable;
+% load ..\Data\bakers_passiveStretch_1000ms.mat
+% datatable3 = datatable;
+% load ..\Data\bakers_passiveStretch_10000ms.mat
+% datatable2 = datatable;
+% load ..\Data\bakers_passiveStretch_100000ms.mat
+% datatable1 = datatable;
+% 
+% 
+% figure(1); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+% plot(datatable1(:,1),datatable1(:,3),'bo-','linewidth',1);
+% set(gca,'Xtick',[],'Ytick',[])
+% 
+% figure(2); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+% plot(datatable1(:,1),datatable1(:,3),'bo-','linewidth',1);
+% set(gca,'Xtick',[],'Ytick',[])
+% 
+% figure(3); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+% plot(datatable1(:,1),datatable1(:,3),'bo-','linewidth',1);
+% set(gca,'Xtick',[],'Ytick',[])
+% 
+% figure(4); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+% plot(datatable1(:,1),datatable1(:,3),'bo-','linewidth',1);
+% set(gca,'Xtick',[],'Ytick',[])
+% 
+% figure(5); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+% plot(datatable1(:,1),datatable1(:,3),'bo-','linewidth',1);
+% set(gca,'Xtick',[],'Ytick',[])
 
 ks     = 15;
 del_U  = 0.02; % (vary del_U and alphaL together)
@@ -49,7 +50,7 @@ for i = 1:5
   V = Vlist(i);
   Tend_ramp = Lmax/V; % length of ramp
   [t1,x1] = ode15s(@dPdT,2+[0 Tend_ramp],x0,opts,N,V,del_U,alphaL);
-  [t2,x2] = ode15s(@dPdT,2+[Tend_ramp 1200],x1(end,:),opts,N,0,del_U,alphaL);
+  [t2,x2] = ode15s(@dPdT,2+[Tend_ramp 198],x1(end,:),opts,N,0,del_U,alphaL);
 
   t = [t1; t2];
   x = [x1; x2];
@@ -71,16 +72,23 @@ for i = 1:5
 
   PeakModel(i,:) = [0.4/V max(T)];
 
-  figure(i); plot(t,T,'r-','LineWidth',2);
-  axis([0 202 0 12])
+  datatable = load(['../data/bakers_passiveStretch_' num2str(Tend_ramp*1000) 'ms.mat']).datatable;
+
+  % subplot(5, 1, i);cla;
+  semilogx(datatable(:,1),datatable(:,3), 'o-','Color', colors(i, :), 'Linewidth', 1);
+  hold on;
+  semilogx(t,T, '--', 'Color', max(colors(i, :)*0.8, 0), 'LineWidth',3);
+
+  axis([0 202 0 16])
   ylabel('Stress (kPa)')
   set(gca,'Xtick',0:50:200)
-  set(gca,'Xticklabel',[])
+  set(gca,'Ytick',0:5:15)
+  % set(gca,'Xticklabel',[])
   set(gca,'Fontsize',14)
 
 end
 
-figure(5); set(gca,'Xticklabel',0:50:200)
+% figure(5); set(gca,'Xticklabel',0:50:200)
 xlabel('time (sec.)')
 
 
