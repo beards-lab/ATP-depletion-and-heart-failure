@@ -1,27 +1,55 @@
 clear
 
-figure(1); 
-figure(2); clf; % hold on; box on;
-% figure(3); clf; hold on
+load Data\bakers_passiveStretch_20ms.mat
+datatable5 = datatable;
+load Data\bakers_passiveStretch_100ms.mat
+datatable4 = datatable;
+load Data\bakers_passiveStretch_1000ms.mat
+datatable3 = datatable;
+load Data\bakers_passiveStretch_10000ms.mat
+datatable2 = datatable;
+load Data\bakers_passiveStretch_100000ms.mat
+datatable1 = datatable;
 
-ks    = 400;
-del_U = 0.015;
 
-N = 24;
+figure(1); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+plot(datatable1(:,1),datatable1(:,3),'bo','linewidth',2);
+set(gca,'Xtick',[],'Ytick',[])
+
+figure(2); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+plot(datatable2(:,1),datatable2(:,3),'bo','linewidth',2);
+set(gca,'Xtick',[],'Ytick',[])
+
+figure(3); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+plot(datatable3(:,1),datatable3(:,3),'bo','linewidth',2);
+set(gca,'Xtick',[],'Ytick',[])
+
+figure(4); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+plot(datatable4(:,1),datatable4(:,3),'bo','linewidth',2);
+set(gca,'Xtick',[],'Ytick',[])
+
+figure(5); clf; axes('position',[0.15 0.25 0.8 0.25]); hold on; box on;
+plot(datatable5(:,1),datatable5(:,3),'bo','linewidth',2);
+set(gca,'Xtick',[],'Ytick',[])
+
+ks     = 15;
+del_U  = 0.02; % (vary del_U and alphaL together)
+alphaL = 0.10*3000; % length-dependent unfolding rate
+
+Lmax = 0.4;
+N = ceil(Lmax/del_U);
 P = zeros(N,1);
 x0 = [P; 0];
 
-Vlist = [1 10 100 1000 5000]*0.40/100; %  half-sarcomere velocity
+Vlist = [1 10 100 1000 5000]*Lmax/100; %  half-sarcomere velocity
 
 opts = odeset('MaxStep',0.1);
 
-rds = [100, 10, 1, 0.1, 0.02];
-colors = colormap(lines(length(rds)));
 for i = 1:5
   V = Vlist(i);
-  Tend_ramp = 0.4/V; % length of ramp
-  [t1,x1] = ode15s(@dPdT,2+[0 Tend_ramp],x0,opts,N,V,del_U);
-  [t2,x2] = ode15s(@dPdT,2+[Tend_ramp 1200],x1(end,:),opts,N,0,del_U);
+  Tend_ramp = Lmax/V; % length of ramp
+  [t1,x1] = ode15s(@dPdT,2+[0 Tend_ramp],x0,opts,N,V,del_U,alphaL);
+  [t2,x2] = ode15s(@dPdT,2+[Tend_ramp 1200],x1(end,:),opts,N,0,del_U,alphaL);
 
   t = [t1; t2];
   x = [x1; x2];
@@ -29,40 +57,32 @@ for i = 1:5
 
   % forces
   PF    = 1 - sum(x(:,1:N)')'; % probability that whole chain is folded
-  T     = ks*PF.*L.^4 + (L+0.65).^6; % force due to 100% folded fraction PLUS OFFSET
+  T     = ks*PF.*L.^1.35; % force due to 100% folded fraction
 
   for j = 1:length(t)
-    T(j) = T(j) + ks*sum(x(j,1:N).* max( 0,L(j) - del_U*(1:N) ).^4 );
+    T(j) = T(j) + ks*sum(x(j,1:N).* max( 0,L(j) - del_U*(1:N) ).^1.35 );
   end
-  T = T + 100*L.^4;
+  T = T + 150*L.^4;
 
   % viscous force to help get peak in fast ramps
-  T(1:length(t1)) = T(1:length(t1)) + 0.1*V;
-  
-  figure(2);
-  semilogx(t,T, '--', 'Color', colors(i, :), 'LineWidth',3);
-  hold on;
-  rd = rds(i);
-    datatable = load(['../data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']).datatable;
-    [~, i_peak] = max(datatable(:, 3));
-    zone = i_peak:length(datatable(:, 1));
-    timebase = datatable(zone, 1) - datatable(zone(1), 1);
-    fbase = datatable(zone, 3);
-    t_data = datatable(:, 1);
-    f_data = datatable(:, 3);
-    hold on;
-    % curtting off the offset?
-    semilogx(t_data, f_data, 'Color', colors(i, :), 'Linewidth', 2);
-
-
-%   figure(3); plot(log10(t),T)
+  T(1:length(t1)) = T(1:length(t1)) + 0.3*V;
+  t = [t(1); t];
+  T = [0; T];
 
   PeakModel(i,:) = [0.4/V max(T)];
 
+  figure(i); plot(t,T,'r-','LineWidth',2);
+  axis([0 202 0 12])
+  ylabel('Stress (kPa)')
+  set(gca,'Xtick',0:50:200)
+  set(gca,'Xticklabel',[])
+  set(gca,'Fontsize',14)
+
 end
 
-figure(1); plot(t,x(:,1:N),2+[Tend_ramp Tend_ramp],[0 1],'k--')
-title('state probabilities versus time for last ramp')
+figure(5); set(gca,'Xticklabel',0:50:200)
+xlabel('time (sec.)')
+
 
 PeakData =[
 0.02	14.1969	3.926472727
@@ -74,10 +94,22 @@ PeakModel
 
 
 figure(6); semilogx(PeakData(:,1),PeakData(:,2),'o',PeakModel(:,1),PeakModel(:,2),'r-','LineWidth',2)
-title('Peak tension vs. ramp speed')
-figure(7); semilogy(t,T - 100*0.4^4)
-title('semilog Y plot tension vs. time')
-figure(8); loglog(t,T - 100*0.4^4)
-title('log log plot tension vs. time')
-figure(2); axis([0 202 0 12])
-title('linear plot total tension versus time')
+ylabel('Peak stress (kPa)')
+xlabel('Ramp time (sec.)')
+set(gca,'Fontsize',14)
+legend('data','model')
+% 
+% 
+% figure(7); semilogy(t,T - 125*0.4^4)
+% title('semilog Y plot tension vs. time')
+% 
+% figure(8); loglog(t,T - 125*0.4^4)
+% title('log log plot tension vs. time')
+% 
+% figure(2); axis([0 202 0 12])
+% ylabel('Stress (kPa)')
+% xlabel('time (sec.)')
+% set(gca,'Fontsize',16)
+
+
+
