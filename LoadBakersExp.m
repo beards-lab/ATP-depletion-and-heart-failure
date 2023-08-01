@@ -408,7 +408,7 @@ figure(11);
 figure(12); 
 subplot(121); legend('20 ms', '100 ms', '1000 ms', '10 s', '100 s', 'location', 'Northwest')
 
-%% Fit decay of the strecth
+%% Fit decay of the stretch data - loop for any param
 % start with the slowest one
 
 
@@ -422,31 +422,72 @@ rd = 0.02; % experiment length in s
 rds = [0.02, 0.1, 1, 10, 100];
 colors = colormap(lines(length(rds)));
 ss_rmse = [];
-sa= [2:0.01:2.1];
+% sa = [2:0.01:2.1];
+sa = [0.1:0.005:0.16];
 for ss = sa
-    %%
+%% Loop for all ramps only
 figure(1);clf;
 rmse = [];
     for rd_i = 1:length(rds)
     rd = rds(rd_i);
 datatable = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']).datatable;
+
 [~, i_peak] = max(datatable(:, 3));
 dataplotpoints = 1:1:length(datatable(:, 1));
 zone = i_peak:length(datatable(:, 1));
 timebase = datatable(zone, 1) - datatable(zone(1), 1);
+extrap_time = [timebase; timebase(end) + (1:10:(60*30))'];
 fbase = datatable(zone, 3);
 % this fits the fastest one pretty well
 % y_dec = @(a, b, c, d, e, x)a*x.^(-b) + c + 0*a*b*c*d*e;
+% exploring the steady state param
+% y_dec = @(a, b, c, d, e, x)a*x.^(-b) +ss+ 0*c*d*e;
+% exploring the exponent param with constsnt offset
+y_dec = @(a, b, c, d, e, x)a*x.^(-b) +2.04 + 0*d*exp(-x*e)+ 0*a*b*c*d*e;
 
-y_dec = @(a, b, c, d, e, x)a*x.^(-b) +ss+ 0*c*d*e;
 
-
-
-[ae be] = fit(timebase(2:end), fbase(2:end), y_dec, 'StartPoint', [1, 1, 3.750, -1, 0.01]);
-% loglog(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
-% loglog(datatable(zone, 1), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, timebase), '--','Linewidth', 4, 'Color', colors(rd_i, :));
+[ae be] = fit(timebase(2:end), fbase(2:end), y_dec, 'StartPoint', [1, 1, 3.750, 0, 1]);
 rmse(rd_i) = be.rmse;
-fitparam.a(rd_i) = ae.a;fitparam.b(rd_i) = ae.b;fitparam.c(rd_i) = ae.c;
+fitparam.a(rd_i) = ae.a;fitparam.b(rd_i) = ae.b;fitparam.c(rd_i) = ae.c;fitparam.d(rd_i) = ae.d;fitparam.e(rd_i) = ae.e;
+%%
+% t = datatable(dataplotpoints, 1);
+% f = datatable(dataplotpoints, 3);
+% plot data
+% clf;
+% hold on;
+% plot(t, f);
+% loglog(t, f-2.04);
+% semilog(t, f);
+%%
+% plot(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
+semilogx(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
+% plot fit
+semilogx(extrap_time+datatable(zone(1), 1), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, extrap_time), '--','Linewidth', 4, 'Color', colors(rd_i, :));
+
+% clf;loglog(timebase, fbase-2.04);hold on;
+%% redo as differential equation
+a = fitparam.a(rd_i);
+b = fitparam.b(rd_i);
+c = 2.04;
+
+dxdt = @(t, x) -b*(x-c)/t;
+dxd =  @(~, y) -b/(a^(1/b))*(y-c)^(1 + 1/b); 
+% dxdt = -b*x/t;
+% clf;
+% semilogx(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
+
+
+% for m = 2.8:0.1:3.2
+    % m = 3;
+x0 = a*extrap_time(2)^(-b) + c;
+[t, x] = ode15s(dxdt, [extrap_time(2), extrap_time(end)], x0);
+[t2, x2] = ode15s(dxd, [extrap_time(2), extrap_time(end)], x0);
+
+% semilogx(t + 2 + rds(rd_i), x, 'k:')
+% semilogx(t2 + 2 + rds(rd_i), x2, 'k--', LineWidth=2);
+
+% end
+
 
 end
 legend('0.02s data', sprintf('0.02s fit, rmse %0.2f', rmse(1)),...
@@ -455,19 +496,100 @@ legend('0.02s data', sprintf('0.02s fit, rmse %0.2f', rmse(1)),...
     '10s data', sprintf('10s fit, rmse %0.2f', rmse(4)),...
     '100s data', sprintf('100s fit, rmse %0.2f', rmse(5))...
     );
+title(sprintf('OVerall fit: %0.2f', sum(rmse)));
 figure(2);clf;
-semilogx(rds, fitparam.a, 'o-',rds, fitparam.b, 'o-',rds, fitparam.c, 'o-');
-legend('Optimized a', 'Optimized b', 'Optimized c')
+% semilogx(rds, fitparam.a, 'o-',rds, fitparam.b, 'o-',rds, fitparam.c, 'o-');
+semilogx(rds, fitparam.a, 'o-',rds, fitparam.b, 'o-',rds, fitparam.d, 'o-',rds, fitparam.e, 'o-');
+legend('Optimized a', 'Optimized b', 'Optimized c', 'd', 'e')
 xlabel('Ramp duration');
+title('Optimized parameter values for different ramp durations');
 ss_rmse = [ss_rmse sum(rmse)];
-ss
-sum(rmse)
+% ss
 end
 figure(3);clf;
 plot(sa, ss_rmse, 'x-', 'LineWidth',2);
 % fix the 'a' param
 % [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
 % plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
+%% Fit the pCa4 passive experiments
+datatable = readtable('data/pCa4_008.txt', 'filetype', 'text', 'NumHeaderLines',4);
+datatable.Properties.VariableNames = {'t', 'L','F'};
+t_rs = fliplr([186.32, 430.73, 585.82, 730.81]); % ramp start time
+t_rd = [0.1, 1, 10, 100]; % ramp duration time
+t_re = t_rs + t_rd; % ramp end time
+t_rec = t_re + 30; % end of recover
+
+figure(1);clf;
+plot(datatable.t, datatable.F, datatable.t, datatable.L*10)
+colors = colormap(lines(length(t_rs)));
+%%
+figure(2);clf;
+for i_ramp = 1:length(t_rs)
+    rampZone = find(datatable.t >= t_rs(i_ramp) & datatable.t < t_rec(i_ramp));
+    peakZone = find(datatable.t >= t_re(i_ramp) & datatable.t < t_rec(i_ramp));
+    timebase = datatable.t(rampZone) - datatable.t(rampZone(1));
+    peakTimebase = datatable.t(peakZone) - datatable.t(peakZone(1));
+    % extrap_time = [timebase; timebase(end) + (1:10:(60*30))'];
+    fbase = datatable.F(rampZone);
+    peakFbase = datatable.F(peakZone);
+    
+    % plot data
+    semilogx(peakTimebase, peakFbase, 'Color', colors(i_ramp, :));hold on;
+    % semilogx(timebase, fbase, 'Color', colors(i_ramp, :));hold on;
+
+    % fit
+    % same function as without PNB, does not fit well
+    % y_dec = @(a, b, c, d, e, x)a*x.^(-b) + 3.3 + 2.04 + 0*a*b*c*d*e;
+    % not a great fit using the params identified by the resting experiment
+    % y_dec = @(a, b, c, d, e, x)fitparam.a(i_ramp+1)*x.^(-fitparam.b(i_ramp+1)) + 2.04 + 3.3 + d*exp(-x*e) + 0*a*b*c*d*e;
+    % y_dec = @(a, b, c, d, e, x)fitparam.a(i_ramp+1)*x.^(-fitparam.b(i_ramp+1)) + 2.04 + 3.3 + d*x.^(-e) + 0*a*b*c*d*e;
+    % best fit, with clamped offset
+    offset =  3.3 + 2.04 ;
+    y_dec = @(a, b, c, d, e, x)a*x.^(-b) + offset+ d*exp(-x*e) + 0*a*b*c*d*e;
+    
+    [ae be] = fit(peakTimebase(2:end), peakFbase(2:end), y_dec, 'StartPoint', [1, 1, 0, 0.1, 1], 'Lower', [0 0 1, 0, 0], 'Upper', [10, 1, 5, 10, 1]);
+    rmse(i_ramp) = be.rmse;
+    fitparam.pnba(i_ramp) = ae.a;fitparam.pnbb(i_ramp) = ae.b;fitparam.pnbc(i_ramp) = ae.c;fitparam.pnbd(i_ramp) = ae.d;fitparam.pnbe(i_ramp) = ae.e;
+    
+    % plot fit
+    % semilogx(peakTimebase + datatable.t(peakZone(1)) - datatable.t(rampZone(1)), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, peakTimebase), '--','Linewidth', 4, 'Color', max(0, colors(i_ramp, :)-0.2));
+    semilogx(peakTimebase, y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, peakTimebase), '--','Linewidth', 4, 'Color', max(0, colors(i_ramp, :)-0.2));
+end
+legend('0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(1)),...
+    '1s data', sprintf('1s fit, rmse %0.2f', rmse(2)),...
+    '10s data', sprintf('10s fit, rmse %0.2f', rmse(3)),...
+    '100s data', sprintf('100s fit, rmse %0.2f', rmse(4))...
+    );
+title(sprintf('PNB overall fit: %0.2f', sum(rmse)));
+xlabel('time (s)');ylabel('Tension (kPa)');
+sum(rmse)
+%% plot param fit
+figure(3);clf;
+loglog(rds, fitparam.a, rds, fitparam.b, Marker="s", LineWidth=2);hold on;
+set(gca, "colororderindex", 1);
+loglog(t_rd, fitparam.pnba, t_rd, fitparam.pnbb, t_rd, fitparam.pnbc, t_rd, fitparam.pnbd, t_rd, fitparam.pnbe, Marker="o", LineStyle="--", LineWidth=2);hold on;
+legend('Resting a', 'Resting b','PNB a','PNB b','PNB c','PNB d','PNB e');
+xlabel('Ramp duration');title('Values of identified parameters');
+
+figure(4);clf;
+for i_rd =1:length(t_rd)
+    rd = t_rd(i_rd);
+    t = rd:rd:min(200, rd*10);
+    f_pow = y_dec(fitparam.pnba(i_rd), fitparam.pnbb(i_rd), 0, 0, 0, max(1e-2, t-rd)) - offset;
+    f_exp = y_dec(0, 0, 0, fitparam.pnbd(i_rd), fitparam.pnbe(i_rd), max(1e-1, t-rd)) - offset;
+    % area(repmat(t+rd, [3, 1]), [f_exp; f_pow; repmat(offset, [1, length(t)])]);
+    
+    
+    area(t, offset + f_pow + f_exp, FaceColor=colors(1, :));
+    hold on;
+    plot(t, offset + f_pow + f_exp, 'kv--');
+    area(t, offset + f_pow, FaceColor=colors(2, :));
+    area(t, repmat(offset, [length(t), 1]), FaceColor=colors(3, :));
+    plot([rd, rd], [0,offset + f_pow(1) + f_exp(1)], 'k-', LineWidth=2);
+end
+set (gca, 'Xscale', 'log');
+title('Composition of decay response');
+legend('d.exp(-e.x)', 'a.x^{-b}', 'const')
 %% plot semilog
 
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
