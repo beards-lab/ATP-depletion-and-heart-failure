@@ -15,7 +15,7 @@ datatable1 = datatable;
 
 
 Lmax = 0.4;
-Ls0  = 0.10;
+Ls0  = 0.10*mod(13);
 Nx   = 25;          % number of space steps
 ds   = (0.36-Ls0)/(Nx-1);      % space step size
 s  = (0:1:Nx-1)'.*ds; % strain vector
@@ -104,8 +104,8 @@ for j = [1 2 3 4 5]
   % Force{j} = Force{j} + 0.0045*(1.6 + 2*Length{j}).^7;
 
   % decay offset is set, now use a nonlinear func to fit the ramp onset
-  % a*(b + Lmax).^c + d = 1.2716*3;
-  % a*(b + Lmax).^c = 1.2716*3 - d;
+  % a*(-b + Lmax).^c + d = 1.2716*3;
+  % a*(-b + Lmax).^c = 1.2716*3 - d;
   b = 0.05*mod(10);
   c = 7*mod(11);
   d = 0.01*mod(12);
@@ -116,10 +116,10 @@ for j = [1 2 3 4 5]
   end
   % calculate a, so that the max value is the same
   % Fss = mod(10)*3; % optimized previously
-  Fss = 1.2716*3; % reducing the param space
-  a = (Fss - d)/((b+Lmax)^c);
+  Fss = 1.2716*3*mod(14); % reducing the param space
+  a = (Fss - d)/((Lmax -b)^c);
   % calc force
-  Force{j} = Force{j} + a*(b + Length{j}).^c + d; 
+  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
 
   Time{j} = t;
 
