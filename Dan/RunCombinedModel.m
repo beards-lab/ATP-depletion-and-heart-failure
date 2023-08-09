@@ -76,9 +76,14 @@ for j = [1 2 3 4 5]
   Tend_ramp = Lmax/V; % length of ramp
   [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
+  
+  % whole decay till the bitter end
   % [t2,x2] = ode15s(@dXdT,[Tend_ramp min(200, Tend_ramp*4)],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
-  [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
-%   [t3,x3] = ode15s(@dXdT,[2*Tend_ramp:1:200],x2(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  
+  % only ramp up, no decay
+  % [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  x2 = [];t2 = []; 
+
   t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
   x = [x1; x2(2:end, :)];
 
@@ -94,9 +99,26 @@ for j = [1 2 3 4 5]
   end
 
   % add parallel static force
-  Force{j} = Force{j} + mod(10)*3;
+  % Force{j} = Force{j} + mod(10)*3;
   % Force{j} = Force{j} + 130*(Length{j}).^4;
   % Force{j} = Force{j} + 0.0045*(1.6 + 2*Length{j}).^7;
+
+  % decay offset is set, now use a nonlinear func to fit the ramp onset
+  % a*(b + Lmax).^c + d = 1.2716*3;
+  % a*(b + Lmax).^c = 1.2716*3 - d;
+  b = 0.05*mod(11);
+  c = 7*mod(12);
+  d = 0.01*mod(13);
+  % apply constraints
+  if b < 0 || c <= 0 || d < 0 
+      cost = inf;
+      return;
+  end
+  % calculate a, so that the max value is the same
+  a = (mod(10)*3 - d)/((b+Lmax)^c);
+  % calc force
+  Force{j} = Force{j} + a*(b + Length{j}).^c + d; 
+
   Time{j} = t;
 
 end
@@ -104,7 +126,7 @@ end
 % Get error for the whole ramp-up and decay
 Tend_rampset = zeros(1, 5);
 % alternatively, get the error from decay only
-Tend_rampset = Lmax./Vlist + 2;
+% Tend_rampset = Lmax./Vlist + 2;
 
 %%
 datatable = datatable1; j = 1; % set the variable
@@ -165,7 +187,7 @@ end
 
 Ep = sum((PeakData(2:4, 2) - PeakModel(2:4)').^2);
 
-cost = Ep*100 + sum([En{1:end}], 'all');
+cost = 0*Ep*100 + sum([En{1:end}], 'all');
 
 
 if exist('drawPlots', 'var') && ~drawPlots
