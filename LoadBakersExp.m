@@ -348,10 +348,11 @@ figure(13);semilogy(datatable(:, 1), datatable(:, 3), 'LInewidth', 2);
 figure(14);plot(datatable(1:end-1, 1), diff(abs(log10(datatable(:, 3)))), 'LInewidth', 2);
 figure(11);
 %%
-
+ML = 2.0;
 el = 1000; % experiment length in ms
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2000+el*2 + el*40];
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
+ts_s = [0, 200000];
 % ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el, 2000 + el:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/2):200000];
 data_table = readtable('data/1s_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, 5, 1, 'bakers_passiveStretch_1000ms');
@@ -413,7 +414,7 @@ subplot(121); legend('20 ms', '100 ms', '1000 ms', '10 s', '100 s', 'location', 
 
 
 % ts_d = [-5000, 0:500:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el):200000];
-rd = 0.02; % experiment length in s
+rd = 1; % experiment length in s
 % ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
 % data_table = readtable('data/20ms_4.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
@@ -520,7 +521,9 @@ t_re = t_rs + t_rd; % ramp end time
 t_rec = t_re + 30; % end of recover
 
 figure(1);clf;
-plot(datatable.t, datatable.F, datatable.t, datatable.L*10)
+subplot(211);plot(datatable.t, datatable.L);legend('Length (L0)');
+subplot(212);plot(datatable.t, datatable.F);legend('Tension') ;
+xlabel('Time (s)')
 colors = colormap(lines(length(t_rs)));
 %%
 figure(2);clf;

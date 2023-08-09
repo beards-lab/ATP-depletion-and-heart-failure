@@ -62,7 +62,7 @@ tic
 Force = cell(1, 5); 
 Time = cell(1, 5); 
 Length = cell(1, 5); 
-for j = [2 3 4]
+for j = [1 2 3 4 5]
   V = Vlist(j);
 
   pu = zeros(Nx,1)*PU;
@@ -76,7 +76,8 @@ for j = [2 3 4]
   Tend_ramp = Lmax/V; % length of ramp
   [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
-  [t2,x2] = ode15s(@dXdT,[Tend_ramp min(200, Tend_ramp*4)],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  % [t2,x2] = ode15s(@dXdT,[Tend_ramp min(200, Tend_ramp*4)],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
 %   [t3,x3] = ode15s(@dXdT,[2*Tend_ramp:1:200],x2(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
   x = [x1; x2(2:end, :)];
@@ -93,30 +94,59 @@ for j = [2 3 4]
   end
 
   % add parallel static force
-  % Force{j} = Force{j} + 130*(1.6 + 2*Length{j}).^4;
-  Force{j} = Force{j} + 0.0045*(1.6 + 2*Length{j}).^7;
+  Force{j} = Force{j} + mod(10)*3;
+  % Force{j} = Force{j} + 130*(Length{j}).^4;
+  % Force{j} = Force{j} + 0.0045*(1.6 + 2*Length{j}).^7;
   Time{j} = t;
 
 end
+
+% Get error for the whole ramp-up and decay
+Tend_rampset = zeros(1, 5);
+% alternatively, get the error from decay only
+Tend_rampset = Lmax./Vlist + 2;
+
+%%
+datatable = datatable1; j = 1; % set the variable
+datatable = datatable(datatable(:, 1) >= Tend_rampset(j), :);
+t_int{j} = datatable(:, 1) - 2;
+Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
+Es = (Ftot_int{j} - datatable(:,3)).^2; % error set
+Es(isnan(Es)) = 0; % zero outside bounds
+En{j} = 1e3*sum(Es)/length(Es); % normalized error
+
 %%
 datatable = datatable2; j = 2; % set the variable
-Ftot_int{j} = interp1(Time{j}+2, Force{j}, datatable(:,1)); % total force interpolated
+datatable = datatable(datatable(:, 1) >= Tend_rampset(j), :);
+t_int{j} = datatable(:, 1) - 2;
+Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
 Es = (Ftot_int{j} - datatable(:,3)).^2; % error set
 Es(isnan(Es)) = 0; % zero outside bounds
 En{j} = 1e3*sum(Es)/length(Es); % normalized error
 %%
 datatable = datatable3; j = 3; % set the variable
-Ftot_int{j} = interp1(Time{j}+2, Force{j}, datatable(:,1)); % total force interpolated
+datatable = datatable(datatable(:, 1) >= Tend_rampset(j), :);
+t_int{j} = datatable(:, 1) - 2;
+Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
 Es = (Ftot_int{j} - datatable(:,3)).^2; % error set
 Es(isnan(Es)) = 0; % zero outside bounds
 En{j} = 1e3*sum(Es)/length(Es); % normalized error
 
 datatable = datatable4; j = 4; % set the variable
-Ftot_int{j} = interp1(Time{j}+2, Force{j}, datatable(:,1)); % total force interpolated
+datatable = datatable(datatable(:, 1) >= Tend_rampset(j), :);
+t_int{j} = datatable(:, 1) - 2;
+Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
 Es = (Ftot_int{j} - datatable(:,3)).^2; % error set
 Es(isnan(Es)) = 0; % zero outside bounds
 En{j} = 1e3*sum(Es)/length(Es); % normalized error
 
+datatable = datatable5; j = 5; % set the variable
+datatable = datatable(datatable(:, 1) >= Tend_rampset(j), :);
+t_int{j} = datatable(:, 1) - 2;
+Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
+Es = (Ftot_int{j} - datatable(:,3)).^2; % error set
+Es(isnan(Es)) = 0; % zero outside bounds
+En{j} = 1e3*sum(Es)/length(Es); % normalized error
 
 PeakData =[
 100	    4.772521951	3.826958537
@@ -135,23 +165,31 @@ end
 
 Ep = sum((PeakData(2:4, 2) - PeakModel(2:4)').^2);
 
-cost = Ep*10 + sum([En{1:end}], 'all');
+cost = Ep*100 + sum([En{1:end}], 'all');
 
-%%
+
 if exist('drawPlots', 'var') && ~drawPlots
     return;
 end
+%%
 figure(1); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
 plot(datatable1(:,1)-2,datatable1(:,3),'bo','linewidth',2);
+plot(t_int{1},Ftot_int{1},'ro','linewidth',1);
 plot(Time{1},Force{1},'linewidth',2); axis([0 200 0 15])
 ylabel('Stress (kPa)')
 xlabel('time (sec.)')
 set(gca,'Xtick',0:50:200)
 set(gca,'Fontsize',14)
-%%
+axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
+plot(datatable1(:,1)-2,datatable1(:,3),'bo','linewidth',2);
+plot(t_int{1},Ftot_int{1},'-ro','linewidth',1);
+% plot(Time{2},Force{2},'linewidth',2); 
+axis([0 200 0 10])
+
+
 figure(2); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
 plot(datatable2(:,1)-2,datatable2(:,3),'bo','linewidth',2);
-plot(datatable2(:,1)-2,Ftot_int{2},'ro','linewidth',1);
+plot(t_int{2},Ftot_int{2},'ro','linewidth',2);
 plot(Time{2},Force{2},'linewidth',2); axis([0 200 0 15])
 % plot(datatable2(:,1), Es);
 ylabel('Stress (kPa)')
@@ -160,13 +198,14 @@ set(gca,'Xtick',0:50:200)
 set(gca,'Fontsize',14)
 axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
 plot(datatable2(:,1)-2,datatable2(:,3),'bo','linewidth',2);
-plot(datatable2(:,1)-2,Ftot_int{2},'-ro','linewidth',1);
+plot(t_int{2},Ftot_int{2},'ro','linewidth',1);
+% plot(t_int{2},Es,'--','linewidth',1);
 % plot(Time{2},Force{2},'linewidth',2); 
-axis([0 20 0 10])
-%%
+axis([0 20 0 15])
+
 figure(3); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
 plot(datatable3(:,1)-2,datatable3(:,3),'bo','linewidth',2);
-plot(datatable3(:,1)-2,Ftot_int{3},'ro','linewidth',1);
+plot(t_int{3},Ftot_int{3},'ro','linewidth',0.5);
 plot(Time{3},Force{3},'linewidth',2); axis([0 200 0 15])
 ylabel('Stress (kPa)')
 xlabel('time (sec.)')
@@ -174,31 +213,35 @@ set(gca,'Xtick',0:50:200)
 set(gca,'Fontsize',14)
 axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
 plot(datatable3(:,1)-2,datatable3(:,3),'bo','linewidth',2);
-plot(datatable3(:,1)-2,Ftot_int{3},'ro','linewidth',1);
+plot(t_int{3},Ftot_int{3},'ro','linewidth',1);
 plot(Time{3},Force{3},'linewidth',2); axis([0 2 0 15])
 
 figure(4); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
 plot(datatable4(:,1)-2,datatable4(:,3),'bo','linewidth',2);
 plot(Time{4},Force{4},'linewidth',2); axis([0 200 0 15])
-plot(datatable4(:,1)-2,Ftot_int{4},'ro','linewidth',1);
+plot(t_int{4},Ftot_int{4},'ro','linewidth',0.5);
+% plot(t_int{4},Es,'--','linewidth',1);
 ylabel('Stress (kPa)')
 xlabel('time (sec.)')
 set(gca,'Xtick',0:50:200)
 set(gca,'Fontsize',14)
 axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
 plot(datatable4(:,1)-2,datatable4(:,3),'bo','linewidth',2);
-plot(datatable4(:,1)-2,Ftot_int{4},'ro','linewidth',1);
+plot(t_int{4},Ftot_int{4},'ro','linewidth',1);
 plot(Time{4},Force{4},'linewidth',2); axis([0 0.20 0 15])
 
 figure(5); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
 plot(datatable5(:,1)-2,datatable5(:,3),'bo','linewidth',2);
 plot(Time{5},Force{5},'linewidth',2); axis([0 200 0 15])
+plot(t_int{5},Ftot_int{5},'ro','linewidth',0.5);
+% plot(t_int{5},Es,'--','linewidth',1);
 ylabel('Stress (kPa)')
 xlabel('time (sec.)')
 set(gca,'Xtick',0:50:200)
 set(gca,'Fontsize',14)
 axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
 plot(datatable5(:,1)-2,datatable5(:,3),'bo','linewidth',2);
+plot(t_int{5},Ftot_int{5},'ro','linewidth',1);
 plot(Time{5},Force{5},'linewidth',2); axis([0 0.04 0 15])
 
 figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
