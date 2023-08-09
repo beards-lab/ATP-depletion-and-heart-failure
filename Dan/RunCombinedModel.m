@@ -78,11 +78,11 @@ for j = [1 2 3 4 5]
   [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
   
   % whole decay till the bitter end
+  [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  % limited decay
   % [t2,x2] = ode15s(@dXdT,[Tend_ramp min(200, Tend_ramp*4)],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
-  
-  % only ramp up, no decay
-  % [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
-  x2 = [];t2 = []; 
+  % only ramp up, no decay  
+  % x2 = [];t2 = []; 
 
   t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
   x = [x1; x2(2:end, :)];
@@ -106,16 +106,18 @@ for j = [1 2 3 4 5]
   % decay offset is set, now use a nonlinear func to fit the ramp onset
   % a*(b + Lmax).^c + d = 1.2716*3;
   % a*(b + Lmax).^c = 1.2716*3 - d;
-  b = 0.05*mod(11);
-  c = 7*mod(12);
-  d = 0.01*mod(13);
+  b = 0.05*mod(10);
+  c = 7*mod(11);
+  d = 0.01*mod(12);
   % apply constraints
   if b < 0 || c <= 0 || d < 0 
       cost = inf;
       return;
   end
   % calculate a, so that the max value is the same
-  a = (mod(10)*3 - d)/((b+Lmax)^c);
+  % Fss = mod(10)*3; % optimized previously
+  Fss = 1.2716*3; % reducing the param space
+  a = (Fss - d)/((b+Lmax)^c);
   % calc force
   Force{j} = Force{j} + a*(b + Length{j}).^c + d; 
 
@@ -187,7 +189,7 @@ end
 
 Ep = sum((PeakData(2:4, 2) - PeakModel(2:4)').^2);
 
-cost = 0*Ep*100 + sum([En{1:end}], 'all');
+cost = Ep*100 + sum([En{1:end}], 'all');
 
 
 if exist('drawPlots', 'var') && ~drawPlots
