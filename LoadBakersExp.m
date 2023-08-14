@@ -513,33 +513,77 @@ plot(sa, ss_rmse, 'x-', 'LineWidth',2);
 % [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
 % plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
 %% Fit the pCa4 passive experiments
-datatable = readtable('data/pCa4_008.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% datatable = readtable('data/pCa4_008.txt', 'filetype', 'text', 'NumHeaderLines',4);
+datatable = readtable('data/Relax_018.txt', 'filetype', 'text', 'NumHeaderLines',4);
 datatable.Properties.VariableNames = {'t', 'L','F'};
-t_rs = fliplr([186.32, 430.73, 585.82, 730.81]); % ramp start time
+
 t_rd = [0.1, 1, 10, 100]; % ramp duration time
+
+% ramp start time
+% for pCa4_008
+% t_rs = fliplr([186.32, 430.73, 585.82, 730.81]);
+% for Relax_018
+t_rs = fliplr([26, 270.45, 425.4, 570.42]);
+t_dd = ones(1, 4)*30; % decay duration + ramp-down duration
+d_rd = 10; % duration ramp-down
+d_zh = 10; % duration zero-hold
 t_re = t_rs + t_rd; % ramp end time
 t_rec = t_re + 30; % end of recover
 
+% zero-offset for pCa4_008
+% t0 = [0, 45, fliplr(t_rs) + fliplr(t_rd) + t_dd + d_rd];
+% zero-offset for Relax_018
+t0 = fliplr(t_rs) + fliplr(t_rd) + t_dd + d_rd;
+i_fzero = any(datatable.t > t0 & datatable.t < t0 + d_zh, 2);
+t_fzero = datatable.t(i_fzero);
+f_fzero = datatable.F(i_fzero);
+
+% fit a func
+y_f0 = @(a, b, x)a*x + b;
+    
+[ae be] = fit(t_fzero, f_fzero, y_f0, 'StartPoint', [.001, 2]);
+
+% zero level drift
+f_0 = y_f0(ae.a, ae.b, datatable.t);
+datatable.F = datatable.F - f_0;
+
 figure(1);clf;
-subplot(211);plot(datatable.t, datatable.L);legend('Length (L0)');
-subplot(212);plot(datatable.t, datatable.F);legend('Tension') ;
+subplot(211);plot(datatable.t, datatable.L);hold on;
+plot(datatable.t(i_fzero), datatable.L(i_fzero), '.');
+
+legend('Length (L0)');
+subplot(212);hold on;
+plot(datatable.t, datatable.F+f_0);
+plot(datatable.t(i_fzero), datatable.F(i_fzero)+f_0(i_fzero));
+plot(datatable.t, f_0, 'Linewidth', 2);
+plot(datatable.t, datatable.F);legend('Tension raw', 'zeros', 'zero drift approx', 'Tension clear') ;
+
 xlabel('Time (s)')
 colors = colormap(lines(length(t_rs)));
-%%
+
+pca = 'Inf'; % pCa level
 figure(2);clf;
+figure(3);clf;
 for i_ramp = 1:length(t_rs)
+   %% 
+    saveZone = find(datatable.t >= t_rs(i_ramp) - 2 & datatable.t < t_rec(i_ramp)); % time span to save wioth 2s steady state prior to ramp-up
+    el = t_rd(i_ramp)*1000;% experiment length in ms
+    % ts_d = [0:200:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2+el+30];
+    % saving as current ramp's datatable
+    
+    datatable_cur = datatable(saveZone, :);
+    datatable_cur.t = datatable_cur.t - datatable.t(saveZone(1));
+    writetable(datatable_cur, ['data/bakers_passiveStretch_pCa' num2str(pca) '_' num2str(t_rd(i_ramp)*1000) 'ms.csv']);
+
     rampZone = find(datatable.t >= t_rs(i_ramp) & datatable.t < t_rec(i_ramp));
     peakZone = find(datatable.t >= t_re(i_ramp) & datatable.t < t_rec(i_ramp));
     timebase = datatable.t(rampZone) - datatable.t(rampZone(1));
+
     peakTimebase = datatable.t(peakZone) - datatable.t(peakZone(1));
     % extrap_time = [timebase; timebase(end) + (1:10:(60*30))'];
     fbase = datatable.F(rampZone);
     peakFbase = datatable.F(peakZone);
     
-    % plot data
-    semilogx(peakTimebase, peakFbase, 'Color', colors(i_ramp, :));hold on;
-    % semilogx(timebase, fbase, 'Color', colors(i_ramp, :));hold on;
-
     % fit
     % same function as without PNB, does not fit well
     % y_dec = @(a, b, c, d, e, x)a*x.^(-b) + 3.3 + 2.04 + 0*a*b*c*d*e;
@@ -547,16 +591,26 @@ for i_ramp = 1:length(t_rs)
     % y_dec = @(a, b, c, d, e, x)fitparam.a(i_ramp+1)*x.^(-fitparam.b(i_ramp+1)) + 2.04 + 3.3 + d*exp(-x*e) + 0*a*b*c*d*e;
     % y_dec = @(a, b, c, d, e, x)fitparam.a(i_ramp+1)*x.^(-fitparam.b(i_ramp+1)) + 2.04 + 3.3 + d*x.^(-e) + 0*a*b*c*d*e;
     % best fit, with clamped offset
-    offset =  3.3 + 2.04 ;
-    y_dec = @(a, b, c, d, e, x)a*x.^(-b) + offset+ d*exp(-x*e) + 0*a*b*c*d*e;
+    offset =  2.04;
+    y_dec = @(a, b, c, d, e, x)a*x.^(-b) + offset + d*exp(-x*e) + 0*a*b*c*d*e;
     
     [ae be] = fit(peakTimebase(2:end), peakFbase(2:end), y_dec, 'StartPoint', [1, 1, 0, 0.1, 1], 'Lower', [0 0 1, 0, 0], 'Upper', [10, 1, 5, 10, 1]);
     rmse(i_ramp) = be.rmse;
     fitparam.pnba(i_ramp) = ae.a;fitparam.pnbb(i_ramp) = ae.b;fitparam.pnbc(i_ramp) = ae.c;fitparam.pnbd(i_ramp) = ae.d;fitparam.pnbe(i_ramp) = ae.e;
     
+    % plot data  - decay only
+    figure(2);   
+    semilogx(peakTimebase, peakFbase, 'Color', colors(i_ramp, :));hold on;
+    % semilogx(timebase, fbase, 'Color', colors(i_ramp, :));hold on;
+
     % plot fit
     % semilogx(peakTimebase + datatable.t(peakZone(1)) - datatable.t(rampZone(1)), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, peakTimebase), '--','Linewidth', 4, 'Color', max(0, colors(i_ramp, :)-0.2));
     semilogx(peakTimebase, y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, peakTimebase), '--','Linewidth', 4, 'Color', max(0, colors(i_ramp, :)-0.2));
+
+    figure(3);
+    semilogx(datatable_cur.t, datatable_cur.F);hold on;
+    semilogx(peakTimebase + 2 + t_rd(i_ramp), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, peakTimebase), '--', 'Color', colors(i_ramp, :), 'linewidth', 2);hold on;
+
 end
 legend('0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(1)),...
     '1s data', sprintf('1s fit, rmse %0.2f', rmse(2)),...
@@ -566,6 +620,7 @@ legend('0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(1)),...
 title(sprintf('PNB overall fit: %0.2f', sum(rmse)));
 xlabel('time (s)');ylabel('Tension (kPa)');
 sum(rmse)
+
 %% plot param fit
 figure(3);clf;
 loglog(rds, fitparam.a, rds, fitparam.b, Marker="s", LineWidth=2);hold on;
@@ -593,6 +648,45 @@ end
 set (gca, 'Xscale', 'log');
 title('Composition of decay response');
 legend('d.exp(-e.x)', 'a.x^{-b}', 'const')
+%% load the pCa experiments and save the peaks
+pca = [Inf, 4];
+t_rd = [0.1, 1, 10, 100];
+peaktable = table();
+i = 1;
+figure(45);clf;hold on;
+% figure(44);clf;hold on;
+for i_pca = 1:length(pca)
+    for i_ramp = 1:length(t_rd)
+        filename = ['data/bakers_passiveStretch_pCa' num2str(pca(i_pca)) '_' num2str(t_rd(i_ramp)*1000) 'ms.csv'];
+        datatable = readtable(filename);
+        [peak, i_peak] = max(datatable.F);
+        mm = movmean(datatable.F, [32, 4]);
+        ss = mm(datatable.t > datatable.t(i_peak) + 29);
+             % RampDuration,Peak,SteadyState
+        peaktable(i, :) = {pca(i_pca), t_rd(i_ramp), peak, ss(1)};
+        i = i+1;
+        plot(datatable.t, datatable.F);
+        plot(datatable.t, mm, 'Linewidth', 2);
+        plot(datatable.t(i_peak), datatable.F(i_peak), '*', 'Linewidth', 2);
+        plot(datatable.t(i_peak) + 29, ss(1), 'd', 'Linewidth', 2);
+    end
+end
+figure(44);clf;
+peaktable.Properties.VariableNames  = {'pCa', 'RampDuration','Peak','SteadyState'};
+semilogx(peaktable.RampDuration(1:4), peaktable.Peak(1:4), 'o-', 'LineWidth',2);
+hold on;
+semilogx(peaktable.RampDuration(5:8), peaktable.Peak(5:8), 'd-', 'LineWidth',2);
+semilogx(peaktable.RampDuration(1:4), peaktable.SteadyState(1:4), 'o:', 'LineWidth',2);
+semilogx(peaktable.RampDuration(5:8), peaktable.SteadyState(5:8), 'd:', 'LineWidth',2);
+
+% compare with the higher step protocol
+% peakTable = readtable("data/bakers_passiveStretch_Peaks.csv");
+% semilogx(peakTable.RampDuration, peakTable.Peak, 'x--', peakTable.RampDuration, peakTable.SteadyState, 'x--', 'LineWidth',2)
+
+title('Maximal peaks by ramp duration (pCa protocol)')
+legend('Resting (no Ca)', 'pCa4', '30s after peak (no Ca)','30s after peak (pCa4)')
+
+xlabel('ramp duration (s)');ylabel('Tension (kPa)');
 %% plot semilog
 
 ts_d = [-5000, 0:500:2000, 2000:ceil(el/100):2000 + el*2, 2000 + el*2:ceil(el/10):200000];
