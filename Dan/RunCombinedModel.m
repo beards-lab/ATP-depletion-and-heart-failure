@@ -52,11 +52,13 @@ x0 = [x0; 0];
 Vlist = [1 10 100 1000 5000]*Lmax/100; %  half-sarcomere velocity
 % reducing number of ranges
 % Vlist = [10 100 1000]*Lmax/100; %  half-sarcomere velocity
-tic
+% tic
 Force = cell(1, 5); 
 Time = cell(1, 5); 
 Length = cell(1, 5); 
-for j = [1 2 3 4 5]
+rampSet = [2 3 4 5];
+for j = rampSet
+  % tic
   V = Vlist(j);
 
   pu = zeros(Nx,1)*PU;
@@ -65,14 +67,25 @@ for j = [1 2 3 4 5]
   % x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
   x0 = reshape(pu,[(Ng+1)*Nx,1]);
   x0 = [x0; 0]; 
-
-  opts = odeset('RelTol',1e-1, 'AbsTol',1-3);
   Tend_ramp = Lmax/V; % length of ramp
-  [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
-  [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
+
+  opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);
+  % testing tolerances, all with +/- same total cost
+  % abstol 1e-6 7.7s,  1e-3 3.6s, 1e-1 2.7s and 1e1 3.1s
+  % reltol 1e-3 (normal) 7.7s, 1e-1 6.8s and 8s for 1e-5 
+    
+  % test solvers - do not touch ode15s
+  % ode15s 7.5s, ode45 53s, ode23s 173s, ode23t 9.7s
+
+  % test sparse matrix - takes forever
+  % S = [reshape(triu(ones(size(pu))),[(Ng+1)*Nx,1]); 1];
+  % Sp = S*S';  % opts = odeset('JPattern',Sp');
+
+  [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
   
   % whole decay till the bitter end
-  [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   % limited decay
   % [t2,x2] = ode15s(@dXdT,[Tend_ramp min(200, Tend_ramp*4)],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   % only ramp up, no decay  
@@ -91,6 +104,18 @@ for j = [1 2 3 4 5]
                    % kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pa ));
     % Force_pa{j} = kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pa ));
   end
+
+    
+    % show state occupation at the end of the ramp
+    % clf;
+    % i = round(size(x2, 1)*3/4);
+    % xi = x2(i,:);    
+    % pu = reshape( xi(1:(Ng+1)*Nx), [Nx,Ng+1]);
+    % surf(pu)
+    % xlabel('Ng');ylabel('Nx');zlabel('State probability');    
+    % hold on;
+    % title(['Ramp ' num2str(Tend_ramp) 's, V = ' num2str(V) ' ML/s at t ' num2str(t2(i))]);
+
 
   % add parallel static force
   % Force{j} = Force{j} + mod(10)*3;
@@ -116,7 +141,9 @@ for j = [1 2 3 4 5]
   Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
 
   Time{j} = t;
-
+    % ttoc = toc;
+  % fprintf("Ramp %0.1fs takes %1.1fs \n", Tend_ramp, ttoc)
+    
 end
 
 % Get error for the whole ramp-up and decay
@@ -125,7 +152,7 @@ t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % Tend_rampset = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
-for j = 1:length(rds)
+for j = rampSet
     datatable_cur = datatables{j};
     datatable_cur = datatable_cur(datatable_cur(:, 1) >= t_endFreeware(j), :);
     t_int{j} = datatable_cur(:, 1) - 2;
@@ -165,24 +192,26 @@ zoomIns = [0 200 0 10;...
            0 .2 0 15;...
            0 .04 0 15;...
            ];
-
-for j = 1:length(rds)
-    figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
-    plot(datatables{j}(:,1)-2,datatables{j}(:,3),'bo','linewidth',2);
-    plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
-    plot(Time{j},Force{j},'linewidth',2); axis([0 200 0 15])
-    ylabel('Stress (kPa)')
-    xlabel('time (sec.)')
-    set(gca,'Xtick',0:50:200)
-    set(gca,'Fontsize',14)
-    axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
+clf;
+for j = rampSet
+    % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
+    subplot(2, 3, j);hold on;
+    % plot(datatables{j}(:,1)-2,datatables{j}(:,3),'bo','linewidth',2);
+    % plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
+    % plot(Time{j},Force{j},'linewidth',2); axis([0 200 0 15])
+    % ylabel('Stress (kPa)')
+    % xlabel('time (sec.)')
+    % set(gca,'Xtick',0:50:200)
+    % set(gca,'Fontsize',14)
+    % axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
     plot(datatables{j}(:,1)-2,datatables{j}(:,3),'bo','linewidth',2);
     plot(t_int{j},Ftot_int{j},'-ro','linewidth',1);
     % plot(Time{2},Force{2},'linewidth',2); 
     axis(zoomIns(j, :))
 end
 %%
-figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
+% figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
+subplot(2, 3, 6);
 semilogx(PeakData(:,1),PeakData(:,2),'o',PeakData(:,1),PeakModel,'r-','LineWidth',2)
 ylabel('Peak stress (kPa)')
 xlabel('Ramp time (sec.)')
