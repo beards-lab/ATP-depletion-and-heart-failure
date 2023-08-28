@@ -1,14 +1,19 @@
+% Assuming mod = ones(10,1)
+% assuming pCa = Inf
 clear Force
 clear Time
 clear Length
 
-rds = fliplr([0.02, 0.1, 1, 10, 100])*1000;
+rds = fliplr([0.1, 1, 10]);
 for i_rd = 1:length(rds)
-    load(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)) 'ms.mat']);
-    datatables{i_rd} = datatable;
+    % load(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)) 'ms.mat']);
+    % datatables{i_rd} = datatable;
+    % new format for pCa experiments
+    datatables{i_rd} = readtable(['..\Data\PassiveCa_1\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
 end
 
-Lmax = 0.4;
+% Lmax = 0.4;
+Lmax = 1.175 - 0.95;
 Ls0  = 0.10*mod(13);
 Nx   = 25;          % number of space steps
 ds   = (0.36-Ls0)/(Nx-1);      % space step size
@@ -16,12 +21,13 @@ s  = (0:1:Nx-1)'.*ds; % strain vector
 Ng  = 20;            % number of glubules on globular chain
 delU = 0.0125*mod(1);
 
-kA   = 0;
+% propose a function to kA = f(pCa)
+kA   = 1*mod(15);
 kD   = 1;
 kC   = 103.33*mod(2);
 kS   = 300*mod(3);         % series element spring constant
 alphaU = 2000*mod(4);       % chain unfolding rate constant
-alphaF = 1*mod(5);
+% alphaF = 1*mod(5);
 nC = 1.77*mod(6);
 nS = 2.56*mod(7);
 nU = 4*mod(8);
@@ -35,37 +41,46 @@ Fc = kC*(max(0,s-slack)).^nC;
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
-RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
+% RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
+RF = 0;
 
 % Initial state
 PU = zeros(1,Ng+1); % initial unfolded probabilities for un-attached rectifier state
-% PA = zeros(1,Ng+1); % initial unfolded probabilities for attached rectifier state
-% PA = []; % initial unfolded probabilities for attached rectifier state
+PA = zeros(1,Ng+1); % initial unfolded probabilities for attached rectifier state
 
 pu = zeros(Nx,1)*PU;
-% pa = zeros(Nx,1)*PA;
+pa = zeros(Nx,1)*PA;
 pu(1,1) = 1/ds; 
-% x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
-x0 = reshape(pu,[(Ng+1)*Nx,1]);
+
+if pCa < 9  
+    % might have some Ca effect
+    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
+else
+    % no Ca effect assumed
+    x0 = reshape(pu,[(Ng+1)*Nx,1]);
+end
 x0 = [x0; 0]; 
 
-Vlist = [1 10 100 1000 5000]*Lmax/100; %  half-sarcomere velocity
+% Vlist = [1 10 100 1000 5000]*Lmax/100; %  half-sarcomere velocity
 % reducing number of ranges
-% Vlist = [10 100 1000]*Lmax/100; %  half-sarcomere velocity
-% tic
+% Vlist = [10 100 1000]*Lmax/100; %  half-sarcomere velocity (um/s)
+Vlist = Lmax./rds;
 Force = cell(1, 5); 
 Time = cell(1, 5); 
 Length = cell(1, 5); 
-rampSet = [2 3 4 5];
+rampSet = [1 2 3];
 for j = rampSet
   % tic
   V = Vlist(j);
 
   pu = zeros(Nx,1)*PU;
-  % pa = zeros(Nx,1)*PA;
+  pa = zeros(Nx,1)*PA;
   pu(1,1) = 1/ds; 
-  % x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
-  x0 = reshape(pu,[(Ng+1)*Nx,1]);
+  if pCa < 9
+    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
+  else
+    x0 = reshape(pu,[(Ng+1)*Nx,1]);
+  end
   x0 = [x0; 0]; 
   Tend_ramp = Lmax/V; % length of ramp
 
@@ -85,9 +100,9 @@ for j = rampSet
   [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
   
   % whole decay till the bitter end
-  [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  % [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   % limited decay
-  % [t2,x2] = ode15s(@dXdT,[Tend_ramp min(200, Tend_ramp*4)],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  [t2,x2] = ode15s(@dXdT,[Tend_ramp Tend_ramp + 40],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   % only ramp up, no decay  
   % x2 = [];t2 = []; 
 
@@ -98,11 +113,13 @@ for j = rampSet
     xi = x(i,:);
     Length{j}(i) = xi(end);
     pu = reshape( xi(1:(Ng+1)*Nx), [Nx,Ng+1]);
-    % pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
-    Force{j}(i) =  kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pu )) ;
-    % + ...
-                   % kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pa ));
-    % Force_pa{j} = kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pa ));
+    if pCa < 9
+        pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
+    else
+        pa = 0;
+    end
+    Force_pa{j} = kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pa ));
+    Force{j}(i) =  kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pu )) + Force_pa{j};
   end
 
     
@@ -125,20 +142,23 @@ for j = rampSet
   % decay offset is set, now use a nonlinear func to fit the ramp onset
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
-  b = 0.05*mod(10);
-  c = 7*mod(11);
-  d = 0.01*mod(12);
-  % apply constraints
-  if b < 0 || c <= 0 || d < 0 
-      cost = inf;
-      return;
-  end
-  % calculate a, so that the max value is the same
-  % Fss = mod(10)*3; % optimized previously
-  Fss = 1.2716*3*mod(14); % reducing the param space
-  a = (Fss - d)/((Lmax -b)^c);
-  % calc force
-  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+  % b = 0.05*mod(10);
+  % c = 7*mod(11);
+  % d = 0.01*mod(12);
+  % % apply constraints
+  % if b < 0 || c <= 0 || d < 0 
+  %     cost = inf;
+  %     return;
+  % end
+  % calculate a, so that the max value is the same  
+  
+  % Fss = 1.2716*3*mod(14); % reducing the param space
+  % a = (Fss - d)/((Lmax -b)^c);
+  % % calc force
+  % Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+
+  Fss = mod(10)*3; % optimized previously
+  Force{j} = Force{j} + Fss;
 
   Time{j} = t;
     % ttoc = toc;
@@ -149,35 +169,43 @@ end
 % Get error for the whole ramp-up and decay
 t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % alternatively, get the error from decay only
-% Tend_rampset = Lmax./Vlist + 2;
+t_endFreeware  = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
 for j = rampSet
     datatable_cur = datatables{j};
-    datatable_cur = datatable_cur(datatable_cur(:, 1) >= t_endFreeware(j), :);
-    t_int{j} = datatable_cur(:, 1) - 2;
+    inds = find(datatable_cur.Time >= t_endFreeware(j));
+    datatable_cur = datatable_cur(inds, :);
+    t_int{j} = datatable_cur.Time - 2;
     Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
-    Es = (Ftot_int{j} - datatable_cur(:,3)).^2; % error set
+    Es = (Ftot_int{j} - datatable_cur.F).^2; % error set
     Es(isnan(Es)) = 0; % zero outside bounds
     En{j} = 1e3*sum(Es)/length(Es); % normalized error
 end
-%
-PeakData =[
-100	    4.772521951	3.826958537
-10	    5.9797	3.8093
-1	    7.94194	3.93316
-0.1	    10.6611	3.862672727
-0.02	14.1969	3.926472727];
+% Peakdata for no-Ca peaks 0.8-1.2 ML
+% PeakData =[
+% 100	    4.772521951	3.826958537
+% 10	    5.9797	3.8093
+% 1	    7.94194	3.93316
+% 0.1	    10.6611	3.862672727
+% 0.02	14.1969	3.926472727];
 
-PeakModel = zeros(1, 5);
-for j = 1:5
+% Peakdata for Ca ramp 0.95 - 1.175
+PeakData =[ 
+    10 7.2695   
+    1 11.8216   
+    0.1 15.3761];
+
+PeakModel = nan(1, 3);
+for j = 1:3
     m = max(Force{j});
     if ~isempty(m)
         PeakModel(j) = m;
     end
 end
 
-Ep = sum((PeakData(2:4, 2) - PeakModel(2:4)').^2);
+Ep = sum((PeakData(:, 2) - PeakModel(:)).^2);
+% Ep = 0;
 
 cost = Ep*100 + sum([En{1:end}], 'all');
 
@@ -186,33 +214,38 @@ if exist('drawPlots', 'var') && ~drawPlots
     return;
 end
 %%
-zoomIns = [0 200 0 10;...
-           0 20 0 15;...
-           0 2 0 15;...
-           0 .2 0 15;...
-           0 .04 0 15;...
-           ];
+% zoomIns = [0 200 0 10;...
+%            0 20 0 15;...
+%            0 2 0 15;...
+%            0 .2 0 15;...
+%            0 .04 0 15;...
+%            ];
+
 clf;
 for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     subplot(2, 3, j);hold on;
-    % plot(datatables{j}(:,1)-2,datatables{j}(:,3),'bo','linewidth',2);
-    % plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
-    % plot(Time{j},Force{j},'linewidth',2); axis([0 200 0 15])
-    % ylabel('Stress (kPa)')
-    % xlabel('time (sec.)')
-    % set(gca,'Xtick',0:50:200)
-    % set(gca,'Fontsize',14)
+    plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',2);
+    plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
+    plot(Time{j},Force{j},'linewidth',2); axis([0 30+rds(j) 0 15])
+    ylabel('Stress (kPa)')
+    xlabel('time (sec.)')
+    set(gca,'Xtick',0:50:200)
+    set(gca,'Fontsize',14)
+    pos = get(gca, 'Position');
+    w = pos(3)*0.6; h = pos(4)*0.4;
+    x = pos(1) + pos(3) - w; y = pos(2) + pos(4) - h;
+    axes('Position',[x, y, w, h]);hold on;
     % axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
-    plot(datatables{j}(:,1)-2,datatables{j}(:,3),'bo','linewidth',2);
+    plot(datatables{j}.Time-2,datatables{j}.F,'bo','linewidth',2);
     plot(t_int{j},Ftot_int{j},'-ro','linewidth',1);
     % plot(Time{2},Force{2},'linewidth',2); 
-    axis(zoomIns(j, :))
+    axis([0, rds(j)*2, 0, 15]);
 end
 %%
 % figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
 subplot(2, 3, 6);
-semilogx(PeakData(:,1),PeakData(:,2),'o',PeakData(:,1),PeakModel,'r-','LineWidth',2)
+semilogx(PeakData(:,1),PeakData(:,2),'o',PeakData(:,1),PeakModel,'xr-','LineWidth',2)
 ylabel('Peak stress (kPa)')
 xlabel('Ramp time (sec.)')
 set(gca,'Fontsize',14)

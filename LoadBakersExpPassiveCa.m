@@ -1,16 +1,22 @@
 %% read new Anthony's data
+close all;
 
-S1 = dir('data/PassiveCa/20230518');
+% ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
+S1 = dir('data/PassiveCaSrc/20230518');
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort([S1.datenum]);
 S1 = S1(idx);
 
-S2 = dir('data/PassiveCa/20230608');
+
+% ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
+% to be upscaled by 1.5x
+S2 = dir('data/PassiveCaSrc/20230608');
 S2 = S2(~[S2.isdir]);
 [~,idx] = sort([S2.datenum]);
 S2 = S2(idx);
 
-S3 = dir('data/PassiveCa/20230616');
+% ramp height 1.0 to 1.1 ML
+S3 = dir('data/PassiveCaSrc/20230616');
 S3 = S3(~[S3.isdir]);
 S3 = S3(~contains({S3.name}, '0.02'));
 [~,idx] = sort([S3.datenum]);
@@ -19,13 +25,15 @@ S3 = S3(idx);
 
 mergedTables = [struct2table(S1);struct2table(S2)];
 S = table2struct(mergedTables);
-S = S3;
+S = S1;
 %%
 
 
 close all;
 clear peaks;
-clear legnames
+clear legnames;
+clear timecourses;
+
 
 % deifning the sequence
 seq = [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5 5 5 6 6 6 6 7 7 7 7 8 8 8 8];
@@ -40,7 +48,7 @@ for i = 1:length(S)
     % subtrack zero drift
     i_fzero = datatable.t > datatable.t(end) - 35 & datatable.t < datatable.t(end) - 25;
     Fzero = mean(datatable.F(i_fzero));
-    datatable.F = datatable.F - Fzero;
+    datatable.F = (datatable.F - Fzero);
     F = movmean(datatable.F, [8 8]);
     i_ss = datatable.t > datatable.t(end) - 46.0 & datatable.t < datatable.t(end) - 45.5;% index of steady states
     ss_cur = mean(datatable.F(i_ss));
@@ -48,11 +56,12 @@ for i = 1:length(S)
     seq_cur = i - seq(i)*4 + 4;
     peaks(seq(i), seq_cur) = max(datatable.F);        
     ss(seq(i), seq_cur) = ss_cur;
-    timecourses{seq(i), seq_cur} = [datatable.t, datatable.F];
+    % timecourses{seq(i), seq_cur} = [datatable.t, datatable.F];
+    timecourses{seq(i), seq_cur} = datatable;
 
     % get rid of the ramp speeds
     tit = split(S(i).name, '_');
-    legnames{seq(i)} = [num2str(seq(i)) ':' strjoin(tit(2:end), '_')];
+    legnames{seq(i)} = [num2str(seq(i)) ':' strjoin(tit(2:end), '_')];    
 
     if skipPlots
         continue
@@ -192,6 +201,47 @@ plot(-t_f, yf(ae.L, ae.c, ae.k, ae.x0, t_f), '--', 'LineWidth',1, 'Color', color
 xlabel('-pCa');
 ylabel('Tension (kPa)')
 legend('100s', '10s', '1s', '0.1s');
+
+%% Resample and save
+
+intrs = [1 3]
+pCas = [11, 4];
+rds = [100, 10, 1, 0.1]
+% ts_d = 
+clf; hold on;
+for i = 1:length(intrs)
+    for rd_i = 2:length(rds)
+        %%
+        clf; hold on;
+        rd = rds(rd_i);
+        datatable_cur = timecourses{intrs(i), rd_i};
+        % cut out the ramp and decay
+        % validIds = datatable_cur(:, 1) >= 8 & datatable_cur(:, 1) < rd + 10 + 30;
+        validIds = datatable_cur.t >= 8 & datatable_cur.t < rd + 10 + 30;
+        datatable_cur = datatable_cur(validIds, :);
+        % shift the time base
+        datatable_cur(:, 1) =  datatable_cur(:, 1) - 8;
+
+        plot(datatable_cur.t,datatable_cur.F, '|-');
+        % sample times for datas; baseline, ramp-up, peak decay, long tail
+        dwnsmpl = [0:0.5:2, 2 + (0:rd/30:rd), 2 + rd + (0:rd/30:rd), (2 + 2*rd):0.5:(30 + rd + 2 - 1.0)];
+
+        datatable_cur.Properties.VariableNames = {'Time', 'L', 'F', 'SL'};
+        i_data = interp1(datatable_cur.Time, 1:length(datatable_cur.Time), dwnsmpl, 'nearest', 'extrap');
+        
+        dsf = 8;scaleF = 1;
+        datatable_cur.F = movmean(datatable_cur.F*scaleF,[dsf/2 dsf/2]); % force filtered
+        
+        plot(dwnsmpl, datatable_cur.F(i_data), 'x-', 'Linewidth', 2);
+        % 
+        % plot(dwnsmpl, zeros(1, length(dwnsmpl)), '|-', 'Linewidth', 2);
+        % DownSampleAndSplit(datatable, dwnsmpl, [], 2.0, 1, 1.5, filename, 0, 1);
+
+        saveAs = ['bakers_passiveStretch_pCa' num2str(pCas(i)) '_' num2str(rds(rd_i)*1000) 'ms'];
+        writetable(datatable_cur, ['data/PassiveCa_1/' saveAs '.csv']);
+        disp(['Saved as ' saveAs ' and csv'])
+    end
+end
 
 
 %% fft?
