@@ -23,11 +23,11 @@ delU = 0.0125*mod(1);
 
 % propose a function to kA = f(pCa)
 kA   = 1*mod(15);
-kD   = 1;
+kD   = 1*mod(16);
 kC   = 103.33*mod(2);
 kS   = 300*mod(3);         % series element spring constant
 alphaU = 2000*mod(4);       % chain unfolding rate constant
-% alphaF = 1*mod(5);
+alphaF = 1*mod(5);
 nC = 1.77*mod(6);
 nS = 2.56*mod(7);
 nU = 4*mod(8);
@@ -41,8 +41,8 @@ Fc = kC*(max(0,s-slack)).^nC;
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
-% RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
-RF = 0;
+RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
+% RF = 0;
 
 % Initial state
 PU = zeros(1,Ng+1); % initial unfolded probabilities for un-attached rectifier state
@@ -190,11 +190,16 @@ end
 % 0.1	    10.6611	3.862672727
 % 0.02	14.1969	3.926472727];
 
-% Peakdata for Ca ramp 0.95 - 1.175
+% Peakdata for Ca11 ramp 0.95 - 1.175
 PeakData =[ 
     10 7.2695   
     1 11.8216   
     0.1 15.3761];
+
+PeakData =[ 
+10 12.3018   
+1 29.5823  
+0.1 50.0592];
 
 PeakModel = nan(1, 3);
 for j = 1:3
@@ -221,7 +226,7 @@ end
 %            0 .04 0 15;...
 %            ];
 
-clf;
+figure(33);clf;
 for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     subplot(2, 3, j);hold on;
