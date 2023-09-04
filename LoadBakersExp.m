@@ -513,17 +513,17 @@ plot(sa, ss_rmse, 'x-', 'LineWidth',2);
 % [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
 % plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
 %% Fit the pCa4 passive experiments
-% datatable = readtable('data/pCa4_008.txt', 'filetype', 'text', 'NumHeaderLines',4);
-datatable = readtable('data/Relax_018.txt', 'filetype', 'text', 'NumHeaderLines',4);
+datatable = readtable('data/pCa4_008.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% datatable = readtable('data/Relax_018.txt', 'filetype', 'text', 'NumHeaderLines',4);
 datatable.Properties.VariableNames = {'t', 'L','F'};
 
 t_rd = [0.1, 1, 10, 100]; % ramp duration time
 
 % ramp start time
 % for pCa4_008
-% t_rs = fliplr([186.32, 430.73, 585.82, 730.81]);
+t_rs = fliplr([186.32, 430.73, 585.82, 730.81]);
 % for Relax_018
-t_rs = fliplr([26, 270.45, 425.4, 570.42]);
+% t_rs = fliplr([26, 270.45, 425.4, 570.42]);
 t_dd = ones(1, 4)*30; % decay duration + ramp-down duration
 d_rd = 10; % duration ramp-down
 d_zh = 10; % duration zero-hold
@@ -531,9 +531,9 @@ t_re = t_rs + t_rd; % ramp end time
 t_rec = t_re + 30; % end of recover
 
 % zero-offset for pCa4_008
-% t0 = [0, 45, fliplr(t_rs) + fliplr(t_rd) + t_dd + d_rd];
+t0 = [0, 45, fliplr(t_rs) + fliplr(t_rd) + t_dd + d_rd];
 % zero-offset for Relax_018
-t0 = fliplr(t_rs) + fliplr(t_rd) + t_dd + d_rd;
+% t0 = fliplr(t_rs) + fliplr(t_rd) + t_dd + d_rd;
 i_fzero = any(datatable.t > t0 & datatable.t < t0 + d_zh, 2);
 t_fzero = datatable.t(i_fzero);
 f_fzero = datatable.F(i_fzero);
@@ -561,19 +561,23 @@ plot(datatable.t, datatable.F);legend('Tension raw', 'zeros', 'zero drift approx
 xlabel('Time (s)')
 colors = colormap(lines(length(t_rs)));
 
-pca = 'Inf'; % pCa level
+pca = '4'; % pCa level
 figure(2);clf;
 figure(3);clf;
 for i_ramp = 1:length(t_rs)
    %% 
     saveZone = find(datatable.t >= t_rs(i_ramp) - 2 & datatable.t < t_rec(i_ramp)); % time span to save wioth 2s steady state prior to ramp-up
     el = t_rd(i_ramp)*1000;% experiment length in ms
-    % ts_d = [0:200:2000, 2000:ceil(el/20):2000 + el*2, 2000 + el*2:ceil(el/2):2+el+30];
+    ts_d = [0:200:2000, 2000:ceil(el/20):2000 + el*2, 2000 + (el*2:500:el+30000)];
     % saving as current ramp's datatable
     
     datatable_cur = datatable(saveZone, :);
     datatable_cur.t = datatable_cur.t - datatable.t(saveZone(1));
-    writetable(datatable_cur, ['data/bakers_passiveStretch_pCa' num2str(pca) '_' num2str(t_rd(i_ramp)*1000) 'ms.csv']);
+    % datatable_cur.F = datatable_cur.F*1.5; % adjust the peak heights
+    filename = ['bakers_passiveStretch_pCa' num2str(pca) '_' num2str(t_rd(i_ramp)*1000) 'ms'];
+    % writetable(datatable_cur, ['data/' filename '.csv']);
+
+    DownSampleAndSplit(datatable_cur, ts_d/1000, [], 2.0, 1, 1.5, filename, 0, 1);
 
     rampZone = find(datatable.t >= t_rs(i_ramp) & datatable.t < t_rec(i_ramp));
     peakZone = find(datatable.t >= t_re(i_ramp) & datatable.t < t_rec(i_ramp));
@@ -745,7 +749,7 @@ ae
 
 
 %% function definition
-function [datatable, velocitytable] = DownSampleAndSplit(data_table, dwnsmpl, ts_s, ML, dsf, scaleF, saveAs, offset)
+function [datatable, velocitytable] = DownSampleAndSplit(data_table, dwnsmpl, ts_s, ML, dsf, scaleF, saveAs, offset, conv2sec)
 % df / ts_d - empty: no downsampling. 
 %             Scalar: downsampling by said scalar
 %             vector: time segment data points for cost function, filtered by dsf.
@@ -756,6 +760,12 @@ function [datatable, velocitytable] = DownSampleAndSplit(data_table, dwnsmpl, ts
 % offset in ms
 if nargin < 8
     offset = 0;
+end
+
+% baseline is ms
+if nargin < 9
+    % convert to seconds
+    conv2sec = 1/1000;
 end
 
     if length(data_table.Properties.VariableNames) > 3
@@ -824,9 +834,9 @@ end
         SL = data_table.SL(imin_s:imax_s);
         SLf = movmean(data_table.SL,[dsf/2 dsf/2]); % l filtered
         SLd = SLf(i_data);
-        datatable = [td/1000  + offset/1000, ld*ML, fd, SLd];
+        datatable = [td*conv2sec  + offset*conv2sec, ld*ML, fd, SLd];
     else
-        datatable = [td/1000  + offset/1000, ld*ML, fd];
+        datatable = [td*conv2sec  + offset*conv2sec, ld*ML, fd];
     end
     
     
@@ -842,7 +852,7 @@ end
     end
     vsum = vs*ML; % 
     % time (s), velocity ML/s, velocity um/s
-    velocitytable = [(ts_s + offset)/1000;[vs 0];[vsum 0];pos(1:end)]'; 
+    velocitytable = [(ts_s + offset)*conv2sec;[vs 0];[vsum 0];pos(1:end)]'; 
     
 
     if ~isempty(saveAs)
