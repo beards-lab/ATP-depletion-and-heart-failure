@@ -10,11 +10,11 @@ x0 = ones(1, 10);
 % 7  nS
 % 8  nU
 % 9 mu
-% 11 Fss
-% // 10 11 12 14 - params for ramp-up
+% 10 Fss
+% // 10 11 12 - params for ramp-up
 % 13 Ls0
-% 15 kA
-% 16 kD
+% 14 kA
+% 15 kD
 
 x0 = [ 1.0057    1.5981    1.3605    0.0917    1.4696    1.1553    1.0838    0.6758    1.1417]; % first shot
 

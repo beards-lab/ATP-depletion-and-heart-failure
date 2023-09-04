@@ -161,7 +161,6 @@ for j = rampSet
       return;
   end
   % calculate a, so that the max value is the same  
-  
   Fss = 1.2716*3; % reducing the param space
   a = (Fss - d)/((Lmax -b)^c);
   % % calc force
@@ -179,7 +178,7 @@ end
 % Get error for the whole ramp-up and decay
 t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % alternatively, get the error from decay only
-t_endFreeware  = Lmax./Vlist + 2;
+% t_endFreeware  = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
 for j = rampSet
@@ -210,17 +209,17 @@ elseif isinf(pCa)
 % hack to get back the no PNB no pCa passive ramp-ups
 % Peakdata for no-Ca peaks 0.8-1.2 ML
     PeakData =[
-    % 100	    4.772521951	3.826958537
+    100	    4.772521951	3.826958537
     10	    5.9797	3.8093
     1	    7.94194	3.93316
     0.1	    10.6611	3.862672727
-    % 0.02	14.1969	3.926472727
+    0.02	14.1969	3.926472727
     ];
 
 end
 
-PeakModel = nan(1, 3);
-for j = 1:3
+PeakModel = nan(1, 5);
+for j = 1:5
     m = max(Force{j});
     if ~isempty(m)
         PeakModel(j) = m;
