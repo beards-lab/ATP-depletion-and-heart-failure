@@ -190,16 +190,20 @@ end
 % 0.1	    10.6611	3.862672727
 % 0.02	14.1969	3.926472727];
 
-% Peakdata for Ca11 ramp 0.95 - 1.175
-PeakData =[ 
-    10 7.2695   
-    1 11.8216   
-    0.1 15.3761];
-
-PeakData =[ 
-10 12.3018   
-1 29.5823  
-0.1 50.0592];
+% Peakdata for ramps 0.95 - 1.175
+if pCa == 11
+    % pCa11 
+    PeakData =[ 
+        10 7.2695   
+        1 11.8216   
+        0.1 15.3761];
+elseif pCa == 4
+    % pCa4 
+    PeakData =[ 
+        10 12.3018   
+        1 29.5823  
+        0.1 50.0592];
+end
 
 PeakModel = nan(1, 3);
 for j = 1:3
@@ -226,7 +230,7 @@ end
 %            0 .04 0 15;...
 %            ];
 
-figure(33);clf;
+clf;
 for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     subplot(2, 3, j);hold on;
