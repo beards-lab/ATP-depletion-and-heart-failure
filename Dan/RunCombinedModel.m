@@ -4,16 +4,26 @@ clear Force
 clear Time
 clear Length
 
-rds = fliplr([0.1, 1, 10]);
+rds = fliplr([0.02 0.1, 1, 10 100]);
 for i_rd = 1:length(rds)
-    % load(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)) 'ms.mat']);
-    % datatables{i_rd} = datatable;
+  if isinf(pCa)
+    % hack - the no-Ca noPNB experiments had higher ramps
+    datatable = readtable(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)*1000) 'ms.csv']);
+    datatable.Properties.VariableNames = {'Time'  'ML'  'F'  'SL'};
+    datatables{i_rd} = datatable;
+  else
     % new format for pCa experiments
     datatables{i_rd} = readtable(['..\Data\PassiveCa_1\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
+  end
+end
+if isinf(pCa)
+    % hack - the no-Ca noPNB experiments had higher ramps
+  Lmax = 0.4;
+else    
+    % follow-up experiments had lower ramps
+Lmax = 1.175 - 0.95;
 end
 
-% Lmax = 0.4;
-Lmax = 1.175 - 0.95;
 Ls0  = 0.10*mod(13);
 Nx   = 25;          % number of space steps
 ds   = (0.36-Ls0)/(Nx-1);      % space step size
@@ -22,8 +32,8 @@ Ng  = 20;            % number of glubules on globular chain
 delU = 0.0125*mod(1);
 
 % propose a function to kA = f(pCa)
-kA   = 1*mod(15);
-kD   = 1*mod(16);
+kA   = 1*mod(14);
+kD   = 1*mod(15);
 kC   = 103.33*mod(2);
 kS   = 300*mod(3);         % series element spring constant
 alphaU = 2000*mod(4);       % chain unfolding rate constant
@@ -68,7 +78,7 @@ Vlist = Lmax./rds;
 Force = cell(1, 5); 
 Time = cell(1, 5); 
 Length = cell(1, 5); 
-rampSet = [1 2 3];
+rampSet = [1 2 3 4 5];
 for j = rampSet
   % tic
   V = Vlist(j);
@@ -84,7 +94,7 @@ for j = rampSet
   x0 = [x0; 0]; 
   Tend_ramp = Lmax/V; % length of ramp
 
-  opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);
+  opts = odeset('RelTol',1e-3, 'AbsTol',1e-3);
   % testing tolerances, all with +/- same total cost
   % abstol 1e-6 7.7s,  1e-3 3.6s, 1e-1 2.7s and 1e1 3.1s
   % reltol 1e-3 (normal) 7.7s, 1e-1 6.8s and 8s for 1e-5 
@@ -142,23 +152,23 @@ for j = rampSet
   % decay offset is set, now use a nonlinear func to fit the ramp onset
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
-  % b = 0.05*mod(10);
-  % c = 7*mod(11);
-  % d = 0.01*mod(12);
-  % % apply constraints
-  % if b < 0 || c <= 0 || d < 0 
-  %     cost = inf;
-  %     return;
-  % end
+  b = 0.05*mod(10);
+  c = 7*mod(11);
+  d = 0.01*mod(12);
+  % apply constraints
+  if b < 0 || c <= 0 || d < 0 
+      cost = inf;
+      return;
+  end
   % calculate a, so that the max value is the same  
   
-  % Fss = 1.2716*3*mod(14); % reducing the param space
-  % a = (Fss - d)/((Lmax -b)^c);
+  Fss = 1.2716*3; % reducing the param space
+  a = (Fss - d)/((Lmax -b)^c);
   % % calc force
-  % Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
 
-  Fss = mod(10)*3; % optimized previously
-  Force{j} = Force{j} + Fss;
+  % Fss = mod(10)*3; % optimized previously
+  % Force{j} = Force{j} + Fss;
 
   Time{j} = t;
     % ttoc = toc;
@@ -182,13 +192,6 @@ for j = rampSet
     Es(isnan(Es)) = 0; % zero outside bounds
     En{j} = 1e3*sum(Es)/length(Es); % normalized error
 end
-% Peakdata for no-Ca peaks 0.8-1.2 ML
-% PeakData =[
-% 100	    4.772521951	3.826958537
-% 10	    5.9797	3.8093
-% 1	    7.94194	3.93316
-% 0.1	    10.6611	3.862672727
-% 0.02	14.1969	3.926472727];
 
 % Peakdata for ramps 0.95 - 1.175
 if pCa == 11
@@ -203,6 +206,17 @@ elseif pCa == 4
         10 12.3018   
         1 29.5823  
         0.1 50.0592];
+elseif isinf(pCa)
+% hack to get back the no PNB no pCa passive ramp-ups
+% Peakdata for no-Ca peaks 0.8-1.2 ML
+    PeakData =[
+    % 100	    4.772521951	3.826958537
+    10	    5.9797	3.8093
+    1	    7.94194	3.93316
+    0.1	    10.6611	3.862672727
+    % 0.02	14.1969	3.926472727
+    ];
+
 end
 
 PeakModel = nan(1, 3);
