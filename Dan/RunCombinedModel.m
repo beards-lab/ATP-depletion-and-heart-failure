@@ -4,7 +4,9 @@ clear Force
 clear Time
 clear Length
 
-rds = fliplr([0.02 0.1, 1, 10 100]);
+% rds = fliplr([0.02 0.1, 1, 10 100]);
+% rds = fliplr([0.1, 1, 10]);
+rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -21,7 +23,7 @@ if isinf(pCa)
   Lmax = 0.4;
 else    
     % follow-up experiments had lower ramps
-Lmax = 1.175 - 0.95;
+    Lmax = 1.175 - 0.95;
 end
 
 Ls0  = 0.10*mod(13);
@@ -78,7 +80,7 @@ Vlist = Lmax./rds;
 Force = cell(1, 5); 
 Time = cell(1, 5); 
 Length = cell(1, 5); 
-rampSet = [1 2 3 4 5];
+rampSet = 1:length(rds); %[1 2 3 4 5];
 for j = rampSet
   % tic
   V = Vlist(j);
@@ -94,7 +96,7 @@ for j = rampSet
   x0 = [x0; 0]; 
   Tend_ramp = Lmax/V; % length of ramp
 
-  opts = odeset('RelTol',1e-3, 'AbsTol',1e-3);
+  opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);
   % testing tolerances, all with +/- same total cost
   % abstol 1e-6 7.7s,  1e-3 3.6s, 1e-1 2.7s and 1e1 3.1s
   % reltol 1e-3 (normal) 7.7s, 1e-1 6.8s and 8s for 1e-5 
@@ -176,11 +178,12 @@ for j = rampSet
 end
 
 % Get error for the whole ramp-up and decay
-t_endFreeware = zeros(1, 5); % time when we start counting the costs
+% t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % alternatively, get the error from decay only
-% t_endFreeware  = Lmax./Vlist + 2;
+t_endFreeware  = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
+En = cell(1, length(rampSet));
 for j = rampSet
     datatable_cur = datatables{j};
     inds = find(datatable_cur.Time >= t_endFreeware(j));
@@ -197,13 +200,13 @@ if pCa == 11
     % pCa11 
     PeakData =[ 
         10 7.2695   
-        1 11.8216   
+        % 1 11.8216   
         0.1 15.3761];
 elseif pCa == 4
     % pCa4 
     PeakData =[ 
         10 12.3018   
-        1 29.5823  
+        % 1 29.5823  
         0.1 50.0592];
 elseif isinf(pCa)
 % hack to get back the no PNB no pCa passive ramp-ups
@@ -218,8 +221,8 @@ elseif isinf(pCa)
 
 end
 
-PeakModel = nan(1, 5);
-for j = 1:5
+PeakModel = nan(1, length(PeakData));
+for j = 1:length(PeakModel)
     m = max(Force{j});
     if ~isempty(m)
         PeakModel(j) = m;
