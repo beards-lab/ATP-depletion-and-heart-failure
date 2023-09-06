@@ -420,18 +420,22 @@ rd = 1; % experiment length in s
 % % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s, ML, 1, 1, '');
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, [], ML, 5, 1, '');
 
-rds = [0.02, 0.1, 1, 10, 100];
+% rds = [0.02, 0.1, 1, 10, 100];
+% new ramp-ups with Ca
+rds = [0.1, 1, 10];
 colors = colormap(lines(length(rds)));
 ss_rmse = [];
-% sa = [2:0.01:2.1];
-sa = [0.1:0.005:0.16];
+sa = [0:0.1:2.1];
+% sa = [0.1:0.005:0.16];
 for ss = sa
 %% Loop for all ramps only
 figure(1);clf;
 rmse = [];
     for rd_i = 1:length(rds)
     rd = rds(rd_i);
-datatable = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']).datatable;
+% datatable = load(['data/bakers_passiveStretch_' num2str(rd*1000) 'ms.mat']).datatable;
+data_table = readtable(['Data/PassiveCa_1/bakers_passiveStretch_pCa11_' num2str(1000*rds(rd_i)) 'ms.csv']);
+datatable = table2array(data_table);
 
 [~, i_peak] = max(datatable(:, 3));
 dataplotpoints = 1:1:length(datatable(:, 1));
@@ -442,9 +446,9 @@ fbase = datatable(zone, 3);
 % this fits the fastest one pretty well
 % y_dec = @(a, b, c, d, e, x)a*x.^(-b) + c + 0*a*b*c*d*e;
 % exploring the steady state param
-% y_dec = @(a, b, c, d, e, x)a*x.^(-b) +ss+ 0*c*d*e;
+y_dec = @(a, b, c, d, e, x)a*x.^(-b) +ss+ 0*c*d*e;
 % exploring the exponent param with constsnt offset
-y_dec = @(a, b, c, d, e, x)a*x.^(-b) +2.04 + 0*d*exp(-x*e)+ 0*a*b*c*d*e;
+% y_dec = @(a, b, c, d, e, x)a*x.^(-b) +2.04 + 0*d*exp(-x*e)+ 0*a*b*c*d*e;
 
 
 [ae be] = fit(timebase(2:end), fbase(2:end), y_dec, 'StartPoint', [1, 1, 3.750, 0, 1]);
@@ -463,7 +467,7 @@ fitparam.a(rd_i) = ae.a;fitparam.b(rd_i) = ae.b;fitparam.c(rd_i) = ae.c;fitparam
 % plot(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
 semilogx(datatable(dataplotpoints, 1), datatable(dataplotpoints, 3), 'Color', colors(rd_i, :));hold on;
 % plot fit
-semilogx(extrap_time+datatable(zone(1), 1), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, extrap_time), '--','Linewidth', 4, 'Color', colors(rd_i, :));
+semilogx(extrap_time+datatable(zone(1), 1), y_dec(ae.a, ae.b,ae.c, ae.d,ae.e, extrap_time), '--','Linewidth', 4, 'Color', max(colors(rd_i, :) - [0.2 0.2 0.2], [0 0 0]));
 
 % clf;loglog(timebase, fbase-2.04);hold on;
 %% redo as differential equation
@@ -491,12 +495,19 @@ x0 = a*extrap_time(2)^(-b) + c;
 
 
 end
-legend('0.02s data', sprintf('0.02s fit, rmse %0.2f', rmse(1)),...
-    '0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(2)),...
-    '1s data', sprintf('1s fit, rmse %0.2f', rmse(3)),...
-    '10s data', sprintf('10s fit, rmse %0.2f', rmse(4)),...
-    '100s data', sprintf('100s fit, rmse %0.2f', rmse(5))...
+% legend(...
+%     '0.02s data', sprintf('0.02s fit, rmse %0.2f', rmse(1)),...
+%     '0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(2)),...
+%     '1s data', sprintf('1s fit, rmse %0.2f', rmse(3)),...
+%     '10s data', sprintf('10s fit, rmse %0.2f', rmse(4)),...
+%     '100s data', sprintf('100s fit, rmse %0.2f', rmse(5))...
+%     );
+legend(...
+    '0.1s data', sprintf('0.1s fit, rmse %0.2f', rmse(1)),...
+    '1s data', sprintf('1s fit, rmse %0.2f', rmse(2)),...
+    '10s data', sprintf('10s fit, rmse %0.2f', rmse(3))...
     );
+
 title(sprintf('OVerall fit: %0.2f', sum(rmse)));
 figure(2);clf;
 % semilogx(rds, fitparam.a, 'o-',rds, fitparam.b, 'o-',rds, fitparam.c, 'o-');
@@ -508,7 +519,7 @@ ss_rmse = [ss_rmse sum(rmse)];
 % ss
 end
 figure(3);clf;
-plot(sa, ss_rmse, 'x-', 'LineWidth',2);
+plot(sa(1:length(ss_rmse)), ss_rmse, 'x-', 'LineWidth',2);
 % fix the 'a' param
 % [ae be] = fit(timebase, fbase, @(b, x)y_dec(0.95, b, x), 'StartPoint', [0.05]);
 % plot(datatable(zone, 1)*1000, y_dec(0.95, ae.b, timebase) + datatable(end, 3), 'Linewidth', 2)
