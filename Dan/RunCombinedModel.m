@@ -44,6 +44,10 @@ nC = 1.77*mod(6);
 nS = 2.56*mod(7);
 nU = 4*mod(8);
 mu = 2.44*mod(9); 
+if mod(9) < 1e-9
+    cost = Inf;
+    return;
+end
 
 % Calculate globular chain force Fc(s,n) for every strain and
 % value. 

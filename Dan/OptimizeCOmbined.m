@@ -88,7 +88,12 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 init = mod(modSel);
 x = fminsearch(@evalCombined, init, options);
 
-save x;
+mod(modSel) = x;
+
+save mod;
+%% result
+mod = [2.0398    1.3113    3.8942    1.3500    0.4784 0.7398    0.8176    0.7869    0.8629    0.7200 1.3634    0.8411   -2.8000    1.0150    0.6382 -0.5199];
+
 %%
 function totalCost = evalCombined(optMods)
     %normal - optimizing for all
@@ -110,7 +115,7 @@ function totalCost = evalCombined(optMods)
     end    
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    totalCost = cost*100;
+    totalCost = cost*10;
 
     %% pCa 4
     pCa = 4;
