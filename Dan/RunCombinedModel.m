@@ -26,28 +26,55 @@ else
     Lmax = 1.175 - 0.95;
 end
 
-Ls0  = 0.10*mod(13);
+% Ls0  = 0.10*mod(13);
+% Nx   = 25;          % number of space steps
+% ds   = (0.36-Ls0)/(Nx-1);      % space step size
+% s  = (0:1:Nx-1)'.*ds; % strain vector
+% Ng  = 20;            % number of glubules on globular chain
+% delU = 0.0125*mod(1);
+
+% half-sarcomere ramp height
+Lmax = 0.225;
+% Nx   = 25;          % number of space steps
 Nx   = 25;          % number of space steps
-ds   = (0.36-Ls0)/(Nx-1);      % space step size
+ds   = 0.80*(Lmax)/(Nx-1);      % space step size
 s  = (0:1:Nx-1)'.*ds; % strain vector
-Ng  = 20;            % number of glubules on globular chain
-delU = 0.0125*mod(1);
+Ng = 11; 
+delU = 0.010;
+
 
 % propose a function to kA = f(pCa)
-kA   = 1*mod(14);
-kD   = 1*mod(15);
-kC   = 103.33*mod(2);
-kS   = 300*mod(3);         % series element spring constant
-alphaU = 2000*mod(4);       % chain unfolding rate constant
-alphaF = 1*mod(5);
-nC = 1.77*mod(6);
-nS = 2.56*mod(7);
-nU = 4*mod(8);
-mu = 2.44*mod(9); 
-if mod(9) < 1e-9
-    cost = Inf;
-    return;
+% kA   = 1*mod(14);
+% kD   = 1*mod(15);
+% kC   = 103.33*mod(2);
+% kS   = 300*mod(3);         % series element spring constant
+% alphaU = 2000*mod(4);       % chain unfolding rate constant
+% alphaF = 1*mod(5);
+% nC = 1.77*mod(6);
+% nS = 2.56*mod(7);
+% nU = 4*mod(8);
+% mu = 2.44*mod(9); 
+
+% g0 = ones(1,11);
+g0 = mod;
+kD   = g0(8)*14.977;
+if pCa == 11
+    kC   = g0(1)*10203;      % proximal chain force constant
+    kA   = g0(7)*0*16.44;
+else
+    kC   = g0(9)*10203*4.78 ;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
+    kA   = g0(7)*16.44;
 end
+kS   = g0(2)*14122;        % distal chain force constant
+alphaU = g0(6)*(8.4137e5);         % chain unfolding rate constant
+alphaF = 1;
+nC = g0(3)*3.27;
+nS = g0(9)*3.25;
+nU = g0(4)*6.0;
+mu = g0(5)*1; 
+Ls0  = 0.0;
+
+
 
 % Calculate globular chain force Fc(s,n) for every strain and
 % value. 
@@ -56,7 +83,9 @@ Fc = kC*(max(0,s-slack)).^nC;
 
 % Calculate the globular chain folding/unfolding probability transition
 % rates
-RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
+% RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
+RU = alphaU*((max(0,s-slack(1:Ng)-Ls0)).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
+
 RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
 % RF = 0;
 
@@ -158,19 +187,25 @@ for j = rampSet
   % decay offset is set, now use a nonlinear func to fit the ramp onset
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
-  b = 0.05*mod(10);
-  c = 7*mod(11);
-  d = 0.01*mod(12);
-  % apply constraints
-  if b < 0 || c <= 0 || d < 0 
-      cost = inf;
-      return;
-  end
+  
+  % b = 0.05*mod(10);
+  % c = 7*mod(11);
+  % d = 0.01*mod(12);
+  % % apply constraints
+  % if b < 0 || c <= 0 || d < 0 
+  %     cost = inf;
+  %     return;
+  % end
+  
   % calculate a, so that the max value is the same  
-  Fss = 1.2716*3*mod(12); % reducing the param space
-  a = (Fss - d)/((Lmax -b)^c);
+  % Fss = 1.2716*3*mod(12); % reducing the param space
+  % Fss = (0.55e6)*0.225^8*mod(12); % update from Dan's code
+  % a = (Fss - d)/((Lmax -b)^c);
   % % calc force
-  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+  % Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+
+  Force{j} = Force{j} + (0.55e6)*0.225^8*mod(10); 
+
 
   % Fss = mod(10)*3; % optimized previously
   % Force{j} = Force{j} + Fss;

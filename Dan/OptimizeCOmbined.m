@@ -110,9 +110,10 @@ set(gca,'XTickLabels',strcat(string(1:length(cost4_sap)), ':', modNames(1:15),td
 set(gca, "FontSize", 14)
 %%
 tic
-modSel = [2 3 4 6 7 8 9 12 14 15];
+% modSel = [2 3 4 6 7 8 9 12 14 15];
 % mod(16) = 0;
-evalCombined(mod(modSel))
+% evalCombined(mod(modSel))
+evalCombined(mod)
 toc
 %%
 % cost = 301.7
@@ -123,15 +124,20 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % best in the worst so far optMods =     1.3705    1.4770    1.1905    1.1205    0.8670    0.3074    0.6812    0.9407    1.3393    0.8915    1.1628    1.0166
 modSel = [2 3 4 6 7 8 9 12 14 15];
 
-init = mod(modSel);
+% init = mod(modSel);
+init = ones(1, 10);
 x = fminsearch(@evalCombined, init, options);
 
-mod(modSel) = x;
+% mod(modSel) = x;
+mod = x;
 
 save mod;
 %% result
 mod = [2.0398    0.9359    4.3424    2.3068    0.4784 0.6410    0.8054    0.8220    0.2923    0.7200 1.3634    1.0000   -2.8000    1.3022    0.8551];
 mod = [2.0398    0.9359    4.3397    2.2756    0.4784 0.6412    0.8053    0.8333    0.2923    0.7200 1.3634    1.0468   -2.8000    1.3200    0.8759];
+
+% proximal chain Ca dependency
+mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
 %%
 function totalCost = evalCombined(optMods)
     %normal - optimizing for all
@@ -142,13 +148,16 @@ function totalCost = evalCombined(optMods)
     % mod([11, 12, 13]) = optMods(:);
     % x0 = [1.0504    1.2978    0.9544    1.0226    0.4784    1.0429    0.9584    0.8259    0.8629    0.7200    1.3634    0.8411    0.9660    1.0150 1 1];    
     % mod = [2.2000    4.4000    2.2000    1.0226    0.4784    1.0300    0.9584    0.8259    0.8629    0.7200    1.3634    0.8411   -2.8000    1.0150    1.0000    1.0000];
-    mod = [2.0398    0.9359    4.3424    2.3068    0.4784 0.6410    0.8054    0.8220    0.2923    0.7200 1.3634    1.0000   -2.8000    1.3022    0.8551];
 
-    modSel = [2 3 4 6 7 8 9 12 14 15];
-    % mod([1:4 6:10 13]) = optMods;
-    mod(modSel) = optMods;
+    % mod = [2.0398    0.9359    4.3424    2.3068    0.4784 0.6410    0.8054    0.8220    0.2923    0.7200 1.3634    1.0000   -2.8000    1.3022    0.8551];
+    % 
+    % modSel = [2 3 4 6 7 8 9 12 14 15];
+    % % mod([1:4 6:10 13]) = optMods;
+    % mod(modSel) = optMods;
 
-    drawPlots = false;
+    mod = optMods;
+
+    drawPlots = true;
     %% no Ca
     pCa = 11;
     if drawPlots
