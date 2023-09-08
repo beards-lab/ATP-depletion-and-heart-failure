@@ -6,7 +6,7 @@ clear Length
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
 % rds = fliplr([0.1, 1, 10]);
-rds = fliplr([0.1, 1, 10]);
+rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -204,13 +204,13 @@ if pCa == 11
     % pCa11 
     PeakData =[ 
         10 7.2695   
-        1 11.8216   
+        % 1 11.8216   
         0.1 15.3761];
 elseif pCa == 4
     % pCa4 
     PeakData =[ 
         10 12.3018   
-        1 29.5823  
+        % 1 29.5823  
         0.1 50.0592];
 elseif isinf(pCa)
 % hack to get back the no PNB no pCa passive ramp-ups
@@ -253,7 +253,7 @@ end
 clf;
 for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
-    subplot(1, 4, j);hold on;
+    subplot(1, 3, j);hold on;
     
     plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',2);
     plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
@@ -277,7 +277,7 @@ end
 sgtitle(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost));
 %%
 % figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
-subplot(1, 4, 4);
+subplot(1, 3, 3);
 semilogx(PeakData(:,1),PeakData(:,2),'o',PeakData(:,1),PeakModel,'xr-','LineWidth',2)
 ylabel('Peak stress (kPa)')
 xlabel('Ramp time (sec.)')
