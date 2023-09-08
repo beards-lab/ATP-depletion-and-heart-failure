@@ -167,7 +167,7 @@ for j = rampSet
       return;
   end
   % calculate a, so that the max value is the same  
-  Fss = 1.2716*3; % reducing the param space
+  Fss = 1.2716*3*mod(12); % reducing the param space
   a = (Fss - d)/((Lmax -b)^c);
   % % calc force
   Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
@@ -253,27 +253,31 @@ end
 clf;
 for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
-    subplot(2, 3, j);hold on;
+    subplot(1, 3, j);hold on;
+    
     plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',2);
     plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
-    plot(Time{j},Force{j},'linewidth',2); axis([0 30+rds(j) 0 15])
+    plot(Time{j},Force{j},'linewidth',2); 
+    ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
+    axis([0 30+rds(j) 0 ym])
     ylabel('Stress (kPa)')
     xlabel('time (sec.)')
-    set(gca,'Xtick',0:50:200)
+    % set(gca,'Xtick',0:50:200)
     set(gca,'Fontsize',14)
     pos = get(gca, 'Position');
     w = pos(3)*0.6; h = pos(4)*0.4;
     x = pos(1) + pos(3) - w; y = pos(2) + pos(4) - h;
-    axes('Position',[x, y, w, h]);hold on;
+    axes('Position',[x, y - 0.1, w, h]);hold on;
     % axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
     plot(datatables{j}.Time-2,datatables{j}.F,'bo','linewidth',2);
     plot(t_int{j},Ftot_int{j},'-ro','linewidth',1);
     % plot(Time{2},Force{2},'linewidth',2); 
-    axis([0, rds(j)*2, 0, 15]);
+    axis([0, rds(j)*2, 0, ym]);    
 end
+sgtitle(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost));
 %%
 % figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
-subplot(2, 3, 6);
+subplot(1, 3, 3);
 semilogx(PeakData(:,1),PeakData(:,2),'o',PeakData(:,1),PeakModel,'xr-','LineWidth',2)
 ylabel('Peak stress (kPa)')
 xlabel('Ramp time (sec.)')
