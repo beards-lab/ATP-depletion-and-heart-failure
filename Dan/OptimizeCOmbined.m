@@ -119,7 +119,10 @@ tic
 % mod(16) = 0;
 % evalCombined(mod(modSel))
 % mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
-evalCombined(mod)
+modSel = [7, 9];
+mod_pca6 = [0.1657, 0.3895];
+% evalCombined(mod(modSel))
+evalCombined(mod_pca6)
 toc
 %%
 % cost = 301.7
@@ -132,7 +135,8 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 
 % init = mod(modSel);
 % init = ones(1, 10);
-init = mod;
+modSel = [7, 9];
+init = mod(modSel);
 x = fminsearch(@evalCombined, init, options);
 
 % mod(modSel) = x;
@@ -147,26 +151,48 @@ mod = [2.0398    0.9359    4.3397    2.2756    0.4784 0.6412    0.8053    0.8333
 mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
 % Fix for nS
 mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988];
+
+% mods for pCa 6: modSel = [7, 9], x = [0.1657, 0.3895];
+% thus, the profile is:
+pCa = [11, 6, 4];
+kC   = [10203,10203*4.78*0.3895,10203*4.78*0.9889];      % proximal chain force constant
+kA   = [0, 16.44*0.1657,16.44*0.9403];
+figure(44);clf;
+% subplot(211);
+plot(pCa, kA, 'x:', LineWidth=2);
+ylabel('kA Value');
+yyaxis right;
+plot(pCa, kC, '+:', LineWidth=2);
+ylabel('kC Value');
+
+set ( gca, 'xdir', 'reverse' );
+xlabel('pCa');
+legend('kA (PEVK attachment)', 'kC (stiffening proximal chain)')
 %%
 function totalCost = evalCombined(optMods)
     %normal - optimizing for all
     % mod = optMods;
     
     % optimizing only subset of mods
-    % mod = [0.9522    1.1349    1.0334 0.9123    0.4409    1.0839    0.9946    0.8851    1.1345    1.2716];
-    % mod([11, 12, 13]) = optMods(:);
-    % x0 = [1.0504    1.2978    0.9544    1.0226    0.4784    1.0429    0.9584    0.8259    0.8629    0.7200    1.3634    0.8411    0.9660    1.0150 1 1];    
-    % mod = [2.2000    4.4000    2.2000    1.0226    0.4784    1.0300    0.9584    0.8259    0.8629    0.7200    1.3634    0.8411   -2.8000    1.0150    1.0000    1.0000];
-
-    % mod = [2.0398    0.9359    4.3424    2.3068    0.4784 0.6410    0.8054    0.8220    0.2923    0.7200 1.3634    1.0000   -2.8000    1.3022    0.8551];
-    % 
-    % modSel = [2 3 4 6 7 8 9 12 14 15];
+    mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988];
+    
+    modSel = [7, 9];
     % % mod([1:4 6:10 13]) = optMods;
-    % mod(modSel) = optMods;
-
-    mod = optMods;
+    mod(modSel) = optMods;
 
     drawPlots = true;
+
+    %% pCa 6
+    pCa = 6;
+    if drawPlots
+        figure(35);title('pCa 6');
+    end
+
+    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+    totalCost = cost;
+    return;
+
+
     %% no Ca
     pCa = 11;
     if drawPlots
@@ -184,6 +210,7 @@ function totalCost = evalCombined(optMods)
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     totalCost = totalCost + cost;
+
 end
 
 function cost = isolateRunCombinedModel(mod, pCa, drawPlots)

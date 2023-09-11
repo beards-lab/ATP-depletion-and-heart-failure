@@ -15,7 +15,7 @@ for i_rd = 1:length(rds)
     datatables{i_rd} = datatable;
   else
     % new format for pCa experiments
-    datatables{i_rd} = readtable(['..\Data\PassiveCa_1\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
+    datatables{i_rd} = readtable(['..\Data\PassiveCa_2\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
   end
 end
 if isinf(pCa)
@@ -247,6 +247,13 @@ elseif pCa == 4
         10 12.3018   
         % 1 29.5823  
         0.1 50.0592];
+
+elseif pCa == 6
+    % pCa6 
+    PeakData =[         
+        10 7.8147   
+        % 1 15.7110   
+        0.1 25.9032];    
 elseif isinf(pCa)
 % hack to get back the no PNB no pCa passive ramp-ups
 % Peakdata for no-Ca peaks 0.8-1.2 ML

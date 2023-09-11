@@ -1,13 +1,21 @@
 %% read new Anthony's data
 close all;
 
+rds = [0.1 1 10 100];
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
 S1 = dir('data/PassiveCaSrc/20230518');
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort([S1.datenum]);
 S1 = S1(idx);
 
+% ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
+S1 = dir('data/PassiveCaSrc2/20230518');
+S1 = S1(~[S1.isdir]);
+[~,idx] = sort({S1.name});
+S1 = S1(idx);
+rds = fliplr([0.1 1 10 100]);
 
+%{
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
 % to be upscaled by 1.5x
 S2 = dir('data/PassiveCaSrc/20230608');
@@ -21,7 +29,7 @@ S3 = S3(~[S3.isdir]);
 S3 = S3(~contains({S3.name}, '0.02'));
 [~,idx] = sort([S3.datenum]);
 S3 = S3(idx);
-
+%}
 
 mergedTables = [struct2table(S1);struct2table(S2)];
 S = table2struct(mergedTables);
@@ -30,14 +38,14 @@ S = S1;
 
 
 close all;
-clear peaks;
+clear peaks ss;
 clear legnames;
 clear timecourses;
 
 
 % deifning the sequence
-seq = [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5 5 5 6 6 6 6 7 7 7 7 8 8 8 8];
-seq = [1 1 1 1]'*[1:12];
+% seq = [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5 5 5 6 6 6 6 7 7 7 7 8 8 8 8];
+seq = [1 1 1 1 1]'*[1:12];
 seq = seq(:)';
 
 skipPlots = false;
@@ -53,15 +61,21 @@ for i = 1:length(S)
     i_ss = datatable.t > datatable.t(end) - 46.0 & datatable.t < datatable.t(end) - 45.5;% index of steady states
     ss_cur = mean(datatable.F(i_ss));
 
-    seq_cur = i - seq(i)*4 + 4;
-    peaks(seq(i), seq_cur) = max(datatable.F);        
-    ss(seq(i), seq_cur) = ss_cur;
+    seq_cur = i - seq(i)*5 + 5;
     % timecourses{seq(i), seq_cur} = [datatable.t, datatable.F];
     timecourses{seq(i), seq_cur} = datatable;
 
     % get rid of the ramp speeds
     tit = split(S(i).name, '_');
-    legnames{seq(i)} = [num2str(seq(i)) ':' strjoin(tit(2:end), '_')];    
+    legnames{seq(i)} = [num2str(seq(i)) ':' strjoin(tit(2), '_')];    
+
+    if seq_cur == 5
+        % log of the whole experiment
+        continue;
+    end
+
+    peaks(seq(i), seq_cur) = max(datatable.F);        
+    ss(seq(i), seq_cur) = ss_cur;
 
     if skipPlots
         continue
@@ -74,7 +88,7 @@ for i = 1:length(S)
     % plot(datatable.t, datatable.F);
     plot(datatable.t, F);
     plot(datatable.t(i_ss), repmat(ss_cur, [sum(i_ss), 1])+2, 'LineWidth',2);
-    title(S(i).name, 'Interpreter','None');
+    title(legnames{seq(i)}, 'Interpreter','None');
     ylim([0 10])
     % pause
 end
@@ -82,14 +96,14 @@ end
 
 %% plot All the peaks and ss
 
-rds = [0.1 1 10 100];
+% rds = [0.1 1 10 100];
 figure(21);clf; 
 markers = 'sd<^>vox.ph*';
 colors = jet(size(peaks, 1));
 
 for i = 1:size(peaks, 1)
     % subplot(211);
-    semilogx(rds, fliplr(peaks(i, :)), [markers(i) '-'], 'LineWidth',2, 'Color', colors(i, :));
+    semilogx(rds, (peaks(i, :)), [markers(i) '-'], 'LineWidth',2, 'Color', colors(i, :));
     hold on;    
 end
 title('All peaks and SS')
@@ -98,7 +112,7 @@ legend(legnames, 'AutoUpdate',false)
 % separate loop to separate the legends
 for i = 1:size(peaks, 1)
 % subplot(212);
-    semilogx(rds, fliplr(ss(i, :)), [markers(i) '--'], 'LineWidth',1, 'Color', colors(i, :));
+    semilogx(rds, (ss(i, :)), [markers(i) '--'], 'LineWidth',1, 'Color', colors(i, :));
     hold on;
 end
 
@@ -174,10 +188,14 @@ subplot(2,2,1);legend(legnames{[1 3 6 7]}, 'Interpreter', 'None');
 %% stiffness at Ca levels
 figure(28);clf;hold on;
 colors = lines(5);
-pCa = [4.4, 5.5, 5.75, 6, 6.25, 11, 12];
-indx = [2 3 4 5 6 7 1];
+pCa = [4.4, 6, 11, 12]
+
+indx = [4, 3, 5, 1]
+% pCa = [4.4, 5.5, 5.75, 6, 6.25, 11, 12];
+% indx = [2 3 4 5 6 7 1];
 plot(-repmat(pCa, [4,1])', peaks(indx, :), 's', 'Linewidth', 1); 
 
+% TODO fix me
 ramp01 = peaks(indx, 4);
 
 yf = @(L, c, k, x0, x)L./(1+exp(-k*(-x-x0)))+c;
@@ -204,13 +222,13 @@ legend('100s', '10s', '1s', '0.1s');
 
 %% Resample and save
 
-intrs = [1 3]
-pCas = [11, 4];
-rds = [100, 10, 1, 0.1]
+intrs = [2 3 4]
+pCas = [11, 6, 4];
+% rds = [100, 10, 1, 0.1];
 % ts_d = 
 clf; hold on;
 for i = 1:length(intrs)
-    for rd_i = 2:length(rds)
+    for rd_i = 1:length(rds)
         %%
         clf; hold on;
         rd = rds(rd_i);
@@ -224,13 +242,14 @@ for i = 1:length(intrs)
 
         plot(datatable_cur.t,datatable_cur.F, '|-');
         % sample times for datas; baseline, ramp-up, peak decay, long tail
-        dwnsmpl = [0:0.5:2, 2 + (0:rd/30:rd), 2 + rd + (0:rd/30:rd), (2 + 2*rd):0.5:(30 + rd + 2 - 1.0)];
+        dwnsmpl = [0:0.5:2, 2 + (0:max(2,rd/30):rd), 2 + rd + (0:max(2,rd/30):min(30,rd)), (2 + 2*rd):0.5:(30 + rd + 2 - 1.0)];
 
         datatable_cur.Properties.VariableNames = {'Time', 'L', 'F', 'SL'};
         i_data = interp1(datatable_cur.Time, 1:length(datatable_cur.Time), dwnsmpl, 'nearest', 'extrap');
         
         dsf = 8;scaleF = 1;
         datatable_cur.F = movmean(datatable_cur.F*scaleF,[dsf/2 dsf/2]); % force filtered
+        % datatable_cur = 
         
         plot(dwnsmpl, datatable_cur.F(i_data), 'x-', 'Linewidth', 2);
         % 
@@ -238,7 +257,7 @@ for i = 1:length(intrs)
         % DownSampleAndSplit(datatable, dwnsmpl, [], 2.0, 1, 1.5, filename, 0, 1);
 
         saveAs = ['bakers_passiveStretch_pCa' num2str(pCas(i)) '_' num2str(rds(rd_i)*1000) 'ms'];
-        writetable(datatable_cur, ['data/PassiveCa_1/' saveAs '.csv']);
+        writetable(datatable_cur, ['data/PassiveCa_2/' saveAs '.csv']);
         disp(['Saved as ' saveAs ' and csv'])
     end
 end
