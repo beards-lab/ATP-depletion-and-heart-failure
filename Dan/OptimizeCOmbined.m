@@ -52,33 +52,37 @@ mod(6) = 1.03;
 mod(13) = -2.8;
 %%
 % mod = [2.0398    1.3113    3.8942    1.3500    0.4784 0.7398    0.8176    0.7869    0.8629    0.7200 1.3634    1   -2.8000    1.0150    0.6382 -0.5199];
+mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
+mod(5) = mod(9);
 drawPlots = true;
 cost_sap = []; % SA plus
 cost_sam = []; % SA minus
 pCa = 11;
 figure(100);
-RunCombinedModel;
-cost
-c0 = cost;
+cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+c0 = cost
 %
-saSet = [1:9 12:15];
+% saSet = [1:9 12:15];
 % saSet = [1:8 13];
 % saSet = [14 15];
+saSet = 1:10;
+SAFact = 1.05;
 for i_m = saSet
-    mod(i_m) = mod(i_m)*1.1;
+    mod(i_m) = mod(i_m)*SAFact;
     fprintf('Mod %g is up to %g..', i_m, mod(i_m));
     % figure(i_m)
-    RunCombinedModel;    
+    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     cost_sap(i_m) = cost;
     
-    mod(i_m) = mod(i_m)/1.1/1.1;
+    mod(i_m) = mod(i_m)/SAFact/SAFact;
     fprintf('costing %1.4e€ and down to %g...', cost, mod(i_m));
-    RunCombinedModel;    
+    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     cost_sam(i_m) = cost;
-    mod(i_m) = mod(i_m)*1.1;
+    mod(i_m) = mod(i_m)*SAFact;
     fprintf('costing %1.4e€. \n', cost);
 end
 %% plot the result
+modNames = {'kc(lowCa)', 'kS', 'nC', 'nU', 'nS', 'alphaU', 'kA', 'kD', 'kC(HighCa)', 'Fss'};
 % %%
 % cost11_sap = cost_sap;
 % cost11_sam = cost_sam;
@@ -93,26 +97,28 @@ eps = (c0_4 + c0_11)*1e-3;
 % better result
 bett = (cost11_sap*10 + cost4_sap + eps < c0_11*10 + c0_4) ...
     | (cost11_sam*10 + cost4_sam + eps < c0_11*10 + c0_4);
-betts = strings(1, length(cost4_sap));betts(bett) = "+++";
-% tradeoffs
-tdo = (cost11_sap + eps < c0_11 & cost4_sap > c0_4 + eps) | (cost11_sam + eps < c0_11 & cost4_sam > c0_4 + eps) ...
+betts = strings(1, length(cost4_sap));betts(bett) = "$$$";
+% tradeoffs between low and high Ca - suggesting some dependency?
+tdoCa = (cost11_sap + eps < c0_11 & cost4_sap > c0_4 + eps) | (cost11_sam + eps < c0_11 & cost4_sam > c0_4 + eps) ...
     | (cost11_sap > c0_11 + eps & cost4_sap + eps < c0_4) | (cost11_sam > c0_11 + eps & cost4_sam + eps < c0_4);
-tdos = strings(1, length(cost4_sap));tdos(tdo) = "*";
+tdoCas = strings(1, length(cost4_sap));tdoCas(tdoCa) = "*";
+
 figure(101);clf; 
 b = bar([cost11_sap*10; cost4_sap; zeros(size(cost4_sap)); cost11_sam*10;cost4_sam]'); hold on;
 title('Sensitivity Anal')
-plot([0, 16], [c0_11 c0_11]*10, 'b--')
-plot([0, 16], [c0_4 c0_4], 'm--')
-title('Grouped sensitivity analysis (* indicates trade-off, +++ potential of improvement)')
+plot([0.5, length(cost4_sap)], [c0_11 c0_11]*10, 'b--')
+plot([0.5, length(cost4_sap)], [c0_4 c0_4], 'm--')
+title('Grouped sensitivity analysis (* indicates Ca trade-off, $$$ potential of improvement)')
 legend('10xpCa11+','pCa4+','', '10xpCa11-','pCa4-','pCa11_0','pCa4_0')
 set(gca,'XTick',saSet);
-set(gca,'XTickLabels',strcat(string(1:length(cost4_sap)), ':', modNames(1:15),tdos, betts   ));
+set(gca,'XTickLabels',strcat(string(1:length(cost4_sap)), ':', modNames(1:length(cost4_sap)),tdoCas, betts));
 set(gca, "FontSize", 14)
 %%
 tic
 % modSel = [2 3 4 6 7 8 9 12 14 15];
 % mod(16) = 0;
 % evalCombined(mod(modSel))
+% mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
 evalCombined(mod)
 toc
 %%
@@ -122,10 +128,11 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % x0 = [0.5795    1.6029    0.9047    1.0569    0.9236    0.6627    1.0497    0.9465    1.0641    0.7124];
 
 % best in the worst so far optMods =     1.3705    1.4770    1.1905    1.1205    0.8670    0.3074    0.6812    0.9407    1.3393    0.8915    1.1628    1.0166
-modSel = [2 3 4 6 7 8 9 12 14 15];
+% modSel = [2 3 4 6 7 8 9 12 14 15];
 
 % init = mod(modSel);
-init = ones(1, 10);
+% init = ones(1, 10);
+init = mod;
 x = fminsearch(@evalCombined, init, options);
 
 % mod(modSel) = x;
@@ -138,6 +145,8 @@ mod = [2.0398    0.9359    4.3397    2.2756    0.4784 0.6412    0.8053    0.8333
 
 % proximal chain Ca dependency
 mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
+% Fix for nS
+mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988];
 %%
 function totalCost = evalCombined(optMods)
     %normal - optimizing for all

@@ -69,9 +69,9 @@ kS   = g0(2)*14122;        % distal chain force constant
 alphaU = g0(6)*(8.4137e5);         % chain unfolding rate constant
 alphaF = 1;
 nC = g0(3)*3.27;
-nS = g0(9)*3.25;
+nS = g0(5)*3.25;
 nU = g0(4)*6.0;
-mu = g0(5)*1; 
+mu = 1.12; 
 Ls0  = 0.0;
 
 
@@ -290,9 +290,9 @@ for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     subplot(1, 3, j);hold on;
     
-    plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',2);
-    plot(t_int{j},Ftot_int{j},'ro','linewidth',1);
-    plot(Time{j},Force{j},'linewidth',2); 
+    plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',0.5);
+    plot(Time{j},Force{j},'r:', 'linewidth',1); 
+    plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
     ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
     axis([0 30+rds(j) 0 ym])
     ylabel('Stress (kPa)')
@@ -304,9 +304,9 @@ for j = rampSet
     x = pos(1) + pos(3) - w; y = pos(2) + pos(4) - h;
     axes('Position',[x, y - 0.1, w, h]);hold on;
     % axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
-    plot(datatables{j}.Time-2,datatables{j}.F,'bo','linewidth',2);
-    plot(t_int{j},Ftot_int{j},'-ro','linewidth',1);
-    % plot(Time{2},Force{2},'linewidth',2); 
+    plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',0.5);
+    plot(Time{j},Force{j}, 'r:', 'linewidth',2); 
+    plot(t_int{j},Ftot_int{j},'-r','linewidth',1);
     axis([0, rds(j)*2, 0, ym]);    
 end
 sgtitle(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost));
