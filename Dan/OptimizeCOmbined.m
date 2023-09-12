@@ -119,10 +119,11 @@ tic
 % mod(16) = 0;
 % evalCombined(mod(modSel))
 % mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
-modSel = [7, 9];
-mod_pca6 = [0.1657, 0.3895];
+% modSel = [7, 9];
+% mod_pca6 = [0.1657, 0.3895];
 % evalCombined(mod(modSel))
-evalCombined(mod_pca6)
+% evalCombined(mod_pca6)
+evalCombined([1 1 1])
 toc
 %%
 % cost = 301.7
@@ -150,9 +151,10 @@ mod = [2.0398    0.9359    4.3397    2.2756    0.4784 0.6412    0.8053    0.8333
 % proximal chain Ca dependency
 mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
 % Fix for nS
-mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988];
+mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988 1 1 1];
 
 % mods for pCa 6: modSel = [7, 9], x = [0.1657, 0.3895];
+mod([7,9]) = [0.1657, 0.3895];
 % thus, the profile is:
 pCa = [11, 6, 4];
 kC   = [10203,10203*4.78*0.3895,10203*4.78*0.9889];      % proximal chain force constant
@@ -176,21 +178,24 @@ function totalCost = evalCombined(optMods)
     % optimizing only subset of mods
     mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988];
     
-    modSel = [7, 9];
+    % modSel = [7, 9];
     % % mod([1:4 6:10 13]) = optMods;
+    modSel = [11, 12, 13];
     mod(modSel) = optMods;
 
     drawPlots = true;
+    totalCost = 0;
 
     %% pCa 6
     pCa = 6;
+    mod([7,9]) = [0.1657, 0.3895];
     if drawPlots
         figure(35);title('pCa 6');
     end
 
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    totalCost = cost;
-    return;
+    totalCost = totalCost + cost;
+    % return;
 
 
     %% no Ca
@@ -200,10 +205,11 @@ function totalCost = evalCombined(optMods)
     end    
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    totalCost = cost*10;
-
+    totalCost = totalCost + cost*10;
+% return
     %% pCa 4
     pCa = 4;
+    mod([7,9]) = [0.9403    0.9889];
     if drawPlots
         figure(34);title('pCa 4');
     end

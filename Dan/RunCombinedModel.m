@@ -188,23 +188,22 @@ for j = rampSet
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
   
-  % b = 0.05*mod(10);
-  % c = 7*mod(11);
-  % d = 0.01*mod(12);
-  % % apply constraints
-  % if b < 0 || c <= 0 || d < 0 
-  %     cost = inf;
-  %     return;
-  % end
+  b = 0.05*mod(11);
+  c = 7*mod(12);
+  d = 0.01*mod(13);
+  % apply constraints
+  if b < 0 || c <= 0 || d < 0 
+      cost = inf;
+      return;
+  end
   
   % calculate a, so that the max value is the same  
-  % Fss = 1.2716*3*mod(12); % reducing the param space
-  % Fss = (0.55e6)*0.225^8*mod(12); % update from Dan's code
-  % a = (Fss - d)/((Lmax -b)^c);
-  % % calc force
-  % Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+  Fss = 3.2470; % reducing the param space
+  a = (Fss - d)/((Lmax -b)^c);
+  % calc force
+  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
 
-  Force{j} = Force{j} + (0.55e6)*0.225^8*mod(10); 
+  % Force{j} = Force{j} + (0.55e6)*0.225^8*mod(10); 
 
 
   % Fss = mod(10)*3; % optimized previously
@@ -217,9 +216,9 @@ for j = rampSet
 end
 
 % Get error for the whole ramp-up and decay
-% t_endFreeware = zeros(1, 5); % time when we start counting the costs
+t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % alternatively, get the error from decay only
-t_endFreeware  = Lmax./Vlist + 2;
+% t_endFreeware  = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
 En = cell(1, length(rampSet));
