@@ -136,6 +136,7 @@ for i_logtrace = 1:size(timecourses, 1)
     t_slackStart = t_slackStart([end-3:end]);
     % compare to the 100s, 10s, 1s and 0.1s ramp-up cutouts
     figure(i_logtrace);subplot(221);cla;hold on;
+    zd = cell(1, 5);
     for i_ramp = 1:4
         % i_ramp = 3;
         dt(i_ramp) = t_slackStart(i_ramp) - (timecourses{i_logtrace, i_ramp}.t(end) - 36.4);
@@ -150,11 +151,14 @@ for i_logtrace = 1:size(timecourses, 1)
     
     figure(i_logtrace);subplot(212);cla;hold on;
     for i_ramp = 1:4
-        zd = f_Fdt(ae.a, ae.b, ae.c, timecourses{i_logtrace, i_ramp}.t + dt(i_ramp)); % zero drift
+        zd{i_ramp} = f_Fdt(ae.a, ae.b, ae.c, timecourses{i_logtrace, i_ramp}.t + dt(i_ramp)); % zero drift
         % zero drift fitted
-        plot(timecourses{i_logtrace, i_ramp}.t + dt(i_ramp), timecourses{i_logtrace, i_ramp}.F - zd)
+        plot(timecourses{i_logtrace, i_ramp}.t + dt(i_ramp), timecourses{i_logtrace, i_ramp}.F - zd{i_ramp})
         % compare with simple cut-out
         plot(timecourses{i_logtrace, i_ramp}.t + dt(i_ramp), timecourses{i_logtrace, i_ramp}.F - avg_Fslack(i_ramp), ':')        
+
+        % save the force corrected for the zero drift
+        % timecourses{i_logtrace, i_ramp}.F = timecourses{i_logtrace, i_ramp}.F - zd;
     end
     % plot(timecourses{i_logtrace, 5}.t(is_slack), timecourses{i_logtrace, 5}.F(is_slack), '.', 'LineWidth',2)
     % plot(timecourses{i_logtrace, 5}.t, f_Fdt(ae.a, ae.b, ae.c, timecourses{i_logtrace, 5}.t))
@@ -163,8 +167,7 @@ for i_logtrace = 1:size(timecourses, 1)
 
     axis tight;
 
-    % plot(timecourses{i_logtrace, 5}.t, timecourses{i_logtrace, 5}.L, ...
-    %     timecourses{i_logtrace, 5}.t(is_slack), timecourses{i_logtrace, 5}.L(is_slack));
+
 end
 
 %% plot All the peaks and ss
@@ -293,6 +296,18 @@ xlabel('-pCa');
 ylabel('Tension (kPa)')
 legend('100s', '10s', '1s', '0.1s');
 
+%% Overlap the decays
+for i = 1:size(timecourses, 1)
+    %%
+    i = 1;
+    figure(i);clf;hold on;
+    for i_rd = 1:length(rds)
+      plot(timecourses{i, i_rd}.t - rds(i_rd), (timecourses{i, i_rd}.F  - ss(i, i_rd))/(peaks(i, i_rd) - ss(i, i_rd)));
+    end
+end
+
+
+
 %% Resample and save
 
 intrs = [2 3 4]
@@ -301,11 +316,15 @@ pCas = [11, 6, 4];
 % ts_d = 
 clf; hold on;
 for i = 1:length(intrs)
-    for rd_i = 1:length(rds)
+    for i_rd = 1:length(rds)
         %%
         clf; hold on;
-        rd = rds(rd_i);
-        datatable_cur = timecourses{intrs(i), rd_i};
+        rd = rds(i_rd);
+        datatable_cur = timecourses{intrs(i), i_rd};
+
+        % correct for zero drift
+        datatable_cur.F = datatable_cur.F - zd{i_rd};
+        
         % cut out the ramp and decay
         % validIds = datatable_cur(:, 1) >= 8 & datatable_cur(:, 1) < rd + 10 + 30;
         validIds = datatable_cur.t >= 8 & datatable_cur.t < rd + 10 + 30;
@@ -313,7 +332,8 @@ for i = 1:length(intrs)
         % shift the time base
         datatable_cur(:, 1) =  datatable_cur(:, 1) - 8;
 
-        plot(datatable_cur.t,datatable_cur.F, '|-');
+
+        plot(datatable_cur.t,datatable_cur.F, '--');
         % sample times for datas; baseline, ramp-up, peak decay, long tail
         dwnsmpl = [0:0.5:2, 2 + (0:max(2,rd/30):rd), 2 + rd + (0:max(2,rd/30):min(30,rd)), (2 + 2*rd):0.5:(30 + rd + 2 - 1.0)];
 
@@ -329,8 +349,8 @@ for i = 1:length(intrs)
         % plot(dwnsmpl, zeros(1, length(dwnsmpl)), '|-', 'Linewidth', 2);
         % DownSampleAndSplit(datatable, dwnsmpl, [], 2.0, 1, 1.5, filename, 0, 1);
 
-        saveAs = ['bakers_passiveStretch_pCa' num2str(pCas(i)) '_' num2str(rds(rd_i)*1000) 'ms'];
-        writetable(datatable_cur, ['data/PassiveCa_2/' saveAs '.csv']);
+        saveAs = ['bakers_passiveStretch_pCa' num2str(pCas(i)) '_' num2str(rds(i_rd)*1000) 'ms'];
+        writetable(datatable_cur, ['data/PassiveCa_3/' saveAs '.csv']);
         disp(['Saved as ' saveAs ' and csv'])
     end
 end
