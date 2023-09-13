@@ -31,8 +31,8 @@ S3 = S3(~contains({S3.name}, '0.02'));
 S3 = S3(idx);
 %}
 
-mergedTables = [struct2table(S1);struct2table(S2)];
-S = table2struct(mergedTables);
+% mergedTables = [struct2table(S1);struct2table(S2)];
+% S = table2struct(mergedTables);
 S = S1;
 %%
 
@@ -53,26 +53,34 @@ for i = 1:length(S)
     datatable = readtable([S(i).folder '/' S(i).name], 'filetype', 'text', 'NumHeaderLines',4);
     datatable.Properties.VariableNames = {'t', 'L','F', 'SL'};
 
+    if strcmp(S(i).name, '30_extracted_Log.txt')
+        % some strange end messes with zero drift correction
+        datatable = datatable(datatable.t < 1000, :);
+    % elseif strcmp(S(i).name, '15_pCa6_PNB_Log.txt')
+    end
+
     % subtrack zero drift
-    i_fzero = datatable.t > datatable.t(end) - 35 & datatable.t < datatable.t(end) - 25;
-    Fzero = mean(datatable.F(i_fzero));
-    datatable.F = (datatable.F - Fzero);
-    F = movmean(datatable.F, [8 8]);
+    % i_fzero = datatable.t > datatable.t(end) - 35 & datatable.t < datatable.t(end) - 25;
+    % Fzero = mean(datatable.F(i_fzero));
+    % datatable.F = (datatable.F - Fzero);
+    datatable.F = movmean(datatable.F, [8 8]);
     i_ss = datatable.t > datatable.t(end) - 46.0 & datatable.t < datatable.t(end) - 45.5;% index of steady states
     ss_cur = mean(datatable.F(i_ss));
 
     seq_cur = i - seq(i)*5 + 5;
     % timecourses{seq(i), seq_cur} = [datatable.t, datatable.F];
     timecourses{seq(i), seq_cur} = datatable;
-
-    % get rid of the ramp speeds
-    tit = split(S(i).name, '_');
-    legnames{seq(i)} = [num2str(seq(i)) ':' strjoin(tit(2), '_')];    
+    
 
     if seq_cur == 5
         % log of the whole experiment
-        continue;
+        % continue;
     end
+
+    % cut out the title
+    tit = split(S(i).name, {'_', '.txt'});
+    legnames{seq(i)} = [num2str(seq(i)) ':' strjoin(tit(3), '_')];    
+
 
     peaks(seq(i), seq_cur) = max(datatable.F);        
     ss(seq(i), seq_cur) = ss_cur;
@@ -85,14 +93,79 @@ for i = 1:length(S)
 
     subplot(211);hold on;plot(datatable.t, datatable.L);
     subplot(212);hold on;
-    % plot(datatable.t, datatable.F);
-    plot(datatable.t, F);
+    plot(datatable.t, datatable.F);
+    % plot(datatable.t, F);
     plot(datatable.t(i_ss), repmat(ss_cur, [sum(i_ss), 1])+2, 'LineWidth',2);
     title(legnames{seq(i)}, 'Interpreter','None');
-    ylim([0 10])
+    % ylim([0 10])
     % pause
 end
 
+%% Filter out zeros in a separate pass
+for i_logtrace = 1:size(timecourses, 1)
+    %%
+    % i_logtrace = 6
+    % is slack? ML below 0.85 definitely is
+    is_slack = timecourses{i_logtrace, 5}.L < 0.85; 
+    % allow first 2s to be considered as slack too. Usually over zero
+    % though
+    % is_slack = is_slack | timecourses{i_logtrace, 5}.t < 2; % is slack?
+
+    zdt = timecourses{i_logtrace, 5}.t(is_slack); % zero drift time
+    zdF = timecourses{i_logtrace, 5}.F(is_slack); % zero drift Force
+
+    % Force drift as a function of time
+    f_Fdt = @(a, b, c, x)0*a.*x.^2 +b.*x + c;        
+    [ae be] = fit(zdt, zdF, f_Fdt, 'StartPoint', [1e-6, 1e-4, 1]);        
+    % plot(timebase, y_exp(ae.a, ae.b, ae.c, timebase), '--', 'Linewidth', 2);
+    zd = f_Fdt(ae.a, ae.b, ae.c, timecourses{i_logtrace, 5}.t); % zero drift
+
+    figure(i_logtrace); clf; 
+    subplot(222)
+    plot(timecourses{i_logtrace, 5}.t, timecourses{i_logtrace, 5}.F, ...
+        timecourses{i_logtrace, 5}.t(is_slack), timecourses{i_logtrace, 5}.F(is_slack), ...
+        timecourses{i_logtrace, 5}.t, zd);
+    legend('Raw Force reading', 'Zero regions', 'Zero drift');
+
+    %% Identify position of individual ramps
+    % We use start of the slack, which beggins 4s from the end of indi ramp
+    % of the individual cut-out
+    i_slackStart = find(diff(is_slack) > 0);
+    t_slackStart = (timecourses{i_logtrace, 5}.t(i_slackStart));    
+    % take last 4, some traces have some weird beggining
+    t_slackStart = t_slackStart([end-3:end]);
+    % compare to the 100s, 10s, 1s and 0.1s ramp-up cutouts
+    figure(i_logtrace);subplot(221);cla;hold on;
+    for i_ramp = 1:4
+        % i_ramp = 3;
+        dt(i_ramp) = t_slackStart(i_ramp) - (timecourses{i_logtrace, i_ramp}.t(end) - 36.4);
+        t_slack = timecourses{i_logtrace, i_ramp}.t(end) - 36.4 + [2, 10];
+        i_slack = timecourses{i_logtrace, i_ramp}.t > t_slack(1) & timecourses{i_logtrace, i_ramp}.t < t_slack(2);
+        avg_Fslack(i_ramp) = mean(timecourses{i_logtrace, i_ramp}.F(i_slack));
+        plot(timecourses{i_logtrace, i_ramp}.t + dt(i_ramp), timecourses{i_logtrace, i_ramp}.L)
+        plot(timecourses{i_logtrace, i_ramp}.t(i_slack) + dt(i_ramp), timecourses{i_logtrace, i_ramp}.L(i_slack), '*--')
+    end
+    plot(timecourses{i_logtrace, 5}.t, timecourses{i_logtrace, 5}.L, ':')
+    legend('Muscle length', 'Zero regions')
+    
+    figure(i_logtrace);subplot(212);cla;hold on;
+    for i_ramp = 1:4
+        zd = f_Fdt(ae.a, ae.b, ae.c, timecourses{i_logtrace, i_ramp}.t + dt(i_ramp)); % zero drift
+        % zero drift fitted
+        plot(timecourses{i_logtrace, i_ramp}.t + dt(i_ramp), timecourses{i_logtrace, i_ramp}.F - zd)
+        % compare with simple cut-out
+        plot(timecourses{i_logtrace, i_ramp}.t + dt(i_ramp), timecourses{i_logtrace, i_ramp}.F - avg_Fslack(i_ramp), ':')        
+    end
+    % plot(timecourses{i_logtrace, 5}.t(is_slack), timecourses{i_logtrace, 5}.F(is_slack), '.', 'LineWidth',2)
+    % plot(timecourses{i_logtrace, 5}.t, f_Fdt(ae.a, ae.b, ae.c, timecourses{i_logtrace, 5}.t))
+    % plot(timecourses{i_logtrace, 5}.t, timecourses{i_logtrace, 5}.F, ':')
+    legend('Zero drift removal', 'zero-value removal')
+
+    axis tight;
+
+    % plot(timecourses{i_logtrace, 5}.t, timecourses{i_logtrace, 5}.L, ...
+    %     timecourses{i_logtrace, 5}.t(is_slack), timecourses{i_logtrace, 5}.L(is_slack));
+end
 
 %% plot All the peaks and ss
 
