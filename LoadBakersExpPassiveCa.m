@@ -356,6 +356,45 @@ axes('position', [0.15 0.62, 0.28, 0.3]);
 semilogx(rds(1, 5:8), peaks(1, 5:8), 'd-', rds(1, 1:4), peaks(1, 1:4), 's-', 'LineWidth',2)
 title('Peaks', 'Position',[1, 30, 0])
 
+%% Fit the onset
+for i_logtrace = 1:size(dsc,1)
+
+    figure(10 + i_logtrace);clf;hold on;
+    colors = lines(size(dsc, 2));
+    
+
+    for i_ramp = 1:size(dsc, 2)-1
+        if isempty(dsc{i_logtrace, i_ramp+1})
+            break;
+        end
+        dtst = dsc{i_logtrace, i_ramp+1}; % dataset
+        rmp = dtst.datatableZDCorr;
+        offset = 10 + dtst.rd/4;
+        fitrg = rmp.t > offset & rmp.t < 10 + dtst.rd;
+        rmpFitrg = rmp(fitrg, :);
+        % fitfun = @(a, b, c, d, x) min(a*max(x+d, 0).^(b) + c +0*d, 1e2);
+        fitfun = @(a, b, c, d, x) a.*exp(x*b) + c + a*b*c*d*0;
+
+        [ae goodness] = fit(rmpFitrg.t - offset, rmpFitrg.F,fitfun, 'StartPoint',[1, 0.01, 1, 0.01]);
+        as(i_ramp) = ae.a;
+        bs(i_ramp) = ae.b;
+        cs(i_ramp) = ae.c;
+        ds(i_ramp) = ae.d;
+        rd(i_ramp) = dtst.rd;
+        
+        p(i_ramp) = plot(rmp.t + dtst.ramp_shift, rmp.F, '-','Linewidth', 0.5, 'Color', colors(i_ramp, :));
+        plot(rmpFitrg.t + dtst.ramp_shift, fitfun(ae.a, ae.b,ae.c, ae.d, rmpFitrg.t-offset), '-','Linewidth', 4, 'Color', colors(i_ramp, :)*0.8);        
+        text(rmpFitrg.t(end) + dtst.ramp_shift, rmpFitrg.F(end), sprintf('a = %1.2e\nb = %1.2e', ae.a, ae.b))
+        legends{i_ramp} = sprintf('%s: d = %2.1d with RMSE = %3.1e', dtst.datasetLegend, ae.b, goodness.rmse);
+    end
+    title(sprintf('Fit for a.*exp(x*b) + c'), 'Interpreter', 'none')
+    legend(p, legends)
+    axes('position', [0.35, 0.6, 0.25, 0.3])
+    semilogx(rd, as, 'x-', rd, bs, 'v-', rd, cs, '^-');
+    legend('A', 'B', 'C')
+
+end
+
 %% Compare extracted time-courses
 figure(24);clf; hold on;
 mult = 1.5;
