@@ -37,7 +37,7 @@ end
 Lmax = 0.225;
 % Nx   = 25;          % number of space steps
 Nx   = 25;          % number of space steps
-ds   = 0.40*(Lmax)/(Nx-1);      % space step size
+ds   = 0.80*(Lmax)/(Nx-1);      % space step size
 s  = (0:1:Nx-1)'.*ds; % strain vector
 Ng = 11; 
 delU = 0.010;
@@ -59,20 +59,20 @@ delU = 0.010;
 g0 = mod;
 kD   = g0(8)*14.977;
 if pCa == 11
-    kC   = g0(1)*10203*1e3;      % proximal chain force constant
+    kC   = g0(1)*10203;      % proximal chain force constant
     kA   = g0(7)*0*16.44;
 else
-    kC   = g0(9)*10203*4.78*1e3 ;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
+    kC   = g0(9)*10203*4.78 ;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = g0(7)*16.44;
 end
-kS   = g0(2)*14122*1e3;        % distal chain force constant
+kS   = g0(2)*14122;        % distal chain force constant
 alphaU = g0(6)*(8.4137e5);         % chain unfolding rate constant
 alphaF = 1;
-nC = g0(3)*3.27*2;
-nS = g0(5)*3.25*2;
-nU = g0(4)*6.0*2;
+nC = g0(3)*3.27;
+nS = g0(5)*3.25;
+nU = g0(4)*6.0;
 mu = 1.12; 
-Ls0  = 0;
+Ls0  = 0.0;
 
 
 
@@ -201,8 +201,7 @@ for j = rampSet
   Fss = 3.2470; % reducing the param space
   a = (Fss - d)/((Lmax -b)^c);
   % calc force
-  % 6.4399e+05*(0.2250 - 0.05)^7 + 0.01
-  Force{j} = Force{j} + 0*a*max(Length{j} - b, 0).^c + d; 
+  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
 
   % Force{j} = Force{j} + (0.55e6)*0.225^8*mod(10); 
 

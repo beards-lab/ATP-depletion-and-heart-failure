@@ -123,7 +123,7 @@ tic
 % mod_pca6 = [0.1657, 0.3895];
 % evalCombined(mod(modSel))
 % evalCombined(mod_pca6)
-evalCombined(mod(modSel))
+evalCombined([1 1 1])
 toc
 %%
 % cost = 301.7
@@ -136,12 +136,12 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 
 % init = mod(modSel);
 % init = ones(1, 10);
-modSel = 1:8;
+modSel = [7, 9];
 init = mod(modSel);
 x = fminsearch(@evalCombined, init, options);
 
-mod(modSel) = x;
-% mod = x;
+% mod(modSel) = x;
+mod = x;
 
 save mod;
 %% result
@@ -176,26 +176,26 @@ function totalCost = evalCombined(optMods)
     % mod = optMods;
     
     % optimizing only subset of mods
-    mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988 1 1 1];
+    mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988];
     
     % modSel = [7, 9];
     % % mod([1:4 6:10 13]) = optMods;
-    modSel = [1:8];
+    modSel = [11, 12, 13];
     mod(modSel) = optMods;
 
     drawPlots = true;
     totalCost = 0;
 
     %% pCa 6
-    % pCa = 6;
-    % mod([7,9]) = [0.1657, 0.3895];
-    % if drawPlots
-    %     figure(35);title('pCa 6');
-    % end
-    % 
-    % cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    % totalCost = totalCost + cost;
-    % % return;
+    pCa = 6;
+    mod([7,9]) = [0.1657, 0.3895];
+    if drawPlots
+        figure(35);title('pCa 6');
+    end
+
+    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+    totalCost = totalCost + cost;
+    % return;
 
 
     %% no Ca
@@ -206,7 +206,7 @@ function totalCost = evalCombined(optMods)
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     totalCost = totalCost + cost*10;
-return
+% return
     %% pCa 4
     pCa = 4;
     mod([7,9]) = [0.9403    0.9889];
