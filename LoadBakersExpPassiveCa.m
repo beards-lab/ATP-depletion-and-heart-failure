@@ -19,17 +19,17 @@ clear;
 % rds = fliplr([0.1 1 10 100]);
 
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
-S1 = dir('data/PassiveCaSrc2/20230919');
+S1 = dir('data/PassiveCaSrc2/20230927');
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
 S1 = S1(idx);
 
 % mergedTables = [struct2table(S1);struct2table(S2)];
 % S = table2struct(mergedTables);
-S = S1;
+S = S1([1:9]);
 %%
 
-skipPlots = true;
+skipPlots = false;
 
 dsc = cell(0); % dataset structure cell array
 for i = 1:length(S)
@@ -95,15 +95,15 @@ for i = 1:length(S)
     if skipPlots
         continue
     end
-    figure(seq(i));
+    figure(ds.set);
     set(gcf, 'Position',  [769.8000   41.8000  766.4000 740.8000]);
 
     subplot(211);hold on;plot(datatable.t, datatable.L);
     subplot(212);hold on;
     plot(datatable.t, datatable.F);
     % plot(datatable.t, F);
-    plot(datatable.t(i_ss), repmat(ss_cur, [sum(i_ss), 1])+2, 'LineWidth',2);
-    title(legnames{seq(i)}, 'Interpreter','None');
+    % plot(datatable.t(i_ss), repmat(ss_cur, [sum(i_ss), 1])+2, 'LineWidth',2);
+    title(ds.datasetLegend, 'Interpreter','None');
     % ylim([0 10])
     % pause
 end
@@ -116,7 +116,7 @@ end
 %% Filter out zero drift in a separate pass
 for i_logtrace = 1:size(dsc, 1)
     %% take the log. Log is number 1
-    % i_logtrace = 2
+    i_logtrace = 1
     ds = dsc{i_logtrace, 1};
 
     % is slack? ML below 0.85 definitely is
@@ -180,8 +180,8 @@ for i_logtrace = 1:size(dsc, 1)
     % ignored, results saved
     i_logtrace = 1
     ful = dsc{i_logtrace, 1}.datatable;
-    i = 10; % ramp order in dataset
-    srchrng = 10000:20000; % correlation range - xcorr does good peaks, but can't really find the one
+    i = 9; % ramp order in dataset
+    srchrng = 12000:18000; % correlation range - xcorr does good peaks, but can't really find the one
     seg = dsc{i_logtrace, i}.datatable; 
 
     % take common sampling rate at 10/s
@@ -189,7 +189,7 @@ for i_logtrace = 1:size(dsc, 1)
     timebase = 0:1/Fs:ful.t(end);
     F_fulI = interp1(ful.t, ful.F, 0:1/Fs:ful.t(end));
     F_segI = interp1(seg.t, seg.F, 0:1/Fs:seg.t(end));
-    
+
     [c, d] = xcorr(F_fulI, F_segI);
     c = c(d>0); d = d(d>0);    % limit only positive shift
     [~, i_xcm] = max(c(srchrng));
@@ -197,25 +197,29 @@ for i_logtrace = 1:size(dsc, 1)
     clf;hold on;
     plot(d, c/max(c), 1:length(F_fulI), F_fulI, i_xcm + (1:length(F_segI)), F_segI);
     fprintf('Shift for i:%d, t:%0.3f (%s)\n', dsc{1, i}.order, timebase(i_xcm), dsc{1, i}.filename)
+%%
+    % Shift for i:2, t:106.600 (01_02_0.1s_RelaxF2S_relax.txt)
+    % Shift for i:3, t:276.500 (01_03_1s_RelaxF2S_relax.txt)
+    % Shift for i:4, t:446.600 (01_04_10s_RelaxF2S_relax.txt)
+    % Shift for i:5, t:626.600 (01_05_100s_RelaxF2S_relax.txt)
+    % Shift for i:6, t:896.500 (01_06_100s_RelaxS2F_relax.txt)
+    % Shift for i:7, t:1166.600 (01_07_10s_RelaxS2F_relax.txt)
+    % Shift for i:8, t:1346.500 (01_08_1s_RelaxS2F_relax.txt)
+    % Shift for i:9, t:1516.600 (01_09_0.1s_RelaxS2F_relax_300s_hold.txt)
 
-    % Shift for i:2, t:186.800 (01_02_100s_RelaxS2F.txt)
-    % Shift for i:3, t:426.900 (01_03_10s_RelaxS2F.txt)
-    % Shift for i:4, t:576.900 (01_04_1s_RelaxS2F.txt)
-    % Shift for i:5, t:716.900 (01_05_0.1s_RelaxS2F.txt)
-    % Shift for i:6, t:952.900 (01_06_0.1s_RelaxF2S.txt)
-    % Shift for i:7, t:1092.900 (01_07_1s_RelaxF2S.txt)
-    % Shift for i:8, t:1232.900 (01_08_10s_RelaxF2S.txt)
-    % Shift for i:9, t:1383.000 (01_09_100s_RelaxF2S.txt)
-    % Shift for i:10, t:1721.900 (01_10_0.1s_RelaxF2S_hold300s.txt)
-    ramp_order = [2,3,4,5,6,7,8,9,10];
-    ramp_shift = [186.8,426.9,576.9,716.9,952.9,1092.9,1232.9,1383,1721.9];
+    % dataset 20230919
+    % ramp_order = [2,3,4,5,6,7,8,9,10];
+    % ramp_shift = [186.8,426.9,576.9,716.9,952.9,1092.9,1232.9,1383,1721.9];
 
+    % dataset 20230927
+    % ramp_order = [2,3,4,5,6,7,8,9];
+    % ramp_shift = [106.600,276.500,446.600,626.600,896.500,1166.600,1346.500,1516.600]
     %}
     %% Identify position of individual ramps
     if i_logtrace == 1
         % this is weird and has been identified semi-manually
-        ramp_order = [2,3,4,5,6,7,8,9,10];
-        ramp_shift = [186.8,426.9,576.9,716.9,952.9,1092.9,1232.9,1383,1721.9];
+        ramp_order = [2,3,4,5,6,7,8,9];
+        ramp_shift = [106.600,276.500,446.600,626.600,896.500,1166.600,1346.500,1516.600];
     else   
         % We use start of the slack, which beggins 4s from the end of indi ramp
         % of the individual cut-out
@@ -341,16 +345,16 @@ end
 figure(23);clf;hold on;
 colors = lines(2);
 for i_ramp = 2:5
-    rmpS2F = dsc{1, i_ramp};
-    rmpF2S = dsc{1, 11 - i_ramp};
-    plot(rmpS2F.datatableZDCorr.t + rmpS2F.ramp_shift, movmean(rmpS2F.datatableZDCorr.F, [32 32]), '--', 'Color',colors(1, :));
-    plot(rmpF2S.datatableZDCorr.t + rmpS2F.ramp_shift, movmean(rmpF2S.datatableZDCorr.F, [32 32]), '--', 'Color',colors(2, :));
+    rmpF2S = dsc{1, i_ramp};
+    rmpS2F = dsc{1, 11 - i_ramp};
+    plot(rmpS2F.datatableZDCorr.t + rmpF2S.ramp_shift, movmean(rmpS2F.datatableZDCorr.F, [32 32]), '--', 'Color',colors(1, :));    
+    plot(rmpF2S.datatableZDCorr.t + rmpF2S.ramp_shift, movmean(rmpF2S.datatableZDCorr.F, [32 32]), '--', 'Color',colors(2, :));    
 end
-legend('Slow to fast (default)', 'Fast to slow', 'Location','northeast')
+legend('Slow to fast ', 'Fast to slow (first)', 'Location','northeast')
 title('Ramp order differences - relaxed')
 axes('position', [0.15 0.62, 0.28, 0.3]);
-semilogx(rds(1, 1:4), peaks(1, 1:4), 'd-', rds(1, 5:8), peaks(1, 5:8), 's-', 'LineWidth',2)
-title('Peaks', 'Position',[1, 7.5, 0])
+semilogx(rds(1, 5:8), peaks(1, 5:8), 'd-', rds(1, 1:4), peaks(1, 1:4), 's-', 'LineWidth',2)
+title('Peaks', 'Position',[1, 30, 0])
 
 %% Compare extracted time-courses
 figure(24);clf; hold on;
