@@ -1,9 +1,9 @@
 %% read new Anthony's dataset
 % expected format:
-% SS_NN_RD_TYPE[_holdXXXs].txt
+% SS_NN[_RD][_TYPE][_holdXXXs][_CONDS].txt
 % SS - zero padded dataset order
 % NN - zero padded order, e.g. 01. Log has 01, if present
-% L - ramp duration with 's', e.g. 100s or 0.1s or 'Log' for log
+% RD - ramp duration, ending with 's', e.g. 100s or 0.1s or 'Log' for log
 % TYPE: 
 %  'Relax', 
 %  'RelaxS2F' - relax slow to fast, 
@@ -11,6 +11,11 @@
 %  'RelaxHold' - ramp hold 300s
 %  'pCa4.4', 
 %  'pCa5.5' etc.
+% CONDS - optionally any other conditions or control sequence. 
+%  'PNB' - it was in a PNB solution
+%  'NoZDR' - not suitable for zero-drift removal, i.e. interpolation
+%  between two slack regions. Zero-value removal is preferred
+
 % holdXXXs : optional, specifying different ramp hold time, e.g. hold300s
 close all;
 clear;
@@ -19,14 +24,16 @@ clear;
 % rds = fliplr([0.1 1 10 100]);
 
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
-S1 = dir('data/PassiveCaSrc2/20230927');
+% S1 = dir('data/PassiveCaSrc2/20230919');
+% S1 = dir('data/PassiveCaSrc2/20230927');
+S1 = dir('data/PassiveCaSrc2/20230928');
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
 S1 = S1(idx);
 
 % mergedTables = [struct2table(S1);struct2table(S2)];
 % S = table2struct(mergedTables);
-S = S1([1:9]);
+S = S1;
 %%
 
 skipPlots = false;
@@ -35,19 +42,23 @@ dsc = cell(0); % dataset structure cell array
 for i = 1:length(S)
     ds = struct();
     ds.filename = S(i).name;
+    folders = split(S(i).folder, '\');
+    ds.folder = folders{end};
+
 
     % categorized based on name
     np = split(S(i).name, {'_', '.txt'}); % name part
-    if length(np) < 5
-        % unsupported format
+    if length(np) < 3
+        % unsupported format, we want at least three elements
         continue;
     end
     ds.set = str2double(np{1}); % dataset set. A set is one series of ramps
-    if isnan(ds.set)
+    ds.order = str2double(np{2}); % dataset order. One piece of ramp.
+    if isnan(ds.set) || isnan(ds.order)
         % unsupported format
         continue;
     end
-    ds.order = str2double(np{2}); % dataset order. One piece of ramp.
+    
     ds.rd = str2double(np{3}(1:end-1)); % ramp duration
     ds.isLog = strcmp(np{3}, 'Log');
     if ds.isLog
@@ -57,7 +68,8 @@ for i = 1:length(S)
     ds.pCa = str2double(np{4}(4:end));
     % optional format: hold100s, otherwise normal hold time
     % holdTime = str2double(np{5}(5:end-1));
-    if length(np) > 5 && length(np{5}) > 5 && ~isnan(str2double(np{5}(5:end-1)))
+    if length(np) > 5 && length(np{5}) > 5 && ...
+        contains(np{5}, 'hold') && ~isnan(str2double(np{5}(5:end-1)))
         ds.holdTime = str2double(np{5}(5:end-1));
     elseif ds.isLog
         ds.holdTime = NaN;
@@ -66,8 +78,14 @@ for i = 1:length(S)
         ds.holdTime = 30;
     end
 
+    if any(contains(np, 'NoZDR'))
+        ds.ZDR = false;
+    else
+        ds.ZDR = true;
+    end
+
     % cut out the title    
-    ds.datasetTitle = sprintf('%d:%s', ds.order, ds.type);
+    ds.datasetTitle = sprintf('%d:%s', ds.set, ds.type);
     
     if ds.isLog
         ds.datasetLegend = sprintf('%s log', ds.type);
@@ -76,13 +94,22 @@ for i = 1:length(S)
     end
 
     % log
-    fprintf('Loading %s (%s)...\n', ds.datasetLegend, ds.filename);
+    fprintf('Loading %s (%s)...', ds.datasetLegend, ds.filename);
 
     % read the data
     datatable = readtable([S(i).folder '/' S(i).name], 'filetype', 'text', 'NumHeaderLines',4);
-    datatable.Properties.VariableNames = {'t', 'L','F'};
+    if length(datatable.Properties.VariableNames) == 3
+        datatable.Properties.VariableNames = {'t', 'L','F'};
+    elseif length(datatable.Properties.VariableNames) == 4
+        datatable.Properties.VariableNames = {'t', 'L','F', 'SL'};
+    else
+        disp('Wat?')
+    end
     datatable.F = movmean(datatable.F, [8 8]);
     ds.datatable = datatable;
+    % sampling frequency. The set starts with 0, thus subtracking one extra element
+    ds.fs = (length(datatable.t) - 1)/datatable.t(end); 
+    fprintf('Done. Loaded %1.2fs at %0.1f Hz.\n', datatable.t(end), ds.fs);
 
     % the zero drift is not yet applied!
     % i_ss = datatable.t > datatable.t(end) - 46.0 & datatable.t < datatable.t(end) - 45.5;% index of steady states
@@ -116,7 +143,7 @@ end
 %% Filter out zero drift in a separate pass
 for i_logtrace = 1:size(dsc, 1)
     %% take the log. Log is number 1
-    i_logtrace = 1
+    % i_logtrace = 1
     ds = dsc{i_logtrace, 1};
 
     % is slack? ML below 0.85 definitely is
@@ -140,6 +167,15 @@ for i_logtrace = 1:size(dsc, 1)
         zeroZone_tavg(i_zones) = mean(ds.datatable.t(zeroStartZones(i_zones):zeroEndZones(i_zones)));
     end            
     
+    % if no slack found
+    if length(zeroZone_tavg) == 0
+        zeroZone_tavg = [ds.datatable.t(1) ds.datatable.t(end)];
+        zeroZone_Favg = [0, 0];
+    elseif length(zeroZone_tavg) == 1
+        zeroZone_tavg = [ds.datatable.t(1) zeroZone_tavg ds.datatable.t(end)];
+        zeroZone_Favg = [zeroZone_Favg, zeroZone_Favg, zeroZone_Favg];
+    end
+
     zeroDriftType = 'piecewiseSpline';
     switch zeroDriftType
         case 'linear'
@@ -176,12 +212,12 @@ for i_logtrace = 1:size(dsc, 1)
         ds.datatable.t(is_slack), ds.datatable.L(is_slack));
     legend('Raw Force reading', 'Zero regions', ['Zero drift (' zeroDriftType ')']);
     %% xcorr: semimanual data gathering
-    %{ 
+    %{
     % ignored, results saved
-    i_logtrace = 1
+    i_logtrace = 3;
     ful = dsc{i_logtrace, 1}.datatable;
-    i = 9; % ramp order in dataset
-    srchrng = 12000:18000; % correlation range - xcorr does good peaks, but can't really find the one
+    i = 14; % ramp order in dataset
+    srchrng = (i-1)*0.2e4 -0.1e4 + (1:0.2e4); % correlation range - xcorr does good peaks, but can't really find the one
     seg = dsc{i_logtrace, i}.datatable; 
 
     % take common sampling rate at 10/s
@@ -195,32 +231,29 @@ for i_logtrace = 1:size(dsc, 1)
     [~, i_xcm] = max(c(srchrng));
     i_xcm = i_xcm + srchrng(1);
     clf;hold on;
-    plot(d, c/max(c), 1:length(F_fulI), F_fulI, i_xcm + (1:length(F_segI)), F_segI);
-    fprintf('Shift for i:%d, t:%0.3f (%s)\n', dsc{1, i}.order, timebase(i_xcm), dsc{1, i}.filename)
-%%
-    % Shift for i:2, t:106.600 (01_02_0.1s_RelaxF2S_relax.txt)
-    % Shift for i:3, t:276.500 (01_03_1s_RelaxF2S_relax.txt)
-    % Shift for i:4, t:446.600 (01_04_10s_RelaxF2S_relax.txt)
-    % Shift for i:5, t:626.600 (01_05_100s_RelaxF2S_relax.txt)
-    % Shift for i:6, t:896.500 (01_06_100s_RelaxS2F_relax.txt)
-    % Shift for i:7, t:1166.600 (01_07_10s_RelaxS2F_relax.txt)
-    % Shift for i:8, t:1346.500 (01_08_1s_RelaxS2F_relax.txt)
-    % Shift for i:9, t:1516.600 (01_09_0.1s_RelaxS2F_relax_300s_hold.txt)
-
-    % dataset 20230919
-    % ramp_order = [2,3,4,5,6,7,8,9,10];
-    % ramp_shift = [186.8,426.9,576.9,716.9,952.9,1092.9,1232.9,1383,1721.9];
-
-    % dataset 20230927
-    % ramp_order = [2,3,4,5,6,7,8,9];
-    % ramp_shift = [106.600,276.500,446.600,626.600,896.500,1166.600,1346.500,1516.600]
+    plot(d, c/max(c), 1:length(F_fulI), F_fulI, i_xcm + (1:length(F_segI)), F_segI, 'Linewidth', 2);
+    fprintf('Shift for i:%d, t:%0.3f (%s)\n', dsc{i_logtrace, i}.order, timebase(i_xcm), dsc{i_logtrace, i}.filename)
     %}
+%% manually assigned shift from 2 to end of all ramps
+    ramp_shift_array{i_logtrace} = nan(size(dsc, 2), 1);
+    switch dsc{i_logtrace, 1}.folder
+        case '20230919'
+            ramp_shift_array{1} = [186.8,426.9,576.9,716.9,952.9,1092.9,1232.9,1383,1721.9];
+        case '20230927'
+            ramp_shift_array{1} = [106.600,276.500,446.600,626.600,896.500,1166.600,1346.500,1516.600];
+            ramp_shift_array{2} = [80, 140];
+            ramp_shift_array{3} = [134.600, 404.550, 584.500, 754.500, 939.760,1030.500,1300.500,1480.500,1650.500,2066.600,2241.500,2416.500,2591.500];
+        case '20230928'
+            ramp_shift_array{1} = [99.600, 269.600, 439.600, 619.700, 889.700,1159.700,1339.600,1509.700];
+            ramp_shift_array{3} = [108.700, 378.500, 558.600, 728.500, 909.800,1004.500,1274.500,1454.500,1624.500,2040.600,2215.600,2390.600,2565.600];
+    end
+
     %% Identify position of individual ramps
-    if i_logtrace == 1
+    if ~isnan(ramp_shift_array{i_logtrace})
         % this is weird and has been identified semi-manually
-        ramp_order = [2,3,4,5,6,7,8,9];
-        ramp_shift = [106.600,276.500,446.600,626.600,896.500,1166.600,1346.500,1516.600];
-    else   
+        % ramp_order = [2,3,4,5,6,7,8,9];
+        ramp_shift = ramp_shift_array{i_logtrace};
+    elseif length(find(diff(is_slack) > 0)) >= 4
         % We use start of the slack, which beggins 4s from the end of indi ramp
         % of the individual cut-out
         i_slackStart = find(diff(is_slack) > 0);
@@ -230,6 +263,17 @@ for i_logtrace = 1:size(dsc, 1)
         for i = 1:size(t_slackStart, 1)
             ramp_shift(i) = t_slackStart(i) - (dsc{i_logtrace, i + 1}.datatable.t(end) - 36.4);
         end
+    else
+        % no correction, perhaps no need for a correction
+        for i_ramp = 1:size(dsc, 2)-1
+            if isempty(dsc{i_logtrace, i_ramp +1})
+                % no more ramps here
+                break;
+            end
+            dsc{i_logtrace, i_ramp +1}.datatableZDCorr = dsc{i_logtrace, i_ramp +1}.datatable;
+            dsc{i_logtrace, i_ramp +1}.ramp_shift = 0;
+        end
+        continue;
     end
     % compare to the 100s, 10s, 1s and 0.1s ramp-up cutouts    
     figure(i_logtrace);subplot(221);cla;hold on;
@@ -240,6 +284,7 @@ for i_logtrace = 1:size(dsc, 1)
             break;
         end
         rmpdt = dsc{i_logtrace, i_ramp +1}.datatable;
+        % TODO pair to global slack zones of the log instead!
         t_slack = rmpdt.t(end) - 31.4 + [0, 8];
         i_slack = rmpdt.t > t_slack(1) & rmpdt.t < t_slack(2);
         avg_Fslack(i_ramp) = mean(rmpdt.F(i_slack));
@@ -255,17 +300,25 @@ for i_logtrace = 1:size(dsc, 1)
             % no more ramps here
             break;
         end
-        rmpdt = dsc{i_logtrace, i_ramp + 1}.datatable;
-        % zero drift fitted
-        plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp)))
-        % compare with simple cut-out
-        plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - avg_Fslack(i_ramp), ':')        
+        rmp = dsc{i_logtrace, i_ramp + 1};
+        rmpdt = rmp.datatable;
+
+        if rmp.ZDR
+            % zero drift fitted
+            plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp)))
+            % save the force corrected for the zero drift
+            rmpdt.F = rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp));        
+        else
+            % compare with simple zero shift - e.g. we get oinly single true zer inbetween the baths
+            plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - avg_Fslack(i_ramp), ':')        
+            % save the force corrected for the zero shift
+            rmpdt.F = rmpdt.F - avg_Fslack(i_ramp);        
+        end
         
-        % save the force corrected for the zero drift
-        rmpdt.F = rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp));
         dsc{i_logtrace, i_ramp +1}.datatableZDCorr = rmpdt;
         dsc{i_logtrace, i_ramp +1}.ramp_shift = ramp_shift(i_ramp);
     end
+    plot(dsc{i_logtrace, 1}.datatable.t, dsc{i_logtrace, 1}.datatable.F - f_zd(dsc{i_logtrace, 1}.datatable.t), 'k:')
     % plot(ds.datatable.t(is_slack), ds.datatable.F(is_slack), '.', 'LineWidth',2)
     % plot(ds.datatable.t, f_Fdt(ae.a, ae.b, ae.c, ds.datatable.t))
     % plot(ds.datatable.t, ds.datatable.F, ':')
@@ -296,19 +349,23 @@ for i_logtrace = 1:size(dsc, 1)
             rmpdt.t(i_ss) + rs, rmpdt.F(i_ss), 'x', ...
             rmpdt.t(peakPos) + rs, peak, 'x');
 
-    end
+        title(['Peaks and steady state:' dsc{i_logtrace, i_ramp+1}.datasetTitle])
 
+    end
 end
+%% Save the data file
+
+save(['DataStruct' dsc{1, 1}.folder], 'dsc')
 
 %% plot All the peaks and ss
 
 % rds = [0.1 1 10 100];
 figure(21);clf; 
 markers = 'sd<^>vox.ph*';
-colors = jet(size(dsc, 1));
+colors = lines(size(dsc, 1));
 
-peaks = [];
-rds = [];
+peaks = nan(size(dsc));
+rds = nan(size(dsc));
 for i_logtrace = 1:size(dsc, 1)
     for i_ramp = 1:size(dsc, 2) -1
         if isempty(dsc{i_logtrace, i_ramp+1})
@@ -327,7 +384,7 @@ title('All peaks and SS')
 legend(legnames, 'AutoUpdate',false)
 
 % separate loop to separate the legends
-ss = [];
+ss = zeros(size(rds));
 for i_logtrace = 1:size(dsc, 1)
     for i_ramp = 1:size(dsc, 2) -1
         if isempty(dsc{i_logtrace, i_ramp+1})
@@ -343,25 +400,54 @@ end
 
 %% compare fast to slow with slow to fast
 figure(23);clf;hold on;
-colors = lines(2);
-for i_ramp = 2:5
-    rmpF2S = dsc{1, i_ramp};
-    rmpS2F = dsc{1, 11 - i_ramp};
-    plot(rmpS2F.datatableZDCorr.t + rmpF2S.ramp_shift, movmean(rmpS2F.datatableZDCorr.F, [32 32]), '--', 'Color',colors(1, :));    
-    plot(rmpF2S.datatableZDCorr.t + rmpF2S.ramp_shift, movmean(rmpF2S.datatableZDCorr.F, [32 32]), '--', 'Color',colors(2, :));    
+colors = lines(3);
+rmpsF2S = [];rmpsS2F = [];rmpsPNB = [];
+pf2s=[]; ps2f=[]; ppnb = [];
+% ramp shift by dictionary
+rs = dictionary([100, 10, 1, 0.1], [0, 200, 300, 400]);
+
+% relax only now
+for i_logtrace = 1:size(dsc, 1)
+    for i_ramp = 1:size(dsc, 2) -1
+        rmp = dsc{i_logtrace, i_ramp+1};
+        if isempty(rmp) 
+            continue;
+        elseif strcmp(rmp.type, 'RelaxF2S')
+            rmpsF2S = [rmpsF2S; rmp.rd, rmp.peak, rmp.ss];
+            pf2s = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(1, :));
+        elseif strcmp(rmp.type, 'RelaxS2F')
+            rmpsS2F = [rmpsS2F; rmp.rd, rmp.peak, rmp.ss];
+            ps2f = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(2, :));
+        elseif strcmp(rmp.type, 'PNBRelax')
+            rmpsPNB = [rmpsPNB; rmp.rd, rmp.peak, rmp.ss];
+            ppnb = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(3, :));        
+        elseif strcmp(rmp.type, 'pCa11')
+            rmpsPNB = [rmpsPNB; rmp.rd, rmp.peak, rmp.ss];
+            ppnb = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(3, :));                    
+        end
+    end
 end
-legend('Slow to fast ', 'Fast to slow (first)', 'Location','northeast')
+    
+    
+
+legend([pf2s, ps2f, ppnb], 'Fast to slow (first)', 'Slow to fast ', 'PNB slow to fast', 'Location','northeast')
 title('Ramp order differences - relaxed')
 axes('position', [0.15 0.62, 0.28, 0.3]);
-semilogx(rds(1, 5:8), peaks(1, 5:8), 'd-', rds(1, 1:4), peaks(1, 1:4), 's-', 'LineWidth',2)
-title('Peaks', 'Position',[1, 30, 0])
+semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', rmpsF2S(:, 1), rmpsF2S(:, 2),  's-', rmpsPNB(:, 1), rmpsPNB(:, 2),  's-', 'LineWidth',2)
+% semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', rmpsF2S(:, 1), rmpsF2S(:, 2),  's-', 'LineWidth',2)
+title('Peaks', 'Position',[1, max(rmpsS2F(:, 2)), 0])
+legend('Slow to fast', 'fast to slow', 'PNB slow to fast')
+
+%% End of data processing
+
+return;
 
 %% Fit the onset
 for i_logtrace = 1:size(dsc,1)
 
     figure(10 + i_logtrace);clf;hold on;
     colors = lines(size(dsc, 2));
-    
+    as = []; bs = []; cs = []; ds = []; rd = []; p = [];
 
     for i_ramp = 1:size(dsc, 2)-1
         if isempty(dsc{i_logtrace, i_ramp+1})
@@ -468,13 +554,3 @@ end
 
 
 %% fft?
-ms = movstd(datatable.F, 5);
-figure(33); plot(datatable.t, ms); 
-Y = fft(datatable.F);
-L = length(datatable.F);
-P2 = abs(Y/L);
-P1 = P2(1:L/2+1);
-P1(2:end-1) = 2*P1(2:end-1);
-Fs = 1/mean(diff(datatable.t));
-f = Fs*(0:(L/2))/L;
-plot(f,P1)
