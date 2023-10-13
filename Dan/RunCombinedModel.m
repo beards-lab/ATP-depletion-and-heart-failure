@@ -5,8 +5,8 @@ clear Time
 clear Length
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
-% rds = fliplr([0.1, 1, 10]);
-rds = fliplr([0.1, 10]);
+rds = fliplr([0.1, 1, 10]);
+% rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -238,20 +238,20 @@ if pCa == 11
     % pCa11 
     PeakData =[ 
         10 7.2695   
-        % 1 11.8216   
+        1 11.8216   
         0.1 15.3761];
 elseif pCa == 4
     % pCa4 
     PeakData =[ 
         10 12.3018   
-        % 1 29.5823  
+        1 29.5823  
         0.1 50.0592];
 
 elseif pCa == 6
     % pCa6 
     PeakData =[         
         10 7.8147   
-        % 1 15.7110   
+        1 15.7110   
         0.1 25.9032];    
 elseif isinf(pCa)
 % hack to get back the no PNB no pCa passive ramp-ups
@@ -292,6 +292,24 @@ end
 %            ];
 
 clf;
+colors = lines(length(rampSet)+1);
+for j = length(rampSet):-1:1
+% figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
+    % subplot(1, 3, j);hold on;
+    
+    semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',1, 'Color', [colors(j+1, :)*0.9, 0.2]);
+    hold on;
+    semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
+    % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
+    ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
+    axis([0 30+rds(j) 0 ym])
+    ylabel('Stress (kPa)')
+    xlabel('time (sec.)')
+end
+title(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost));
+
+
+%{
 for j = rampSet
     % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     subplot(1, 3, j);hold on;
@@ -324,3 +342,4 @@ ylabel('Peak stress (kPa)')
 xlabel('Ramp time (sec.)')
 set(gca,'Fontsize',14)
 legend('data','model')
+%}
