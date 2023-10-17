@@ -34,6 +34,8 @@ x0 = [0.9736, 1.1519, 1.0295, 0.9306, 0.4439, 1.0758, 1.0011, 0.8704, 1.0829, 0.
 
 x0 = [1.0504    1.2978    0.9544    1.0226    0.4784    1.0429    0.9584    0.8259    0.8629    0.7200    1.3634    0.8411    0.9660    1.0150 1 1];
 
+% optim for -log10 weighting
+mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1];
 %% set data set
 % pCa = Inf; % First round of passive ramp-ups data, 200s long, dML 0.4
 % pCa = 11; % Ca&PNB experiments, resting ramp-ups, 30s decay, dML = 0.225
@@ -128,8 +130,9 @@ tic
     
 % modSel = [2, 4, 5, 6, 7, 8, 9];
 
-evalCombined(mod(modSel))
+% evalCombined(mod(modSel))
 % evalCombined(mod_pca6)
+evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
 toc
 %%
@@ -180,16 +183,19 @@ legend('kA (PEVK attachment)', 'kC (stiffening proximal chain)')
 %%
 function totalCost = evalCombined(optMods)
     %normal - optimizing for all
-    % mod = optMods;
+    mod = optMods;
     
     % optimizing only subset of mods
-    mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988 1 1 1];
+    % mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988 1 1 1];
+    
+    % optim for -log10 weighting
+    % mod = [0.928351480405723	0.928351480405723	1.01367539052550	1.02336567490158	1.01367539052550	1.10319213342611	0.937882365838957	1.19500150970587	0.909890571615859 1 1 1 1];
     
     % modSel = [7, 9];
     % % mod([1:4 6:10 13]) = optMods;
     % modSel = [11, 12, 13];
-    modSel = [2, 4, 5, 6, 7, 8, 9];
-    mod(modSel) = optMods;
+    % modSel = [2, 4, 5, 6, 7, 8, 9];
+    % mod(modSel) = optMods;
 
     drawPlots = true;
     totalCost = 0;
