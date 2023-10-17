@@ -1,4 +1,4 @@
-function g = dXdT(~,x,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V)
+function g = dXdT(~,x,Nx,Ng,ds,kA,kD,kd,Fp,alphaU,alphaF,mu,Lref,nd,V)
 s  = (0:1:Nx-1)'.*ds;
 
 pu = reshape( x(1:(Ng+1)*Nx), [Nx,Ng+1]);
@@ -12,7 +12,7 @@ end
 L = x(end);
 
 % Calculate the un-attached chain velocities for every pu(s,n) entry
-deltaF = (kS*max(0,L-s-Ls0).^nS - Fc);
+deltaF = kd*max(0,(L-s)/Lref).^nd - Fp;
 Vc = deltaF/mu;
 
 ij = (1:Nx)' + Nx*(0:Ng); % matrix of Ng X Nx indices over all elements
@@ -32,15 +32,15 @@ g(ij(1,:)) = g(ij(1,:)) - (1/ds)*(pu(1,:).*Vc(1,:))';
 g(ij(2:Nx,:)) = g(ij(2:Nx,:)) - (1/ds)*pu(ij(2:Nx,:)).*max(0,Vc(2:end,:)) + ...
                 (1/ds)*pu(ij(2:Nx,:)-1).*max(0,Vc(1:end-1,:));  
 
-% unfolding for pu states
-UR = RU.*pu(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
+% unfolding rate for pu states
+UR = alphaU.*pu(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
 g(ij(:,2:(Ng+1))) = g(ij(:,2:(Ng+1))) + UR;
 g(ij(:,1:Ng))     = g(ij(:,1:Ng))     - UR;
 
 % unfolding for pa states
 if ~isempty(pa)
     NxNg = Nx*(Ng+1);
-    UR = RU.*pa(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
+    UR = alphaU.*pa(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
     g(ij(:,2:(Ng+1))+NxNg) = g(ij(:,2:(Ng+1))+NxNg) + UR;
     g(ij(:,1:Ng)+NxNg)     = g(ij(:,1:Ng)+NxNg)     - UR;
 end

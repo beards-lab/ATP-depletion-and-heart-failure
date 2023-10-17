@@ -5,8 +5,8 @@ clear Time
 clear Length
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
-rds = fliplr([0.1, 1, 10]);
-% rds = fliplr([0.1, 10]);
+% rds = fliplr([0.1, 1, 10]);
+rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -57,34 +57,35 @@ delU = 0.010;
 
 % g0 = ones(1,11);
 g0 = mod;
-kD   = g0(8)*14.977;
+kD   = g0(8)*14.977; % PEVK detachment rate
 if pCa == 11
-    kC   = g0(1)*10203;      % proximal chain force constant
-    kA   = g0(7)*0*16.44;
+    kp   = g0(1)*10203*0.7;      % proximal chain force constant
+    kA   = g0(7)*0*16.44; % PEVK attachment rate
 else
-    kC   = g0(9)*10203*4.78 ;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
+    kp   = g0(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = g0(7)*16.44;
 end
-kS   = g0(2)*14122;        % distal chain force constant
-alphaU = g0(6)*(8.4137e5);         % chain unfolding rate constant
-alphaF = 1;
-nC = g0(3)*3.27;
-nS = g0(5)*3.25;
-nU = g0(4)*6.0;
+kd   = g0(2)*14122;        % distal chain force constant
+alphaU = g0(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
+alphaF = 0; % chain folding rate constant - not implemented yet
+np = g0(3)*3.27; % proximal chain force exponent
+nd = g0(5)*3.25; % distal chain force exponent
+nU = g0(4)*6.0; % unfolding rate exponent
+nF = 1; % folding rate exponent (not implemented yet)
 mu = 1.12; 
-Ls0  = 0.0;
+Lref  = 0.9; % reference sarcomere length (um)
 
 
 
-% Calculate globular chain force Fc(s,n) for every strain and
-% value. 
+% Calculate proximal globular chain force Fp(s,n) for every strain and
+%% value. 
 slack = (0:Ng).*delU;
-Fc = kC*(max(0,s-slack)).^nC;
-
+Fp = kp*(max(0,s-slack)/Lref).^(np); 
+%%
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
-RU = alphaU*((max(0,s-slack(1:Ng)-Ls0)).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
+RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 
 RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
 % RF = 0;
@@ -116,7 +117,7 @@ Length = cell(1, 5);
 rampSet = 1:length(rds); %[1 2 3 4 5];
 for j = rampSet
   % tic
-  V = Vlist(j);
+  V = Vlist(j); % ramp velocity
 
   pu = zeros(Nx,1)*PU;
   pa = zeros(Nx,1)*PA;
@@ -141,13 +142,13 @@ for j = rampSet
   % S = [reshape(triu(ones(size(pu))),[(Ng+1)*Nx,1]); 1];
   % Sp = S*S';  % opts = odeset('JPattern',Sp');
 
-  [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
-  [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,V);
+  [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V);
   
   % whole decay till the bitter end
   % [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   % limited decay
-  [t2,x2] = ode15s(@dXdT,[Tend_ramp Tend_ramp + 40],x1(end,:),[],Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
+  [t2,x2] = ode15s(@dXdT,[Tend_ramp Tend_ramp + 40],x1(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
   % only ramp up, no decay  
   % x2 = [];t2 = []; 
 
@@ -163,8 +164,9 @@ for j = rampSet
     else
         pa = 0;
     end
-    Force_pa{j} = kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pa ));
-    Force{j}(i) =  kS*ds*sum(sum( (max(0,Length{j}(i) - s - Ls0).^nS).*pu )) + Force_pa{j};
+    Fd = kd* max(0,(Length{j}(i) - s)/Lref).^nd; 
+    Force_pa{j} = ds*sum(sum(Fd.*pa ));
+    Force{j}(i) =  ds*sum(sum(Fd.*pu )) + Force_pa{j};
   end
 
     
@@ -218,19 +220,32 @@ end
 % Get error for the whole ramp-up and decay
 t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % alternatively, get the error from decay only
-% t_endFreeware  = Lmax./Vlist + 2;
+t_endFreeware  = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
 En = cell(1, length(rampSet));
+Es = cell(0);
 for j = rampSet
     datatable_cur = datatables{j};
     inds = find(datatable_cur.Time >= t_endFreeware(j));
     datatable_cur = datatable_cur(inds, :);
     t_int{j} = datatable_cur.Time - 2;
     Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
-    Es = (Ftot_int{j} - datatable_cur.F).^2; % error set
-    Es(isnan(Es)) = 0; % zero outside bounds
-    En{j} = 1e3*sum(Es)/length(Es); % normalized error
+
+    % weighting to fit semilogx
+    x = -log10(max(rds(j), t_int{j}));
+    % center and scale
+    w = (x+abs(min(x)))/mean(x+abs(min(x)));
+    
+    % semilogx(t_int{j}, x/sum(x));
+    % plot(t_int{j}, w);hold on;
+
+    % no weighing
+    % w = 1;
+%%
+    Es{j} = w.*(Ftot_int{j} - datatable_cur.F).^2; % error set
+    Es{j}(isnan(Es{j})) = 0; % zero outside bounds
+    En{j} = 1e3*sum(Es{j})/length(Es{j}); % normalized error
 end
 
 % Peakdata for ramps 0.95 - 1.175
@@ -238,20 +253,20 @@ if pCa == 11
     % pCa11 
     PeakData =[ 
         10 7.2695   
-        1 11.8216   
+        % 1 11.8216   
         0.1 15.3761];
 elseif pCa == 4
     % pCa4 
     PeakData =[ 
         10 12.3018   
-        1 29.5823  
+        % 1 29.5823  
         0.1 50.0592];
 
 elseif pCa == 6
     % pCa6 
     PeakData =[         
         10 7.8147   
-        1 15.7110   
+        % 1 15.7110   
         0.1 25.9032];    
 elseif isinf(pCa)
 % hack to get back the no PNB no pCa passive ramp-ups
@@ -297,9 +312,16 @@ for j = length(rampSet):-1:1
 % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     % subplot(1, 3, j);hold on;
     
-    semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',1, 'Color', [colors(j+1, :)*0.9, 0.2]);
+    semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :)*0.9, 0.2]);
     hold on;
-    semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
+    semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
+    % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
+
+    % plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',1.5, 'Color', [colors(j+1, :)*0.9, 0.2]);
+    % hold on;
+    % plot(Time{j},Force{j},'-', 'linewidth',1.5, 'Color', colors(j+1, :)*0.8); 
+    % plot(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
+
     % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
     ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
     axis([0 30+rds(j) 0 ym])
