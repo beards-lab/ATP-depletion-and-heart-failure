@@ -17,16 +17,17 @@
 %  between two slack regions. Zero-value removal is preferred
 
 % holdXXXs : optional, specifying different ramp hold time, e.g. hold300s
-close all;
+% close all;
 clear;
 
 % rds = [0.1 1 10 100];
 % rds = fliplr([0.1 1 10 100]);
 
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
+S1 = dir('data/PassiveCaSrc2/20230518_rename');
 % S1 = dir('data/PassiveCaSrc2/20230919');
 % S1 = dir('data/PassiveCaSrc2/20230927');
-S1 = dir('data/PassiveCaSrc2/20230928');
+% S1 = dir('data/PassiveCaSrc2/20230928');
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
 S1 = S1(idx);
@@ -401,7 +402,7 @@ end
 %% compare fast to slow with slow to fast
 figure(23);clf;hold on;
 colors = lines(3);
-rmpsF2S = [];rmpsS2F = [];rmpsPNB = [];
+rmpsF2S = zeros(0, 2);rmpsS2F = zeros(0, 2);rmpsPNB = zeros(0, 2);
 pf2s=[]; ps2f=[]; ppnb = [];
 % ramp shift by dictionary
 rs = dictionary([100, 10, 1, 0.1], [0, 200, 300, 400]);
@@ -441,6 +442,46 @@ legend('Slow to fast', 'fast to slow', 'PNB slow to fast')
 %% End of data processing
 
 return;
+
+%% serial stiffness to sarcomere?
+
+colors = lines(size(dsc, 2));
+styles = {'-', '--', ':', 's-', 'd--', 'o:', '<-', '^--', '>:'};
+figure(41);clf;
+leg = cell(0);
+for i_logtrace = 1:size(dsc,1)
+% i_logtrace = 1
+    for i_ramp = 1:size(dsc, 2)-1
+        if isempty(dsc{i_logtrace, i_ramp+1})
+            break;
+        end
+    dtst = dsc{i_logtrace, i_ramp+1}; % dataset
+    rmp = dtst.datatableZDCorr;
+    % limit to ramp plateau
+    % wind = rmp.L > 1;
+    wind = find(rmp.L > 1.17 & rmp.SL > 2); % window of interest
+    wind = wind(1:100:end);
+    if ~contains(rmp.Properties.VariableNames, 'SL')
+        continue;
+    end
+    subplot(221);
+    plot(rmp.t(wind), rmp.SL(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
+    xlabel('t');ylabel('SL');title('SL in time');
+    hold on;
+    subplot(223);
+    plot(rmp.t(wind), rmp.F(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
+    xlabel('t');ylabel('F');title('F in time');
+    hold on;
+    subplot(122);
+    plot(rmp.SL(wind), rmp.F(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
+    xlabel('SL');ylabel('F');title('F to SL relation');
+    hold on;
+    leg{length(leg)+1} =dtst.datasetLegend;
+    end
+    % pause;
+end
+legend(leg)
+
 
 %% Fit the onset
 for i_logtrace = 1:size(dsc,1)

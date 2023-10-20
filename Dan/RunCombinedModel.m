@@ -3,10 +3,11 @@
 clear Force
 clear Time
 clear Length
+clear outStruct;
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
-% rds = fliplr([0.1, 1, 10]);
-rds = fliplr([0.1, 10]);
+rds = fliplr([0.1, 1, 10]);
+% rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -167,6 +168,20 @@ for j = rampSet
     Fd = kd* max(0,(Length{j}(i) - s)/Lref).^nd; 
     Force_pa{j} = ds*sum(sum(Fd.*pa ));
     Force{j}(i) =  ds*sum(sum(Fd.*pu )) + Force_pa{j};
+
+    if t(i) >= rds(j) && t(max(1, i-1)) < rds(j)
+        % at the peak
+        outStruct{j, 1}.pa = pa;
+        outStruct{j, 1}.pu = pu;
+    elseif t(i) >= rds(j)*2 && t(max(1, i-1)) < rds(j)*2
+        % after t_rd after the peak
+        outStruct{j, 2}.pa = pa;
+        outStruct{j, 2}.pu = pu;
+    elseif t(i) >= rds(j) + 20 && t(max(1, i-1)) < rds(j) + 20
+        % after 20s after the peak
+        outStruct{j, 3}.pa = pa;
+        outStruct{j, 3}.pu = pu;
+    end
   end
 
     
@@ -220,7 +235,7 @@ end
 % Get error for the whole ramp-up and decay
 t_endFreeware = zeros(1, 5); % time when we start counting the costs
 % alternatively, get the error from decay only
-t_endFreeware  = Lmax./Vlist + 2;
+% t_endFreeware  = Lmax./Vlist + 2;
 
 %% Evaluating all ramps at once
 En = cell(1, length(rampSet));
@@ -246,38 +261,10 @@ for j = rampSet
     Es{j} = w.*(Ftot_int{j} - datatable_cur.F).^2; % error set
     Es{j}(isnan(Es{j})) = 0; % zero outside bounds
     En{j} = 1e3*sum(Es{j})/length(Es{j}); % normalized error
-end
 
-% Peakdata for ramps 0.95 - 1.175
-if pCa == 11
-    % pCa11 
-    PeakData =[ 
-        10 7.2695   
-        % 1 11.8216   
-        0.1 15.3761];
-elseif pCa == 4
-    % pCa4 
-    PeakData =[ 
-        10 12.3018   
-        % 1 29.5823  
-        0.1 50.0592];
-
-elseif pCa == 6
-    % pCa6 
-    PeakData =[         
-        10 7.8147   
-        % 1 15.7110   
-        0.1 25.9032];    
-elseif isinf(pCa)
-% hack to get back the no PNB no pCa passive ramp-ups
-% Peakdata for no-Ca peaks 0.8-1.2 ML
-    PeakData =[
-    100	    4.772521951	3.826958537
-    10	    5.9797	3.8093
-    1	    7.94194	3.93316
-    0.1	    10.6611	3.862672727
-    0.02	14.1969	3.926472727
-    ];
+    PeakData(j, 1) = rds(j);
+    PeakData(j, 2) = max(datatable_cur.F);
+    PeakModel(j) = max(Ftot_int{j});
 
 end
 
@@ -308,60 +295,120 @@ end
 
 clf;
 colors = lines(length(rampSet)+1);
+
+% max out of all
+ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
+
+% prepare in advance so that it wont draw over my inset
+sp = subplot(212);hold on;
+pos = get(sp, 'Position');
+ylabel('Tension (kPa)')
+xlabel('Time (s)')
+set(gca,'Fontsize',14)
+title(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost), 'Parent',sp);
+set(sp, 'XLim', [-1 30+max(rds)]);
+set(sp, 'YLim', [0 ym*1])
+
+% shift of peaks to have the same tail - just guessed
+shift = [-8.6, -0.78, 0];
+
 for j = length(rampSet):-1:1
 % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     % subplot(1, 3, j);hold on;
-    
+%% primary plot - semilog
+    subplot(221)
     semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :)*0.9, 0.2]);
     hold on;
     semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
-
-    % plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',1.5, 'Color', [colors(j+1, :)*0.9, 0.2]);
-    % hold on;
-    % plot(Time{j},Force{j},'-', 'linewidth',1.5, 'Color', colors(j+1, :)*0.8); 
-    % plot(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
-
-    % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
-    ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
-    axis([0 30+rds(j) 0 ym])
-    ylabel('Stress (kPa)')
-    xlabel('time (sec.)')
-end
-title(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost));
-
-
-%{
-for j = rampSet
-    % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
-    subplot(1, 3, j);hold on;
-    
-    plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',0.5);
-    plot(Time{j},Force{j},'r:', 'linewidth',1); 
-    plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
-    ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
-    axis([0 30+rds(j) 0 ym])
-    ylabel('Stress (kPa)')
-    xlabel('time (sec.)')
-    % set(gca,'Xtick',0:50:200)
+    axis([1e-2, 1e2, 0, ym]);  
     set(gca,'Fontsize',14)
-    pos = get(gca, 'Position');
-    w = pos(3)*0.6; h = pos(4)*0.4;
-    x = pos(1) + pos(3) - w; y = pos(2) + pos(4) - h;
-    axes('Position',[x, y - 0.1, w, h]);hold on;
+    title('Tension response to muscle length ramp-up')
+    xlabel('Time (s)')
+    ylabel('Tension (kPa)')
+
+%% other view - shifted to see the tail overlap
+
+    subplot(222)
+    semilogx(datatables{j}.Time-2 + shift(j),datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
+    hold on;
+    semilogx(Time{j} + shift(j),Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
+    % plot(Time{j} + shift(j),Force{j},styles{j}, 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
+    
+    % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
+    % axis([1e-2, 1e2, 0, ym]);  
+    xlim([1e-2, 1e2]);
+    legend('Ramp 10s (Data)', 'Ramp 10s (Model)', 'Ramp 1s (Data)', 'Ramp 1s (Model)', 'Ramp 0.1s (Data)', 'Ramp 0.1s (Model)');
+    % legend('Ramp 10s, shifted by -8.6s', 'Ramp 1s, shifted by -0.78', 'Ramp 0.1s' );
+
+    set(gca,'Fontsize',14)
+    title('Tension response to muscle length ramp-up: shifted peaks')   
+
+%% secondary plots - timebase. Need to cut out
+
+    plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.15], Parent=sp);
+    plot(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8, Parent=sp);
+    % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
+    % max out of all
+
+    
+    ylabel('Tension (kPa)')
+    xlabel('Time (s)')
+    % set(gca,'Xtick',0:50:200)
+    
+    % zoom-in inset
+    
+    w = pos(3)*0.18; h = pos(4)*0.5;
+    x = pos(1) + pos(3) - (j*1.3 - 0.3)*w; y = pos(2) + pos(4) - h;
+    axes('Position',[x, y, w, h]);hold on;
     % axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
-    plot(datatables{j}.Time-2,datatables{j}.F,'b-','linewidth',0.5);
-    plot(Time{j},Force{j}, 'r:', 'linewidth',2); 
-    plot(t_int{j},Ftot_int{j},'-r','linewidth',1);
-    axis([0, rds(j)*2, 0, ym]);    
+    plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',3, 'Color', [colors(j+1, :), 0.15]);
+    % plot(Time{j},Force{j}, 'r:', 'linewidth',2); 
+    plot(t_int{j},Ftot_int{j},'-','linewidth',2, 'Color', colors(j+1, :)*0.9);
+    ym_inset = ceil( max(Force{j}) / 10 ) * 10;
+    axis([0, rds(j)*2, 0, ym_inset]);  
+    set(gca,'Fontsize',14)    
+    
 end
-sgtitle(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost));
+% cla;
+pos1 = get(subplot(221), 'Position');
+w = pos1(3)*0.45; h = pos1(4)*0.5;
+x = pos1(1) + pos1(3) - w; y = pos1(2) + pos1(4) - h;
+axes('Position',[x, y, w, h]);
+semilogx(PeakData(:, 1), PeakData(:, 2), 'ko', LineWidth=2);hold on;
+semilogx(PeakData(:, 1), PeakModel, 'x', 'MarkerEdgeColor', [1 1 1]*0.5, LineWidth=2, MarkerSize=8);
+axis([1e-1 1e1 0 ym])
+semilogx(PeakData(:, 1), PeakModel, '--', Color=[1 1 1]*0.5, LineWidth=1);
+legend('Peaks (Data)', 'Peaks (Model)')
 %%
-% figure(6); clf; axes('position',[0.15 0.15 0.8 0.80]);
-subplot(1, 3, 3);
-semilogx(PeakData(:,1),PeakData(:,2),'o',PeakData(:,1),PeakModel,'xr-','LineWidth',2)
-ylabel('Peak stress (kPa)')
-xlabel('Ramp time (sec.)')
-set(gca,'Fontsize',14)
-legend('data','model')
-%}
+h = annotation('textbox', [0.07 0.95 0 0], 'String', 'A)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
+h = annotation('textbox', [0.5 0.95 0 0], 'String', 'B)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
+h = annotation('textbox', [0.07 0.5 0 0], 'String', 'C)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
+%%
+
+% fig = gcf;
+% set(gcf, 'Position', [50 50 1200 700])
+% saveas(fig, ['..\Figures\Fig_' fig.Name], 'png')
+
+return;
+
+%% Overlap plots
+
+%% Draw plots
+figure(1001);clf;hold on;legend()
+% plot n.1: 
+colororder(jet(Ng));
+for n = 1:1:Ng
+    
+    plot(outStruct{1, 1}.pu(:, n), 'x-', LineWidth=2)
+    plot(outStruct{1, 2}.pu(:, n), 'x--', LineWidth=2)
+    plot(outStruct{1, 3}.pu(:, n), 'x:', LineWidth=2)
+end
+
+% plot u to s for different N
+
+% Visualize states in time?
+% / Passive resting fit - both semilog and linear?
+% / Shift the peaks so the tails overlap?
+% / Fit for maximal CA
+% Values of the Ca sensitive params - kA, KD?, kd

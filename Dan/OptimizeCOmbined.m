@@ -201,21 +201,21 @@ function totalCost = evalCombined(optMods)
     totalCost = 0;
 
     %% pCa 6
-    % pCa = 6;
-    % mod([7,9]) = [0.1657, 0.3895];
-    % if drawPlots
-    %     figure(35);title('pCa 6');
-    % end
-    % 
-    % cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    % totalCost = totalCost + cost;
+    pCa = 6;
+    mod([7,9]) = [0.1657, 0.3895];
+    if drawPlots
+        f = figure(35);f.Name = 'pCa 6';
+    end
+
+    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+    totalCost = totalCost + cost;
     % return;
 
 
     %% no Ca
     pCa = 11;
     if drawPlots
-        figure(33);title('pCa 11');
+        f = figure(33);f.Name = 'pCa 11';
     end    
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
@@ -225,7 +225,7 @@ function totalCost = evalCombined(optMods)
     pCa = 4;
     mod([7,9]) = [0.9403    0.9889];
     if drawPlots
-        figure(34);title('pCa 4');
+        f = figure(34);f.Name = 'pCa 4';
     end
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
