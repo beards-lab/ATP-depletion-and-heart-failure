@@ -17,17 +17,18 @@
 %  between two slack regions. Zero-value removal is preferred
 
 % holdXXXs : optional, specifying different ramp hold time, e.g. hold300s
-% close all;
-clear;
+close all;
+clear;clc;
 
 % rds = [0.1 1 10 100];
 % rds = fliplr([0.1 1 10 100]);
 
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
-S1 = dir('data/PassiveCaSrc2/20230518_rename');
+% S1 = dir('data/PassiveCaSrc2/20230518_renamed');
 % S1 = dir('data/PassiveCaSrc2/20230919');
 % S1 = dir('data/PassiveCaSrc2/20230927');
 % S1 = dir('data/PassiveCaSrc2/20230928');
+S1 = dir('data/PassiveCaSrc2/20231027');
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
 S1 = S1(idx);
@@ -217,8 +218,9 @@ for i_logtrace = 1:size(dsc, 1)
     % ignored, results saved
     i_logtrace = 3;
     ful = dsc{i_logtrace, 1}.datatable;
-    i = 14; % ramp order in dataset
-    srchrng = (i-1)*0.2e4 -0.1e4 + (1:0.2e4); % correlation range - xcorr does good peaks, but can't really find the one
+    i = 15; % ramp order in dataset
+    srchrng = (i-1)*0.2e4 - 0.1e4 + (1:0.2e4); % correlation range - xcorr does good peaks, but can't really find the one
+    % srchrng = (3e0:1.6e3); % correlation range - xcorr does good peaks, but can't really find the one
     seg = dsc{i_logtrace, i}.datatable; 
 
     % take common sampling rate at 10/s
@@ -247,6 +249,10 @@ for i_logtrace = 1:size(dsc, 1)
         case '20230928'
             ramp_shift_array{1} = [99.600, 269.600, 439.600, 619.700, 889.700,1159.700,1339.600,1509.700];
             ramp_shift_array{3} = [108.700, 378.500, 558.600, 728.500, 909.800,1004.500,1274.500,1454.500,1624.500,2040.600,2215.600,2390.600,2565.600];
+        case '20231027'
+            ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
+            ramp_shift_array{2} = [68, 139.100];
+            ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200];
     end
 
     %% Identify position of individual ramps
@@ -339,6 +345,7 @@ for i_logtrace = 1:size(dsc, 1)
         rs = dsc{i_logtrace, i_ramp + 1}.ramp_shift;
 
         
+        % i_ss = (rmpdt.t > rmpdt.t(end) - 41.5 - 5 & rmpdt.t < rmpdt.t(end) - 40.5 -5);% indexes of steady states for 20230518
         i_ss = (rmpdt.t > rmpdt.t(end) - 41.5 & rmpdt.t < rmpdt.t(end) - 40.5);% indexes of steady states
         ss_cur = mean(rmpdt.F(i_ss));    
         [peak peakPos] = max(rmpdt.F);
@@ -367,6 +374,7 @@ colors = lines(size(dsc, 1));
 
 peaks = nan(size(dsc));
 rds = nan(size(dsc));
+pCas = nan(size(dsc));
 for i_logtrace = 1:size(dsc, 1)
     for i_ramp = 1:size(dsc, 2) -1
         if isempty(dsc{i_logtrace, i_ramp+1})
@@ -374,6 +382,7 @@ for i_logtrace = 1:size(dsc, 1)
         end
         peaks(i_logtrace,i_ramp) = dsc{i_logtrace, i_ramp+1}.peak;
         rds(i_logtrace,i_ramp) = dsc{i_logtrace, i_ramp+1}.rd;
+        pCas(i_logtrace,i_ramp) = dsc{i_logtrace, i_ramp+1}.pCa;
     end
     % subplot(211);
 
@@ -403,9 +412,11 @@ end
 figure(23);clf;hold on;
 colors = lines(3);
 rmpsF2S = zeros(0, 2);rmpsS2F = zeros(0, 2);rmpsPNB = zeros(0, 2);
-pf2s=[]; ps2f=[]; ppnb = [];
+pf2s=[]; ps2f=[]; ppnb = [];pf = [];
 % ramp shift by dictionary
 rs = dictionary([100, 10, 1, 0.1], [0, 200, 300, 400]);
+% order of the ramp in measurements - first come first noted
+order = '';
 
 % relax only now
 for i_logtrace = 1:size(dsc, 1)
@@ -414,30 +425,57 @@ for i_logtrace = 1:size(dsc, 1)
         if isempty(rmp) 
             continue;
         elseif strcmp(rmp.type, 'RelaxF2S')
+            if isempty(order)
+                order = 'F2S';
+            end
             rmpsF2S = [rmpsF2S; rmp.rd, rmp.peak, rmp.ss];
             pf2s = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(1, :));
         elseif strcmp(rmp.type, 'RelaxS2F')
+            if isempty(order)
+                order = 'S2F';
+            end
             rmpsS2F = [rmpsS2F; rmp.rd, rmp.peak, rmp.ss];
             ps2f = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(2, :));
-        elseif strcmp(rmp.type, 'PNBRelax')
+        elseif strcmp(rmp.type, 'PNBRelax') || strcmp(rmp.type, 'pCa11')
             rmpsPNB = [rmpsPNB; rmp.rd, rmp.peak, rmp.ss];
             ppnb = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(3, :));        
-        elseif strcmp(rmp.type, 'pCa11')
-            rmpsPNB = [rmpsPNB; rmp.rd, rmp.peak, rmp.ss];
-            ppnb = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(3, :));                    
+        % elseif strcmp(rmp.type, 'pCa11')
+        %     rmpsPNB = [rmpsPNB; rmp.rd, rmp.peak, rmp.ss];
+        %     ppnb = plot(rmp.datatableZDCorr.t + rs(rmp.rd), movmean(rmp.datatableZDCorr.F, [32 32]), '--', 'Color',colors(3, :));                    
         end
     end
 end
-    
-    
+title('Ramp order differences - relaxed')    
+if strcmp(order, 'F2S')
+    legend([pf2s, ps2f, ppnb], 'Fast to slow (first)', 'Slow to fast ', 'PNB slow to fast', 'Location','northeast')
+    axes('position', [0.15 0.62, 0.28, 0.3]);cla;
+    semilogx(rmpsF2S(:, 1), rmpsF2S(:, 2),  's-', 'Color', colors(1, :), 'LineWidth',2);
+    hold on;
+    semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', 'Color', colors(2, :), 'LineWidth',2);
+    semilogx(rmpsPNB(:, 1), rmpsPNB(:, 2),  's-', 'Color', colors(3, :), 'LineWidth',2);
+    legend('fast to slow (first)', 'Slow to fast', 'PNB slow to fast')
 
-legend([pf2s, ps2f, ppnb], 'Fast to slow (first)', 'Slow to fast ', 'PNB slow to fast', 'Location','northeast')
-title('Ramp order differences - relaxed')
-axes('position', [0.15 0.62, 0.28, 0.3]);
-semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', rmpsF2S(:, 1), rmpsF2S(:, 2),  's-', rmpsPNB(:, 1), rmpsPNB(:, 2),  's-', 'LineWidth',2)
+elseif strcmp(order, 'S2F') && ~isempty(rmpsF2S)
+    legend([pf2s, ps2f, ppnb], 'Fast to slow', 'Slow to fast (first)', 'PNB slow to fast', 'Location','northeast')
+    axes('position', [0.15 0.62, 0.28, 0.3]);cla;
+    semilogx(rmpsF2S(:, 1), rmpsF2S(:, 2),  's-', 'Color', colors(1, :), 'LineWidth',2);
+    hold on;
+    semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', 'Color', colors(2, :), 'LineWidth',2);
+    semilogx(rmpsPNB(:, 1), rmpsPNB(:, 2),  's-', 'Color', colors(3, :), 'LineWidth',2);
+    legend('fast to slow', 'Slow to fast (first)', 'PNB slow to fast')
+
+else
+    % F2S is probably empty
+    legend([ps2f, ppnb], 'Slow to fast (first)', 'PNB slow to fast', 'Location','northeast')
+    axes('position', [0.15 0.62, 0.28, 0.3]);cla;    
+    semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', 'Color', colors(2, :), 'LineWidth',2);
+    hold on;
+    semilogx(rmpsPNB(:, 1), rmpsPNB(:, 2),  's-', 'Color', colors(3, :), 'LineWidth',2);
+    legend('Slow to fast', 'PNB slow to fast')
+end 
+
 % semilogx(rmpsS2F(:, 1), rmpsS2F(:, 2), 'd-', rmpsF2S(:, 1), rmpsF2S(:, 2),  's-', 'LineWidth',2)
 title('Peaks', 'Position',[1, max(rmpsS2F(:, 2)), 0])
-legend('Slow to fast', 'fast to slow', 'PNB slow to fast')
 
 %% End of data processing
 
@@ -484,42 +522,51 @@ legend(leg)
 
 
 %% Fit the onset
-for i_logtrace = 1:size(dsc,1)
-
+for i_logtrace = [1, 2, 3, 4, 5]
+%%
     figure(10 + i_logtrace);clf;hold on;
     colors = lines(size(dsc, 2));
-    as = []; bs = []; cs = []; ds = []; rd = []; p = [];
+    as = []; bs = []; cs = []; ds = []; rd = []; p = []; pCa = [];
 
     for i_ramp = 1:size(dsc, 2)-1
         if isempty(dsc{i_logtrace, i_ramp+1})
             break;
+        elseif isnan(dsc{i_logtrace, i_ramp+1}.rd)
+            continue;
         end
         dtst = dsc{i_logtrace, i_ramp+1}; % dataset
         rmp = dtst.datatableZDCorr;
         offset = 10 + dtst.rd/4;
-        fitrg = rmp.t > offset & rmp.t < 10 + dtst.rd;
+
+        fitrg = rmp.L > 1.1 & rmp.t < 10 + dtst.rd;
         rmpFitrg = rmp(fitrg, :);
         % fitfun = @(a, b, c, d, x) min(a*max(x+d, 0).^(b) + c +0*d, 1e2);
-        fitfun = @(a, b, c, d, x) a.*exp(x*b) + c + a*b*c*d*0;
+        fitfun = @(a, b, c, d, x) a.*(x + b) + a*b*c*d*0;
 
-        [ae goodness] = fit(rmpFitrg.t - offset, rmpFitrg.F,fitfun, 'StartPoint',[1, 0.01, 1, 0.01]);
+        [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1, 1, 0.01]);
         as(i_ramp) = ae.a;
         bs(i_ramp) = ae.b;
         cs(i_ramp) = ae.c;
         ds(i_ramp) = ae.d;
         rd(i_ramp) = dtst.rd;
-        
-        p(i_ramp) = plot(rmp.t + dtst.ramp_shift, rmp.F, '-','Linewidth', 0.5, 'Color', colors(i_ramp, :));
-        plot(rmpFitrg.t + dtst.ramp_shift, fitfun(ae.a, ae.b,ae.c, ae.d, rmpFitrg.t-offset), '-','Linewidth', 4, 'Color', colors(i_ramp, :)*0.8);        
-        text(rmpFitrg.t(end) + dtst.ramp_shift, rmpFitrg.F(end), sprintf('a = %1.2e\nb = %1.2e', ae.a, ae.b))
-        legends{i_ramp} = sprintf('%s: d = %2.1d with RMSE = %3.1e', dtst.datasetLegend, ae.b, goodness.rmse);
+        pCa(i_ramp) = dtst.pCa;
+        % clf;hold on;
+        p(i_ramp) = plot(rmpFitrg.L, rmpFitrg.F, '-','Linewidth', 0.5, 'Color', colors(i_ramp, :));
+        plot(rmpFitrg.L, fitfun(ae.a, ae.b,ae.c, ae.d, rmpFitrg.L), '-','Linewidth', 4, 'Color', colors(i_ramp, :)*0.8);        
+        text(rmpFitrg.L(end), rmpFitrg.F(end), sprintf('a = %1.2e\nb = %1.2e', ae.a, ae.b))
+        legends{i_ramp} = sprintf('%s: a = %2.1d with RMSE = %3.1e', dtst.datasetLegend, ae.a, goodness.rmse);
     end
     title(sprintf('Fit for a.*exp(x*b) + c'), 'Interpreter', 'none')
-    legend(p, legends)
-    axes('position', [0.35, 0.6, 0.25, 0.3])
-    semilogx(rd, as, 'x-', rd, bs, 'v-', rd, cs, '^-');
-    legend('A', 'B', 'C')
+    legend(p(p~=0), legends(p~=0))
+    axes('position', [0.15, 0.6, 0.25, 0.3])
+    % semilogx(rd, as, 'x-', rd, bs, 'v-', rd, cs, '^-');hold on;
+    semilogx(rd, as/max(as), 's:', rds(i_logtrace, :), peaks(i_logtrace, :)/max(peaks(i_logtrace, :)), '^:', 'Linewidth', 2);
+    legend('Stiffness Slope (Norm.)', 'Peaks (normalized)');
 
+    axes('position', [0.45, 0.6, 0.25, 0.3])
+    plot(-pCa, as/max(as), 's:', -pCas(i_logtrace, :), peaks(i_logtrace, :)/max(peaks(i_logtrace, :)), '^:', 'Linewidth', 2);
+    legend('Stiffness Slope (Norm.)', 'Peaks (normalized)');
+    
 end
 
 %% Compare extracted time-courses
