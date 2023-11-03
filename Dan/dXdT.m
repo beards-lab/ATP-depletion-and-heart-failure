@@ -1,4 +1,4 @@
-function g = dXdT(~,x,Nx,Ng,ds,kA,kD,kd,Fp,alphaU,alphaF,mu,Lref,nd,V)
+function g  = dXdT(t,x,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V)
 s  = (0:1:Nx-1)'.*ds;
 
 pu = reshape( x(1:(Ng+1)*Nx), [Nx,Ng+1]);
@@ -13,7 +13,7 @@ L = x(end);
 
 % Calculate the un-attached chain velocities for every pu(s,n) entry
 deltaF = kd*max(0,(L-s)/Lref).^nd - Fp;
-Vc = deltaF/mu;
+Vp = deltaF/mu;
 
 ij = (1:Nx)' + Nx*(0:Ng); % matrix of Ng X Nx indices over all elements
 
@@ -27,22 +27,41 @@ if ~isempty(pa)
 
 end
 
-% UPWIND differencing for sliding (+ direction) for pu
-g(ij(1,:)) = g(ij(1,:)) - (1/ds)*(pu(1,:).*Vc(1,:))';
-g(ij(2:Nx,:)) = g(ij(2:Nx,:)) - (1/ds)*pu(ij(2:Nx,:)).*max(0,Vc(2:end,:)) + ...
-                (1/ds)*pu(ij(2:Nx,:)-1).*max(0,Vc(1:end-1,:));  
+% % UPWIND differencing for sliding (+ direction) for pu
+g(ij(1,:)) = g(ij(1,:)) - (1/ds)*(pu(1,:).*max(0,Vp(1,:)))';
+
+% positive velocities - extending
+indxs = ij(2:Nx,:);
+g(indxs) = g(indxs) ...
+    - (1/ds)*pu(indxs).*max(0,Vp(2:Nx, :)) + (1/ds)*pu(indxs-1).*max(0,Vp(1:Nx-1,:));
+
+% like:
+% k(1) = k(1) - pu(1)*V(1)/ds;
+% k(2:Nx) = k(2:Nx) - (pu(2:Nx)*V(2:Nx) - pu(2:Nx)*Vp(1:Nx-1))/ds
+
+%%
+% negative velocities - shrinking
+indxs = ij(1:Nx-1,:);
+g(indxs) = g(indxs) ...
+    - (1/ds)*pu(indxs+1).*min(0,Vp(2:Nx,:)) + (1/ds)*pu(indxs).*min(0,Vp(1:Nx-1,:));
+
+g(ij(end,:)) = g(ij(end,:)) + (1/ds)*(pu(end,:).*min(0,Vp(end,:)))';
 
 % unfolding rate for pu states
-UR = alphaU.*pu(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
-g(ij(:,2:(Ng+1))) = g(ij(:,2:(Ng+1))) + UR;
-g(ij(:,1:Ng))     = g(ij(:,1:Ng))     - UR;
+UR = RU.*pu(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
+FR = RF.*pu(ij(:,2:Ng+1)); % rate of probabilty transitions from n+1 to n states
+if t > 19 
+    a = 1;
+end
+g(ij(:,2:(Ng+1))) = g(ij(:,2:(Ng+1))) + UR - FR;
+g(ij(:,1:Ng))     = g(ij(:,1:Ng))     - UR + FR;
 
 % unfolding for pa states
 if ~isempty(pa)
     NxNg = Nx*(Ng+1);
-    UR = alphaU.*pa(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
-    g(ij(:,2:(Ng+1))+NxNg) = g(ij(:,2:(Ng+1))+NxNg) + UR;
-    g(ij(:,1:Ng)+NxNg)     = g(ij(:,1:Ng)+NxNg)     - UR;
+    UR = RU.*pa(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
+    g(ij(:,2:(Ng+1))+NxNg) = g(ij(:,2:(Ng+1))+NxNg) + UR - FR;
+    g(ij(:,1:Ng)+NxNg)     = g(ij(:,1:Ng)+NxNg)     - UR + FR;
 end
 
 

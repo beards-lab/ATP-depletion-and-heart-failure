@@ -119,7 +119,11 @@ set(gca,'XTick',saSet);
 set(gca,'XTickLabels',strcat(string(1:length(cost4_sap)), ':', modNames(1:length(cost4_sap)),tdoCas, betts));
 set(gca, "FontSize", 14)
 %%
+close all
 tic
+% optim for -log10 weighting
+mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
+
 % modSel = [2 3 4 6 7 8 9 12 14 15];
 % mod(16) = 0;
 % evalCombined(mod(modSel))
@@ -201,15 +205,15 @@ function totalCost = evalCombined(optMods)
     totalCost = 0;
 
     %% pCa 6
-    pCa = 6;
-    mod([7,9]) = [0.1657, 0.3895];
-    if drawPlots
-        f = figure(35);f.Name = 'pCa 6';
-    end
-
-    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    totalCost = totalCost + cost;
-    % return;
+    % pCa = 6;
+    % mod([7,9]) = [0.1657, 0.3895];
+    % if drawPlots
+    %     f = figure(35);f.Name = 'pCa 6';
+    % end
+    % 
+    % cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+    % totalCost = totalCost + cost;
+    % % return;
 
 
     %% no Ca

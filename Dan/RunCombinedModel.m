@@ -6,8 +6,8 @@ clear Length
 clear outStruct;
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
-rds = fliplr([0.1, 1, 10]);
-% rds = fliplr([0.1, 10]);
+% rds = fliplr([0.1, 1, 10]);
+rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -35,13 +35,14 @@ end
 % delU = 0.0125*mod(1);
 
 % half-sarcomere ramp height
-Lmax = 0.225;
+% Lmax = 0.225;
 % Nx   = 25;          % number of space steps
 Nx   = 25;          % number of space steps
-ds   = 0.80*(Lmax)/(Nx-1);      % space step size
+ds   = 1*(Lmax)/(Nx-1);      % space step size
 s  = (0:1:Nx-1)'.*ds; % strain vector
-Ng = 11; 
-delU = 0.010;
+Ng = 14; 
+delU = 0.0125;
+% so all unfolded make Ng*delU slack, i.e. 11*0.137=0.1375um
 
 
 % propose a function to kA = f(pCa)
@@ -79,18 +80,59 @@ Lref  = 0.9; % reference sarcomere length (um)
 
 
 % Calculate proximal globular chain force Fp(s,n) for every strain and
-%% value. 
+% value. 
 slack = (0:Ng).*delU;
 Fp = kp*(max(0,s-slack)/Lref).^(np); 
+%% visualizing the Force plot
+% clf;
+% plot(repmat(s, [1, Ng]), Fp(:, 1:Ng), 'linewidth', 2); 
+% legend('\itF_{p,1}', '\itF_{p,2}', '\itF_{p,3}', '\it...', 'Location', 'Northwest');
+% xlabel('Strain (um)');ylabel('Tension (kPa)');
+% set(gca, 'FontSize', 14)
+% set(gcf, 'Position', [500  240  400  300])
+% ylim([0 60])
+% xlabel('s (\mum)');ylabel(['\itt_p (kPa)']);
+% mesh(Fp)
 %%
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
 RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 
-RF = alphaF*(max(0,s-slack(2:(Ng+1)))).^1;  % folding rates from state n+1 to n                 
-% RF = 0;
+%% visualizing the unfolding rate = fig 1C
+% clf;hold on;
+% plot(repmat(s, [1 Ng]), RU, '-','linewidth', 2);
+% plot(repmat(s(end), [Ng, 1])', RU(end, :)', 'ks', 'linewidth', 2);
+% for n = 1:4
+%     text(s(end) + 0.01, RU(end, n), ['{\itU}_{' num2str(n)  '\rightarrow' num2str(n+1) '}'], 'Fontsize', 14)
+% end
+% text(s(end) + 0.01, RU(end, 5), '...', 'FontSize',14, 'FontWeight','bold')
+% xlabel('s (\mum)');ylabel(['{\itU_{n\rightarrown+1}  (s^{-1})}']);
+% set(gca, 'FontSize', 14)
+% 
+% axes('position', [0.25 0.5 0.35 0.4], 'YAxisLocation','right')
+% plot(1:Ng, RU(end, :), 'ks-', 'linewidth', 2);
+% xlabel('\itn')
+% text(4, max(RU(end, 1))*0.8, ['\itU_{n\rightarrown+1}' char(10) 'at ' num2str(s(end)) '\mum'], 'FontSize',14, 'FontWeight','bold')
+% set(gca, 'FontSize', 14)
+% set(gcf, 'Position', [500  240  400  300])
+% % set(gca, 'YAxisLocation', 'right');
+% set(gca, 'YTickLabel', {})
+% clf;mesh(RU)
+%% Folding rate design and visualization
+alphaF = 100;
+% RF = alphaF*(max(0,delU-s))  % folding rates from state n+1 to n            
+% RF = 1 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+RF = 0.1 + alphaF*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+% mesh(RF);view(3)
 
+% clf;hold on;
+% plot(repmat(s, [1 11]), RF(:, 1:11), 's-', 'linewidth', 2);
+% xlabel('Strain (um)');ylabel('Transition rate');
+% legend('U_0', 'U_{2\rightarrow1}', 'U_{3\rightarrow2}', '...')
+
+% RF = 0;
+%
 % Initial state
 PU = zeros(1,Ng+1); % initial unfolded probabilities for un-attached rectifier state
 PA = zeros(1,Ng+1); % initial unfolded probabilities for attached rectifier state
@@ -153,8 +195,35 @@ for j = rampSet
   % only ramp up, no decay  
   % x2 = [];t2 = []; 
 
-  t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
-  x = [x1; x2(2:end, :)];
+   % ramp downm, wait and up again
+  Vdown = Lmax./0.1;
+  [t3,x3] = ode15s(@dXdT, t2(end)+[0 0.1],x2(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,-Vdown);
+  [t4,x4] = ode15s(@dXdT, t3(end)+[0 100],x3(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  [t5,x5] = ode15s(@dXdT, t4(end)+[0 rds(j)],x4(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V);
+  [t6,x6] = ode15s(@dXdT, t5(end)+[0 10],x5(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+
+  % t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
+  % x = [x1; x2(2:end, :)];
+  t = [t1(1:end); t2(2:end); t3(2:end); t4(2:end); t5(2:end); t6(2:end)];% prevent overlap at tend_ramp
+  x = [x1; x2(2:end, :); x3(2:end, :); x4(2:end, :); x5(2:end, :); x6(2:end, :)];
+  Time{j} = t;
+%%
+states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
+% save current figure
+g = gcf;
+% open up a new one
+figure(50+j); clf;
+% decide for timepoints
+% fixed time or fraction of ramp durations?
+% time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
+time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
+% i_time_snaps = find(t > time_snaps)
+
+% disable
+% time_snaps = [];i_time_snaps = [];
+for i = 1:length(time_snaps)
+    i_time_snaps(i) = find(t>=time_snaps(i), 1, 'first');    
+end
 
   for i = 1:length(t)
     xi = x(i,:);
@@ -168,21 +237,90 @@ for j = rampSet
     Fd = kd* max(0,(Length{j}(i) - s)/Lref).^nd; 
     Force_pa{j} = ds*sum(sum(Fd.*pa ));
     Force{j}(i) =  ds*sum(sum(Fd.*pu )) + Force_pa{j};
+    states{j}(i, 1:Ng+1) = sum(pu);
+    states_a{j}(i, 1:Ng+1) = sum(pa);
+    strains{j}(i, 1:Nx) = sum(pu, 2);
 
-    if t(i) >= rds(j) && t(max(1, i-1)) < rds(j)
-        % at the peak
-        outStruct{j, 1}.pa = pa;
-        outStruct{j, 1}.pu = pu;
-    elseif t(i) >= rds(j)*2 && t(max(1, i-1)) < rds(j)*2
-        % after t_rd after the peak
-        outStruct{j, 2}.pa = pa;
-        outStruct{j, 2}.pu = pu;
-    elseif t(i) >= rds(j) + 20 && t(max(1, i-1)) < rds(j) + 20
-        % after 20s after the peak
-        outStruct{j, 3}.pa = pa;
-        outStruct{j, 3}.pu = pu;
+    if any(ismember(i_time_snaps, i))
+        i_snap = find(i_time_snaps == i);
+        % snap{i_snap} = 
+        subplot(2, length(i_time_snaps), i_snap);cla;
+        surf(s, 0:Ng, pu', 'EdgeColor','none');hold on;
+        surf(s, 0:Ng, Fp')
+        colormap(1-gray);
+        xlim([0, s(end)]);
+        shading(gca, 'interp')
+        % view(90, -90); 
+        xlabel('s'); ylabel('State');
+        title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
+        
+
+        % next line
+        subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
+        plot(repmat(s, [1 Ng+1]), pu(:, 1:Ng+1), 's-')
+        legend('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'Location', 'best');
+        axis([0, s(end), 0, max(max(x))])
+        
+        % ignore pa for a moment
+        % if ~(pa == 0)
+        %     subplot(2, length(i_time_snaps), i_snap + length(i_time_snaps));
+        %     surf(s, 0:Ng -1, pa, 'EdgeColor','none');
+        %     view(90, -90); xlabel('s'); ylabel('State');
+        %     title(sprintf('A (%fs)', t(i)))
+        % end
     end
-  end
+        
+
+    % if t(i) >= rds(j) && t(max(1, i-1)) < rds(j)
+    %     % at the peak
+    %     outStruct{j, 1}.pa = pa;
+    %     outStruct{j, 1}.pu = pu;
+    % elseif t(i) >= rds(j)*2 && t(max(1, i-1)) < rds(j)*2
+    %     % after t_rd after the peak
+    %     outStruct{j, 2}.pa = pa;
+    %     outStruct{j, 2}.pu = pu;
+    % elseif t(i) >= rds(j) + 20 && t(max(1, i-1)) < rds(j) + 20
+    %     % after 20s after the peak
+    %     outStruct{j, 3}.pa = pa;
+    %     outStruct{j, 3}.pu = pu;
+    % end
+    end
+
+%%
+
+figure(60+j); clf;
+set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
+subplot(131);
+h = surf(0:Ng, Time{j}, states{j}, 'EdgeColor','none');
+% shading(gca, 'interp')
+view(90, -90)
+ylabel('Time (s)'); xlabel('State occupancy (#)')
+title('States pu');
+colorbar;
+
+subplot(132);
+plot(t, Force{j}, LineWidth=2);
+% subplot(132);
+% surf(0:Ng, Time{j}, states_a{j});
+% shading(gca, 'interp')
+% view(90, -90)
+% ylabel('Time (s)'); xlabel('State occupancy (#)')
+% title('States pa');
+% colorbar;
+
+subplot(133);
+surf((1:Nx)*ds, Time{j}, strains{j});
+shading(gca, 'interp')
+view(90, -90)
+ylabel('Time (s)'); xlabel('Strains (um)')
+title('Strains');
+
+colorbar;
+
+% set to preset figure
+figure(g);
+
+%%
 
     
     % show state occupation at the end of the ramp
@@ -226,7 +364,6 @@ for j = rampSet
   % Fss = mod(10)*3; % optimized previously
   % Force{j} = Force{j} + Fss;
 
-  Time{j} = t;
     % ttoc = toc;
   % fprintf("Ramp %0.1fs takes %1.1fs \n", Tend_ramp, ttoc)
     
