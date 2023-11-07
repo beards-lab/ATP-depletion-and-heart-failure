@@ -56,13 +56,14 @@ mod(13) = -2.8;
 % mod = [2.0398    1.3113    3.8942    1.3500    0.4784 0.7398    0.8176    0.7869    0.8629    0.7200 1.3634    1   -2.8000    1.0150    0.6382 -0.5199];
 % mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
 mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988, 1, 1, 1];
+mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
     
 % mod(5) = mod(9);
 drawPlots = true;
 cost_sap = []; % SA plus
 cost_sam = []; % SA minus
 pCa = 11;
-pCa = 4;
+% pCa = 4;
 figure(100);
 cost = isolateRunCombinedModel(mod, pCa, drawPlots);
 c0 = cost
@@ -70,7 +71,7 @@ c0 = cost
 % saSet = [1:9 12:15];
 % saSet = [1:8 13];
 % saSet = [14 15];
-saSet = 1:10;
+saSet = 11:15;
 SAFact = 1.05;
 for i_m = saSet
     mod(i_m) = mod(i_m)*SAFact;
@@ -87,12 +88,12 @@ for i_m = saSet
     fprintf('costing %1.4e€. \n', cost);
 end
 %% plot the result
-modNames = {'kc(lowCa)', 'kS', 'nC', 'nU', 'nS', 'alphaU', 'kA', 'kD', 'kC(HighCa)', 'Fss'};
+modNames = {'kc(lowCa)', 'kS', 'nC', 'nU', 'nS', 'alphaU', 'kA', 'kD', 'kC(HighCa)', 'Fss', '1', '2', '3', '4', '5'};
 % %%
 % cost11_sap = cost_sap;
 % cost11_sam = cost_sam;
 % c0_11 = c0;
-% %%
+% %% 
 % cost4_sap = cost_sap;
 % cost4_sam = cost_sam;
 % c0_4 = c0;
@@ -122,7 +123,7 @@ set(gca, "FontSize", 14)
 close all
 tic
 % optim for -log10 weighting
-mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
+% mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
 
 % modSel = [2 3 4 6 7 8 9 12 14 15];
 % mod(16) = 0;
@@ -132,16 +133,16 @@ mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.0
 % mod_pca6 = [0.1657, 0.3895];
 % mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988 1 1 1];
     
-% modSel = [2, 4, 5, 6, 7, 8, 9];
+modSel = [1 2 3 5 6 12 13 14 15];
 
-% evalCombined(mod(modSel))
+evalCombined(mod(modSel))
 % evalCombined(mod_pca6)
-evalCombined(mod)
+% evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
 toc
 %%
 % cost = 301.7
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 5000);
 % x0 = x0([1:4 6:10 13]);
 % x0 = [0.5795    1.6029    0.9047    1.0569    0.9236    0.6627    1.0497    0.9465    1.0641    0.7124];
 
@@ -191,17 +192,18 @@ function totalCost = evalCombined(optMods)
     
     % optimizing only subset of mods
     % mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988 1 1 1];
-    
+    mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
+
     % optim for -log10 weighting
     % mod = [0.928351480405723	0.928351480405723	1.01367539052550	1.02336567490158	1.01367539052550	1.10319213342611	0.937882365838957	1.19500150970587	0.909890571615859 1 1 1 1];
     
     % modSel = [7, 9];
     % % mod([1:4 6:10 13]) = optMods;
     % modSel = [11, 12, 13];
-    % modSel = [2, 4, 5, 6, 7, 8, 9];
-    % mod(modSel) = optMods;
+    modSel = [1 2 3 5 6 12 13 14 15];
+    mod(modSel) = optMods;
 
-    drawPlots = true;
+    drawPlots = false;
     totalCost = 0;
 
     %% pCa 6
@@ -224,7 +226,7 @@ function totalCost = evalCombined(optMods)
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     totalCost = totalCost + cost*10;
-% return
+return
     %% pCa 4
     pCa = 4;
     mod([7,9]) = [0.9403    0.9889];

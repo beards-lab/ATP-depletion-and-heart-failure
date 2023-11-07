@@ -5,19 +5,24 @@ clear Time
 clear Length
 clear outStruct;
 
+drawAllStates = false;
+
 % rds = fliplr([0.02 0.1, 1, 10 100]);
-% rds = fliplr([0.1, 1, 10]);
-rds = fliplr([0.1, 10]);
+rds = fliplr([0.1, 1, 10]);
+% rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
-  if isinf(pCa)
-    % hack - the no-Ca noPNB experiments had higher ramps
-    datatable = readtable(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)*1000) 'ms.csv']);
-    datatable.Properties.VariableNames = {'Time'  'ML'  'F'  'SL'};
-    datatables{i_rd} = datatable;
-  else
-    % new format for pCa experiments
-    datatables{i_rd} = readtable(['..\Data\PassiveCa_2\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
-  end
+  % if isinf(pCa)
+  %   % hack - the no-Ca noPNB experiments had higher ramps
+  %   datatable = readtable(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)*1000) 'ms.csv']);
+  %   datatable.Properties.VariableNames = {'Time'  'ML'  'F'  'SL'};
+  %   datatables{i_rd} = datatable;
+  % elseif isnan(pCa)
+      % newest format of experiments
+    datatables{i_rd} = readtable(['..\Data\AvgRelaxed_' num2str(rds(i_rd)) 's.csv']);
+  % else
+  %   % new format for pCa experiments
+  %   datatables{i_rd} = readtable(['..\Data\PassiveCa_2\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
+  % end
 end
 if isinf(pCa)
     % hack - the no-Ca noPNB experiments had higher ramps
@@ -121,9 +126,10 @@ RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % 
 % clf;mesh(RU)
 %% Folding rate design and visualization
 alphaF = 100;
+alphaF0 = 0.05;
 % RF = alphaF*(max(0,delU-s))  % folding rates from state n+1 to n            
-% RF = 1 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
-RF = 0.1 + alphaF*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+RF = alphaF0 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+% RF = 0.1 + alphaF*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
 % mesh(RF);view(3)
 
 % clf;hold on;
@@ -195,35 +201,41 @@ for j = rampSet
   % only ramp up, no decay  
   % x2 = [];t2 = []; 
 
-   % ramp downm, wait and up again
-  Vdown = Lmax./0.1;
-  [t3,x3] = ode15s(@dXdT, t2(end)+[0 0.1],x2(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,-Vdown);
-  [t4,x4] = ode15s(@dXdT, t3(end)+[0 100],x3(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
-  [t5,x5] = ode15s(@dXdT, t4(end)+[0 rds(j)],x4(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V);
-  [t6,x6] = ode15s(@dXdT, t5(end)+[0 10],x5(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
+  x = [x1; x2(2:end, :)];
 
-  % t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
-  % x = [x1; x2(2:end, :)];
-  t = [t1(1:end); t2(2:end); t3(2:end); t4(2:end); t5(2:end); t6(2:end)];% prevent overlap at tend_ramp
-  x = [x1; x2(2:end, :); x3(2:end, :); x4(2:end, :); x5(2:end, :); x6(2:end, :)];
-  Time{j} = t;
+  %% ramp downm, wait and up again
+  % Vdown = Lmax./0.1;
+  % [t3,x3] = ode15s(@dXdT, t2(end)+[0 0.1],x2(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,-Vdown);
+  % [t4,x4] = ode15s(@dXdT, t3(end)+[0 100],x3(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  % [t5,x5] = ode15s(@dXdT, t4(end)+[0 rds(j)],x4(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V);
+  % [t6,x6] = ode15s(@dXdT, t5(end)+[0 10],x5(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  % 
+  % 
+  % t = [t1(1:end); t2(2:end); t3(2:end); t4(2:end); t5(2:end); t6(2:end)];% prevent overlap at tend_ramp
+  % x = [x1; x2(2:end, :); x3(2:end, :); x4(2:end, :); x5(2:end, :); x6(2:end, :)];
+  
 %%
+Time{j} = t;
 states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
-% save current figure
-g = gcf;
-% open up a new one
-figure(50+j); clf;
-% decide for timepoints
-% fixed time or fraction of ramp durations?
-% time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
-time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
-% i_time_snaps = find(t > time_snaps)
-
-% disable
-% time_snaps = [];i_time_snaps = [];
-for i = 1:length(time_snaps)
-    i_time_snaps(i) = find(t>=time_snaps(i), 1, 'first');    
-end
+    
+    if drawAllStates
+        % save current figure
+        g = gcf;
+        % open up a new one
+        figure(50+j); clf;
+        % decide for timepoints
+        % fixed time or fraction of ramp durations?
+        % time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
+        time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
+        % i_time_snaps = find(t > time_snaps)
+    
+        % disable
+        % time_snaps = [];i_time_snaps = [];
+        for i = 1:length(time_snaps)
+            i_time_snaps(i) = find(t>=time_snaps(i), 1, 'first');    
+        end
+    end
 
   for i = 1:length(t)
     xi = x(i,:);
@@ -241,35 +253,36 @@ end
     states_a{j}(i, 1:Ng+1) = sum(pa);
     strains{j}(i, 1:Nx) = sum(pu, 2);
 
-    if any(ismember(i_time_snaps, i))
-        i_snap = find(i_time_snaps == i);
-        % snap{i_snap} = 
-        subplot(2, length(i_time_snaps), i_snap);cla;
-        surf(s, 0:Ng, pu', 'EdgeColor','none');hold on;
-        surf(s, 0:Ng, Fp')
-        colormap(1-gray);
-        xlim([0, s(end)]);
-        shading(gca, 'interp')
-        % view(90, -90); 
-        xlabel('s'); ylabel('State');
-        title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
-        
-
-        % next line
-        subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
-        plot(repmat(s, [1 Ng+1]), pu(:, 1:Ng+1), 's-')
-        legend('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'Location', 'best');
-        axis([0, s(end), 0, max(max(x))])
-        
-        % ignore pa for a moment
-        % if ~(pa == 0)
-        %     subplot(2, length(i_time_snaps), i_snap + length(i_time_snaps));
-        %     surf(s, 0:Ng -1, pa, 'EdgeColor','none');
-        %     view(90, -90); xlabel('s'); ylabel('State');
-        %     title(sprintf('A (%fs)', t(i)))
-        % end
-    end
-        
+    if drawAllStates
+        if any(ismember(i_time_snaps, i))
+            i_snap = find(i_time_snaps == i);
+            % snap{i_snap} = 
+            subplot(2, length(i_time_snaps), i_snap);cla;
+            surf(s, 0:Ng, pu', 'EdgeColor','none');hold on;
+            surf(s, 0:Ng, Fp')
+            colormap(1-gray);
+            xlim([0, s(end)]);
+            shading(gca, 'interp')
+            % view(90, -90); 
+            xlabel('s'); ylabel('State');
+            title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
+            
+    
+            % next line
+            subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
+            plot(repmat(s, [1 Ng+1]), pu(:, 1:Ng+1), 's-')
+            legend('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'Location', 'best');
+            axis([0, s(end), 0, max(max(x))])
+            
+            % ignore pa for a moment
+            % if ~(pa == 0)
+            %     subplot(2, length(i_time_snaps), i_snap + length(i_time_snaps));
+            %     surf(s, 0:Ng -1, pa, 'EdgeColor','none');
+            %     view(90, -90); xlabel('s'); ylabel('State');
+            %     title(sprintf('A (%fs)', t(i)))
+            % end
+        end
+    end    
 
     % if t(i) >= rds(j) && t(max(1, i-1)) < rds(j)
     %     % at the peak
@@ -287,38 +300,39 @@ end
     end
 
 %%
-
-figure(60+j); clf;
-set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
-subplot(131);
-h = surf(0:Ng, Time{j}, states{j}, 'EdgeColor','none');
-% shading(gca, 'interp')
-view(90, -90)
-ylabel('Time (s)'); xlabel('State occupancy (#)')
-title('States pu');
-colorbar;
-
-subplot(132);
-plot(t, Force{j}, LineWidth=2);
-% subplot(132);
-% surf(0:Ng, Time{j}, states_a{j});
-% shading(gca, 'interp')
-% view(90, -90)
-% ylabel('Time (s)'); xlabel('State occupancy (#)')
-% title('States pa');
-% colorbar;
-
-subplot(133);
-surf((1:Nx)*ds, Time{j}, strains{j});
-shading(gca, 'interp')
-view(90, -90)
-ylabel('Time (s)'); xlabel('Strains (um)')
-title('Strains');
-
-colorbar;
-
-% set to preset figure
-figure(g);
+if drawAllStates
+    figure(60+j); clf;
+    set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
+    subplot(131);
+    h = surf(0:Ng, Time{j}, states{j}, 'EdgeColor','none');
+    shading(gca, 'interp')
+    view(90, -90)
+    ylabel('Time (s)'); xlabel('State occupancy (#)')
+    title('States pu');
+    colorbar;
+    
+    subplot(132);
+    plot(t, Force{j}, LineWidth=2);
+    % subplot(132);
+    % surf(0:Ng, Time{j}, states_a{j});
+    % shading(gca, 'interp')
+    % view(90, -90)
+    % ylabel('Time (s)'); xlabel('State occupancy (#)')
+    % title('States pa');
+    % colorbar;
+    
+    subplot(133);
+    surf((1:Nx)*ds, Time{j}, strains{j});
+    shading(gca, 'interp')
+    view(90, -90)
+    ylabel('Time (s)'); xlabel('Strains (um)')
+    title('Strains');
+    
+    colorbar;
+    
+    % set to preset figure
+    figure(g);
+end
 
 %%
 
@@ -382,6 +396,7 @@ for j = rampSet
     inds = find(datatable_cur.Time >= t_endFreeware(j));
     datatable_cur = datatable_cur(inds, :);
     t_int{j} = datatable_cur.Time - 2;
+    % t_int{j} = datatable_cur.Time;
     Ftot_int{j} = interp1(Time{j}, Force{j}, t_int{j}); % total force interpolated
 
     % weighting to fit semilogx
@@ -392,8 +407,8 @@ for j = rampSet
     % semilogx(t_int{j}, x/sum(x));
     % plot(t_int{j}, w);hold on;
 
-    % no weighing
-    % w = 1;
+    % no weighing, already in the data
+    w = 1;
 %%
     Es{j} = w.*(Ftot_int{j} - datatable_cur.F).^2; % error set
     Es{j}(isnan(Es{j})) = 0; % zero outside bounds
