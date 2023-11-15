@@ -6,16 +6,18 @@ dataset{2} = load('DataStruct20230919.mat');
 dataset{3} = load('DataStruct20230927.mat');
 dataset{4} = load('DataStruct20230928.mat');
 dataset{5} = load('DataStruct20231027.mat');
+dataset{6} = load('DataStruct20231102.mat');
 %% cell for each ramp
 % ramp durations
 rds = [100, 10, 1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % all
-relaxed{1} = [1, 1, 2;2, 1, 2;2, 1, 9;3, 1, 6;4, 1, 6;5,1,9];
-relaxed{2} = [1, 1, 3;2, 1, 3;2, 1, 8;3, 1, 7;4, 1, 7;5,1,8];
-relaxed{3} = [1, 1, 4;2, 1, 4;2, 1, 7;3, 1, 8;4, 1, 8;5,1,7];
-relaxed{4} = [1, 1, 5;2, 1, 5;2, 1, 6;3, 1, 9;4, 1, 9;5,1,6];
+relaxed{1} = [1, 1, 2;2, 1, 2;2, 1, 9;3, 1, 6;4, 1, 6;5,1,9;6, 1, 9];
+relaxed{2} = [1, 1, 3;2, 1, 3;2, 1, 8;3, 1, 7;4, 1, 7;5,1,8;6, 1, 8];
+relaxed{3} = [1, 1, 4;2, 1, 4;2, 1, 7;3, 1, 8;4, 1, 8;5,1,7;6, 1, 7];
+relaxed{4} = [1, 1, 5;2, 1, 5;2, 1, 6;3, 1, 9;4, 1, 9;5,1,6;6, 1, 6];
 dsName = 'AvgRelaxed';
+% peaks = relaxed;
 % % Only with decay 60s+
 % relaxed{1} = [3, 1, 6;4, 1, 6;5,1,9];
 % relaxed{2} = [3, 1, 7;4, 1, 7;5,1,8];
@@ -65,7 +67,7 @@ for i_rds = 1:length(rds)
         F = rmp.F/base_rel;
         % F = rmp.F;
 
-        semilogx(rmp.t, F, ':');hold on;
+        plot(rmp.t, F, ':');hold on;
         set(gca, 'FontSize', 14);
         % base on obsolute peak
         peaks(i_rds, i_logtrace) = max(rmp.F);
@@ -97,11 +99,13 @@ for i_rds = 1:length(rds)
 
         
     end
-    %%
+%% resample and save
     
     % resample up the peak and for the tail separately
     t_s = [linspace(0, 1, 20)*rds(i_rds) ...
         logspace(log10(rds(i_rds)), log10(outT(end)), 40)];
+    % resample log equally
+    % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
     t_s = t_s(~[false t_s(2:end) == t_s(1:end-1)]);
     % force and length interpolation
@@ -110,9 +114,9 @@ for i_rds = 1:length(rds)
     tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
     writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
-%%
-    semilogx(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2)
-    xlim([1e-2 5e2])
+%% plot the AVG
+    plot(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2)
+    xlim([1e-2 2e2])
     yl = ylim;
     ylabel('\itT_{m,rel}');
     yyaxis right; ylim(yl*Fmax);
@@ -121,27 +125,30 @@ for i_rds = 1:length(rds)
     leg{length(leg) +1} = 'Averaged';
     title(['Ramp ' num2str(rds(i_rds)) 's'])
     if i_rds == 1
-        x = 0.1;y = 0.03;
-        legend(leg, 'Interpreter','none', 'Position', ...
-            [sp.Position(1) + sp.Position(3) + x, sp.Position(2) - y, 1 - sp.Position(1) - sp.Position(3) - x, sp.Position(4)])
+        % x = 0.1;y = 0.03;
+        % legend(leg, 'Interpreter','none', 'Position', ...
+        %     [sp.Position(1) + sp.Position(3) + x, sp.Position(2) - y, 1 - sp.Position(1) - sp.Position(3) - x, sp.Position(4)])
     elseif i_rds == 4
         xlabel('Time (s)')
-    end
-    
-
-    
+    end    
 end
-% peak sum up
-subplot(4, 4, [11 16]);cla;
+%% peak sum up
+subplot(4, 4, [3 16]);cla;
 clin = lines(size(peaks, 2)+1);
 for i_pk = 1:size(peaks, 2)
     % set(gca, 'colororderindex', 1);
-    semilogx(rds, peaks(:, i_pk), '.:', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;    
+    semilogx(rds, peaks(:, i_pk), '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));hold on;    
     % semilogx(rds, as(:, i_pk), 'x:', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
 end
 % set(gca, 'YAxisLocation', 'right');
-semilogx(rds, mean(peaks, 2)', '-', LineWidth=1, Color=clin(end, :))
-semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, Color=clin(end, :), MarkerSize=12)
+% just for the legend
+semilogx(NaN, NaN, '-|',LineWidth=3, Color=clin(end, :))
+legend(leg, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
+
+semilogx(rds, mean(peaks, 2)', '-', LineWidth=3, Color=clin(end, :))
+semilogx(rds, mean(peaks, 2)', '|', LineWidth=5, Color=clin(end, :), MarkerSize=12)
+
+
 xlabel('Ramp duration (s)');
 xlim([0.08, 150])
 ylabel('Peak tension (kPa)')
@@ -151,3 +158,5 @@ set(gca, 'FontSize', 14);
 title('Absolute peak height')
 
 % boxplot(peaks', 'Positions',rds)
+% end
+%% the same, but for pCa

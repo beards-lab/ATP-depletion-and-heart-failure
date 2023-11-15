@@ -29,7 +29,9 @@ clear;clc;
 % S1 = dir('data/PassiveCaSrc2/20230927');
 % S1 = dir('data/PassiveCaSrc2/20230928');
 % S1 = dir('data/PassiveCaSrc2/20231027');
-S1 = dir('data/PassiveCaSrc2/20231102');
+% S1 = dir('data/PassiveCaSrc2/20231102');
+S1 = dir('data/PassiveCaSrc2/20231107');
+
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
 S1 = S1(idx);
@@ -250,7 +252,7 @@ for i_logtrace = 1:size(dsc, 1)
         case '20230928'
             ramp_shift_array{1} = [99.600, 269.600, 439.600, 619.700, 889.700,1159.700,1339.600,1509.700];
             ramp_shift_array{3} = [108.700, 378.500, 558.600, 728.500, 909.800,1004.500,1274.500,1454.500,1624.500,2040.600,2215.600,2390.600,2565.600];
-        case {'20231027', '20231102'} 
+        case {'20231027', '20231102', '20231107'} 
             ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
             ramp_shift_array{2} = [68, 139.100];
             ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200];
@@ -504,11 +506,11 @@ for i_logtrace = 1:size(dsc,1)
         continue;
     end
     subplot(221);
-    plot(rmp.t(wind), rmp.SL(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
+    semilogx(rmp.t(wind), rmp.SL(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
     xlabel('t');ylabel('SL');title('SL in time');
     hold on;
     subplot(223);
-    plot(rmp.t(wind), rmp.F(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
+    semilogx(rmp.t(wind), rmp.F(wind), styles{i_logtrace}, 'Color', colors(i_ramp, :), LineWidth=2);
     xlabel('t');ylabel('F');title('F in time');
     hold on;
     subplot(122);
