@@ -11,7 +11,7 @@ drawAllStates = false;
 rds = fliplr([0.1, 1, 10]);
 % rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
-  % if isinf(pCa)
+  if isinf(pCa) || pCa == 11
   %   % hack - the no-Ca noPNB experiments had higher ramps
   %   datatable = readtable(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)*1000) 'ms.csv']);
   %   datatable.Properties.VariableNames = {'Time'  'ML'  'F'  'SL'};
@@ -19,18 +19,21 @@ for i_rd = 1:length(rds)
   % elseif isnan(pCa)
       % newest format of experiments
     datatables{i_rd} = readtable(['..\Data\AvgRelaxed_' num2str(rds(i_rd)) 's.csv']);
+  else
+    datatables{i_rd} = readtable(['..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv']);
+  end
   % else
   %   % new format for pCa experiments
   %   datatables{i_rd} = readtable(['..\Data\PassiveCa_2\bakers_passiveStretch_pCa' num2str(pCa) '_' num2str(1000*rds(i_rd)) 'ms.csv']);
   % end
 end
-if isinf(pCa)
-    % hack - the no-Ca noPNB experiments had higher ramps
-  Lmax = 0.4;
-else    
+% if isinf(pCa)
+%     % hack - the no-Ca noPNB experiments had higher ramps
+%   Lmax = 0.4;
+% else    
     % follow-up experiments had lower ramps
     Lmax = 1.175 - 0.95;
-end
+% end
 
 % Ls0  = 0.10*mod(13);
 % Nx   = 25;          % number of space steps
@@ -63,21 +66,22 @@ delU = 0.0125;
 % mu = 2.44*mod(9); 
 
 % g0 = ones(1,11);
-g0 = mod;
-kD   = g0(8)*14.977; % PEVK detachment rate
-if pCa == 11
-    kp   = g0(1)*10203*0.7;      % proximal chain force constant
-    kA   = g0(7)*0*16.44; % PEVK attachment rate
+% g0 = mod;
+% mod = 0;
+kD   = mod(8)*14.977; % PEVK detachment rate
+if pCa >= 11
+    kp   = mod(1)*10203*0.7;      % proximal chain force constant
+    kA   = mod(7)*0*16.44; % PEVK attachment rate
 else
-    kp   = g0(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
-    kA   = g0(7)*16.44;
+    kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
+    kA   = mod(7)*16.44;
 end
-kd   = g0(2)*14122;        % distal chain force constant
-alphaU = g0(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
+kd   = mod(2)*14122;        % distal chain force constant
+alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
 alphaF = 0; % chain folding rate constant - not implemented yet
-np = g0(3)*3.27; % proximal chain force exponent
-nd = g0(5)*3.25; % distal chain force exponent
-nU = g0(4)*6.0; % unfolding rate exponent
+np = mod(3)*3.27; % proximal chain force exponent
+nd = mod(5)*3.25; % distal chain force exponent
+nU = mod(4)*6.0; % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
 mu = 1.12; 
 Lref  = 0.9; % reference sarcomere length (um)
@@ -126,7 +130,7 @@ RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % 
 % clf;mesh(RU)
 %% Folding rate design and visualization
 alphaF = 100;
-alphaF0 = 0.05;
+alphaF0 = 0.05*mod(15);
 % RF = alphaF*(max(0,delU-s))  % folding rates from state n+1 to n            
 RF = alphaF0 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
 % RF = 0.1 + alphaF*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
