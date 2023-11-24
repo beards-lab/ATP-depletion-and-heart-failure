@@ -1,14 +1,14 @@
 % processes the Ca data, expects peaks from normal
 clearvars -except dataset;
 
-
-dataset{1} = load('DataStruct20230518_renamed.mat');
-dataset{2} = load('DataStruct20230919.mat');
-dataset{3} = load('DataStruct20230927.mat');
-dataset{4} = load('DataStruct20230928.mat');
-dataset{5} = load('DataStruct20231027.mat');
-dataset{6} = load('DataStruct20231102.mat');
-dataset{7} = load('DataStruct20231107.mat');
+% 
+% dataset{1} = load('DataStruct20230518_renamed.mat');
+% dataset{2} = load('DataStruct20230919.mat');
+% dataset{3} = load('DataStruct20230927.mat');
+% dataset{4} = load('DataStruct20230928.mat');
+% dataset{5} = load('DataStruct20231027.mat');
+% dataset{6} = load('DataStruct20231102.mat');
+% dataset{7} = load('DataStruct20231107.mat');
 %% Get fmaxes - for each dataset there is a Fmax
 % index: dataset, 
 % measurement, sequence;
@@ -73,17 +73,26 @@ for i_rds = 1:length(rds)
         i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
         
         % remaining force at the beginning and at the end
-        FremMax0 = mean(rmp.F(1:i_0));
-        FremMaxEnd = mean(rmp.F(i_end:end));
+        FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
 
         % trim the ramp
         rmp = rmp(i_0:i_end, :);
         rmp.t = rmp.t - 10;
 
         %% filter out the remaining force
-        FremFun = @(t, rd) (t < rd).*FremMax0.*(rd-t)./rd + ... % 
-            (t >= rd).*FremMaxEnd.*(t-rd)/(t(end)-rd);
-        rmp.F = rmp.F - FremFun(rmp.t, dtst.rd);        
+        % linear
+        % FremFun = @(t, rd) (t < rd).*FremMax0.*(rd-t)./rd + ... 
+        %    (t >= rd).*FremMaxEnd.*(t-rd)/(t(end)-rd);
+        
+        % first order exponential
+        k = .015; s = 1;
+        FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*FremMax(1).*(rd-t)./rd)) +... % 
+            (t >= rd).*(...
+            s*FremMax(2).*...
+            (1-exp(-k*(t-rd))) +...
+            (1-s).*FremMax(2)); % exponential approximation
+        
+        rmp.F = rmp.F - FremFun(rmp.t, dtst.rd, FremMax);        
         
         % base on nothing - just absolute peak values
         base_rel = 1;
@@ -252,7 +261,7 @@ ylim([0, yl(2)]);
 %% representative case of adjustment of active force
 figure(5); clf; 
 subplot(1, 3, [1 2])
-i_dtst = 5;
+i_dtst = 7;
 % linear
 FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*FremMax(1).*(rd-t)./rd) + ... % 
             (t >= rd).*FremMax(2).*(t-rd)/(t(end)*0 + 300 -rd);
@@ -262,9 +271,12 @@ s = 1;
 
 FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*FremMax(1).*(rd-t)./rd)) +... % 
             (t >= rd).*(...
-            s.*FremMax(2)/(1-exp(-k*(t(end)*0 + 300 - rd))).*... % scaling to hit the FremMax
+            s*FremMax(2).*...
             (1-exp(-k*(t-rd))) +...
             (1-s).*FremMax(2)); % exponential approximation
+% s.*FremMax(2)/(1-exp(-k*(t(end) - rd))).*... % scaling to hit the FremMax at the end
+            
+
 
 dtst = dataset{i_dtst}.dsc{3,10}
 rmp = dtst.datatableZDCorr;
@@ -277,7 +289,7 @@ i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
 rmp.t = rmp.t - 10;
 
 % remaining force at the beginning and at the end
-% FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
+FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
 pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
 pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
 pltCorr = plot(rmp.t, rmp.F - FremFun(rmp.t, dtst.rd, FremMax), '-', LineWidth=2);
@@ -301,7 +313,7 @@ i_FremDecEnd = find(rmp.t > rmp.t(end)-41, 1);
 
 % remaining force at the beginning and at the end
 
-FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
+FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
 F_corr = rmp.F - FremFun(rmp.t, dtst.rd, FremMax);
 
 pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
