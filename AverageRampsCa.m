@@ -133,26 +133,18 @@ for i_rds = 1:length(rds)
         peaks_norm(i_rds, i_logtrace) = max(F);
 
         if isempty(outF)
-            outF = F';
+            outF = F;
             Fmax = base_rel;
-            n(1:length(outF)) = 1;
+            n = 1;
         else
-            % shrink to minimal length
-            % L = min(length(outF), length(rmp.F));
-            % average all acceptable lengths
-            L = length(F);
-            % if the current one is shorter, extend to match the current
-            extendArr = @(u) [u zeros(1, L - length(u))];
-            n = extendArr(n);
-            outF = extendArr(outF);
-            outT = rmp.t';
-            outT = extendArr(outT);
-            n(1:L) = n(1:L) + 1;
-            % online average
-            outF(1:L) = outF(1:L) + (F(1:L)' - outF(1:L))./n;
-            % outT = rmp.t(1:L);
+            L = min(length(outF), length(rmp.F));
+            n = n + 1;
+            % shrink to shortest one
+            outF = outF(1:L) + (F(1:L) - outF(1:L))/n;
+            outT = rmp.t(1:L);
             % avg the peaks to rescale back
-            Fmax = Fmax + (base_rel - Fmax)/n(1);           
+            Fmax = Fmax + (base_rel - Fmax)/n;
+            
         end    
 
         %% getting stiffnes based on linear fit
@@ -176,7 +168,7 @@ for i_rds = 1:length(rds)
     % remove consequent duplicates at joints
     t_s = t_s(~[false t_s(2:end) == t_s(1:end-1)]);
     % force and length interpolation
-    FLint = interp1(outT', [outF'*Fmax, rmp.L(1:L)], t_s, "pchip", 'extrap');
+    FLint = interp1(outT, [outF*Fmax, rmp.L(1:L)], t_s, "pchip", 'extrap');
     
     tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
