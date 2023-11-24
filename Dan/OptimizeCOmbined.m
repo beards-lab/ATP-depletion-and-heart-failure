@@ -140,6 +140,8 @@ tic
 mod = [0.0343    0.7101    0.4731    1.0234    1.0916    1.9353    0.9379 1.1950    0.9099    0.8988    0.5952    2.0416    0.7510    1.2811 4.1891];
 % for absolute average - pca 4.4
 mod = [0.0343    0.7101    0.4731    1.0234    1.0916    1.9353    1.5266 0.8291    0.0356    0.8988    0.5952    2.0416    0.7510    1.2811 4.1891];
+% for absolute average excluding the ramp-up
+mod = [0.0142    0.4204    0.4267    1.0234    0.7567 0.3025    0.1535    1.0318    0.0133    0.8988 0.8679    4.5429    0.7510    1.2811    1.6208];
     
 modSel = [1 2 3 5 6 11 12 15];
 modSel = [7, 8, 9];
@@ -150,6 +152,7 @@ evalCombined(mod(modSel))
 % evalCombined([1 1 1 1 1 1])
 toc
 %%
+% mod = [    0.0140    0.3630    0.4241    1.0234    0.7953    0.2941    0.2514     0.8819    0.0135    0.8988    0.7571    4.3872    0.7510    1.2811    1.6652];
 % cost = 301.7
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 5000);
 % x0 = x0([1:4 6:10 13]);
@@ -216,6 +219,7 @@ function totalCost = evalCombined(optMods)
     modSel = [1 2 3 5 6 7 8 9 11 12 15];
     mod(modSel) = optMods;
 
+    % drawPlots = true;
     drawPlots = false;
     totalCost = 0;
 

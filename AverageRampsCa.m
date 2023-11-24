@@ -1,15 +1,14 @@
 % processes the Ca data, expects peaks from normal
-% peaks_relaxed = peaks;
-clearvars -except dataset rds relaxed peaks_relaxed;
+clearvars -except dataset;
 
 
-% dataset{1} = load('DataStruct20230518_renamed.mat');
-% dataset{2} = load('DataStruct20230919.mat');
-% dataset{3} = load('DataStruct20230927.mat');
-% dataset{4} = load('DataStruct20230928.mat');
-% dataset{5} = load('DataStruct20231027.mat');
-% dataset{6} = load('DataStruct20231102.mat');
-% dataset{7} = load('DataStruct20231107.mat');
+dataset{1} = load('DataStruct20230518_renamed.mat');
+dataset{2} = load('DataStruct20230919.mat');
+dataset{3} = load('DataStruct20230927.mat');
+dataset{4} = load('DataStruct20230928.mat');
+dataset{5} = load('DataStruct20231027.mat');
+dataset{6} = load('DataStruct20231102.mat');
+dataset{7} = load('DataStruct20231107.mat');
 %% Get fmaxes - for each dataset there is a Fmax
 % index: dataset, 
 % measurement, sequence;
@@ -23,32 +22,27 @@ for i = 1:size(dataset, 2)
     dataset_maxF(i) = max(...
         dataset{i}.dsc{fmax_pointers(i, 1), fmax_pointers(i, 2)}.datatable.F);
 end
+
 %% cell for each ramp
 % ramp durations
 rds = [100, 10, 1, 0.1];
 % rds = [1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % all
-pCa4_4Data{1} = [1, 4, 2;2, 2, 2;0,0,0;3, 3, 7;4, 3, 7;5,3,7;6, 3, 7;7, 3, 7];
-pCa4_4Data{2} = [1, 4, 3;2, 2, 3;0,0,0;3, 3, 8;4, 3, 8;5,3,8;6, 3, 8;7, 3, 8];
-pCa4_4Data{3} = [1, 4, 4;2, 2, 4;0,0,0;3, 3, 9;4, 3, 9;5,3,9;6, 3, 9;7, 3, 9];
-pCa4_4Data{4} = [1, 4, 5;2, 2, 5;0,0,0;3, 3, 10;4, 3, 10;5,3,10;6, 3, 10;7, 3, 10];
+pCa4_4Data{1} = [1, 4, 2;2, 2, 2;3, 3, 7;4, 3, 7;5,3, 7;6, 3, 7;7, 3, 7];
+pCa4_4Data{2} = [1, 4, 3;2, 2, 3;3, 3, 8;4, 3, 8;5,3, 8;6, 3, 8;7, 3, 8];
+pCa4_4Data{3} = [1, 4, 4;2, 2, 4;3, 3, 9;4, 3, 9;5,3, 9;6, 3, 9;7, 3, 9];
+pCa4_4Data{4} = [1, 4, 5;2, 2, 5;3, 3,10;4, 3,10;5,3,10;6, 3,10;7, 3,10];
 dsName = 'AvgpCa4.4';
 
-% % Only with decay 60s+
-% relaxed{1} = [3, 1, 6;4, 1, 6;5,1,9];
-% relaxed{2} = [3, 1, 7;4, 1, 7;5,1,8];
-% relaxed{3} = [3, 1, 8;4, 1, 8;5,1,7];
-% relaxed{4} = [3, 1, 9;4, 1, 9;5,1,6];
-
-% % with PNB
-% relaxed{1} = [1, 1, 2;2, 1, 2;2, 1, 9;3, 1, 6;4, 1, 6;5,1,9];
-% relaxed{2} = [1, 1, 3;2, 1, 3;2, 1, 8;3, 1, 7;4, 1, 7;5,1,8];
-% relaxed{3} = [1, 1, 4;2, 1, 4;2, 1, 7;3, 1, 8;4, 1, 8;5,1,7];
-% relaxed{4} = [1, 1, 5;2, 1, 5;2, 1, 6;3, 1, 9;4, 1, 9;5,1,6];
+%% Get corresponding relaxed for scaling options
+relaxed{1} =    [1, 1, 2;2, 1, 2;3, 1, 6;4, 1, 6;5,1, 9;6, 1, 9;7, 1, 9];
+relaxed{2} =    [1, 1, 3;2, 1, 3;3, 1, 7;4, 1, 7;5,1, 8;6, 1, 8;7, 1, 8];
+relaxed{3} =    [1, 1, 4;2, 1, 4;3, 1, 8;4, 1, 8;5,1, 7;6, 1, 7;7, 1, 7];
+relaxed{4} =    [1, 1, 5;2, 1, 5;3, 1, 9;4, 1, 9;5,1, 6;6, 1, 6;7, 1, 6];
 
 
-% %%
+% %% 
 % dtst = dataset{2}.dsc;
 % dtst{1, 1}.datasetTitle
 % rmp = dtst{1, 1}.datatable;
@@ -61,12 +55,13 @@ for i_rds = 1:length(rds)
     sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
     outF = [];n = 1;clear leg;
     rampSet = pCa4_4Data{i_rds};
+    clin = lines(size(rampSet, 1)+1);
 
     for i_logtrace = 1:size(rampSet, 1)
-        if rampSet(i_logtrace, 1) == 0
-            % placeholder to match the relaxed peaks, skipping            
-            continue;
-        end
+        % if rampSet(i_logtrace, 1) == 0
+        %     % placeholder to match the relaxed peaks, skipping            
+        %     continue;
+        % end
         % experiment dataset - whole measurement session
         eds = dataset{rampSet(i_logtrace, 1)}.dsc;
         % dataset - particular conditions
@@ -76,9 +71,19 @@ for i_rds = 1:length(rds)
         % i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
         dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
         i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
-        % cut out
+        
+        % remaining force at the beginning and at the end
+        FremMax0 = mean(rmp.F(1:i_0));
+        FremMaxEnd = mean(rmp.F(i_end:end));
+
+        % trim the ramp
         rmp = rmp(i_0:i_end, :);
         rmp.t = rmp.t - 10;
+
+        %% filter out the remaining force
+        FremFun = @(t, rd) (t < rd).*FremMax0.*(rd-t)./rd + ... % 
+            (t >= rd).*FremMaxEnd.*(t-rd)/(t(end)-rd);
+        rmp.F = rmp.F - FremFun(rmp.t, dtst.rd);        
         
         % base on nothing - just absolute peak values
         base_rel = 1;
@@ -90,9 +95,11 @@ for i_rds = 1:length(rds)
         % base on steady state
         % base_rel = rmp.F(end);
         % base on relaxed peaks for each ramp
-        % base_rel = peaks_relaxed(i_rds, i_logtrace);
+        % base_rel = eds{relaxed{i_rds}(i_logtrace, 2),...
+                        % relaxed{i_rds}(i_logtrace, 3)}.peak;
         % base on relaxed peaks for fastest ramp only
-        % base_rel = peaks_relaxed(4, i_logtrace);
+        % base_rel = eds{relaxed{4}(i_logtrace, 2),...
+                        % relaxed{4}(i_logtrace, 3)}.peak;
         % base on Fmax
         % base_rel = dataset_maxF(rampSet(i_logtrace, 1));
         if isnan(base_rel) || base_rel == 0
@@ -104,7 +111,9 @@ for i_rds = 1:length(rds)
 
         % prepare legend
         leg{i_logtrace} = [dtst.folder ':' dtst.datasetTitle];
-        semilogx(rmp.t, F, ':');hold on;
+        semilogx(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
+        % semilogx(dtst.datatableZDCorr.t - 10, dtst.datatableZDCorr.F, '-', Color=clin(i_logtrace, :));hold on;
+        % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
         set(gca, 'FontSize', 14);
         % base on absolute peak
         peaks(i_rds, i_logtrace) = max(rmp.F);
@@ -129,14 +138,14 @@ for i_rds = 1:length(rds)
             
         end    
 
-        %%
-        fitrg = rmp.L > 1.1 & rmp.t < dtst.rd;
-        rmpFitrg = rmp(fitrg, :);
-        % fitfun = @(a, b, c, d, x) min(a*max(x+d, 0).^(b) + c +0*d, 1e2);
-        fitfun = @(a, b, x) a.*(x + b);
-
-        [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
-        as(i_rds, i_logtrace) = ae.a;
+        %% getting stiffnes based on linear fit
+        % fitrg = rmp.L > 1.1 & rmp.t < dtst.rd;
+        % rmpFitrg = rmp(fitrg, :);
+        % % fitfun = @(a, b, c, d, x) min(a*max(x+d, 0).^(b) + c +0*d, 1e2);
+        % fitfun = @(a, b, x) a.*(x + b);
+        % 
+        % [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
+        % as(i_rds, i_logtrace) = ae.a;
 
         
     end
@@ -154,9 +163,9 @@ for i_rds = 1:length(rds)
     
     tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
-    semilogx(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2)
+    semilogx(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2, Color=clin(end, :))
     xlim([1e-2 2e2])
     yl = ylim;
     ylabel('\itT_{m,rel}');
@@ -240,6 +249,83 @@ ylim([0, yl(2)]);
 
 % boxplot(peaks', 'Positions',rds)
 % end
+%% representative case of adjustment of active force
+figure(5); clf; 
+subplot(1, 3, [1 2])
+i_dtst = 5;
+% linear
+FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*FremMax(1).*(rd-t)./rd) + ... % 
+            (t >= rd).*FremMax(2).*(t-rd)/(t(end)*0 + 300 -rd);
+% first order
+k = .015;
+s = 1;
+
+FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*FremMax(1).*(rd-t)./rd)) +... % 
+            (t >= rd).*(...
+            s.*FremMax(2)/(1-exp(-k*(t(end)*0 + 300 - rd))).*... % scaling to hit the FremMax
+            (1-exp(-k*(t-rd))) +...
+            (1-s).*FremMax(2)); % exponential approximation
+
+dtst = dataset{i_dtst}.dsc{3,10}
+rmp = dtst.datatableZDCorr;
+
+i_0 = find(rmp.t >= 10, 1);
+% i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
+dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
+i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
+% int_avg
+rmp.t = rmp.t - 10;
+
+% remaining force at the beginning and at the end
+% FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
+pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
+pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
+pltCorr = plot(rmp.t, rmp.F - FremFun(rmp.t, dtst.rd, FremMax), '-', LineWidth=2);
+pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
+legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Linear approximation of F_{rem}', 'Corrected data'})
+
+dtst = dataset{i_dtst}.dsc{3,11}
+rmp = dtst.datatableZDCorr;
+set(gca,'ColorOrderIndex',1)
+
+i_0 = find(rmp.t >= 10, 1);
+% i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
+dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
+i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
+% int_avg
+rmp.t = rmp.t - 10;
+
+% the non-increasing window
+win = rmp.t > dtst.rd + 20 & rmp.t < rmp.t(end) - 40;
+i_FremDecEnd = find(rmp.t > rmp.t(end)-41, 1);
+
+% remaining force at the beginning and at the end
+
+FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
+F_corr = rmp.F - FremFun(rmp.t, dtst.rd, FremMax);
+
+pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
+pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
+pltCorr = plot(rmp.t, rmp.F - FremFun(rmp.t, dtst.rd, FremMax), '-', LineWidth=2);
+% plot(rmp.t, movmean(rmp.F, 1000), '-', LineWidth=3);
+% plot(rmp.t, movmean(F_corr, 10000), '--', LineWidth=3);
+% plot(rmp.t(win), movmean(F_corr(win), 4e5), '--', LineWidth=3);
+plot(rmp.t(win), movmean(detrend(F_corr(win), 1), 1e4), '-', LineWidth=2);
+
+plot([0 rmp.t(end)], repmat(F_corr(i_FremDecEnd), [2 1]), 'k-')
+pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
+
+legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Linear approximation of F_{rem}', 'Corrected data'})
+
+F_corrw = F_corr(win);
+Fdet = detrend(F_corrw);
+Fremdiff = [0 ;diff(movmean(F_corr(win), 4e5))];
+Fremdiff(Fremdiff<0) = 0;
+FremIncrS = cumsum(Fremdiff);
+subplot(133);hold on;
+plot(rmp.t(win), [0 ;diff(movmean(F_corr(win), 4e5))], '+-', LineWidth=2);
+plot(rmp.t(win), FremIncrS)
+return
 %% compare pca and relaxed
 
 figure(5);clf;
@@ -261,3 +347,6 @@ semilogx(rds, peaks./peaks_relaxed(4, :), 'x-');
 leg(3) = {'skip'};
 
 legend(leg, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
+%%
+f = @(t)8/90*(t-10);
+plot(rmp.t, rmp.F, rmp.t, f(rmp.t), rmp.t, rmp.F - f(rmp.t))
