@@ -52,7 +52,7 @@ figure(4);clf;hold on;
 clear peaks peaks_norm leg;
 
 for i_rds = 1:length(rds)
-    sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
+    sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));%cla;
     outF = [];n = 1;clear leg;
     rampSet = pCa4_4Data{i_rds};
     clin = lines(size(rampSet, 1)+1);
@@ -73,11 +73,14 @@ for i_rds = 1:length(rds)
         i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
         
         % remaining force at the beginning and at the end
-        FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
+        FremMax = [mean(rmp.F(i_0 -100:i_0+100)), mean(rmp.F(length(rmp.F)-1/dt:end))];
 
-        % trim the ramp
-        rmp = rmp(i_0:i_end, :);
-        rmp.t = rmp.t - 10;
+        % trim the ramp - start to end
+        rmp = rmp(1:i_end, :);
+        % rmp = rmp(i_0:i_end, :);
+        % rmp.t = rmp.t - 10;
+        % i_0 = 1;
+
 
         %% filter out the remaining force
         % linear
@@ -92,7 +95,8 @@ for i_rds = 1:length(rds)
             (1-exp(-k*(t-rd))) +...
             (1-s).*FremMax(2)); % exponential approximation
         
-        rmp.F = rmp.F - FremFun(rmp.t, dtst.rd, FremMax);        
+        rmp.Fraw = rmp.F;
+        rmp.F = rmp.F - FremFun(rmp.t - rmp.t(i_0), dtst.rd, FremMax);        
         
         % base on nothing - just absolute peak values
         base_rel = 1;
@@ -120,7 +124,7 @@ for i_rds = 1:length(rds)
 
         % prepare legend
         leg{i_logtrace} = [dtst.folder ':' dtst.datasetTitle];
-        semilogx(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
+        plot(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
         % semilogx(dtst.datatableZDCorr.t - 10, dtst.datatableZDCorr.F, '-', Color=clin(i_logtrace, :));hold on;
         % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
         set(gca, 'FontSize', 14);
@@ -134,6 +138,7 @@ for i_rds = 1:length(rds)
 
         if isempty(outF)
             outF = F;
+            outFr = rmp.Fraw;
             Fmax = base_rel;
             n = 1;
         else
@@ -141,6 +146,7 @@ for i_rds = 1:length(rds)
             n = n + 1;
             % shrink to shortest one
             outF = outF(1:L) + (F(1:L) - outF(1:L))/n;
+            outFr = outFr(1:L) + (rmp.F(1:L) - outFr(1:L))/n;
             outT = rmp.t(1:L);
             % avg the peaks to rescale back
             Fmax = Fmax + (base_rel - Fmax)/n;
@@ -161,8 +167,8 @@ for i_rds = 1:length(rds)
 %% resample and save
     
     % resample up the peak and for the tail separately
-    t_s = [linspace(0, 1, 20)*rds(i_rds) ...
-        logspace(log10(rds(i_rds)), log10(outT(end)), 40)];
+    t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds)) ...
+        logspace(log10(rmp.t(i_0) + rds(i_rds)), log10(outT(end)), 40)];
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
@@ -172,7 +178,7 @@ for i_rds = 1:length(rds)
     
     tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
     semilogx(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2, Color=clin(end, :))
     xlim([1e-2 2e2])
@@ -258,10 +264,12 @@ ylim([0, yl(2)]);
 
 % boxplot(peaks', 'Positions',rds)
 % end
+%% 
+
 %% representative case of adjustment of active force
-figure(5); clf; 
+figure(6); clf; 
 subplot(1, 3, [1 2])
-i_dtst = 7;
+i_dtst = 6;
 % linear
 FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*FremMax(1).*(rd-t)./rd) + ... % 
             (t >= rd).*FremMax(2).*(t-rd)/(t(end)*0 + 300 -rd);
@@ -278,7 +286,7 @@ FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*Fr
             
 
 
-dtst = dataset{i_dtst}.dsc{3,10}
+dtst = dataset{i_dtst}.dsc{3,11}
 rmp = dtst.datatableZDCorr;
 
 i_0 = find(rmp.t >= 10, 1);
@@ -287,6 +295,18 @@ dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
 i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
 % int_avg
 rmp.t = rmp.t - 10;
+
+% identify the exponential coefficient
+fitrng = rmp.t > 100 & rmp.t < 300;
+fit_F = rmp.F(fitrng);
+fit_t = rmp.t(fitrng);
+
+f_fit = @(a, b, c, x) a*(1-exp(-b*x)) + c;
+[ae good] = fit(fit_t, fit_F, f_fit, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0], 'Upper', [100, 0.1, 100]);
+figure(21);plot(fit_t, fit_F, ':', 1:300, f_fit(ae.a, ae.b, ae.c, 1:300), '-|');
+FremFun
+ae.b
+%%
 
 % remaining force at the beginning and at the end
 FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
@@ -327,7 +347,7 @@ plot(rmp.t(win), movmean(detrend(F_corr(win), 1), 1e4), '-', LineWidth=2);
 plot([0 rmp.t(end)], repmat(F_corr(i_FremDecEnd), [2 1]), 'k-')
 pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
 
-legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Linear approximation of F_{rem}', 'Corrected data'})
+legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Approximation of F_{rem}', 'Corrected data'})
 
 F_corrw = F_corr(win);
 Fdet = detrend(F_corrw);

@@ -83,7 +83,7 @@ np = mod(3)*3.27; % proximal chain force exponent
 nd = mod(5)*3.25; % distal chain force exponent
 nU = mod(4)*6.0; % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
-mu = 1.12; 
+mu = 1*mod(14); % small enough not to affect the result
 Lref  = 0.9; % reference sarcomere length (um)
 
 
@@ -151,7 +151,7 @@ pu = zeros(Nx,1)*PU;
 pa = zeros(Nx,1)*PA;
 pu(1,1) = 1/ds; 
 
-if pCa < 9  
+if pCa < 11 
     % might have some Ca effect
     x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
 else
@@ -363,7 +363,7 @@ end
   
   b = 0.05*mod(11);
   c = 7*mod(12);
-  d = 0.01*mod(13);
+  d = 1*mod(13);
   % apply constraints
   if b < 0 || c <= 0 || d < 0 
       cost = inf;
@@ -371,7 +371,7 @@ end
   end
   
   % calculate a, so that the max value is the same  
-  Fss = 3.2470; % reducing the param space
+  Fss = 3.2470*mod(10); % reducing the param space
   a = (Fss - d)/((Lmax -b)^c);
   % calc force
   Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
@@ -433,7 +433,10 @@ for j = 1:length(PeakModel)
 end
 
 Ep = sum((PeakData(:, 2) - PeakModel(:)).^2);
-% Ep = 0;
+% discarding peak fit
+if pCa < 9
+    Ep = 0;
+end
 
 cost = Ep*100 + sum([En{1:end}], 'all');
 
@@ -473,8 +476,10 @@ for j = length(rampSet):-1:1
     % subplot(1, 3, j);hold on;
 %% primary plot - semilog
     subplot(221)
-    semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :)*0.9, 0.2]);
+    semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
     hold on;
+    semilogx(t_int{j},Es{j},'--','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
+    
     semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
     axis([1e-2, 1e2, 0, ym]);  
@@ -494,7 +499,10 @@ for j = length(rampSet):-1:1
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
     % axis([1e-2, 1e2, 0, ym]);  
     xlim([1e-2, 1e2]);
-    legend('Ramp 10s (Data)', 'Ramp 10s (Model)', 'Ramp 1s (Data)', 'Ramp 1s (Model)', 'Ramp 0.1s (Data)', 'Ramp 0.1s (Model)');
+    if j == 1
+        % only after the last one
+        legend('Ramp 10s (Data)', 'Ramp 10s (Model)', 'Ramp 1s (Data)', 'Ramp 1s (Model)', 'Ramp 0.1s (Data)', 'Ramp 0.1s (Model)');
+    end
     % legend('Ramp 10s, shifted by -8.6s', 'Ramp 1s, shifted by -0.78', 'Ramp 0.1s' );
 
     set(gca,'Fontsize',14)
@@ -504,6 +512,8 @@ for j = length(rampSet):-1:1
 
     plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.15], Parent=sp);
     plot(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8, Parent=sp);
+    plot(t_int{j},Es{j},'--','linewidth',2, 'Color', [colors(j+1, :), 0.3], Parent=sp);
+
     % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
     % max out of all
 
@@ -519,6 +529,7 @@ for j = length(rampSet):-1:1
     axes('Position',[x, y, w, h]);hold on;
     % axes('position',[0.5 0.5 0.4 0.4]); hold on; box on;
     plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',3, 'Color', [colors(j+1, :), 0.15]);
+    plot(t_int{j},Es{j},'--','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
     % plot(Time{j},Force{j}, 'r:', 'linewidth',2); 
     plot(t_int{j},Ftot_int{j},'-','linewidth',2, 'Color', colors(j+1, :)*0.9);
     ym_inset = ceil( max(Force{j}) / 10 ) * 10;
