@@ -4,14 +4,17 @@ clear Force
 clear Time
 clear Length
 clear outStruct;
-
+if any(mod < 0) 
+    cost = inf;
+    return;
+end
 drawAllStates = false;
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
 rds = fliplr([0.1, 1, 10]);
 % rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
-  if isinf(pCa) || pCa == 11
+  if isinf(pCa) || pCa >= 10
   %   % hack - the no-Ca noPNB experiments had higher ramps
   %   datatable = readtable(['..\Data\bakers_passiveStretch_' num2str(rds(i_rd)*1000) 'ms.csv']);
   %   datatable.Properties.VariableNames = {'Time'  'ML'  'F'  'SL'};
@@ -85,8 +88,8 @@ nU = mod(4)*6.0; % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
 mu = 1*mod(14); % small enough not to affect the result
 Lref  = 0.9; % reference sarcomere length (um)
-
-
+alphaF = 100;
+alphaF_0 = 0.05*mod(15);
 
 % Calculate proximal globular chain force Fp(s,n) for every strain and
 % value. 
@@ -129,10 +132,8 @@ RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % 
 % set(gca, 'YTickLabel', {})
 % clf;mesh(RU)
 %% Folding rate design and visualization
-alphaF = 100;
-alphaF0 = 0.05*mod(15);
 % RF = alphaF*(max(0,delU-s))  % folding rates from state n+1 to n            
-RF = alphaF0 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+RF = alphaF_0 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
 % RF = 0.1 + alphaF*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
 % mesh(RF);view(3)
 
@@ -245,7 +246,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
     xi = x(i,:);
     Length{j}(i) = xi(end);
     pu = reshape( xi(1:(Ng+1)*Nx), [Nx,Ng+1]);
-    if pCa < 9
+    if pCa < 11
         pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
     else
         pa = 0;

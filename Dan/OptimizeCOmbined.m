@@ -89,7 +89,8 @@ for i_m = saSet
     fprintf('costing %1.4e€. \n', cost);
 end
 %% plot the result
-modNames = {'kc(lowCa)', 'kS', 'nC', 'nU', 'nS', 'alphaU', 'kA', 'kD', 'kC(HighCa)', 'Fss', 'b', 'c', 'd', '4', 'alphaR0'};
+modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
+
 % %%
 % cost11_sap = cost_sap;
 % cost11_sam = cost_sam;
@@ -123,6 +124,8 @@ set(gca, "FontSize", 14)
 %%
 % close all
 tic
+modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
+
 % optim for -log10 weighting
 % mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
 % reoptim on avg data
@@ -152,17 +155,16 @@ tic
 % retuned for reduced mu
 % mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
 % Retuned for ramp-ups, strange bump in 10s
-mod =  [0.0293    0.8574    0.4871    1.0000    0.9528    1.7817    1.0000    1.0000    1.0000    1.3369    3.6372    0.2425    0.0030    0.1000    0.5000];
-
-modSel = [1 2 3 5 6 11 12 15];
-modSel = [7, 8, 9];
-modSel = [1 2 3 5 6 7 8 9 11 12 15];
-mod(15) = 0.5;
-modSel = [1 2 3 5 6 10];
-%%
-mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000];
+% mod =  [0.0293    0.8574    0.4871    1.0000    0.9528    1.7817    1.0000    1.0000    1.0000    1.3369    3.6372    0.2425    0.0030    0.1000    0.5000];
+% retuned for pCa 11 and 4.4, from scratch except for ramp-up and fixed mu and alphaR0 
+% modSel = [1 2 3 4 5 6 7 8 9 10]; mod = [0.4852    0.2070    1.0403    1.1617    0.7393    1.2668    1.3151    1.5592    1.1949    1.6778    3.6372    0.2425    0.0030    0.1000    0.5000];
+% yet another set
+% mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000];
 % retuned for reduced mu
-mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
+% modSel = [1 2 3 4 5 6 7 8 9 10]; mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
+% retuned for both pCas in log space
+% mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+%%
 modSel = 1:15;
 i = 14;
 mod(i) = mod(i)*1;
@@ -170,11 +172,16 @@ disp(modNames(i))
 tic
 % modSel = [1 2 3 5 6 10];
 % default is 403
-evalCombined(mod, mod, modSel)
+modSel = [7, 9];
+evalCombined(mod(modSel), mod, modSel)
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
 toc
+%%
+hold on;
+polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');
+set(gca, 'ThetaAxisUnits', 'radians', 'thetatick', linspace(2*pi/15, 2*pi, 15), 'thetaticklabel', modNames);
 %%
 % mod = [0.0231    0.2275    0.4870    1.0234    0.7909   0.2929    0.1113    0.2652    0.0218    0.8988    0.7426    1.8401    0.7510    1.2811    1.6663];
 % mod = ones(1, 15);
@@ -199,8 +206,11 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    0.1    0.50000];
 % reducing the mu to nonsensitive value, 
 % modSel = [1 2 3 5 6 10]; mod =  [0.0293    0.8574    0.4871    1.0000    0.9528    1.7817    1.0000    1.0000    1.0000    1.3369    1.0000    1.0000    1.0000    0.1000    0.5000];
-% optimizing for the ramp-ups
-modSel = [11 12 13];
+% optimizing for the ramp-ups in logspace
+% modSel = [1 2 3 4 5 6 7 8 9 10];mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+% optimizing for high pCa
+modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+
 
 
 init = mod(modSel);
@@ -211,6 +221,32 @@ mod(modSel) = x;
 % mod = x;
 
 save mod;
+%% optim in log param space
+init = log10(mod(modSel));
+evalLogCombined = @(logMod, mod, modSel) evalCombined(10.^logMod, mod, modSel);
+x = fminsearch(evalLogCombined, init, options, mod, modSel);
+mod(modSel) = 10.^x;
+mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+%% test in GA
+% parpool
+ga_Opts = optimoptions('ga', ...
+    'PopulationSize',64, ...            % 250
+    'Display','iter', ...
+    'MaxStallGenerations',4, ...  % 10
+    'UseParallel',true);
+
+Ng = length(modSel);
+ub = log10(100)*ones(1, Ng);
+ub([3, 4, 5, 10]) = [10 10 10, 10];
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
+init = log10(mod(modSel));
+
+[p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
+    ga(evalLogCombined,Ng, ...
+    [],[],[],[],...
+    log10(0.01)*ones(1, Ng),log10(100)*ones(1, Ng),[],ga_Opts);
+
+% use fminserach afterwards
 %% result
 mod = [2.0398    0.9359    4.3424    2.3068    0.4784 0.6410    0.8054    0.8220    0.2923    0.7200 1.3634    1.0000   -2.8000    1.3022    0.8551];
 mod = [2.0398    0.9359    4.3397    2.2756    0.4784 0.6412    0.8053    0.8333    0.2923    0.7200 1.3634    1.0468   -2.8000    1.3200    0.8759];
@@ -289,14 +325,14 @@ function totalCost = evalCombined(optMods, mod, modSel)
         try 
             set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
         catch 
-            figure(figInd) % if indFig is not an exsting figure it creates it (and steal the focus)
+            f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
             f.Name = 'pCa 11';
         end        
     end    
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     totalCost = totalCost + cost*10;
-return
+% return
     %% pCa 4
     pCa = 4.4;
     figInd = 104;
@@ -305,7 +341,7 @@ return
         try 
             set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
         catch 
-            figure(figInd) % if indFig is not an exsting figure it creates it (and steal the focus)
+            f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
             f.Name = 'pCa 4.4';
         end
     end

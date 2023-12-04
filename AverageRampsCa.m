@@ -73,12 +73,12 @@ for i_rds = 1:length(rds)
         i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
         
         % remaining force at the beginning and at the end
-        FremMax = [mean(rmp.F(i_0 -100:i_0+100)), mean(rmp.F(length(rmp.F)-1/dt:end))];
+        FremMax = [mean(rmp.F(i_0 -100:i_0)), mean(rmp.F(length(rmp.F)-1/dt:end))];
 
         % trim the ramp - start to end
         rmp = rmp(1:i_end, :);
         % rmp = rmp(i_0:i_end, :);
-        % rmp.t = rmp.t - 10;
+        rmp.t = rmp.t - 10;
         % i_0 = 1;
 
 
@@ -124,7 +124,7 @@ for i_rds = 1:length(rds)
 
         % prepare legend
         leg{i_logtrace} = [dtst.folder ':' dtst.datasetTitle];
-        plot(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
+        semilogx(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
         % semilogx(dtst.datatableZDCorr.t - 10, dtst.datatableZDCorr.F, '-', Color=clin(i_logtrace, :));hold on;
         % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
         set(gca, 'FontSize', 14);
@@ -141,16 +141,19 @@ for i_rds = 1:length(rds)
             outFr = rmp.Fraw;
             Fmax = base_rel;
             n = 1;
+            sum_squared_diff = outF*0;
         else
             L = min(length(outF), length(rmp.F));
             n = n + 1;
             % shrink to shortest one
-            outF = outF(1:L) + (F(1:L) - outF(1:L))/n;
+            outF  = outF(1:L)  + (F(1:L)     - outF(1:L))/n;
             outFr = outFr(1:L) + (rmp.F(1:L) - outFr(1:L))/n;
             outT = rmp.t(1:L);
             % avg the peaks to rescale back
             Fmax = Fmax + (base_rel - Fmax)/n;
-            
+
+            % estimate the standard error out of sum squared
+            sum_squared_diff = sum_squared_diff(1:L) + (F(1:L) - outF(1:L)).^2;            
         end    
 
         %% getting stiffnes based on linear fit
@@ -165,10 +168,10 @@ for i_rds = 1:length(rds)
         
     end
 %% resample and save
-    
+    t_ignore = 0.01; 
     % resample up the peak and for the tail separately
-    t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds)) ...
-        logspace(log10(rmp.t(i_0) + rds(i_rds)), log10(outT(end)), 40)];
+    t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds) - t_ignore) ...
+        logspace(log10(rmp.t(i_0) + rds(i_rds) + t_ignore), log10(outT(end)), 40)];
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
@@ -178,9 +181,17 @@ for i_rds = 1:length(rds)
     
     tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
-    semilogx(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2, Color=clin(end, :))
+    semilogx(outT, outF, 'k-');hold on;
+    SE = sqrt(sum_squared_diff / (n * (n - 1)));
+    semilogx(outT, outF + SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    semilogx(outT, outF - SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+
+    % Fill the area between upper and lower bounds to show the confidence interval
+    % fill([outT', fliplr(outT')], [(outF*Fmax - SE*1.96)', fliplr((outF*Fmax + SE*1.96)')], 'b');
+
+    semilogx(t_s, FLint(:, 1)/Fmax, '--|', LineWidth=2, Color=clin(end, :))
     xlim([1e-2 2e2])
     yl = ylim;
     ylabel('\itT_{m,rel}');
