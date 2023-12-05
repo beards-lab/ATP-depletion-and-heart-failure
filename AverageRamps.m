@@ -97,7 +97,9 @@ for i_rds = 1:length(rds)
             outT = rmp.t(1:L);
             % avg the peaks to rescale back
             Fmax = Fmax + (base_rel - Fmax)/n;
-            
+             
+			% estimate the standard error out of sum squared
+            sum_squared_diff = sum_squared_diff(1:L) + (F(1:L) - outF(1:L)).^2;
         end    
 
         %%
@@ -127,6 +129,13 @@ for i_rds = 1:length(rds)
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
     writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
+    semilogx(outT, outF, 'k-');hold on;
+    SE = sqrt(sum_squared_diff / (n * (n - 1)));
+    % semilogx(outT, outF + SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    % semilogx(outT, outF - SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+
+    % Fill the area between upper and lower bounds to show the confidence interval
+    fill([outT', fliplr(outT')], [(outF*Fmax - SE*1.96)', fliplr((outF*Fmax + SE*1.96)')], 'b');
     plot(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2)
     xlim([1e-2 2e2])
     yl = ylim;

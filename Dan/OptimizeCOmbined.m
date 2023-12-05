@@ -151,37 +151,54 @@ modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_
 % modSel = [1 2 3 5 6 10 15];
 % mod = 0.0278    0.7953    0.4768    1.0000    1.0770    1.7512    1.0000    1.0000    1.0000    1.3607    1.0000    1.0000    1.0000    1.0000   -0.1149
 % fixing the refolding to non-negative
-% mod =[0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000]
+% mod =[0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000];
+% figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 % retuned for reduced mu
 % mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
+% figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 % Retuned for ramp-ups, strange bump in 10s
 % mod =  [0.0293    0.8574    0.4871    1.0000    0.9528    1.7817    1.0000    1.0000    1.0000    1.3369    3.6372    0.2425    0.0030    0.1000    0.5000];
-% retuned for pCa 11 and 4.4, from scratch except for ramp-up and fixed mu and alphaR0 
-% modSel = [1 2 3 4 5 6 7 8 9 10]; mod = [0.4852    0.2070    1.0403    1.1617    0.7393    1.2668    1.3151    1.5592    1.1949    1.6778    3.6372    0.2425    0.0030    0.1000    0.5000];
-% yet another set
-% mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000];
-% retuned for reduced mu
-% modSel = [1 2 3 4 5 6 7 8 9 10]; mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
-% retuned for both pCas in log space
-% mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+% figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+%% retuned for pCa 11 and 4.4, from scratch except for ramp-up and fixed mu and alphaR0 
+% Candidate 1
+modSel = [1 2 3 4 5 6 7 8 9 10]; mod = [0.4852    0.2070    1.0403    1.1617    0.7393    1.2668    1.3151    1.5592    1.1949    1.6778    3.6372    0.2425    0.0030    0.1000    0.5000];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+%% yet another set
+mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+%% retuned for reduced mu
+modSel = [1 2 3 4 5 6 7 8 9 10]; mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+%% retuned for both pCas in log space
+mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+%% retuned for pCa 4 in log space only, incl. ramp-up
+mod = [0.4804    0.0661    0.9735    2.0109    0.5917 1.6109e+05 0.1694    0.2900    0.7105    1.4348    0.3534    0.1366    0.0002 0.1000    0.5000];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+%% retuned for pCa 4 in log space only, w/o. the ramp-up
+mod = [0.4804    0.0667    0.9711    1.9971    0.5672 2.0654e+05 0.0919    0.3252    0.6417    2.0434    0.3652    0.0866    0.0002 0.1000    0.5000];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15);
 %%
 modSel = 1:15;
 i = 14;
 mod(i) = mod(i)*1;
 disp(modNames(i))
+%%
 tic
 % modSel = [1 2 3 5 6 10];
 % default is 403
-modSel = [7, 9];
+% modSel = [7, 9];
 evalCombined(mod(modSel), mod, modSel)
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
 toc
 %%
+clf;
+polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15);
+set(gca, 'ThetaAxisUnits', 'radians', 'thetatick', linspace(2*pi/15, 2*pi, 15), 'thetaticklabel', modNames, 'Rlim', [0 2.1]);
 hold on;
-polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');
-set(gca, 'ThetaAxisUnits', 'radians', 'thetatick', linspace(2*pi/15, 2*pi, 15), 'thetaticklabel', modNames);
+
 %%
 % mod = [0.0231    0.2275    0.4870    1.0234    0.7909   0.2929    0.1113    0.2652    0.0218    0.8988    0.7426    1.8401    0.7510    1.2811    1.6663];
 % mod = ones(1, 15);
@@ -212,7 +229,7 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
 
 
-
+%%
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 x = fminsearch(@evalCombined, init, options, mod, modSel);
@@ -226,7 +243,7 @@ init = log10(mod(modSel));
 evalLogCombined = @(logMod, mod, modSel) evalCombined(10.^logMod, mod, modSel);
 x = fminsearch(evalLogCombined, init, options, mod, modSel);
 mod(modSel) = 10.^x;
-mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
+
 %% test in GA
 % parpool
 ga_Opts = optimoptions('ga', ...

@@ -124,7 +124,7 @@ for i_rds = 1:length(rds)
 
         % prepare legend
         leg{i_logtrace} = [dtst.folder ':' dtst.datasetTitle];
-        semilogx(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
+        plot(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
         % semilogx(dtst.datatableZDCorr.t - 10, dtst.datatableZDCorr.F, '-', Color=clin(i_logtrace, :));hold on;
         % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
         set(gca, 'FontSize', 14);
@@ -185,11 +185,11 @@ for i_rds = 1:length(rds)
 %% plot the AVG
     semilogx(outT, outF, 'k-');hold on;
     SE = sqrt(sum_squared_diff / (n * (n - 1)));
-    semilogx(outT, outF + SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
-    semilogx(outT, outF - SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    % semilogx(outT, outF + SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    % semilogx(outT, outF - SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
 
     % Fill the area between upper and lower bounds to show the confidence interval
-    % fill([outT', fliplr(outT')], [(outF*Fmax - SE*1.96)', fliplr((outF*Fmax + SE*1.96)')], 'b');
+    fill([outT', fliplr(outT')], [(outF*Fmax - SE*1.96)', fliplr((outF*Fmax + SE*1.96)')], 'b');
 
     semilogx(t_s, FLint(:, 1)/Fmax, '--|', LineWidth=2, Color=clin(end, :))
     xlim([1e-2 2e2])
