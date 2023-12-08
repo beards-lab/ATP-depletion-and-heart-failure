@@ -1,18 +1,18 @@
 % processes the Ca data, expects peaks from normal
-clearvars -except dataset;
+% clearvars -except dataset;
 
 % 
 % dataset{1} = load('DataStruct20230518_renamed.mat');
-% dataset{2} = load('DataStruct20230919.mat');
-% dataset{3} = load('DataStruct20230927.mat');
-% dataset{4} = load('DataStruct20230928.mat');
-% dataset{5} = load('DataStruct20231027.mat');
-% dataset{6} = load('DataStruct20231102.mat');
-% dataset{7} = load('DataStruct20231107.mat');
+dataset{1} = load('DataStruct20230919.mat');
+dataset{2} = load('DataStruct20230927.mat');
+dataset{3} = load('DataStruct20230928.mat');
+dataset{4} = load('DataStruct20231027.mat');
+dataset{5} = load('DataStruct20231102.mat');
+dataset{6} = load('DataStruct20231107.mat');
 %% Get fmaxes - for each dataset there is a Fmax
 % index: dataset, 
 % measurement, sequence;
-fmax_pointers = [0, 0;8, 1;2 1;2, 1;2, 1;2, 1;2,1];
+fmax_pointers = [8, 1;2 1;2, 1;2, 1;2, 1;2,1];
 for i = 1:size(dataset, 2)
     if fmax_pointers(i, 1) == 0
         % no fmax measured
@@ -23,24 +23,45 @@ for i = 1:size(dataset, 2)
         dataset{i}.dsc{fmax_pointers(i, 1), fmax_pointers(i, 2)}.datatable.F);
 end
 
+%% Get the ss F of the slowest active ramp
+ss_pointers = [2, 2;3,7;3,7;3,7;3,7;3,7];
+dataset_ssF = [];
+clf;hold on;
+for i = 1:size(dataset, 2)
+    if fmax_pointers(i, 1) == 0
+        % no fmax measured
+        dataset_ssF(i) = NaN;
+        continue;
+    end
+    dttbl = dataset{i}.dsc{ss_pointers(i, 1), ss_pointers(i, 2)}.datatable;
+    i_ss = find(dttbl.L > max(dttbl.L)*0.999, 40, 'last') - 10;
+    dataset_ssF(i) = mean(dttbl.F(i_ss));
+    pl(i) = plot(dttbl.t, dttbl.F); plot(dttbl.t(i_ss), dttbl.F(i_ss), '|');
+end
+legend(pl, '20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F');
 %% cell for each ramp
 % ramp durations
 rds = [100, 10, 1, 0.1];
 % rds = [1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
-% all
-pCa4_4Data{1} = [1, 4, 2;2, 2, 2;3, 3, 7;4, 3, 7;5,3, 7;6, 3, 7;7, 3, 7];
-pCa4_4Data{2} = [1, 4, 3;2, 2, 3;3, 3, 8;4, 3, 8;5,3, 8;6, 3, 8;7, 3, 8];
-pCa4_4Data{3} = [1, 4, 4;2, 2, 4;3, 3, 9;4, 3, 9;5,3, 9;6, 3, 9;7, 3, 9];
-pCa4_4Data{4} = [1, 4, 5;2, 2, 5;3, 3,10;4, 3,10;5,3,10;6, 3,10;7, 3,10];
+% only final dataset
+pCa4_4Data{1} = [1, 2, 2;2, 3, 7;3, 3, 7;4,3, 7;5, 3, 7;6, 3, 7];
+pCa4_4Data{2} = [1, 2, 3;2, 3, 8;3, 3, 8;4,3, 8;5, 3, 8;6, 3, 8];
+pCa4_4Data{3} = [1, 2, 4;2, 3, 9;3, 3, 9;4,3, 9;5, 3, 9;6, 3, 9];
+pCa4_4Data{4} = [1, 2, 5;2, 3,10;3, 3,10;4,3,10;5, 3,10;6, 3,10];
 dsName = 'AvgpCa4.4';
 
 %% Get corresponding relaxed for scaling options
-relaxed{1} =    [1, 1, 2;2, 1, 2;3, 1, 6;4, 1, 6;5,1, 9;6, 1, 9;7, 1, 9];
-relaxed{2} =    [1, 1, 3;2, 1, 3;3, 1, 7;4, 1, 7;5,1, 8;6, 1, 8;7, 1, 8];
-relaxed{3} =    [1, 1, 4;2, 1, 4;3, 1, 8;4, 1, 8;5,1, 7;6, 1, 7;7, 1, 7];
-relaxed{4} =    [1, 1, 5;2, 1, 5;3, 1, 9;4, 1, 9;5,1, 6;6, 1, 6;7, 1, 6];
+% relaxed{1} =    [1, 1, 2;2, 1, 2;3, 1, 6;4, 1, 6;5,1, 9;6, 1, 9;7, 1, 9];
+% relaxed{2} =    [1, 1, 3;2, 1, 3;3, 1, 7;4, 1, 7;5,1, 8;6, 1, 8;7, 1, 8];
+% relaxed{3} =    [1, 1, 4;2, 1, 4;3, 1, 8;4, 1, 8;5,1, 7;6, 1, 7;7, 1, 7];
+% relaxed{4} =    [1, 1, 5;2, 1, 5;3, 1, 9;4, 1, 9;5,1, 6;6, 1, 6;7, 1, 6];
 
+% Only final dataset with the new protocol
+relaxed{1} = [1, 1, 9;2, 1, 6;3, 1, 6;4,1,9;5, 1, 9;6, 1, 9];
+relaxed{2} = [1, 1, 8;2, 1, 7;3, 1, 7;4,1,8;5, 1, 8;6, 1, 8];
+relaxed{3} = [1, 1, 7;2, 1, 8;3, 1, 8;4,1,7;5, 1, 7;6, 1, 7];
+relaxed{4} = [1, 1, 6;2, 1, 9;3, 1, 9;4,1,6;5, 1, 6;6, 1, 6];
 
 % %% 
 % dtst = dataset{2}.dsc;
@@ -115,6 +136,9 @@ for i_rds = 1:length(rds)
                         % relaxed{4}(i_logtrace, 3)}.peak;
         % base on Fmax
         % base_rel = dataset_maxF(rampSet(i_logtrace, 1));
+        % base on staeady state of the slowest ramp (in AverageRampsCa)
+        base_rel = dataset_ssF(i_logtrace);
+
         if isnan(base_rel) || base_rel == 0
             continue;
         end
@@ -124,7 +148,7 @@ for i_rds = 1:length(rds)
 
         % prepare legend
         leg{i_logtrace} = [dtst.folder ':' dtst.datasetTitle];
-        plot(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
+        semilogx(rmp.t, F, ':', Color=clin(i_logtrace, :));hold on;
         % semilogx(dtst.datatableZDCorr.t - 10, dtst.datatableZDCorr.F, '-', Color=clin(i_logtrace, :));hold on;
         % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
         set(gca, 'FontSize', 14);
@@ -183,13 +207,13 @@ for i_rds = 1:length(rds)
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
     % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
-    semilogx(outT, outF, 'k-');hold on;
-    SE = sqrt(sum_squared_diff / (n * (n - 1)));
-    % semilogx(outT, outF + SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
-    % semilogx(outT, outF - SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    % semilogx(outT, outF, 'k-');hold on;
+    SD = sqrt(sum_squared_diff / (n * (n - 1)));
+    semilogx(outT, outF + SD, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    semilogx(outT, outF - SD, '--', Color=[clin(end, :), 0.5], LineWidth=2);
 
     % Fill the area between upper and lower bounds to show the confidence interval
-    fill([outT', fliplr(outT')], [(outF*Fmax - SE*1.96)', fliplr((outF*Fmax + SE*1.96)')], 'b');
+    % fill([outT', fliplr(outT')], [(outF*Fmax - SD*1.96)', fliplr((outF*Fmax + SD*1.96)')], 'b');
 
     semilogx(t_s, FLint(:, 1)/Fmax, '--|', LineWidth=2, Color=clin(end, :))
     xlim([1e-2 2e2])
@@ -278,9 +302,10 @@ ylim([0, yl(2)]);
 %% 
 
 %% representative case of adjustment of active force
-figure(6); clf; 
-subplot(1, 3, [1 2])
-i_dtst = 6;
+% figure(6); clf; 
+% subplot(1, 3, [1 2])
+clf;
+
 % linear
 FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*FremMax(1).*(rd-t)./rd) + ... % 
             (t >= rd).*FremMax(2).*(t-rd)/(t(end)*0 + 300 -rd);
@@ -295,79 +320,100 @@ FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*Fr
             (1-s).*FremMax(2)); % exponential approximation
 % s.*FremMax(2)/(1-exp(-k*(t(end) - rd))).*... % scaling to hit the FremMax at the end
             
-
-
-dtst = dataset{i_dtst}.dsc{3,11}
-rmp = dtst.datatableZDCorr;
-
-i_0 = find(rmp.t >= 10, 1);
-% i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
-dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
-i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
-% int_avg
-rmp.t = rmp.t - 10;
-
-% identify the exponential coefficient
-fitrng = rmp.t > 100 & rmp.t < 300;
-fit_F = rmp.F(fitrng);
-fit_t = rmp.t(fitrng);
-
-f_fit = @(a, b, c, x) a*(1-exp(-b*x)) + c;
-[ae good] = fit(fit_t, fit_F, f_fit, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0], 'Upper', [100, 0.1, 100]);
-figure(21);plot(fit_t, fit_F, ':', 1:300, f_fit(ae.a, ae.b, ae.c, 1:300), '-|');
-FremFun
-ae.b
-%%
-
-% remaining force at the beginning and at the end
-FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
-pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
-pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
-pltCorr = plot(rmp.t, rmp.F - FremFun(rmp.t, dtst.rd, FremMax), '-', LineWidth=2);
-pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
-legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Linear approximation of F_{rem}', 'Corrected data'})
-
-dtst = dataset{i_dtst}.dsc{3,11}
-rmp = dtst.datatableZDCorr;
-set(gca,'ColorOrderIndex',1)
-
-i_0 = find(rmp.t >= 10, 1);
-% i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
-dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
-i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
-% int_avg
-rmp.t = rmp.t - 10;
-
-% the non-increasing window
-win = rmp.t > dtst.rd + 20 & rmp.t < rmp.t(end) - 40;
-i_FremDecEnd = find(rmp.t > rmp.t(end)-41, 1);
-
-% remaining force at the beginning and at the end
-
-FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
-F_corr = rmp.F - FremFun(rmp.t, dtst.rd, FremMax);
-
-pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
-pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
-pltCorr = plot(rmp.t, rmp.F - FremFun(rmp.t, dtst.rd, FremMax), '-', LineWidth=2);
-% plot(rmp.t, movmean(rmp.F, 1000), '-', LineWidth=3);
-% plot(rmp.t, movmean(F_corr, 10000), '--', LineWidth=3);
-% plot(rmp.t(win), movmean(F_corr(win), 4e5), '--', LineWidth=3);
-plot(rmp.t(win), movmean(detrend(F_corr(win), 1), 1e4), '-', LineWidth=2);
-
-plot([0 rmp.t(end)], repmat(F_corr(i_FremDecEnd), [2 1]), 'k-')
-pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
-
-legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Approximation of F_{rem}', 'Corrected data'})
-
-F_corrw = F_corr(win);
-Fdet = detrend(F_corrw);
-Fremdiff = [0 ;diff(movmean(F_corr(win), 4e5))];
-Fremdiff(Fremdiff<0) = 0;
-FremIncrS = cumsum(Fremdiff);
-subplot(133);hold on;
-plot(rmp.t(win), [0 ;diff(movmean(F_corr(win), 4e5))], '+-', LineWidth=2);
-plot(rmp.t(win), FremIncrS)
+i_pca4_4_100ms_hold300 = [0, 10, 10, 11, 11, 11];
+i_validation = [0, 9, 9, 10, 10, 10];
+tiledlayout(2,3)
+for i_dtst = 1:length(i_pca4_4_100ms_hold300)
+    if i_pca4_4_100ms_hold300(i_dtst) == 0
+        continue;
+    end
+    nexttile();
+    dtst = dataset{i_dtst}.dsc{3,i_pca4_4_100ms_hold300(i_dtst)};
+    rmp = dtst.datatableZDCorr;
+    
+    i_0 = find(rmp.t >= 10, 1);
+    % i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
+    dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
+    i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
+    % int_avg
+    rmp.t = rmp.t - 10;
+    rmpRes = rmp(1:100:end, :);
+    
+    % identify the exponential coefficient
+    fitrng = rmp.t > 60 & rmp.t < 300;
+    fit_F = rmp.F(fitrng);
+    fit_t = rmp.t(fitrng);
+    
+    f_fit = @(a, b, c, x) a*(1-exp(-b*x)) + c;
+    [ae good] = fit(fit_t(1:100:end), fit_F(1:100:end), f_fit, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0], 'Upper', [100, 0.1, 100]);    
+    
+    % remaining force at the beginning and at the end
+    FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
+    
+    % plot(rmpRes.t, f_fit(ae.a, ae.b, 0, rmpRes.t))
+    maxSSForceBuldiup = FremMax(2) - f_fit(ae.a, ae.b, 0, rmpRes.t(end));
+    
+    % plot(rmp.t, rmp.F);
+    pltF = plot(rmp.t, rmp.F, ':');
+    hold on;
+    plot(1:300, f_fit(ae.a, ae.b, ae.c, 1:300), '-|');
+    pltCorr = plot(rmpRes.t, rmpRes.F - f_fit(ae.a, ae.b, maxSSForceBuldiup, rmpRes.t), '--');
+    
+    pltLinApprx = plot(rmpRes.t, f_fit(ae.a, ae.b, 0, rmpRes.t) + maxSSForceBuldiup, '-.')
+    
+    
+    % pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
+    pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
+    % pltCorr = plot(rmp.t, rmp.F - FremFun(rmp.t, dtst.rd, FremMax), '-', LineWidth=2);
+    % pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
+    legend([pltF, pltB(1), pltLinApprx, pltCorr], {'Raw tension data', 'Zones used for averaging', 'Linear approximation of F_{rem}', 'Corrected data'})
+    title(['Correction for dataset ' num2str(i_dtst)])    
+    %% repeat for the validation ramp, using the same parametrization
+    if i_validation(i_dtst) == 0
+        continue;
+    end
+    dtst = dataset{i_dtst}.dsc{3,i_validation(i_dtst)};
+    rmp = dtst.datatableZDCorr;
+    set(gca,'ColorOrderIndex',1)
+    
+    i_0 = find(rmp.t >= 10, 1);
+    % i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
+    dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
+    i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
+    % int_avg
+    rmp.t = rmp.t - 10;
+    
+    % % the non-increasing window
+    % win = rmp.t > dtst.rd + 20 & rmp.t < rmp.t(end) - 40;
+    % i_FremDecEnd = find(rmp.t > rmp.t(end)-41, 1);
+    
+    % remaining force at the beginning and at the end
+    % FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))]
+    maxSSForceBuldiup = FremMax(2) - f_fit(ae.a, ae.b, 0, rmpRes.t(end));
+    F_corr = f_fit(ae.a, ae.b, 0, rmp.t) + maxSSForceBuldiup;
+    % rmp.F - FremFun(rmp.t, dtst.rd, FremMax);
+    
+    pltF = plot(rmp.t, rmp.F, ':', LineWidth=0.5);hold on;
+    % pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
+    pltCorr = plot(rmp.t, rmp.F - F_corr, '-', LineWidth=2);
+    % plot(rmp.t, movmean(rmp.F, 1000), '-', LineWidth=3);
+    % plot(rmp.t, movmean(F_corr, 10000), '--', LineWidth=3);
+    % plot(rmp.t(win), movmean(F_corr(win), 4e5), '--', LineWidth=3);
+    % plot(rmp.t(win), movmean(detrend(F_corr(win), 1), 1e4), '-', LineWidth=2);
+    
+    % plot([0 rmp.t(end)], repmat(F_corr(i_FremDecEnd), [2 1]), 'k-')
+    % pltLinApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd, FremMax), '--', LineWidth=3);
+    
+    legend([pltF, pltB(1), pltCorr], {'Raw tension data', 'Zones used for averaging', 'Approximation of F_{rem}', 'Corrected data'})
+end
+% F_corrw = F_corr(win);
+% Fdet = detrend(F_corrw);
+% Fremdiff = [0 ;diff(movmean(F_corr(win), 4e5))];
+% Fremdiff(Fremdiff<0) = 0;
+% FremIncrS = cumsum(Fremdiff);
+% subplot(133);hold on;
+% plot(rmp.t(win), [0 ;diff(movmean(F_corr(win), 4e5))], '+-', LineWidth=2);
+% plot(rmp.t(win), FremIncrS)
 return
 %% compare pca and relaxed
 

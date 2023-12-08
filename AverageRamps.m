@@ -1,23 +1,25 @@
 % processes the relaxed data
 clear -except dataset;
 
-dataset{1} = load('DataStruct20230518_renamed.mat');
-dataset{2} = load('DataStruct20230919.mat');
-dataset{3} = load('DataStruct20230927.mat');
-dataset{4} = load('DataStruct20230928.mat');
-dataset{5} = load('DataStruct20231027.mat');
-dataset{6} = load('DataStruct20231102.mat');
-dataset{7} = load('DataStruct20231107.mat');
+% using only the final dataset
+dataset{1} = load('DataStruct20230919.mat');
+dataset{2} = load('DataStruct20230927.mat');
+dataset{3} = load('DataStruct20230928.mat');
+dataset{4} = load('DataStruct20231027.mat');
+dataset{5} = load('DataStruct20231102.mat');
+dataset{6} = load('DataStruct20231107.mat');
+isMale = [1, 1, 0, 0, 1, 0];
 %% cell for each ramp
 % ramp durations
 rds = [100, 10, 1, 0.1];
-% dataset, logtrace, ramp for each ramp duration
-% all
-relaxed{1} = [1, 1, 2;2, 1, 2;2, 1, 9;3, 1, 6;4, 1, 6;5,1,9;6, 1, 9;7, 1, 9];
-relaxed{2} = [1, 1, 3;2, 1, 3;2, 1, 8;3, 1, 7;4, 1, 7;5,1,8;6, 1, 8;7, 1, 8];
-relaxed{3} = [1, 1, 4;2, 1, 4;2, 1, 7;3, 1, 8;4, 1, 8;5,1,7;6, 1, 7;7, 1, 7];
-relaxed{4} = [1, 1, 5;2, 1, 5;2, 1, 6;3, 1, 9;4, 1, 9;5,1,6;6, 1, 6;7, 1, 6];
 dsName = 'AvgRelaxed';
+
+% Only final dataset with the new protocol
+relaxed{1} = [1, 1, 9;2, 1, 6;3, 1, 6;4,1,9;5, 1, 9;6, 1, 9];
+relaxed{2} = [1, 1, 8;2, 1, 7;3, 1, 7;4,1,8;5, 1, 8;6, 1, 8];
+relaxed{3} = [1, 1, 7;2, 1, 8;3, 1, 8;4,1,7;5, 1, 7;6, 1, 7];
+relaxed{4} = [1, 1, 6;2, 1, 9;3, 1, 9;4,1,6;5, 1, 6;6, 1, 6];
+
 % peaks = relaxed;
 % % Only with decay 60s+
 % relaxed{1} = [3, 1, 6;4, 1, 6;5,1,9];
@@ -38,12 +40,12 @@ dsName = 'AvgRelaxed';
 % rmp = dtst{1, 1}.datatable;
 
 %
-figure(2);clf;hold on;
+figure(3);clf;hold on;
 clear peaks;
 
 for i_rds = 1:length(rds)
     sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
-    outF = [];n = 1;clear leg;
+    outF = [];sum_squared_diff = []; n = 1;clear leg;
     rampSet = relaxed{i_rds};
 
     for i_logtrace = 1:size(rampSet, 1)
@@ -69,8 +71,10 @@ for i_rds = 1:length(rds)
         % base_rel = rmp.F(end);
         % base on max relaxed peak
         % base_rel = peaks_relaxed(4, i_logtrace);
-        % base on Fmax, if available
-        % base_rel = dataset_maxF(rampSet(i_logtrace, 1));
+        % base on Fmax, if available (in AverageRampsCa)
+        base_rel = dataset_maxF(rampSet(i_logtrace, 1));
+        % base on staeady state of the slowest ramp (in AverageRampsCa)
+        % base_rel = dataset_ssF(i_logtrace);
 
         if isnan(base_rel) || base_rel == 0
             continue;
@@ -78,8 +82,12 @@ for i_rds = 1:length(rds)
 
         F = rmp.F/base_rel;
         % F = rmp.F;
-
-        plot(rmp.t, F, ':');hold on;
+        
+        if isMale(i_logtrace)
+            semilogx(rmp.t, F, ':', LineWidth=0.5);hold on;
+        else
+            semilogx(rmp.t, F, ':', LineWidth=1.5);hold on;
+        end
         set(gca, 'FontSize', 14);
         % base on obsolute peak
         peaks(i_rds, i_logtrace) = max(rmp.F);
@@ -89,6 +97,7 @@ for i_rds = 1:length(rds)
             outF = F;
             Fmax = base_rel;
             n = 1;
+            sum_squared_diff = outF*0;
         else
             L = min(length(outF), length(rmp.F));
             n = n + 1;
@@ -127,15 +136,16 @@ for i_rds = 1:length(rds)
     
     tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
     semilogx(outT, outF, 'k-');hold on;
-    SE = sqrt(sum_squared_diff / (n * (n - 1)));
-    % semilogx(outT, outF + SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
-    % semilogx(outT, outF - SE*1.96, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    SD = sqrt(sum_squared_diff / (n * (n - 1)));
+    semilogx(outT, outF + SD, '--', Color=[clin(end, :), 0.5], LineWidth=2);
+    semilogx(outT, outF - SD, '--', Color=[clin(end, :), 0.5], LineWidth=2);
 
     % Fill the area between upper and lower bounds to show the confidence interval
-    fill([outT', fliplr(outT')], [(outF*Fmax - SE*1.96)', fliplr((outF*Fmax + SE*1.96)')], 'b');
+    % fill([outT', fliplr(outT')], [(outF - SE*1.96)', fliplr((outF + SE*1.96)')], 'b');
+
     plot(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2)
     xlim([1e-2 2e2])
     yl = ylim;
