@@ -145,8 +145,9 @@ modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_
 % mod = [0.0343    0.7101    0.4731    1.0234    1.0916    1.9353    1.5266 0.8291    0.0356    0.8988    0.5952    2.0416    0.7510    1.2811 4.1891];
 % for absolute average excluding the ramp-up
 % mod = [0.0142    0.4204    0.4267    1.0234    0.7567 0.3025    0.1535    1.0318    0.0133    0.8988 0.8679    4.5429    0.7510    1.2811    1.6208];
-% optim for filtering out remaining force (attempt 01)
-% mod_1 = [0.0231    0.2275    0.4870    1.0234    0.7909   0.2929    0.1113    0.2652    0.0218    0.8988    0.7426    1.8401    0.7510    1.2811    1.6663];
+%% optim for filtering out remaining force (attempt 01)
+mod = [0.0231    0.2275    0.4870    1.0234    0.7909   0.2929    0.1113    0.2652    0.0218    0.8988    0.7426    1.8401    0.7510    1.2811    1.6663];
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 % optim for pCa 11 only, from original estimates, without ramp up
 % modSel = [1 2 3 5 6 10 15];
 % mod = 0.0278    0.7953    0.4768    1.0000    1.0770    1.7512    1.0000    1.0000    1.0000    1.3607    1.0000    1.0000    1.0000    1.0000   -0.1149
@@ -170,6 +171,7 @@ figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, m
 modSel = [1 2 3 4 5 6 7 8 9 10]; mod =  [0.0287    0.7984    0.4766    1.0000    1.0715    1.8054    1.0000    1.0000    1.0000    1.3254    1.0000    1.0000    1.0000    1.0000    0.5000];
 figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 %% retuned for both pCas in log space
+% candidate 2
 mod = [0.4804    0.1794    0.9727    1.6729 0.7547   1.1479e+03 0.0245    0.1301    0.6788    1.4584 3.6372    0.2425    0.0030    0.1000 0.5000];
 figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 %% retuned for pCa 4 in log space only, incl. ramp-up
@@ -249,20 +251,23 @@ mod(modSel) = 10.^x;
 ga_Opts = optimoptions('ga', ...
     'PopulationSize',64, ...            % 250
     'Display','iter', ...
-    'MaxStallGenerations',4, ...  % 10
+    'MaxStallGenerations',8, ...  % 10
     'UseParallel',true);
-
+modSel = 1:14;
 Ng = length(modSel);
 ub = log10(100)*ones(1, Ng);
-ub([3, 4, 5, 10]) = [10 10 10, 10];
+ub([3, 4, 5, 10, 14]) = [10 10 10, 10, 10];
+lb = log10(100)*ones(1, Ng);
+lb([3, 4, 5, 10, 14]) = [.1 .1 .1 .1 .1];
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 init = log10(mod(modSel));
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
     ga(evalLogCombined,Ng, ...
     [],[],[],[],...
-    log10(0.01)*ones(1, Ng),log10(100)*ones(1, Ng),[],ga_Opts);
+    log10(lb),log10(ub),[],ga_Opts);
 
+mod(modSel) = 10.^p_OptimGA;
 % use fminserach afterwards
 %% result
 mod = [2.0398    0.9359    4.3424    2.3068    0.4784 0.6410    0.8054    0.8220    0.2923    0.7200 1.3634    1.0000   -2.8000    1.3022    0.8551];
