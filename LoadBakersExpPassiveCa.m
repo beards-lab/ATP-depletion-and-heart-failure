@@ -28,9 +28,9 @@ clear;clc;
 % S1 = dir('data/PassiveCaSrc2/20230919');
 % S1 = dir('data/PassiveCaSrc2/20230927');
 % S1 = dir('data/PassiveCaSrc2/20230928');
-% S1 = dir('data/PassiveCaSrc2/20231027');
+S1 = dir('data/PassiveCaSrc2/20231027');
 % S1 = dir('data/PassiveCaSrc2/20231102');
-S1 = dir('data/PassiveCaSrc2/20231107');
+% S1 = dir('data/PassiveCaSrc2/20231107');
 
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
@@ -80,9 +80,10 @@ for i = 1:length(S)
         ds.holdTime = NaN;
     else
         % revert to normal
-        ds.holdTime = 30;
+        ds.holdTime = 60;
     end
 
+    % zero drift removal
     if any(contains(np, 'NoZDR'))
         ds.ZDR = false;
     else
@@ -110,7 +111,7 @@ for i = 1:length(S)
     else
         disp('Wat?')
     end
-    datatable.F = movmean(datatable.F, [8 8]);
+    % datatable.F = movmean(datatable.F, [8 8]);
     ds.datatable = datatable;
     % sampling frequency. The set starts with 0, thus subtracking one extra element
     ds.fs = (length(datatable.t) - 1)/datatable.t(end); 
