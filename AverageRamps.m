@@ -1,5 +1,5 @@
 % processes the relaxed data
-clear -except dataset;
+% clear -except dataset;
 
 % using only the final dataset
 dataset{1} = load('DataStruct20230919.mat');

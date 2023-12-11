@@ -1,5 +1,9 @@
 % Assuming mod = ones(10,1)
 % assuming pCa = Inf
+
+% pCa 11 - load Relaxed, do not run the extended, PEVK attachment model
+% pCa 10 - load Relaxed, run the PEVK attachment model
+% pCa < 10 - load AvgpCa dataset, Ca effect in place
 clear Force
 clear Time
 clear Length
@@ -71,13 +75,14 @@ delU = 0.0125;
 % g0 = ones(1,11);
 % g0 = mod;
 % mod = 0;
-kD   = mod(8)*14.977; % PEVK detachment rate
-if pCa >= 11
+if pCa >= 10
     kp   = mod(1)*10203*0.7;      % proximal chain force constant
-    kA   = mod(7)*0*16.44; % PEVK attachment rate
+    kA   = mod(16)*0.1*16.44; % PEVK attachment rate
+    kD   = mod(17)*14.977; % PEVK detachment rate
 else
     kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = mod(7)*16.44;
+    kD   = mod(8)*14.977; % PEVK detachment rate
 end
 kd   = mod(2)*14122;        % distal chain force constant
 alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
@@ -152,12 +157,12 @@ pu = zeros(Nx,1)*PU;
 pa = zeros(Nx,1)*PA;
 pu(1,1) = 1/ds; 
 
-if pCa < 11 
-    % might have some Ca effect
-    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
-else
+if pCa >= 10 
     % no Ca effect assumed
     x0 = reshape(pu,[(Ng+1)*Nx,1]);
+else
+    % might have some Ca effect
+    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
 end
 x0 = [x0; 0]; 
 
@@ -176,10 +181,10 @@ for j = rampSet
   pu = zeros(Nx,1)*PU;
   pa = zeros(Nx,1)*PA;
   pu(1,1) = 1/ds; 
-  if pCa < 9
-    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
-  else
+  if pCa >= 10
     x0 = reshape(pu,[(Ng+1)*Nx,1]);
+  else
+    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
   end
   x0 = [x0; 0]; 
   Tend_ramp = Lmax/V; % length of ramp
@@ -246,10 +251,10 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
     xi = x(i,:);
     Length{j}(i) = xi(end);
     pu = reshape( xi(1:(Ng+1)*Nx), [Nx,Ng+1]);
-    if pCa < 11
-        pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
-    else
+    if pCa >= 10
         pa = 0;
+    else
+        pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
     end
     Fd = kd* max(0,(Length{j}(i) - s)/Lref).^nd; 
     Force_pa{j} = ds*sum(sum(Fd.*pa ));
@@ -434,8 +439,8 @@ for j = 1:length(PeakModel)
 end
 
 Ep = sum((PeakData(:, 2) - PeakModel(:)).^2);
-% discarding peak fit
-if pCa < 9
+% discarding peak fit for high Ca's
+if pCa < 10
     Ep = 0;
 end
 

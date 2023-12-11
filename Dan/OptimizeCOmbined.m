@@ -147,6 +147,7 @@ modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_
 % mod = [0.0142    0.4204    0.4267    1.0234    0.7567 0.3025    0.1535    1.0318    0.0133    0.8988 0.8679    4.5429    0.7510    1.2811    1.6208];
 %% optim for filtering out remaining force (attempt 01)
 mod = [0.0231    0.2275    0.4870    1.0234    0.7909   0.2929    0.1113    0.2652    0.0218    0.8988    0.7426    1.8401    0.7510    1.2811    1.6663];
+mod = [0.0231    0.2275    0.4870    1.0234    0.7909   0.2929    0.1113    0.2652    0.0218    0.8988    0.7426    1.8401    0.7510    5.2811    1.6663];
 figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 % optim for pCa 11 only, from original estimates, without ramp up
 % modSel = [1 2 3 5 6 10 15];
@@ -162,8 +163,10 @@ figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, m
 % figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 %% retuned for pCa 11 and 4.4, from scratch except for ramp-up and fixed mu and alphaR0 
 % Candidate 1
+tic
 modSel = [1 2 3 4 5 6 7 8 9 10]; mod = [0.4852    0.2070    1.0403    1.1617    0.7393    1.2668    1.3151    1.5592    1.1949    1.6778    3.6372    0.2425    0.0030    0.1000    0.5000];
-figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, [mod 1 1], 1:15)
+toc
 %% yet another set
 mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    1.0000    0.50000];
 figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
@@ -179,7 +182,15 @@ mod = [0.4804    0.0661    0.9735    2.0109    0.5917 1.6109e+05 0.1694    0.290
 figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15)
 %% retuned for pCa 4 in log space only, w/o. the ramp-up
 mod = [0.4804    0.0667    0.9711    1.9971    0.5672 2.0654e+05 0.0919    0.3252    0.6417    2.0434    0.3652    0.0866    0.0002 0.1000    0.5000];
-figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15);
+figure(99);polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, [mod 1 1], 1:15);
+%% Tuned for data readjusted for remaining force and scaled by Fmax - with 1.4e4
+mod = [0.6108    0.0578    1.0426    1.1110    0.5432    1.3586    0.9776    1.3503 1.2387    1.8919    3.6372    0.2425    0.0030    0.7421    0.4327    0.9964 1.0091];
+figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
+%% FineTuning for b, c and d
+mod = [0.6108    0.0578    1.0426    1.1110    0.5432    1.3586    0.9776    1.3503    1.2387    1.8919    0.001    1.0877    0.001    0.7421    0.4327    0.9964    1.0091];
+figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
+%%
+hold on; plotParams([0.4852    0.2070    1.0403    1.1617    0.7393    1.2668    1.3151    1.5592    1.1949    1.6778    3.6372    0.2425    0.0030    0.1000    0.5000 1 1]);
 %%
 modSel = 1:15;
 i = 14;
@@ -190,6 +201,8 @@ tic
 % modSel = [1 2 3 5 6 10];
 % default is 403
 % modSel = [7, 9];
+mod = [mod ones(1, 17 - length(mod))]
+modSel = 1:length(mod)
 evalCombined(mod(modSel), mod, modSel)
 % evalCombined(mod_pca6)
 % evalCombined(mod)
@@ -197,8 +210,17 @@ evalCombined(mod(modSel), mod, modSel)
 toc
 %%
 clf;
-polarplot(linspace(2*pi/15, 2*pi, 15), mod, 'x-');evalCombined(mod, mod, 1:15);
-set(gca, 'ThetaAxisUnits', 'radians', 'thetatick', linspace(2*pi/15, 2*pi, 15), 'thetaticklabel', modNames, 'Rlim', [0 2.1]);
+modNames{16} = 'k_{PEVK,A} (low Ca)';
+modNames{17} = 'k_{PEVK,D} (low Ca)';
+mm = min(floor(log10(mod)));
+
+n = length(mod);
+polarplot(linspace(2*pi/n, 2*pi, n), log10(mod) - mm, 'x-', LineWidth=2);
+% evalCombined(mod, mod, 1:n);
+% set(gca, 'ThetaAxisUnits', 'radians', 'thetatick', linspace(2*pi/n, 2*pi, n));
+set(gca, 'ThetaAxisUnits', 'radians', ...
+    'thetatick', linspace(2*pi/n, 2*pi, n), 'thetaticklabel', modNames, ...
+    'Rlim', [-3 1]-mm, 'RTick', [-2 -1 0 1]-mm, 'RTickLabel', [0.01 0.1 1 10]);
 hold on;
 
 %%
@@ -232,6 +254,7 @@ modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6
 
 
 %%
+modSel = [1:10 14:17];
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 x = fminsearch(@evalCombined, init, options, mod, modSel);
@@ -241,11 +264,23 @@ mod(modSel) = x;
 
 save mod;
 %% optim in log param space
+% mod = ones(1, 17);
+mod = [mod ones(1, 17 - length(mod))];
+modSel = [1:10 14:17];
+modSel = [11 12 13];
 init = log10(mod(modSel));
-evalLogCombined = @(logMod, mod, modSel) evalCombined(10.^logMod, mod, modSel);
-x = fminsearch(evalLogCombined, init, options, mod, modSel);
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
+x = fminsearch(evalLogCombined, init, options);
 mod(modSel) = 10.^x;
 
+%% optim with bounded params
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
+    'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
+
+modSel = [11 12 13];
+init = log10(mod(modSel));
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
+[x, FV, EF, OUT] = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(modSel)), log(ub(modSel)), [], options);
 %% test in GA
 % parpool
 ga_Opts = optimoptions('ga', ...
@@ -254,18 +289,18 @@ ga_Opts = optimoptions('ga', ...
     'MaxStallGenerations',8, ...  % 10
     'UseParallel',true);
 modSel = 1:14;
-Ng = length(modSel);
-ub = log10(100)*ones(1, Ng);
+% Ng = length(modSel);
+ub = 100*ones(1, length(mod));
 ub([3, 4, 5, 10, 14]) = [10 10 10, 10, 10];
-lb = log10(100)*ones(1, Ng);
+lb = 0.001*ones(1, length(mod));
 lb([3, 4, 5, 10, 14]) = [.1 .1 .1 .1 .1];
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 init = log10(mod(modSel));
 
 [p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
-    ga(evalLogCombined,Ng, ...
+    ga(evalLogCombined,length(modSel), ...
     [],[],[],[],...
-    log10(lb),log10(ub),[],ga_Opts);
+    log10(lb(modSel)),log10(ub(modSel)),[],ga_Opts);
 
 mod(modSel) = 10.^p_OptimGA;
 % use fminserach afterwards
@@ -297,6 +332,8 @@ xlabel('pCa');
 legend('kA (PEVK attachment)', 'kC (stiffening proximal chain)')
 %%
 function totalCost = evalCombined(optMods, mod, modSel)
+
+    
     %normal - optimizing for all
     % modSel = 1:15;
 
@@ -322,11 +359,26 @@ function totalCost = evalCombined(optMods, mod, modSel)
     % modSel = [7, 8, 9];
     % modSel = [1 2 3 5 6 10];
     
+    % store the init
+    baseMods = mod;
     mod(modSel) = optMods;
 
     drawPlots = true;
     % drawPlots = false;
     totalCost = 0;
+
+    if drawPlots && 1
+        figInd = 100;
+        try 
+            set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
+        catch 
+            f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
+            f.Name = 'Parameter modifiers';
+        end      
+        clf;
+        plotParams(baseMods);hold on;
+        plotParams(mod);hold off;
+    end
 
     %% pCa 6
     % pCa = 6;
@@ -341,8 +393,8 @@ function totalCost = evalCombined(optMods, mod, modSel)
 
 
     %% no Ca
-    pCa = 11;
-    figInd = 111;
+    pCa = 10;
+    figInd = 110;
     if drawPlots
         try 
             set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
@@ -377,4 +429,14 @@ function cost = isolateRunCombinedModel(mod, pCa, drawPlots)
 % just to isolate the script, so the variables can't intervene
     % drawPlots = true;
     RunCombinedModel;
+end
+
+function plotParams(mod)
+    modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)'};
+    mm = min(floor(log10(mod))); n = length(mod);
+    
+    polarplot(linspace(2*pi/n, 2*pi, n), log10(mod) - mm, 'x-', LineWidth=2);
+    set(gca, 'ThetaAxisUnits', 'radians', ...
+        'thetatick', linspace(2*pi/n, 2*pi, n), 'thetaticklabel', modNames, ...
+        'Rlim', [-3 1]-mm, 'RTick', [-2 -1 0 1]-mm, 'RTickLabel', [0.01 0.1 1 10]);
 end
