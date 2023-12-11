@@ -25,7 +25,7 @@ for i = 1:size(dataset, 2)
     % subplot(122);hold on;
     % plot(rmp.t, rmp.L);
     % subplot(121);hold on;
-    plot(rmp.t, rmp.F);
+    pfm(i) = plot(rmp.t, rmp.F);
 
     %  the pCa starts about halfway the dataset
     i_start = find(rmp.t > 100, 1, 'first');
@@ -37,7 +37,7 @@ for i = 1:size(dataset, 2)
     dataset_maxF(i) = maxF;
     plot(rmp.t(i_max+i_start), maxF, 'rx', LineWidth=4, MarkerSize=12)
 end
-
+legend(pfm, '20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F');
 %% Get the ss F of the slowest active ramp
 ss_pointers = [2, 2;3,7;3,7;3,7;3,7;3,7];
 dataset_ssF = [];
@@ -175,8 +175,12 @@ figure(4);clf;hold on;
 clear peaks peaks_norm leg;
 
 for i_rds = 1:length(rds)
-    sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));%cla;
-    outF = [];n = 1;clear leg;
+    % sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
+    % excluding 100s
+    if i_rds ~= 1 % skip plotting of 100s
+        sp =subplot(3, 4, (i_rds-2)*4 +  (1:2));cla;
+    end
+    outF = [];sum_squared_diff = []; n = 1;clear leg;
     rampSet = pCa4_4Data{i_rds};
     clin = lines(size(rampSet, 1)+1);
 
@@ -237,7 +241,8 @@ for i_rds = 1:length(rds)
 
         % prepare legend
         leg{i_logtrace} = [dtst.folder ':' dtst.datasetTitle];        
-        semilogx(rmp.t, movmean(F, [16 16]), ':', Color=clin(i_logtrace, :));hold on;
+        % semilogx(rmp.t, movmean(F, [16 16]), ':', Color=clin(i_logtrace, :));hold on;
+        semilogx(rmp.t, F, '-', Color=[clin(i_logtrace, :), 0.05]);hold on;
         % semilogx(rmp.t, FremFunArr{i_logtrace}(rmp.t, dtst.rd)/base_rel, '--', Color=clin(i_logtrace, :));
         % semilogx(dtst.datatableZDCorr.t - 10, dtst.datatableZDCorr.F, '-', Color=clin(i_logtrace, :));hold on;
         % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
@@ -290,22 +295,23 @@ for i_rds = 1:length(rds)
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
     t_s = t_s(~[false t_s(2:end) == t_s(1:end-1)]);
+    SD = sqrt(sum_squared_diff / (n * (n - 1)));
     % force and length interpolation
-    FLint = interp1(outT, [outF*Fmax, rmp.L(1:L)], t_s, "pchip", 'extrap');
+    FLSDint = interp1(outT, [outF, rmp.L(1:L), SD], t_s, "pchip", 'extrap');
     
-    tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
+    tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1)*Fmax);
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
     writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
-    % semilogx(outT, outF, 'k-');hold on;
-    SD = sqrt(sum_squared_diff / (n * (n - 1)));
-    semilogx(outT, outF + SD, '--', Color=[clin(end, :), 0.3], LineWidth=3);
-    semilogx(outT, outF - SD, '--', Color=[clin(end, :), 0.3], LineWidth=3);
 
     % Fill the area between upper and lower bounds to show the confidence interval
     % fill([outT', fliplr(outT')], [(outF*Fmax - SD*1.96)', fliplr((outF*Fmax + SD*1.96)')], 'b');
 
-    semilogx(t_s, FLint(:, 1)/Fmax, '--', LineWidth=2, Color=clin(end, :))
+    % semilogx(t_s, FLSDint(:, 1) + FLSDint(:, 3), '-', Color=[clin(end, :), 1], LineWidth=2);
+    % semilogx(t_s, FLSDint(:, 1) - FLSDint(:, 3), '-', Color=[clin(end, :), 1], LineWidth=2);
+    % semilogx(t_s, FLSDint(:, 1), '-|', LineWidth=2, Color=clin(end, :))
+    
+    errorbar(t_s,FLSDint(:, 1),FLSDint(:, 3), '-', LineWidth=2, Color=clin(end, :))
     xlim([1e-2 2e2])
     yl = ylim;
     ylabel('\itT_{m,rel}');
@@ -324,10 +330,10 @@ for i_rds = 1:length(rds)
     end    
 end
 % peak sum up
-normtype = 'Norm to highest peak'
-normtype = 'Norm to steady state'
-normtype = 'Norm to relaxed peaks for each ramp'
-normtype = 'Norm to highest relaxed peak'
+% normtype = 'Norm to highest peak'
+% normtype = 'Norm to steady state'
+% normtype = 'Norm to relaxed peaks for each ramp'
+% normtype = 'Norm to highest relaxed peak'
 normtype = 'Norm to Fmax'
 subplot(4, 4, [3 16]);cla;
 
@@ -359,13 +365,15 @@ for i_pk = 1:size(peaks_norm, 2)
     % semilogx(rds, peaks_relaxed(:, i_pk), 'x-', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
     % semilogx(rds, as(:, i_pk), 'x:', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
 end
-% set(gca, 'YAxisLocation', 'right');
+
 % just for the legend
 plot(NaN, NaN, '-|',LineWidth=3, Color=clin(end, :))
 %# find non-empty legend
-validLeg = ~cellfun(@isempty,leg);
-%# remove empty cells
-leg_cleared = leg(validLeg);
+% validLeg = ~cellfun(@isempty,leg);
+% %# remove empty cells
+% leg_cleared = leg(validLeg);
+leg_cleared = {'20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
+
 legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
 
 plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=3, Color=clin(end, :))

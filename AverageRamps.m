@@ -41,12 +41,17 @@ relaxed{4} = [1, 1, 6;2, 1, 9;3, 1, 9;4,1,6;5, 1, 6;6, 1, 6];
 
 %
 figure(3);clf;hold on;
-clear peaks;
+clear peaks peaks_norm;
 
 for i_rds = 1:length(rds)
-    sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
+    % sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
+    % excluding 100s
+    if i_rds ~= 1 % skip plotting of 100s
+        sp =subplot(3, 4, (i_rds-2)*4 +  (1:2));cla;
+    end
     outF = [];sum_squared_diff = []; n = 1;clear leg;
     rampSet = relaxed{i_rds};
+    clin = lines(size(rampSet, 1)+1);
 
     for i_logtrace = 1:size(rampSet, 1)
         % experiment dataset - whole measurement session
@@ -83,14 +88,20 @@ for i_rds = 1:length(rds)
         F = rmp.F/base_rel;
         % F = rmp.F;
         
-        if isMale(i_logtrace)
-            semilogx(rmp.t, F, ':', LineWidth=0.5);hold on;
-        else
-            semilogx(rmp.t, F, ':', LineWidth=1.5);hold on;
+        % if isMale(i_logtrace)
+        if i_rds ~= 1 % skip 100s
+            semilogx(rmp.t, F, '-', LineWidth=0.5, Color=[clin(i_logtrace, :), 0.1]);hold on;
         end
+        % else
+        %     semilogx(rmp.t, F, ':', LineWidth=1.5);hold on;
+        % end
         set(gca, 'FontSize', 14);
+        
         % base on obsolute peak
         peaks(i_rds, i_logtrace) = max(rmp.F);
+        % normalization        
+        peaks_norm(i_rds, i_logtrace) = max(F);
+
         % base on peak over steady state
         % peaks(i_rds, i_logtrace) = max(rmp.F) - base_rel;
         if isempty(outF)
@@ -112,13 +123,13 @@ for i_rds = 1:length(rds)
         end    
 
         %%
-        fitrg = rmp.L > 1.1 & rmp.t < dtst.rd;
-        rmpFitrg = rmp(fitrg, :);
-        % fitfun = @(a, b, c, d, x) min(a*max(x+d, 0).^(b) + c +0*d, 1e2);
-        fitfun = @(a, b, x) a.*(x + b);
-
-        [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
-        as(i_rds, i_logtrace) = ae.a;
+        % fitrg = rmp.L > 1.1 & rmp.t < dtst.rd;
+        % rmpFitrg = rmp(fitrg, :);
+        % % fitfun = @(a, b, c, d, x) min(a*max(x+d, 0).^(b) + c +0*d, 1e2);
+        % fitfun = @(a, b, x) a.*(x + b);
+        % 
+        % [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
+        % as(i_rds, i_logtrace) = ae.a;
 
         
     end
@@ -131,22 +142,24 @@ for i_rds = 1:length(rds)
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
     t_s = t_s(~[false t_s(2:end) == t_s(1:end-1)]);
-    % force and length interpolation
-    FLint = interp1(outT, [outF*Fmax, rmp.L(1:L)], t_s, "pchip", 'extrap');
-    
-    tab_rmpAvg = table(t_s' + 2, FLint(:, 2), FLint(:, 1));
-    tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
-%% plot the AVG
-    semilogx(outT, outF, 'k-');hold on;
     SD = sqrt(sum_squared_diff / (n * (n - 1)));
-    semilogx(outT, outF + SD, '--', Color=[clin(end, :), 0.5], LineWidth=2);
-    semilogx(outT, outF - SD, '--', Color=[clin(end, :), 0.5], LineWidth=2);
-
+    % Force, Length and SD interpolation (relative to Fmax)
+    FLSDint = interp1(outT, [outF, rmp.L(1:L), SD], t_s, "pchip", 'extrap');
+    
+    tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1)*Fmax);
+    tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
+    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+%% plot the AVG
+    % semilogx(outT, outF, 'k-');hold on;
+    % semilogx(t_s, FLSDint(:, 1) + FLSDint(:, 3), '--', Color=[clin(end, :), 1], LineWidth=2);
+    % semilogx(t_s, FLSDint(:, 1) - FLSDint(:, 3), '--', Color=[clin(end, :), 1], LineWidth=2);
+    % plot(t_s, FLSDint(:, 1), '-|', Color=[clin(end, :), 0.5], LineWidth=2)
+    
     % Fill the area between upper and lower bounds to show the confidence interval
     % fill([outT', fliplr(outT')], [(outF - SE*1.96)', fliplr((outF + SE*1.96)')], 'b');
 
-    plot(t_s, FLint(:, 1)/Fmax, '-|', LineWidth=2)
+    errorbar(t_s,FLSDint(:, 1),FLSDint(:, 3), '-', LineWidth=2, Color=clin(end, :))
+    
     xlim([1e-2 2e2])
     yl = ylim;
     ylabel('\itT_{m,rel}');
@@ -163,10 +176,16 @@ for i_rds = 1:length(rds)
         xlabel('Time (s)')
     end    
 end
-%% peak sum up
+% peak sum up
 subplot(4, 4, [3 16]);cla;
 % remove zero peaks as NaNs to fix the average - only when something was missing
 peaks(peaks == 0) = NaN;
+
+
+% for x axis we go from fastest to slowest
+x_ax = length(rds):-1:1;
+
+boxplot(fliplr(peaks_norm'), PlotStyle="traditional", Notch="off");hold on;
 
 clin = lines(size(peaks, 2)+1);
 for i_pk = 1:size(peaks, 2)
@@ -176,31 +195,35 @@ for i_pk = 1:size(peaks, 2)
         continue;
     end    
     % set(gca, 'colororderindex', 1);
-    semilogx(rds, peaks(:, i_pk), '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));hold on;    
+    plot(x_ax, peaks_norm(:, i_pk)', '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));hold on;    
     % semilogx(rds, as(:, i_pk), 'x:', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
 end
 % set(gca, 'YAxisLocation', 'right');
 % just for the legend
-semilogx(NaN, NaN, '-|',LineWidth=3, Color=clin(end, :))
-validLeg = ~cellfun(@isempty,leg);
-%# remove empty cells
-leg_cleared = leg(validLeg);
+plot(NaN, NaN, '-|',LineWidth=3, Color=clin(end, :))
+% validLeg = ~cellfun(@isempty,leg);
+% %# remove empty cells
+% leg_cleared = leg(validLeg);
+
+leg_cleared = {'20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
 legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
 
-semilogx(rds, nanmean(peaks, 2)', '-', LineWidth=3, Color=clin(end, :))
-semilogx(rds, nanmean(peaks, 2)', '|', LineWidth=5, Color=clin(end, :), MarkerSize=12)
+plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=3, Color=clin(end, :))
+plot(x_ax, nanmean(peaks_norm, 2)', '|', LineWidth=5, Color=clin(end, :), MarkerSize=12)
 
 
 xlabel('Ramp duration (s)');
-xlim([0.08, 150])
+% xlim([0.08, 150])
 ylabel('Peak tension (kPa)')
 % semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, MarkerSize=12)
-set(gca, 'XTick', fliplr(rds));
+% set(gca, 'XTick', fliplr(rds));
+set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
+
 set(gca, 'FontSize', 14);
 title('Absolute peak height')
 
 % boxplot(peaks', 'Positions',rds)
 % end
 %% the same, but for pCa
-ds = readtable(['Data\AvgpCa4.4_0.1s.csv']);
+% ds = readtable(['Data\AvgpCa4.4_0.1s.csv']);
   
