@@ -168,9 +168,10 @@ figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 mod = [0.4847    0.0514    1.0389    1.1202    0.5064    1.3293    0.9757    1.3062    1.3521    1.9492    0.0003    1.0841    0.0007    0.7551    0.6101    0.9964    1.0090];
 % [0.4777    0.0503    1.0404    1.1199    0.5045    1.3213     0.9756    1.2949    1.3656    1.9521    0.0003    1.0843    0.0008    0.7595    0.6170    0.9964    1.0089];
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
-%% unfinished finetuning with free PEVK_A_Relaxed, costs 3e4
+%% unfinished finetuning for Fmax normalized data without Frem with free PEVK_A_Relaxed, costs 3e4
 mod = [0.2651    0.0171    1.0557    1.1643    0.3515    1.4502    0.9884    1.1832    1.0980    2.0724    0.0000    0.8893    0.0027    0.6528    0.6272    0.9964    1.0068];
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
+
 %%
 modSel = 1:15;
 i = 14;

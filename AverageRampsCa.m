@@ -94,27 +94,43 @@ FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*Fr
 
 % indexes of active PNB 300s hold datasets
 i_pca4_4_100ms_hold300 = [2 5; 3 10; 3 10;3 11; 3 11; 3 11];
+% get the pCa 11 long hold for decay fitting 
+% row = dataset#, col 1 measurement set, col 2 ramp index
+i_Relax_100ms_hold300 = [1 10;1 9;1 9;1 6;1 6;1 6];
 % indexes of validation datasets
 % same or one step slower
 i_validation = [2 4;3 9;3 9;3 10;3 10;3 10];
 % 10s
-% i_validation = [2 3;3 8;3 8;3 8;3 8;3 8];
+i_validation = [2 3;3 8;3 8;3 8;3 8;3 8];
 tiledlayout(2,3)
 for i_dtst = 1:length(i_pca4_4_100ms_hold300)
     nexttile();
     dtst = dataset{i_dtst}.dsc{i_pca4_4_100ms_hold300(i_dtst, 1), i_pca4_4_100ms_hold300(i_dtst, 2)};
+    dtst_relaxed = dataset{i_dtst}.dsc{i_Relax_100ms_hold300(i_dtst, 1), i_Relax_100ms_hold300(i_dtst, 2)};
     rmp = dtst.datatableZDCorr;
+    rmpRel = dtst_relaxed.datatableZDCorr;
+   
     
     i_0 = find(rmp.t >= 10, 1);
     % i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
     dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
-    i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
+    % i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
     % int_avg
     rmp.F = movmean(rmp.F, [8 8]);
     rmp.t = rmp.t - 10;
-    rmpRes = rmp(1:100:end, :);
+    rmpRes = rmp(1:10:end, :);
+    rmpRelRes = rmpRel(1:10:end, :);
+    rmpRelRes.t = rmpRelRes.t - 10;
+    fitRelRng = rmpRelRes.t > dtst_relaxed.rd & rmpRelRes.t < 300;
+
+    % fit the relaxed decay first
+    f_fitRelax = @(a, b, c, x) a*(x-dtst_relaxed.rd).^(-b) + c;
+    [rae rgood] = fit(rmpRelRes.t(fitRelRng), rmpRelRes.F(fitRelRng), f_fitRelax, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0]);    
+
+    % plot(rmpRel.t-10, rmpRel.F, rmpRelRes.t(fitRelRng), rmpRelRes.F(fitRelRng),...
+    %     rmpRelRes.t(fitRelRng), f_fitRelax(rae.a, rae.b, rae.c, rmpRelRes.t(fitRelRng)))
         
-    % remaining force at the beginning and at the end
+    %% remaining force at the beginning and at the end
     FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
 
     % identify the exponential coefficient by fitting
@@ -128,26 +144,30 @@ for i_dtst = 1:length(i_pca4_4_100ms_hold300)
         fitrng = rmpRes.t > t_fit_start & rmpRes.t < 300;
     end
     
-    f_fit = @(a, b, c, x) a*(1-exp(-b*x)) + c;
+    f_k = @(a, b, c, x) a*(1-exp(-b*x)) + c;
+    f_fit = @(a, b, c, x) f_k(a, b, c, x) + f_fitRelax(rae.a, rae.b, rae.c, x);
     [ae good] = fit(rmpRes.t(fitrng), rmpRes.F(fitrng), f_fit, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0], 'Upper', [100, 0.1, 100]);    
         
     % Match that by the fit function
-    FremFitShift = FremMax(2) - f_fit(ae.a, ae.b, 0, rmpRes.t(end));
+    FremFitShift = FremMax(2) - f_k(ae.a, ae.b, 0, rmpRes.t(end));
     % minRemForce = f_fit(ae.a, ae.b, FremFitShift, dtst.rd);
     FremFun = @(t, rd) (t <= 0)*FremMax(1) + ...
-            (t > 0 & t < rd).*max(-10, min(FremMax(1), (f_fit(ae.a, ae.b, FremFitShift, rd) - FremMax(1))/rd*t + FremMax(1))) +... % 
+            (t > 0 & t < rd).*max(-10, min(FremMax(1), (f_k(ae.a, ae.b, FremFitShift, rd) - FremMax(1))/rd*t + FremMax(1))) +... % 
             (t >= rd).*(...
-            f_fit(ae.a, ae.b, FremFitShift, t)); % exponential approximation
+            f_k(ae.a, ae.b, FremFitShift, t)); % exponential approximation
 
     % plot the raw force
     pltF = plot(rmp.t, rmp.F, ':');
     hold on;
     % show the remaining force approximation
-    pltApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd), '--');
+    pltApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd), '--', LineWidth=3);
     % show the corrected dataset
     pltCorr = plot(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, dtst.rd), '-');    
     % show the fit
-    plot(t_fit_start:10:300, f_fit(ae.a, ae.b, ae.c, t_fit_start:10:300), '--', LineWidth=2);
+    x_ax = 0.1:0.1:300;
+    plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), '--', LineWidth=2);
+    plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), '--', LineWidth=2);
+    plot(x_ax, f_fitRelax(rae.a, rae.b, rae.c, x_ax), '--', LineWidth=2);
     
     % approximation zones
     pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
@@ -236,7 +256,11 @@ for i_rds = 1:length(rds)
             continue;
         end
 
+        % adjusted for Fremaining, normalized
         F = rmp.F/base_rel;
+        % just raw force, normalized
+        % F = rmp.Fraw/base_rel;
+        % just raw force
         % F = rmp.F;
 
         % prepare legend
@@ -248,7 +272,7 @@ for i_rds = 1:length(rds)
         % semilogx(rmp.t, FremFun(rmp.t, dtst.rd), '--', Color=clin(i_logtrace, :));
         set(gca, 'FontSize', 14);
         % base on absolute peak
-        peaks(i_rds, i_logtrace) = max(rmp.F);
+        peaks(i_rds, i_logtrace) = max(F*base_rel);
         % base on peak over steady state
         % peaks(i_rds, i_logtrace) = max(rmp.F) - base_rel;
         
@@ -289,8 +313,14 @@ for i_rds = 1:length(rds)
 %% resample and save
     t_ignore = 0.01; 
     % resample up the peak and for the tail separately
+    % t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds) - t_ignore) ...
+    %     logspace(log10(rmp.t(i_0) + rds(i_rds) + t_ignore), log10(rmp.t(i_0) + rds(i_rds) + 10), 20) ...
+    %     logspace(log10(rmp.t(i_0) + rds(i_rds) + 10), log10(outT(end)), 5)];
+
+    % resample up the peak and for the tail separately
     t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds) - t_ignore) ...
         logspace(log10(rmp.t(i_0) + rds(i_rds) + t_ignore), log10(outT(end)), 40)];
+
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints

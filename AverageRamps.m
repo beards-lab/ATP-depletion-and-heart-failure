@@ -77,7 +77,7 @@ for i_rds = 1:length(rds)
         % base on max relaxed peak
         % base_rel = peaks_relaxed(4, i_logtrace);
         % base on Fmax, if available (in AverageRampsCa)
-        base_rel = dataset_maxF(rampSet(i_logtrace, 1));
+        % base_rel = dataset_maxF(rampSet(i_logtrace, 1));
         % base on staeady state of the slowest ramp (in AverageRampsCa)
         % base_rel = dataset_ssF(i_logtrace);
 
@@ -148,7 +148,7 @@ for i_rds = 1:length(rds)
     
     tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1)*Fmax);
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
     % semilogx(outT, outF, 'k-');hold on;
     % semilogx(t_s, FLSDint(:, 1) + FLSDint(:, 3), '--', Color=[clin(end, :), 1], LineWidth=2);
