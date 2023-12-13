@@ -157,7 +157,7 @@ pu = zeros(Nx,1)*PU;
 pa = zeros(Nx,1)*PA;
 pu(1,1) = 1/ds; 
 
-if pCa >= 10 
+if pCa >= 11 
     % no Ca effect assumed
     x0 = reshape(pu,[(Ng+1)*Nx,1]);
 else
@@ -181,7 +181,7 @@ for j = rampSet
   pu = zeros(Nx,1)*PU;
   pa = zeros(Nx,1)*PA;
   pu(1,1) = 1/ds; 
-  if pCa >= 10
+  if pCa >= 11
     x0 = reshape(pu,[(Ng+1)*Nx,1]);
   else
     x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
@@ -251,7 +251,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
     xi = x(i,:);
     Length{j}(i) = xi(end);
     pu = reshape( xi(1:(Ng+1)*Nx), [Nx,Ng+1]);
-    if pCa >= 10
+    if pCa >= 11
         pa = 0;
     else
         pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
@@ -518,7 +518,7 @@ for j = length(rampSet):-1:1
 
     plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.15], Parent=sp);
     plot(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8, Parent=sp);
-    plot(t_int{j},Es{j},'--','linewidth',2, 'Color', [colors(j+1, :), 0.3], Parent=sp);
+    plot(t_int{j},Es{j},'--|','linewidth',2, 'Color', [colors(j+1, :), 0.3], Parent=sp);
 
     % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
     % max out of all
@@ -545,14 +545,14 @@ for j = length(rampSet):-1:1
 end
 % cla;
 pos1 = get(subplot(221), 'Position');
-w = pos1(3)*0.45; h = pos1(4)*0.5;
+w = pos1(3)*0.45; h = pos1(4)*0.4;
 x = pos1(1) + pos1(3) - w; y = pos1(2) + pos1(4) - h;
 axes('Position',[x, y, w, h]);
 semilogx(PeakData(:, 1), PeakData(:, 2), 'ko', LineWidth=2);hold on;
 semilogx(PeakData(:, 1), PeakModel, 'x', 'MarkerEdgeColor', [1 1 1]*0.5, LineWidth=2, MarkerSize=8);
 axis([1e-1 1e1 0 ym])
 semilogx(PeakData(:, 1), PeakModel, '--', Color=[1 1 1]*0.5, LineWidth=1);
-legend('Peaks (Data)', 'Peaks (Model)')
+legend('Peaks (Data)', 'Peaks (Model)', 'Location', 'southeast')
 %%
 h = annotation('textbox', [0.07 0.95 0 0], 'String', 'A)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
 h = annotation('textbox', [0.5 0.95 0 0], 'String', 'B)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');

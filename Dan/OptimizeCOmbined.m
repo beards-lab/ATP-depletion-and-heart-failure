@@ -55,56 +55,31 @@ mod(13) = -2.8;
 %%
 % mod = [2.0398    1.3113    3.8942    1.3500    0.4784 0.7398    0.8176    0.7869    0.8629    0.7200 1.3634    1   -2.8000    1.0150    0.6382 -0.5199];
 % mod = [1.1592    1.0379    0.9763    0.9779    1.1237    1.0935    0.9365    1.0882    0.9846    0.8931];
-mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988, 1, 1, 1];
-mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
-mod = [0.0185    0.8479    0.4307    1.0234    1.0326 0.5971    0.9379    1.1950    0.9099    0.8988 1.0000    1.4450    0.7510    1.2811    2.7365];
-    
-% mod(5) = mod(9);
-drawPlots = true;
-cost_sap = []; % SA plus
-cost_sam = []; % SA minus
-pCa = 11;
-% pCa = 4;
-figure(100);
-cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-c0 = cost
-%
-% saSet = [1:9 12:15];
-% saSet = [1:8 13];
-% saSet = [14 15];
+% mod = [1.1697    1.0418    0.9774    0.9737    0.9858    1.0265    0.9403    1.0837    0.9889    0.8988, 1, 1, 1];
+% mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
+% mod = [0.0185    0.8479    0.4307    1.0234    1.0326 0.5971    0.9379    1.1950    0.9099    0.8988 1.0000    1.4450    0.7510    1.2811    2.7365];
+
+tic
 saSet = 1:15;
-SAFact = 1.05;
-for i_m = saSet
-    mod(i_m) = mod(i_m)*SAFact;
-    fprintf('Mod %g is up to %g..', i_m, mod(i_m));
-    % figure(i_m)
-    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    cost_sap(i_m) = cost;
-    
-    mod(i_m) = mod(i_m)/SAFact/SAFact;
-    fprintf('costing %1.4e€ and down to %g...', cost, mod(i_m));
-    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    cost_sam(i_m) = cost;
-    mod(i_m) = mod(i_m)*SAFact;
-    fprintf('costing %1.4e€. \n', cost);
-end
+[c0_11, cost11_sap, cost11_sam] = runSa(11, saSet);
+[c0_4, cost4_sap, cost4_sam] = runSa(4.4, mod, saSet);
+% normalize
+cost11_sam = cost11_sam/c0_11;
+cost11_sap = cost11_sap/c0_11;
+cost4_sam = cost4_sam/c0_4;
+cost4_sap = cost4_sap/c0_4;
+toc
 %% plot the result
 modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
 
-% %%
-% cost11_sap = cost_sap;
-% cost11_sam = cost_sam;
-% c0_11 = c0;
-% %% 
-% cost4_sap = cost_sap;
-% cost4_sam = cost_sam;
-% c0_4 = c0;
+c0_11 = 1;
+c0_4 = 1;
 
 % identify tradeoffs
 eps = (c0_4 + c0_11)*1e-3;
 % better result
-bett = (cost11_sap*10 + cost4_sap + eps < c0_11*10 + c0_4) ...
-    | (cost11_sam*10 + cost4_sam + eps < c0_11*10 + c0_4);
+bett = (cost11_sap + cost4_sap + eps < c0_11 + c0_4) ...
+    | (cost11_sam + cost4_sam + eps < c0_11 + c0_4);
 betts = strings(1, length(cost4_sap));betts(bett) = "$$$";
 % tradeoffs between low and high Ca - suggesting some dependency?
 tdoCa = (cost11_sap + eps < c0_11 & cost4_sap > c0_4 + eps) | (cost11_sam + eps < c0_11 & cost4_sam > c0_4 + eps) ...
@@ -112,9 +87,9 @@ tdoCa = (cost11_sap + eps < c0_11 & cost4_sap > c0_4 + eps) | (cost11_sam + eps 
 tdoCas = strings(1, length(cost4_sap));tdoCas(tdoCa) = "*";
 
 figure(101);clf; 
-b = bar([cost11_sap*10; cost4_sap; zeros(size(cost4_sap)); cost11_sam*10;cost4_sam]'); hold on;
+b = bar([cost11_sap; cost4_sap; zeros(size(cost4_sap)); cost11_sam;cost4_sam]'); hold on;
 title('Sensitivity Anal')
-plot([0.5, length(cost4_sap)], [c0_11 c0_11]*10, 'b--')
+plot([0.5, length(cost4_sap)], [c0_11 c0_11], 'b--')
 plot([0.5, length(cost4_sap)], [c0_4 c0_4], 'm--')
 title('Grouped sensitivity analysis (* indicates Ca trade-off, $$$ potential of improvement)')
 legend('10xpCa11+','pCa4+','', '10xpCa11-','pCa4-','pCa11_0','pCa4_0')
@@ -189,8 +164,13 @@ figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 %% FineTuning for b, c and d
 mod = [0.6108    0.0578    1.0426    1.1110    0.5432    1.3586    0.9776    1.3503    1.2387    1.8919    0.001    1.0877    0.001    0.7421    0.4327    0.9964    1.0091];
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
-%%
-hold on; plotParams([0.4852    0.2070    1.0403    1.1617    0.7393    1.2668    1.3151    1.5592    1.1949    1.6778    3.6372    0.2425    0.0030    0.1000    0.5000 1 1]);
+%% Retuned for Fmax normalized data without Frem adjustment, incl. mu
+mod = [0.4847    0.0514    1.0389    1.1202    0.5064    1.3293    0.9757    1.3062    1.3521    1.9492    0.0003    1.0841    0.0007    0.7551    0.6101    0.9964    1.0090];
+% [0.4777    0.0503    1.0404    1.1199    0.5045    1.3213     0.9756    1.2949    1.3656    1.9521    0.0003    1.0843    0.0008    0.7595    0.6170    0.9964    1.0089];
+figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
+%% unfinished finetuning with free PEVK_A_Relaxed, costs 3e4
+mod = [0.2651    0.0171    1.0557    1.1643    0.3515    1.4502    0.9884    1.1832    1.0980    2.0724    0.0000    0.8893    0.0027    0.6528    0.6272    0.9964    1.0068];
+figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 %%
 modSel = 1:15;
 i = 14;
@@ -268,6 +248,7 @@ save mod;
 mod = [mod ones(1, 17 - length(mod))];
 modSel = [1:10 14:17];
 modSel = [11 12 13];
+modSel = 1:17;
 init = log10(mod(modSel));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 x = fminsearch(evalLogCombined, init, options);
@@ -431,12 +412,53 @@ function cost = isolateRunCombinedModel(mod, pCa, drawPlots)
     RunCombinedModel;
 end
 
-function plotParams(mod)
+function plotParams(mod, resetGca)
+
     modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)'};
     mm = min(floor(log10(mod))); n = length(mod);
     
     polarplot(linspace(2*pi/n, 2*pi, n), log10(mod) - mm, 'x-', LineWidth=2);
+    
+    if strcmp('degrees', get(gca, 'ThetaAxisUnits')) || nargin <= 2 || ~resetGca
+        % degrees means it is not adjusted yet 
+        % or the param has not been provided 
+        % or we want to reset
+        return
+    end
     set(gca, 'ThetaAxisUnits', 'radians', ...
         'thetatick', linspace(2*pi/n, 2*pi, n), 'thetaticklabel', modNames, ...
-        'Rlim', [-3 1]-mm, 'RTick', [-2 -1 0 1]-mm, 'RTickLabel', [0.01 0.1 1 10]);
+        'Rlim', [-3 1]-mm, 'RTick', [-2 -1 0 1]-mm, 'RTickLabel', [1 10 100 1000]*10^mm);
+end
+
+function [c0, cost_sap, cost_sam] = runSa(pCa, mod, saSet)
+    drawPlots = false;
+    cost_sap = []; % SA plus
+    cost_sam = []; % SA minus
+
+    % pCa = 4;
+    if drawPlots
+        figure(100);
+    end
+    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+    c0 = cost;
+    %
+    % saSet = [1:9 12:15];
+    % saSet = [1:8 13];
+    % saSet = [14 15];
+    
+    SAFact = 1.05;
+    for i_m = saSet
+        mod(i_m) = mod(i_m)*SAFact;
+        fprintf('Mod %g is up to %g..', i_m, mod(i_m));
+        % figure(i_m)
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        cost_sap(i_m) = cost;
+        
+        mod(i_m) = mod(i_m)/SAFact/SAFact;
+        fprintf('costing %1.4e€ and down to %g...', cost, mod(i_m));
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        cost_sam(i_m) = cost;
+        mod(i_m) = mod(i_m)*SAFact;
+        fprintf('costing %1.4e€. \n', cost);
+    end
 end
