@@ -165,7 +165,7 @@ mod = [0.6108    0.0578    1.0426    1.1110    0.5432    1.3586    0.9776    1.3
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 %% Retuned for Fmax normalized data without Frem adjustment, incl. mu
 mod = [0.4847    0.0514    1.0389    1.1202    0.5064    1.3293    0.9757    1.3062    1.3521    1.9492    0.0003    1.0841    0.0007    0.7551    0.6101    0.9964    1.0090];
-% mod = [0.4777    0.0503    1.0404    1.1199    0.5045    1.3213     0.9756    1.2949    1.3656    1.9521    0.0003    1.0843    0.0008    0.7595    0.6170    0.9964    1.0089];
+% [0.4777    0.0503    1.0404    1.1199    0.5045    1.3213     0.9756    1.2949    1.3656    1.9521    0.0003    1.0843    0.0008    0.7595    0.6170    0.9964    1.0089];
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 %% unfinished finetuning for Fmax normalized data without Frem with free PEVK_A_Relaxed, costs 3e4
 mod = [0.2651    0.0171    1.0557    1.1643    0.3515    1.4502    0.9884    1.1832    1.0980    2.0724    0.0000    0.8893    0.0027    0.6528    0.6272    0.9964    1.0068];
@@ -183,8 +183,8 @@ figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 mod = [0.1675    0.0321    0.9585    1.2787     0.4273    1.4061    0.0986    0.3406    0.2290    1.5851    0.4737    1.1618    0.0031    0.3933    1.4191    0.4482    1.6593    0.9094    0.6945];
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 
-%% and longer until 6.3e3
-mod = [0.1403    0.0493    0.9278    1.2795    0.4052    1.1240    0.0933    0.6228    0.1716    1.5952    0.0008    1.4658    0.0023    0.4388    2.7788    0.6790    2.9644    0.9875    0.8030];
+%% Ca dependent alphaU
+mod = [0.7168    0.0345    1.1294    1.2120    0.4802    1.5696    0.2385    0.3601    1.5007    1.9081    0.9997    0.6665    0.0000    0.9346    0.9702    0.6262    0.6327    1.0000     1.0000    1.0005];
 %%
 modSel = 1:15;
 i = 14;
@@ -206,7 +206,7 @@ tic
 % modSel = [1 2 3 5 6 10];
 % default is 403
 % modSel = [7, 9];
-mod = [mod ones(1, 19 - length(mod))]
+mod = [mod ones(1, 20 - length(mod))]
 modSel = 1:length(mod);
 
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
@@ -241,7 +241,7 @@ hold on;
 % modSel = [1 2 3 5 6 8 10 11 12 13 15];
 % mod = [    0.0140    0.3630    0.4241    1.0234    0.7953    0.2941    0.2514     0.8819    0.0135    0.8988    0.7571    4.3872    0.7510    1.2811    1.6652];
 % cost = 301.7
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 1000);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % x0 = x0([1:4 6:10 13]);
 % x0 = [0.5795    1.6029    0.9047    1.0569    0.9236    0.6627    1.0497    0.9465    1.0641    0.7124];
 
@@ -261,8 +261,7 @@ modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6
 
 
 %%
-modSel = [1:10 14:19];
-modSel = 1:19;
+modSel = [1:110 20]
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 x = fminsearch(@evalCombined, init, options, mod, modSel);
@@ -277,7 +276,7 @@ save moddd;
 % modSel = [1:10 14:17];
 % modSel = [11 12 13];
 % modSel = 1:17;
-init = log10(mod(modSel));
+init = max(-10, log10(mod(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 x = fminsearch(evalLogCombined, init, options);
 mod(modSel) = 10.^x;
@@ -402,8 +401,8 @@ function totalCost = evalCombined(optMods, mod, modSel)
 
 
     %% no Ca
-    pCa = 10;
-    figInd = 110;
+    pCa = 11;
+    figInd = 111;
     if drawPlots
         try 
             set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
@@ -442,7 +441,8 @@ end
 
 function plotParams(mod, mm, resetGca)
 
-    modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU'};
+    modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU', ...
+        'AlphaU_highCa'};
     if nargin < 2 || isempty(mm)
         mi = min(floor(log10(mod)));
         ma = mi + 3;

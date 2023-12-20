@@ -77,12 +77,17 @@ delU = 0.0125*mod(19);
 % mod = 0;
 if pCa >= 10
     kp   = mod(1)*10203*0.7;      % proximal chain force constant
-    kA   = mod(16)*0.1*16.44; % PEVK attachment rate
-    kD   = mod(17)*14.977; % PEVK detachment rate
+    % kA   = mod(16)*0.1*16.44; % PEVK attachment rate
+    % kD   = mod(17)*14.977; % PEVK detachment rate
+    kA   = mod(7)*16.44;
+    kD   = mod(8)*14.977; % PEVK detachment rate
+
+    alphaU = mod(6)*(8.4137e5)*0.7;  
 else
     kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = mod(7)*16.44;
     kD   = mod(8)*14.977; % PEVK detachment rate
+    alphaU = mod(20)*(8.4137e5)*0.7;  
 end
 % kD   = mod(8)*14.977; % PEVK detachment rate
 kd   = mod(2)*14122;        % distal chain force constant
@@ -175,6 +180,7 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
+rampSet = [1 3];
 for j = rampSet
   % tic
   V = Vlist(j); % ramp velocity
@@ -383,6 +389,12 @@ end
   % calc force
   Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
 
+  if any(isnan(Force{j}))
+      disp('error');
+      cost = inf;
+      return;
+  end
+
   % Force{j} = Force{j} + (0.55e6)*0.225^8*mod(10); 
 
 
@@ -424,7 +436,7 @@ for j = rampSet
     Es{j} = w.*(Ftot_int{j} - datatable_cur.F).^2; % error set
     Es{j}(isnan(Es{j})) = 0; % zero outside bounds
     En{j} = 1e3*sum(Es{j})/length(Es{j}); % normalized error
-
+    
     PeakData(j, 1) = rds(j);
     PeakData(j, 2) = max(datatable_cur.F);
     PeakModel(j) = max(Ftot_int{j});
@@ -439,7 +451,7 @@ for j = 1:length(PeakModel)
     end
 end
 
-Ep = sum((PeakData(:, 2) - PeakModel(:)).^2);
+Ep = nansum((PeakData(:, 2) - PeakModel(:)).^2);
 % discarding peak fit for high Ca's
 if pCa < 10
     Ep = 0;
@@ -451,6 +463,8 @@ cost = Ep*100 + sum([En{1:end}], 'all');
 if exist('drawPlots', 'var') && ~drawPlots
     return;
 end
+try
+
 %%
 % zoomIns = [0 200 0 10;...
 %            0 20 0 15;...
@@ -460,7 +474,7 @@ end
 %            ];
 
 clf;
-colors = lines(length(rampSet)+1);
+colors = lines(max(rampSet)+1);
 
 % max out of all
 ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
@@ -478,7 +492,10 @@ set(sp, 'YLim', [0 ym*1])
 % shift of peaks to have the same tail - just guessed
 shift = [-8.6, -0.78, 0];
 
-for j = length(rampSet):-1:1
+for j = max(rampSet):-1:1
+    if isempty(Force{j})
+        continue;
+    end
 % figure(j); clf; axes('position',[0.15 0.15 0.8 0.80]); hold on; box on;
     % subplot(1, 3, j);hold on;
 %% primary plot - semilog
@@ -558,6 +575,10 @@ legend('Peaks (Data)', 'Peaks (Model)', 'Location', 'southeast')
 h = annotation('textbox', [0.07 0.95 0 0], 'String', 'A)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
 h = annotation('textbox', [0.5 0.95 0 0], 'String', 'B)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
 h = annotation('textbox', [0.07 0.5 0 0], 'String', 'C)', 'FitBoxToText', false, 'FontSize', 32, 'FontWeight','bold');
+%%
+catch e
+    disp(e.message)
+end
 %%
 
 % fig = gcf;

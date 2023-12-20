@@ -331,7 +331,7 @@ for i_rds = 1:length(rds)
     
     tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1)*Fmax);
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
 
     % Fill the area between upper and lower bounds to show the confidence interval
