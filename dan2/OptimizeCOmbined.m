@@ -59,8 +59,8 @@ mod(13) = -2.8;
 % mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
 % mod = [0.0185    0.8479    0.4307    1.0234    1.0326 0.5971    0.9379    1.1950    0.9099    0.8988 1.0000    1.4450    0.7510    1.2811    2.7365];
 tic
-saSet = 1:15;
-[c0_11, cost11_sap, cost11_sam] = runSa(11, saSet);
+saSet = 1:20;
+[c0_11, cost11_sap, cost11_sam] = runSa(11, mod, saSet);
 [c0_4, cost4_sap, cost4_sam] = runSa(4.4, mod, saSet);
 % normalize
 cost11_sam = cost11_sam/c0_11;
@@ -69,7 +69,7 @@ cost4_sam = cost4_sam/c0_4;
 cost4_sap = cost4_sap/c0_4;
 toc
 %% plot the result
-modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
+% modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
 
 c0_11 = 1;
 c0_4 = 1;
@@ -88,7 +88,7 @@ tdoCas = strings(1, length(cost4_sap));tdoCas(tdoCa) = "*";
 figure(101);clf; 
 b = bar([cost11_sap; cost4_sap; zeros(size(cost4_sap)); cost11_sam;cost4_sam]'); hold on;
 title('Sensitivity Anal')
-plot([0.5, length(cost4_sap)], [c0_11 c0_11], 'b--')
+plot([0.5, length(cost4_sap)], [c0_11 c0_11], 'b:')
 plot([0.5, length(cost4_sap)], [c0_4 c0_4], 'm--')
 title('Grouped sensitivity analysis (* indicates Ca trade-off, $$$ potential of improvement)')
 legend('10xpCa11+','pCa4+','', '10xpCa11-','pCa4-','pCa11_0','pCa4_0')
@@ -184,7 +184,15 @@ mod = [0.1675    0.0321    0.9585    1.2787     0.4273    1.4061    0.0986    0.
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 
 %% Ca dependent alphaU
+clf
 mod = [0.7168    0.0345    1.1294    1.2120    0.4802    1.5696    0.2385    0.3601    1.5007    1.9081    0.9997    0.6665    0.0000    0.9346    0.9702    0.6262    0.6327    1.0000     1.0000    1.0005];
+plotParams(mod, [-2, 3]);hold on;
+
+%% fixed bug in alphaU_LowCa, optim at 0.1 and 10s only with 3.8e3, but 7.6e3 for all three and 9.46e3 for all 4
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785   0.6262    0.6327    1.0000    1.0000  415.4241];
+% mod(setdiff(1:20, modSel)) = NaN;
+plotParams(mod, [-2, 3]);hold on;
+
 %%
 modSel = 1:15;
 i = 14;
@@ -261,7 +269,7 @@ modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6
 
 
 %%
-modSel = [1:110 20]
+modSel = [1:11 20]
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 x = fminsearch(@evalCombined, init, options, mod, modSel);
@@ -275,7 +283,7 @@ save moddd;
 % mod = [mod ones(1, 17 - length(mod))];
 % modSel = [1:10 14:17];
 % modSel = [11 12 13];
-% modSel = 1:17;
+modSel = [1:15 20];
 init = max(-10, log10(mod(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 x = fminsearch(evalLogCombined, init, options);
@@ -401,6 +409,8 @@ function totalCost = evalCombined(optMods, mod, modSel)
 
 
     %% no Ca
+    % pca 11 does not evaluate PEVK binding at all, leading to faster
+    % simulation. pCa 10 does.
     pCa = 11;
     figInd = 111;
     if drawPlots

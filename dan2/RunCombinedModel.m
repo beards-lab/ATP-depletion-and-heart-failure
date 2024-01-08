@@ -15,7 +15,7 @@ end
 drawAllStates = false;
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
-rds = fliplr([0.1, 1, 10]);
+rds = fliplr([0.1, 1, 10, 100]);
 % rds = fliplr([0.1, 10]);
 for i_rd = 1:length(rds)
   if isinf(pCa) || pCa >= 10
@@ -91,7 +91,7 @@ else
 end
 % kD   = mod(8)*14.977; % PEVK detachment rate
 kd   = mod(2)*14122;        % distal chain force constant
-alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
+% alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
 alphaF = 0; % chain folding rate constant - not implemented yet
 np = mod(3)*3.27; % proximal chain force exponent
 nd = mod(5)*3.25; % distal chain force exponent
@@ -180,7 +180,7 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
-rampSet = [1 3];
+% rampSet = [1 3];
 for j = rampSet
   % tic
   V = Vlist(j); % ramp velocity
@@ -250,6 +250,9 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
         % disable
         % time_snaps = [];i_time_snaps = [];
         for i = 1:length(time_snaps)
+            if time_snaps(i) > t
+                break;
+            end
             i_time_snaps(i) = find(t>=time_snaps(i), 1, 'first');    
         end
     end
@@ -490,7 +493,7 @@ set(sp, 'XLim', [-1 30+max(rds)]);
 set(sp, 'YLim', [0 ym*1])
 
 % shift of peaks to have the same tail - just guessed
-shift = [-8.6, -0.78, 0];
+shift = [-92, -8.6, -0.78, 0];
 
 for j = max(rampSet):-1:1
     if isempty(Force{j})

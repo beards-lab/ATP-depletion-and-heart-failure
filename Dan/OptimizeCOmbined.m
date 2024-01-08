@@ -59,8 +59,8 @@ mod(13) = -2.8;
 % mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
 % mod = [0.0185    0.8479    0.4307    1.0234    1.0326 0.5971    0.9379    1.1950    0.9099    0.8988 1.0000    1.4450    0.7510    1.2811    2.7365];
 tic
-saSet = 1:15;
-[c0_11, cost11_sap, cost11_sam] = runSa(11, saSet);
+saSet = 1:19;
+[c0_11, cost11_sap, cost11_sam] = runSa(11, mod, saSet);
 [c0_4, cost4_sap, cost4_sam] = runSa(4.4, mod, saSet);
 % normalize
 cost11_sam = cost11_sam/c0_11;
@@ -69,7 +69,7 @@ cost4_sam = cost4_sam/c0_4;
 cost4_sap = cost4_sap/c0_4;
 toc
 %% plot the result
-modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
+% modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0'};
 
 c0_11 = 1;
 c0_4 = 1;
@@ -184,7 +184,18 @@ mod = [0.1675    0.0321    0.9585    1.2787     0.4273    1.4061    0.0986    0.
 figure(99);plotParams(mod);evalCombined(mod, mod, 1:17)
 
 %% and longer until 6.3e3
-mod = [0.1403    0.0493    0.9278    1.2795    0.4052    1.1240    0.0933    0.6228    0.1716    1.5952    0.0008    1.4658    0.0023    0.4388    2.7788    0.6790    2.9644    0.9875    0.8030];
+clf
+mod = [0.1403    0.0493    0.9278    1.2795    0.4052    1.1240    0.0933    0.6228    0.1716    1.5952    0.0008    1.4658    0.0023    0.4388    2.7788    0.6790    2.9644    0.9875    0.8030 1.1240];
+plotParams(mod, [-2, 1]);hold on;
+%% add alphaU_LowCa, optim at 0.1 and 10s only with 4.3e3, but 7.25e3 for all three and 9.6593e+03 for all four
+clf;
+mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1476];
+plotParams(mod, [-2, 3]);hold on;
+
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785   0.6262    0.6327    1.0000    1.0000  415.4241];
+% mod(setdiff(1:20, modSel)) = NaN;
+plotParams(mod, [-2, 3]);hold on;
+legend('Extended set', 'Reduced set')
 %%
 modSel = 1:15;
 i = 14;
@@ -206,7 +217,7 @@ tic
 % modSel = [1 2 3 5 6 10];
 % default is 403
 % modSel = [7, 9];
-mod = [mod ones(1, 19 - length(mod))]
+mod = [mod ones(1, 20 - length(mod))]
 modSel = 1:length(mod);
 
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
@@ -277,7 +288,8 @@ save moddd;
 % modSel = [1:10 14:17];
 % modSel = [11 12 13];
 % modSel = 1:17;
-init = log10(mod(modSel));
+modSel = [1:17 20];
+init = max(-10, log10(mod(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 x = fminsearch(evalLogCombined, init, options);
 mod(modSel) = 10.^x;
@@ -391,10 +403,6 @@ function totalCost = evalCombined(optMods, mod, modSel)
 
     %% pCa 6
     % pCa = 6;
-    % mod([7,9]) = [0.1657, 0.3895];
-    % if drawPlots
-    %     f = figure(35);f.Name = 'pCa 6';
-    % end
     % 
     % cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     % totalCost = totalCost + cost;
@@ -403,36 +411,32 @@ function totalCost = evalCombined(optMods, mod, modSel)
 
     %% no Ca
     pCa = 10;
-    figInd = 110;
-    if drawPlots
-        try 
-            set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
-        catch 
-            f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
-            f.Name = 'pCa 11';
-        end        
-    end    
+    plotOnBackground(drawPlots, pCa);
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     totalCost = totalCost + cost*10;
 % return
     %% pCa 4
     pCa = 4.4;
-    figInd = 104;
-    % mod([7,9]) = [0.9403    0.9889];
-    if drawPlots
-        try 
-            set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
-        catch 
-            f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
-            f.Name = 'pCa 4.4';
-        end
-    end
+    plotOnBackground(drawPlots, pCa);
     % RunCombinedModel;
     cost = isolateRunCombinedModel(mod, pCa, drawPlots);
     totalCost = totalCost + cost;
 
 end
+
+function plotOnBackground(drawPlots, pCa)
+    figInd = 100 + round(pCa*10);
+    if drawPlots
+        try 
+            set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
+        catch 
+            f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
+            f.Name = ['pCa ' num2str(pCa)];
+        end
+    end
+end
+
 
 function cost = isolateRunCombinedModel(mod, pCa, drawPlots)
 % just to isolate the script, so the variables can't intervene
@@ -442,7 +446,10 @@ end
 
 function plotParams(mod, mm, resetGca)
 
-    modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU'};
+    % modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU'};
+    modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU', ...
+        'AlphaU_highCa'};
+
     if nargin < 2 || isempty(mm)
         mi = min(floor(log10(mod)));
         ma = mi + 3;
