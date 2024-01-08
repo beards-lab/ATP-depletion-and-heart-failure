@@ -30,7 +30,7 @@ for i = 1:size(dataset, 2)
     %  the pCa starts about halfway the dataset
     i_start = find(rmp.t > 100, 1, 'first');
     i_firstSteps = find(rmp.L(i_start:end) > 1.001, 1, 'first') - 5 + i_start;
-    rmp.t([i_start, i_firstSteps])
+    % rmp.t([i_start, i_firstSteps])
 
     % plot(rmp.t(i_start:i_firstSteps), rmp.F(i_start:i_firstSteps), 'x')
     [maxF i_max] = max(rmp.F(i_start:i_firstSteps));
@@ -191,7 +191,12 @@ for i_dtst = 1:length(i_pca4_4_100ms_hold300)
 end
 
 %% Average all data
+% figure(5);clf;
+% shift of peaks to have the same tail - just guessed
+rampShift = [-94, -7.2, -0.35, 0];
+
 figure(4);clf;hold on;
+
 clear peaks peaks_norm leg;
 
 for i_rds = 1:length(rds)
@@ -290,7 +295,7 @@ for i_rds = 1:length(rds)
             n = n + 1;
             % shrink to shortest one
             outF  = outF(1:L)  + (F(1:L)     - outF(1:L))/n;
-            outFr = outFr(1:L) + (rmp.F(1:L) - outFr(1:L))/n;
+            outFr = outFr(1:L) + (rmp.Fraw(1:L) - outFr(1:L))/n;
             outT = rmp.t(1:L);
             % avg the peaks to rescale back
             Fmax = Fmax + (base_rel - Fmax)/n;
@@ -307,7 +312,10 @@ for i_rds = 1:length(rds)
         % 
         % [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
         % as(i_rds, i_logtrace) = ae.a;
-
+        figure(5);
+        semilogx(rmp.t + rampShift(i_rds), rmp.Fraw, '-', Color=[clin(i_logtrace, :), 0.1]);hold on;
+        figure(4);
+        
         
     end
 %% resample and save
@@ -358,6 +366,18 @@ for i_rds = 1:length(rds)
     elseif i_rds == 4
         xlabel('Time (s)')
     end    
+    
+    % figure(5);
+    % rampShift = [-92, -8.6, -0.58, 0];
+    % semilogx(outT + rampShift(i_rds), outFr, 'k-', LineWidth=1);hold on;
+    % xlim([1e-2 1e2])
+    % figure(4);
+    % Tarr{i_rds} = t_s;
+    % Farr{i_rds} = interp1(outT, outFr, t_s, "pchip", 'extrap');
+    Tarr{i_rds} = outT;
+    Farr{i_rds} = outFr;
+    
+
 end
 % peak sum up
 % normtype = 'Norm to highest peak'
@@ -436,7 +456,18 @@ ylim([0, yl(2)]);
 % subplot(133);hold on;
 % plot(rmp.t(win), [0 ;diff(movmean(F_corr(win), 4e5))], '+-', LineWidth=2);
 % plot(rmp.t(win), FremIncrS)
-return
+
+%% Compare the shift
+
+% rampShift = [-94, -7.2, -0.35, 0];
+figure(5);
+% clf;
+for i_rds = 4:-1:1
+    semilogx(Tarr{i_rds} + rampShift(i_rds), Farr{i_rds}, 'k', LineWidth=5-i_rds);hold on;
+end
+xlim([1e-1, 50])
+
+return;
 %% compare pca and relaxed
 
 figure(5);clf;

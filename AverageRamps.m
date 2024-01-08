@@ -131,7 +131,9 @@ for i_rds = 1:length(rds)
         % [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
         % as(i_rds, i_logtrace) = ae.a;
 
-        
+        figure(7);
+        semilogx(rmp.t + rampShift(i_rds), rmp.F, '-', Color=[clin(i_logtrace, :), 0.1]);hold on;
+        figure(3);        
     end
 %% resample and save
     
@@ -174,7 +176,10 @@ for i_rds = 1:length(rds)
         %     [sp.Position(1) + sp.Position(3) + x, sp.Position(2) - y, 1 - sp.Position(1) - sp.Position(3) - x, sp.Position(4)])
     elseif i_rds == 4
         xlabel('Time (s)')
-    end    
+    end   
+    
+    Tarr{i_rds} = outT;
+    Farr{i_rds} = outF;
 end
 % peak sum up
 subplot(4, 4, [3 16]);cla;
@@ -224,6 +229,17 @@ title('Absolute peak height')
 
 % boxplot(peaks', 'Positions',rds)
 % end
+%% Overlap of the tails
+figure(7);
+% clf;
+cg = gray(5);
+for i_rds = 4:-1:1
+    semilogx(Tarr{i_rds} + rampShift(i_rds), Farr{i_rds}, Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
+end
+xlim([1e-1, 50])
+ylim([1 20])
+title('no Ca ramp overlap')
+
 %% the same, but for pCa
 % ds = readtable(['Data\AvgpCa4.4_0.1s.csv']);
   
