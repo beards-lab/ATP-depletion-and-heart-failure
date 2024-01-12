@@ -20,12 +20,12 @@ relaxed{2} = [1, 1, 8;2, 1, 7;3, 1, 7;4,1,8;5, 1, 8;6, 1, 8];
 relaxed{3} = [1, 1, 7;2, 1, 8;3, 1, 8;4,1,7;5, 1, 7;6, 1, 7];
 relaxed{4} = [1, 1, 6;2, 1, 9;3, 1, 9;4,1,6;5, 1, 6;6, 1, 6];
 
-% peaks = relaxed;
-% % Only with decay 60s+
-% relaxed{1} = [3, 1, 6;4, 1, 6;5,1,9];
-% relaxed{2} = [3, 1, 7;4, 1, 7;5,1,8];
-% relaxed{3} = [3, 1, 8;4, 1, 8;5,1,7];
-% relaxed{4} = [3, 1, 9;4, 1, 9;5,1,6];
+peaks = relaxed;
+% Only with decay 60s+
+relaxed{1} = [2, 1, 6;3, 1, 6;4, 1, 9;5,1,9;6, 1, 9];
+relaxed{2} = [2, 1, 7;3, 1, 7;4, 1, 8;5,1,8;6, 1, 8];
+relaxed{3} = [2, 1, 8;3, 1, 8;4, 1, 7;5,1,7;6, 1, 7];
+relaxed{4} = [2, 1, 9;3, 1, 9;4, 1, 6;5,1,6;6, 1, 6];
 
 % % with PNB
 % relaxed{1} = [1, 1, 2;2, 1, 2;2, 1, 9;3, 1, 6;4, 1, 6;5,1,9];
@@ -231,15 +231,123 @@ title('Absolute peak height')
 % end
 %% Overlap of the tails
 figure(7);
-% clf;
+clf;
 cg = gray(5);
-for i_rds = 4:-1:1
-    semilogx(Tarr{i_rds} + rampShift(i_rds), Farr{i_rds}, Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
+clin = lines(5);
+ylmi = Inf;ylma = -Inf;
+% c0space = -3:1:3;
+% cost_c0 = zeros(size(c0space));
+% for i_c0 = 1:length(c0space)
+rampShift = [-97, -8, -0.3, 0];
+rampShift = -[0 0 -0.9 -1.5 0]
+rampShiftY = [0 0 1.6  - 1.5 0]
+c0space = -[1 1 0 0];
+for i_rds = 4:-1:3
+    %%
+    Favg = movmean(Farr{i_rds}, [10 10]*i_rds) + c0space(i_rds);
+    ylmi = min(Favg(end), ylmi);ylma = max([Favg; ylma]);
+    loglog(Tarr{i_rds} + rampShift(i_rds), Favg + rampShiftY(i_rds), Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
+
+    % resample log equally from the peak
+    t_s = logspace(log10(rds(i_rds)*1.01), log10(Tarr{i_rds}(end)), 60);
+    % force interpolation
+    Fint = interp1(Tarr{i_rds}, Favg, t_s, "pchip", 'extrap');
+    % loglog(t_s + rampShift(i_rds), Fint, '-x', Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
+
+    % PowerFunction
+    pf = @(a, b, c, d, x) a*(x-rds(i_rds)).^(-b) + a*b*c*d*0;
+    [ae goodness] = fit(t_s', Fint', pf, 'StartPoint', [1, 0.1, 3, 0], 'Lower',[0 0 0 -Inf], 'Upper',[Inf 1 10, Inf]);
+    goodness.rmse
+    cost_c0(i_c0) = cost_c0(i_c0) + goodness.rmse;
+    t_ext = [t_s,logspace(log10(t_s(end)), log10(t_s(end)*10), 10)] + rampShift(i_rds);    
+    t_ext = [t_s linspace(30, 1000, 10)];
+    loglog(t_ext + rampShift(i_rds), pf(ae.a, ae.b, ae.c, ae.d, t_ext) + + rampShiftY(i_rds), '--', Color=[clin(5-i_rds, :)], LineWidth=2);
 end
+% end
 xlim([1e-1, 50])
-ylim([1 20])
+ylim([7 ylma])
 title('no Ca ramp overlap')
+%%
+% figure(8);clf;
+% plot(c0space, cost_c0, '|--');
 
 %% the same, but for pCa
 % ds = readtable(['Data\AvgpCa4.4_0.1s.csv']);
-  
+
+% fitfun = @(init) evalPowerFit([0 0 0 init(1) init(2)], Farr, Tarr)
+fitfun = @(init) evalPowerFit(init, Farr, Tarr);
+clf;
+% init = [rampShift(1), rampShift(2), rampShift(3), 0.1, 2]
+% init(4:5) = x(4:5);
+% estim on all 6 datasets
+% x = [0.0452    0.0063   -0.0003 0.1298    3.5574];
+% x = [0.0452    0.0063   -0.0003 0.1298    3.5574];
+% estim on 60s decays
+x = [0 0 0 0.1182    3.2011];
+x = [0.1182    3.2011];
+% x = [0.1933    4.8597];
+% x = [0.2029    5.0110];
+x = [0.2050    5.2430];
+% consider 1/2 samples for each second, start optim from second sample
+x = [0.1919    4.9227];
+% consider 100 samples for each second, start optim from second sample
+x = [0.1338    3.7595];
+% let b free, fix c only
+% fitfun = @(init) evalPowerFit([init(1:3) 0 init(4)], Farr, Tarr)
+% x = [0 0 0 0.9048];
+x = [10 1 0.1 0.9048];
+% this is pretty good
+x = [10.4485    1.0067    0.0299  0 1.2534];
+x = [4.7344    0.7637    0.0209  0  2.2266];
+x = [4.2850    0.7909    0.0787  0.0051    4.2050];
+c = fitfun(x)
+%% init = x;
+title({"Averaged true viscous force F_{ss}, shifted by ramp-up duration time", "and fitted by power law decay"})
+ylabel('Viscous force (kPa)');xlabel('Time (s)')
+ 
+%%
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
+    'TolX', 0.001, 'PlotFcns', @optimplotfval, 'MaxIter', 100);
+% init(1:3) = [0 0 0]
+init = x;
+x = fminsearch(fitfun, init, options)
+
+function cost_c0 = evalPowerFit(params, Farr, Tarr)
+rampShift = [params(1:4) ]; 
+% b = params(4); 
+c = params(5);
+% rampShift = [0 0 0 0];
+    cost_c0 = 0;
+    cg = gray(6);
+    clin = lines(5);
+    rds = [100.0000   10.0000    1.0000    0.1000];
+    set(groot,'CurrentFigure',2); % replace figure(indFig) without stealing the focus
+    % figure(2);
+    clf;
+    param_a = string();
+    for i_rds = 4:-1:1
+        %%
+        Favg = movmean(Farr{i_rds}, [0 0]) - c;
+        % loglog(Tarr{i_rds} + rampShift(i_rds), Favg -c, Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
+    
+        % resample log equally from the peak
+        t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*100);
+        % force interpolation
+        Fint = interp1(Tarr{i_rds}, Favg, t_s, "pchip", 'extrap');
+        loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+    
+        % PowerFunction
+        pf = @(a, b, x) a*(x-rds(i_rds) + rampShift(i_rds)).^(-b);
+        try
+            [ae goodness] = fit(t_s(2:end)', Fint(2:end)', pf, 'StartPoint', [1, 0.1]);%, 'Lower',[0 0 0 -Inf], 'Upper',[Inf 1 10, Inf]);
+        catch e
+            disp(e)
+        end
+        cost_c0 = cost_c0 + goodness.rmse;%/length(t_s);
+        t_ext = [t_s(2:end),logspace(log10(t_s(end)), log10(1e4), 100)];    
+        l(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+        param_a(i_rds) = sprintf('%0.2f (t - %0.1f + %0.2f)^{-%0.2f}', ae.a,rds(i_rds), rampShift(i_rds), ae.b);
+    end
+    legend(l, num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)))
+    title(num2str(cost_c0))
+end
