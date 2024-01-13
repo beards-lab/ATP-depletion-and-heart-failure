@@ -302,8 +302,10 @@ x = [4.7344    0.7637    0.0209  0  2.2266];
 x = [4.2850    0.7909    0.0787  0.0051    4.2050];
 c = fitfun(x)
 %% init = x;
-title({"Averaged true viscous force F_{ss}, shifted by ramp-up duration time", "and fitted by power law decay"})
+title({"Averaged true viscous force F_{ss}, shifted by ramp-up duration time,", "fitted by power law decay and extrapolated to 24hrs"})
 ylabel('Viscous force (kPa)');xlabel('Time (s)')
+xlim([1e-2, 1e5])                                   
+% ylim([4, 18])
  
 %%
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
@@ -331,10 +333,10 @@ c = params(5);
         % loglog(Tarr{i_rds} + rampShift(i_rds), Favg -c, Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
     
         % resample log equally from the peak
-        t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*100);
+        t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*10);
         % force interpolation
         Fint = interp1(Tarr{i_rds}, Favg, t_s, "pchip", 'extrap');
-        loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+        l_d(i_rds) = loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint +0*c, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
     
         % PowerFunction
         pf = @(a, b, x) a*(x-rds(i_rds) + rampShift(i_rds)).^(-b);
@@ -344,10 +346,15 @@ c = params(5);
             disp(e)
         end
         cost_c0 = cost_c0 + goodness.rmse;%/length(t_s);
-        t_ext = [t_s(2:end),logspace(log10(t_s(end)), log10(1e4), 100)];    
-        l(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+        t_ext = [t_s(2:end),logspace(log10(t_s(end)), log10(24*60*60), 100)];    
+        l_f(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
         param_a(i_rds) = sprintf('%0.2f (t - %0.1f + %0.2f)^{-%0.2f}', ae.a,rds(i_rds), rampShift(i_rds), ae.b);
     end
-    legend(l, num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)))
+    % xl = xlim();
+    % l_f(length(l_f)+1) = loglog(xl, [c, c], 'r--');
+    % xlim(xl);
+    % yl = ylim();
+    % ylim([yl(1)*0.9, yl(2)])
+    legend([l_d l_f], 'Ramp-up 100s', 'Ramp-up 10s', 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)), 'True F_{ss}')
     title(num2str(cost_c0))
 end
