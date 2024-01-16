@@ -61,7 +61,10 @@ rds = [100, 10, 1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % only final dataset
 pCa = 4.4;
+pCa = 5.5;
+pCa = 5.75;
 pCa = 6;
+pCa = 6.25;
 
 switch pCa
     case 4.4
@@ -74,26 +77,26 @@ switch pCa
         dsName = 'AvgpCa4.4';
     case 5.5
         %% 5.5 - only 100ms in latter experiments
-        pcaData{1} = [];pcaData{2} = [];pcaData{3} = [];
-        pcaData{4} = [1,3,5;2,3,11;3,3,11;4,3,12;5,3,12;6,3,12];
+        pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
+        pCaData{4} = [1,3,5;2,3,11;3,3,11;4,3,12;5,3,12;6,3,12];
         i_pca100ms_hold = [3 5; 3 11; 3 11;3 12; 3 12; 3 12];
         dsName = 'AvgpCa5.5';
     case 5.75
         %% 5.75 - only 100ms in latter experiments
-        pcaData{1} = [];pcaData{2} = [];pcaData{3} = [];
-        pcaData{4} = [1,4,5;2,3,12;3,3,12;4,3,13;5,3,13;6,3,13];
+        pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
+        pCaData{4} = [1,4,5;2,3,12;3,3,12;4,3,13;5,3,13;6,3,13];
         i_pca100ms_hold = [4 5; 3 12; 3 12;3 13; 3 13; 3 13];
         dsName = 'AvgpCa5.75';
     case 6.0
         %% 6.0 - only 100ms in latter experiments
-        pcaData{1} = [];pcaData{2} = [];pcaData{3} = [];
-        pcaData{4} = [1,5,5;2,3,13;3,3,13;4,3,14;5,3,14;6,3,14];
+        pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
+        pCaData{4} = [1,5,5;2,3,13;3,3,13;4,3,14;5,3,14;6,3,14];
         i_pca100ms_hold = [5 5; 3 13; 3 13;3 14; 3 14; 3 14];
         dsName = 'AvgpCa6.0';
     case 6.25
         %% 6.25 - only 100ms in latter experiments
-        pcaData{1} = [];pcaData{2} = [];pcaData{3} = [];
-        pcaData{4} = [1,6,5;2,3,14;3,3,14;4,3,15;5,3,15;6,3,15];
+        pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
+        pCaData{4} = [1,6,5;2,3,14;3,3,14;4,3,15;5,3,15;6,3,15];
         i_pca100ms_hold = [5 5; 3 14; 3 14;3 15; 3 15; 3 15];
         dsName = 'AvgpCa6.25';
 end
@@ -265,6 +268,9 @@ for i_rds = 1:length(rds)
     end
     outF = [];sum_squared_diff = []; n = 1;clear leg;
     rampSet = pCaData{i_rds};
+    if isempty(rampSet)
+        continue;
+    end
     clin = lines(size(rampSet, 1)+1);
 
     for i_logtrace = 1:size(rampSet, 1)

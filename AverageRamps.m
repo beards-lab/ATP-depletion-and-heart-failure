@@ -131,9 +131,9 @@ for i_rds = 1:length(rds)
         % [ae goodness] = fit(rmpFitrg.L, rmpFitrg.F,fitfun, 'StartPoint',[1, 1]);
         % as(i_rds, i_logtrace) = ae.a;
 
-        figure(7);
-        semilogx(rmp.t + rampShift(i_rds), rmp.F, '-', Color=[clin(i_logtrace, :), 0.1]);hold on;
-        figure(3);        
+        % figure(7);
+        % semilogx(rmp.t + rampShift(i_rds), rmp.F, '-', Color=[clin(i_logtrace, :), 0.1]);hold on;
+        % figure(3);        
     end
 %% resample and save
     
