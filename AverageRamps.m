@@ -336,25 +336,56 @@ c = params(5);
         t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*10);
         % force interpolation
         Fint = interp1(Tarr{i_rds}, Favg, t_s, "pchip", 'extrap');
-        l_d(i_rds) = loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint +0*c, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
     
         % PowerFunction
         pf = @(a, b, x) a*(x-rds(i_rds) + rampShift(i_rds)).^(-b);
+        % ef = @(a, b, x) a*b^(x-rds(i_rds) + rampShift(i_rds));
         try
             [ae goodness] = fit(t_s(2:end)', Fint(2:end)', pf, 'StartPoint', [1, 0.1]);%, 'Lower',[0 0 0 -Inf], 'Upper',[Inf 1 10, Inf]);
+            % [ae goodness] = fit(t_s(2:end)', Fint(2:end)', ef, 'StartPoint', [1, 2]);%, 'Lower',[0 0 0 -Inf], 'Upper',[Inf 1 10, Inf]);
         catch e
             disp(e)
         end
         cost_c0 = cost_c0 + goodness.rmse;%/length(t_s);
         t_ext = [t_s(2:end),logspace(log10(t_s(end)), log10(24*60*60), 100)];    
+        % l_f(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+        subplot(131);
+        semilogx(t_s + rampShift(i_rds) - rds(i_rds), Fint + c, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+        semilogx(t_ext+rampShift(i_rds)-rds(i_rds), c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+        subplot(133);
+        l_d(i_rds) = loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint +0*c, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
         l_f(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+        subplot(132);
+        semilogy(t_s + rampShift(i_rds) - rds(i_rds), Fint + c*0, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+        semilogy(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
         param_a(i_rds) = sprintf('%0.2f (t - %0.1f + %0.2f)^{-%0.2f}', ae.a,rds(i_rds), rampShift(i_rds), ae.b);
     end
+    %just for the legend
+    subplot(131);
+    xl = xlim();
+    l_g = loglog(xl, [c, c], 'r--');
+    xlim([1e-2 300])
+    title('A: Log-linear plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
+    legend(l_g, 'Fss');
+    
+    subplot(132);
+    % l_f(length(l_f)+1) = loglog(NaN, NaN, 'r--');
     % xl = xlim();
     % l_f(length(l_f)+1) = loglog(xl, [c, c], 'r--');
+    xlim([1e-2 300])
+    title('B: Linear-log a_i(x-r_d - \tau_{0, i})^{\tau_i}')
+    
+
+    subplot(133);
+    xlim([1e-2 1e5])
+    xl = xlim();
+    title('C: Log-log plot a_i(x-r_d - \tau_{0, i})^{\tau_i}, extrapolated to 24hrs')
+    % loglog(xl, [c, c], 'r--');
     % xlim(xl);
     % yl = ylim();
     % ylim([yl(1)*0.9, yl(2)])
     legend([l_d l_f], 'Ramp-up 100s', 'Ramp-up 10s', 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)), 'True F_{ss}')
-    title(num2str(cost_c0))
+    % legend([l_d l_f], 'Ramp-up 100s', 'Ramp-up 10s', 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)), 'True F_{ss}')
+    % legend([l_d(3:4) l_f(3:4)], 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(3)), num2str(param_a(4)), 'True F_{ss}')
+    % title(num2str(cost_c0))
 end
