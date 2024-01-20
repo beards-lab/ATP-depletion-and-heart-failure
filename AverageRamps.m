@@ -71,13 +71,13 @@ for i_rds = 1:length(rds)
         % base rebase not base
         base_rel = 1;
         % base on absolute peak
-        % base_rel = max(rmp.F);
+        base_rel = max(rmp.F);
         % base on steady state
         % base_rel = rmp.F(end);
         % base on max relaxed peak
         % base_rel = peaks_relaxed(4, i_logtrace);
         % base on Fmax, if available (in AverageRampsCa)
-        % base_rel = dataset_maxF(rampSet(i_logtrace, 1));
+        base_rel = dataset_maxF(rampSet(i_logtrace, 1));
         % base on staeady state of the slowest ramp (in AverageRampsCa)
         % base_rel = dataset_ssF(i_logtrace);
 
@@ -179,7 +179,7 @@ for i_rds = 1:length(rds)
     end   
     
     Tarr{i_rds} = outT;
-    Farr{i_rds} = outF;
+    Farr{i_rds} = outF*Fmax;
 end
 % peak sum up
 subplot(4, 4, [3 16]);cla;
@@ -276,7 +276,7 @@ title('no Ca ramp overlap')
 
 % fitfun = @(init) evalPowerFit([0 0 0 init(1) init(2)], Farr, Tarr)
 fitfun = @(init) evalPowerFit(init, Farr, Tarr);
-clf;
+figure(2);clf;
 % init = [rampShift(1), rampShift(2), rampShift(3), 0.1, 2]
 % init(4:5) = x(4:5);
 % estim on all 6 datasets
@@ -300,13 +300,18 @@ x = [10 1 0.1 0.9048];
 x = [10.4485    1.0067    0.0299  0 1.2534];
 x = [4.7344    0.7637    0.0209  0  2.2266];
 x = [4.2850    0.7909    0.0787  0.0051    4.2050];
+
+x = [6.2885    1.2324    0.0530    0.0065   4.4534];
+% C_avg = mean([0.187    0.197 0.175    0.183])
+% C_std = std([0.187    0.197 0.175    0.183])
+% alpha_avg = mean([0.187    0.197 0.175    0.183])
+% alpha_std = std([0.187    0.197 0.175    0.183])
 c = fitfun(x)
 %% init = x;
 title({"Averaged true viscous force F_{ss}, shifted by ramp-up duration time,", "fitted by power law decay and extrapolated to 24hrs"})
 ylabel('Viscous force (kPa)');xlabel('Time (s)')
 xlim([1e-2, 1e5])                                   
 % ylim([4, 18])
- 
 %%
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
     'TolX', 0.001, 'PlotFcns', @optimplotfval, 'MaxIter', 100);
@@ -315,6 +320,8 @@ init = x;
 x = fminsearch(fitfun, init, options)
 
 function cost_c0 = evalPowerFit(params, Farr, Tarr)
+%%
+plotResults = true;
 rampShift = [params(1:4) ]; 
 % b = params(4); 
 c = params(5);
@@ -336,6 +343,10 @@ c = params(5);
         t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*10);
         % force interpolation
         Fint = interp1(Tarr{i_rds}, Favg, t_s, "pchip", 'extrap');
+        % t_s_ru = [logspace(log10(1e-2), log10(rds(i_rds)), 10) t_s(2:end)];% including ramp-up
+        t_s_ru = [linspace(0, rds(i_rds), 20) t_s(2:end)];% including ramp-up
+        t_s_ru = [0:0.01:rds(i_rds) t_s(2:end)];% including ramp-up
+        Fint_ru = interp1(Tarr{i_rds}, Favg, t_s_ru, "pchip", 'extrap');
     
         % PowerFunction
         pf = @(a, b, x) a*(x-rds(i_rds) + rampShift(i_rds)).^(-b);
@@ -349,43 +360,56 @@ c = params(5);
         cost_c0 = cost_c0 + goodness.rmse;%/length(t_s);
         t_ext = [t_s(2:end),logspace(log10(t_s(end)), log10(24*60*60), 100)];    
         % l_f(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
-        subplot(131);
-        semilogx(t_s + rampShift(i_rds) - rds(i_rds), Fint + c, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
-        semilogx(t_ext+rampShift(i_rds)-rds(i_rds), c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
-        subplot(133);
-        l_d(i_rds) = loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint +0*c, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
-        l_f(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
-        subplot(132);
-        semilogy(t_s + rampShift(i_rds) - rds(i_rds), Fint + c*0, '-x', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
-        semilogy(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
-        param_a(i_rds) = sprintf('%0.2f (t - %0.1f + %0.2f)^{-%0.2f}', ae.a,rds(i_rds), rampShift(i_rds), ae.b);
+        if plotResults
+            set(groot,'CurrentFigure',2); % replace figure(indFig) without stealing the focus
+            subplot(311);
+            l_d(i_rds) = plot(t_s_ru + rampShift(i_rds)*0 - rds(i_rds), Fint_ru + c, '-', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+            % plot(t_ext+rampShift(i_rds)-rds(i_rds), c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+            subplot(313);
+            loglog(t_s_ru + rampShift(i_rds) - rds(i_rds), Fint_ru +0*c, '-', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+            l_f(i_rds) = loglog(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+            subplot(312);
+            semilogy(t_s_ru + rampShift(i_rds) - rds(i_rds), Fint_ru + c*0, '-', Color=[cg(6-i_rds, :)], LineWidth=5-i_rds);hold on;
+            % semilogy(t_ext+rampShift(i_rds)-rds(i_rds), 0*c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
+        end
+            param_a(i_rds) = sprintf('%0.2f (t - %0.1f + %0.2f)^{-%0.2f}', ae.a,rds(i_rds), rampShift(i_rds), ae.b);
     end
-    %just for the legend
-    subplot(131);
-    xl = xlim();
-    l_g = loglog(xl, [c, c], 'r--');
-    xlim([1e-2 300])
-    title('A: Log-linear plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
-    legend(l_g, 'Fss');
-    
-    subplot(132);
-    % l_f(length(l_f)+1) = loglog(NaN, NaN, 'r--');
-    % xl = xlim();
-    % l_f(length(l_f)+1) = loglog(xl, [c, c], 'r--');
-    xlim([1e-2 300])
-    title('B: Linear-log a_i(x-r_d - \tau_{0, i})^{\tau_i}')
-    
+    %%just for the legend
+    if ~plotResults
+        return;
+    end
 
-    subplot(133);
-    xlim([1e-2 1e5])
+    subplot(311);
+    xlim([-5 30])
     xl = xlim();
+    l_g = loglog(xl, [c, c], 'r--');    
+    title('A: Linear axis plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
+    legend([l_d l_g], 'Ramp-up 100s', 'Ramp-up 10s', 'Ramp-up 1s', 'Ramp-up 0.1s', 'Fss');
+    xlabel("Time (s)");
+    ylabel("Tension (kPa)")
+    
+    subplot(313);
+    xlim([1e-2 1e5])
+    yl = ylim();    
     title('C: Log-log plot a_i(x-r_d - \tau_{0, i})^{\tau_i}, extrapolated to 24hrs')
     % loglog(xl, [c, c], 'r--');
     % xlim(xl);
     % yl = ylim();
     % ylim([yl(1)*0.9, yl(2)])
-    legend([l_d l_f], 'Ramp-up 100s', 'Ramp-up 10s', 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)), 'True F_{ss}')
+    legend([l_f], num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)), 'True F_{ss}')
     % legend([l_d l_f], 'Ramp-up 100s', 'Ramp-up 10s', 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(1)), num2str(param_a(2)),num2str(param_a(3)),num2str(param_a(4)), 'True F_{ss}')
     % legend([l_d(3:4) l_f(3:4)], 'Ramp-up 1s', 'Ramp-up 0.1s', num2str(param_a(3)), num2str(param_a(4)), 'True F_{ss}')
     % title(num2str(cost_c0))
+    xlabel('Time - \tau_i (s)');
+    ylabel('Tension - F_{ss} (kPa)') 
+    
+    subplot(312);
+    % l_f(length(l_f)+1) = loglog(NaN, NaN, 'r--');
+    % xl = xlim();
+    % l_f(length(l_f)+1) = loglog(xl, [c, c], 'r--');
+    xlim(xl)
+    ylim(yl)
+    title('B: Linear-log a_i(x-r_d - \tau_{0, i})^{\tau_i}')
+    xlabel('Time - \tau_i (s)');
+    ylabel('Tension - F_{ss} (kPa)')    
 end

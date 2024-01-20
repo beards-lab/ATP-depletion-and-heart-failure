@@ -61,10 +61,10 @@ rds = [100, 10, 1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % only final dataset
 pCa = 4.4;
-pCa = 5.5;
-pCa = 5.75;
-pCa = 6;
-pCa = 6.25;
+% pCa = 5.5;
+% pCa = 5.75;
+% pCa = 6;
+% pCa = 6.25;
 
 switch pCa
     case 4.4
@@ -92,7 +92,7 @@ switch pCa
         pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
         pCaData{4} = [1,5,5;2,3,13;3,3,13;4,3,14;5,3,14;6,3,14];
         i_pca100ms_hold = [5 5; 3 13; 3 13;3 14; 3 14; 3 14];
-        dsName = 'AvgpCa6.0';
+        dsName = 'AvgpCa6';
     case 6.25
         %% 6.25 - only 100ms in latter experiments
         pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
