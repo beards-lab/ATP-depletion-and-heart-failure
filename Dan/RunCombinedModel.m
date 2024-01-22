@@ -24,10 +24,14 @@ for i_rd = 1:length(rds)
   %   datatable.Properties.VariableNames = {'Time'  'ML'  'F'  'SL'};
   %   datatables{i_rd} = datatable;
   % elseif isnan(pCa)
-      % newest format of experiments
+      % newest format of experiments    
     datatables{i_rd} = readtable(['..\Data\AvgRelaxed_' num2str(rds(i_rd)) 's.csv']);
   else
-    datatables{i_rd} = readtable(['..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv']);
+    if exist(['..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv'], "file")
+        datatables{i_rd} = readtable(['..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv']);
+    else
+        datatables{i_rd} = [];
+    end
   end
   % else
   %   % new format for pCa experiments
@@ -77,8 +81,18 @@ delU = 0.0125*mod(19);
 % mod = 0;
 
 kp   = mod(1)*10203*0.7;      % proximal chain force constant
-kA   = mod(16)*0.1*16.44; % PEVK attachment rate
-kD   = mod(17)*14.977; % PEVK detachment rate
+if ~isnan(mod(16))
+    kA   = mod(16)*0.1*16.44; % PEVK attachment rate
+else
+    kA   = mod(7)*16.44;
+end
+
+if ~isnan(mod(17))
+    kD   = mod(17)*14.977; % PEVK detachment rate
+else
+    kD   = mod(8)*14.977; % PEVK detachment rate
+end
+
 alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
 
 if pCa < 10
@@ -86,7 +100,8 @@ if pCa < 10
     kA   = mod(7)*16.44;
     kD   = mod(8)*14.977; % PEVK detachment rate
     if ~isnan(mod(20))
-        alphaU = mod(20)*(8.4137e5)*0.7;         % chain unfolding rate constant
+        % cant exceed the no Ca unfolding rate!
+        alphaU = min(alphaU, mod(20)*(8.4137e5)*0.7);         % chain unfolding rate constant
     end
 end
 kd   = mod(2)*14122;        % distal chain force constant
@@ -180,6 +195,10 @@ Length = cell(1, 5);
 rampSet = 1:length(rds); %[1 2 3 4 5];
 rampSet = [2 4];
 for j = rampSet
+  if isempty(datatables{j})
+      fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
+      continue;
+  end
   % tic
   V = Vlist(j); % ramp velocity
 
@@ -417,6 +436,9 @@ En = cell(1, length(rampSet));
 Es = cell(0);
 for j = rampSet
     datatable_cur = datatables{j};
+    if isempty(datatable_cur)
+        continue;
+    end
     inds = find(datatable_cur.Time >= t_endFreeware(j));
     datatable_cur = datatable_cur(inds, :);
     t_int{j} = datatable_cur.Time - 2;

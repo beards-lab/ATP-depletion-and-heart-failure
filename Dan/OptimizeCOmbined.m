@@ -189,10 +189,12 @@ mod = [0.1403    0.0493    0.9278    1.2795    0.4052    1.1240    0.0933    0.6
 plotParams(mod, [-2, 1]);hold on;
 %% add alphaU_LowCa, optim at 0.1 and 10s only with 4.3e3, but 7.25e3 for all three and 9.6593e+03 for all four
 clf;
-mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1476];
+mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
 plotParams(mod, [-2, 3]);hold on;
 
-mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785   0.6262    0.6327    1.0000    1.0000  415.4241];
+%% reduced set - no low Ca PEVK attachment
+% optim at 0.1 and 10s only with 3.8e3, but 7.6e3 for all three and 9.46e3 for all 4
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785   NaN    NaN    1.0000    1.0000  415.4241];
 % mod(setdiff(1:20, modSel)) = NaN;
 plotParams(mod, [-2, 3]);hold on;
 legend('Extended set', 'Reduced set')
@@ -219,13 +221,17 @@ tic
 % modSel = [7, 9];
 mod = [mod ones(1, 20 - length(mod))]
 modSel = 1:length(mod);
-
+%%
+tic
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
-evalCombined(mod(modSel), mod, modSel)
+evalCombined(mod(modSel), mod, modSel, [4.4 10])
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
 toc
+%%
+evalCombined(mod(modSel), mod, modSel, [6])
+
 %%
 clf;
 modNames{16} = 'k_{PEVK,A} (low Ca)';
@@ -274,6 +280,8 @@ modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6
 %%
 modSel = [1:10 14:19];
 modSel = 1:19;
+modSel = [1:17 20];
+
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 x = fminsearch(@evalCombined, init, options, mod, modSel);
@@ -289,8 +297,16 @@ save moddd;
 % modSel = [11 12 13];
 % modSel = 1:17;
 modSel = [1:17 20];
+
+% Ca sensitive only
+% modSel = [7 8 9 20];
+% pca 5.75
+% mod(modSel) = [0.1052    0.7715    0.2400  590.8530];
+% pca 6
+% mod(modSel) = [0.0274    1.0723    0.1016 2.1787e+03];
+
 init = max(-10, log10(mod(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4 10]);
 x = fminsearch(evalLogCombined, init, options);
 mod(modSel) = 10.^x;
 
@@ -352,9 +368,12 @@ set ( gca, 'xdir', 'reverse' );
 xlabel('pCa');
 legend('kA (PEVK attachment)', 'kC (stiffening proximal chain)')
 %%
-function totalCost = evalCombined(optMods, mod, modSel)
+function totalCost = evalCombined(optMods, mod, modSel, pCas)
 
-    
+    if nargin < 4
+        % evaluate pCa 4.4 and 10 by default
+        pCas = [4.4 10];
+    end
     %normal - optimizing for all
     % modSel = 1:15;
 
@@ -401,28 +420,58 @@ function totalCost = evalCombined(optMods, mod, modSel)
         plotParams(mod, [-2, 1]);hold off;
     end
 
-    %% pCa 6
-    % pCa = 6;
-    % 
-    % cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    % totalCost = totalCost + cost;
-    % % return;
 
-
-    %% no Ca
-    pCa = 10;
-    plotOnBackground(drawPlots, pCa);
-    % RunCombinedModel;
-    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    totalCost = totalCost + cost*10;
-% return
     %% pCa 4
-    pCa = 4.4;
-    plotOnBackground(drawPlots, pCa);
-    % RunCombinedModel;
-    cost = isolateRunCombinedModel(mod, pCa, drawPlots);
-    totalCost = totalCost + cost;
+    if ismember(4.4, pCas)
+        pCa = 4.4;
+        plotOnBackground(drawPlots, pCa);
+        % RunCombinedModel;
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        totalCost = totalCost + cost;
+    end
+    %% pCa 5.5
+    if ismember(5.5, pCas)
+        pCa = 5.5;
+        plotOnBackground(drawPlots, pCa);
+        % RunCombinedModel;
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        totalCost = totalCost + cost;
+    end    
+    %% pCa 5.75
+    if ismember(5.75, pCas)
+        pCa = 5.75;
+        plotOnBackground(drawPlots, pCa);
+        % RunCombinedModel;
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        totalCost = totalCost + cost;
+    end
 
+    %% pCa 6
+    if ismember(6, pCas)
+        pCa = 6;
+        plotOnBackground(drawPlots, pCa);
+        % RunCombinedModel;
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        totalCost = totalCost + cost;
+    end
+
+    %% no Ca, but evaluate PEVK binding
+    if ismember(10, pCas)    
+        pCa = 10;
+        plotOnBackground(drawPlots, pCa);
+        % RunCombinedModel;
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        totalCost = totalCost + cost*10;
+    end
+    %% no Ca, PEVK binding not evaluated
+    if ismember(11, pCas)    
+        pCa = 11;
+        plotOnBackground(drawPlots, pCa);
+        % RunCombinedModel;
+        cost = isolateRunCombinedModel(mod, pCa, drawPlots);
+        totalCost = totalCost + cost*10;
+    end    
+% return
 end
 
 function plotOnBackground(drawPlots, pCa)
