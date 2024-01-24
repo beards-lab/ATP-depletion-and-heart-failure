@@ -406,8 +406,9 @@ end
   % calculate a, so that the max value is the same  
   Fss = 3.2470*mod(10); % reducing the param space
   a = (Fss - d)/((Lmax -b)^c);
+  Force_par{j} = a*max(Length{j} - b, 0).^c + d;
   % calc force
-  Force{j} = Force{j} + a*max(Length{j} - b, 0).^c + d; 
+  Force{j} = Force{j} + Force_par{j}; 
 
   if any(isnan(Force{j}))
       disp('error');
@@ -513,8 +514,10 @@ set(sp, 'XLim', [-1 30+max(rds)]);
 set(sp, 'YLim', [0 ym*1])
 
 % shift of peaks to have the same tail - just guessed
-shift = [-94, -7.2, -0.35, 0];
-
+% shift = [-94, -7.2, -0.35, 0];
+% based on pCa 11 shift in data
+shift = [5.4, 0.82, 0.22, 0.01] - [100 10 1 0.1];
+ymaxScale = 0;
 for j = max(rampSet):-1:1
     if isempty(Force{j})
         continue;
@@ -538,14 +541,23 @@ for j = max(rampSet):-1:1
 %% other view - shifted to see the tail overlap
 
     subplot(222)
-    semilogx(datatables{j}.Time-2 + shift(j),datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
+    % Estimating the true offset: Fss = C*(Tss)^-alpha + Fss_true;
+    % Fss = Force_par{j}(end); % "steady state" at the end 
+    % tss = Time{j}(end) - rds(j);
+    % Fss_true = Fss - (4.22*tss^-0.21);
+    Fss_true = Force_par{j}(end);
+
+    loglog(datatables{j}.Time-2 + shift(j),datatables{j}.F - Fss_true,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
     hold on;
-    semilogx(Time{j} + shift(j),Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
+    loglog(Time{j} + shift(j),Force{j} - Fss_true,'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
     % plot(Time{j} + shift(j),Force{j},styles{j}, 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
     
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
     % axis([1e-2, 1e2, 0, ym]);  
     xlim([1e-2, 1e2]);
+    ymaxScale = max(ymaxScale, max(Force{j} - Fss_true));
+    yminScale = (Force{j}(end) - Fss_true); % this should be around the same
+    ylim([max(1e-2, 0.8*yminScale), 1.2*ymaxScale])
     if j == 1
         % only after the last one
         legend('Ramp 10s (Data)', 'Ramp 10s (Model)', 'Ramp 1s (Data)', 'Ramp 1s (Model)', 'Ramp 0.1s (Data)', 'Ramp 0.1s (Model)');
