@@ -191,29 +191,56 @@ plotParams(mod, [-2, 1]);hold on;
 clf;
 mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
 plotParams(mod, [-2, 3]);hold on;
-
+evalCombined(mod, mod, 1:length(mod), [4.4 10])
 %% reduced set - no low Ca PEVK attachment
 % optim at 0.1 and 10s only with 3.8e3, but 7.6e3 for all three and 9.46e3 for all 4
-mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785   NaN    NaN    1.0000    1.0000  415.4241];
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
+evalCombined(mod, mod, 1:length(mod), [4.4 11])
+%% starting at reduced, but extending with non Ca PEVK
+mod = [0.2520    0.0793    0.9654    1.7583    0.5718  612.9789    0.2057    0.4547    0.2984    1.6962    0.9569    1.3798    0.1658    0.5642    1.1109   0.1956    0.6015 1.0000    1.0000  454.1430];
 % mod(setdiff(1:20, modSel)) = NaN;
 plotParams(mod, [-2, 3]);hold on;
 legend('Extended set', 'Reduced set')
-%%
-modSel = 1:15;
-i = 14;
-mod(i) = mod(i)*1;
-disp(modNames(i))
-%%
-figure(10);clf;
-tic
-isolateRunCombinedModel(mod, 10, true)
-toc
-%%
-figure(11);clf;
-tic
-isolateRunCombinedModel(mod, 11, true)
-toc
+evalCombined(mod, mod, 1:length(mod), [4.4 10])
 
+%% test evaluate Ca sensitivity importance
+% reduced candidate
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
+evalCombined(mod, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'rc_base.png')
+% no Ca dep on kp
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
+mod(9) = mod(1)*4.78; % the multiplier in RunCombinedModel
+evalCombined(mod, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'rc_no_kp.png')
+% no PEVK attachment
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
+mod(7) = 1e-6;% PEVK attachment
+mod(8) = 1e6; % PEVK detachment
+evalCombined(mod, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'rc_no_PEVK.png')
+%% test evaluate Ca sensitivity importance
+% extended candidate
+mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
+evalCombined(mod, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'ec_base.png')
+%% no Ca dep on kp
+mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
+mod(9) = mod(1)*4.78; % the multiplier in RunCombinedModel
+evalCombined(mod, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'ec_no_kp.png')
+% no PEVK attachment
+mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
+mod(7) = 1e-6;% PEVK attachment
+mod(8) = 1e6; % PEVK detachment
+evalCombined(mod, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'ec_no_PEVK.png')
 %%
 tic
 % modSel = [1 2 3 5 6 10];
@@ -498,6 +525,9 @@ function plotParams(mod, mm, resetGca)
     % modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU'};
     modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU', ...
         'AlphaU_highCa'};
+
+    indxs = strcat(string(1:length(modNames)), ':');
+    modNames = strcat(indxs, modNames);
 
     if nargin < 2 || isempty(mm)
         mi = min(floor(log10(mod)));
