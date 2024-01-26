@@ -203,45 +203,68 @@ plotParams(mod, [-2, 3]);hold on;
 legend('Extended set', 'Reduced set')
 evalCombined(mod, mod, 1:length(mod), [4.4 10])
 
-%% test evaluate Ca sensitivity importance
+%% test evaluate Ca sensitivity importance - REDUCED
 % reduced candidate
 mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
 evalCombined(mod, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'rc_base.png')
-% no Ca dep on kp
-mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
-mod(9) = mod(1)*4.78; % the multiplier in RunCombinedModel
-evalCombined(mod, mod, 1:length(mod), [4.4])
+%% no Ca dep on kp
+m = mod;
+m(9) = mod(1)/4.78; % the multiplier in RunCombinedModel
+evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'rc_no_kp.png')
-% no PEVK attachment
-mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
-mod(7) = 1e-6;% PEVK attachment
-mod(8) = 1e6; % PEVK detachment
-evalCombined(mod, mod, 1:length(mod), [4.4])
+%% no PEVK attachment
+m=mod;
+m(7) = 1e-6;% PEVK attachment
+m(8) = 1e6; % PEVK detachment
+evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'rc_no_PEVK.png')
-%% test evaluate Ca sensitivity importance
+%% no alphaU dep
+m = mod;
+m(20) = mod(6);% PEVK attachment
+evalCombined(m, mod, 1:length(mod), [4.4])
+f = figure(144)
+title('rc_no_alphaU', 'Interpreter','none')
+saveas(f, 'rc_no_alphaU.png')
+%% test evaluate Ca sensitivity importance - EXTENDED
 % extended candidate
 mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
-evalCombined(mod, mod, 1:length(mod), [4.4])
+evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'ec_base.png')
 %% no Ca dep on kp
-mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
-mod(9) = mod(1)*4.78; % the multiplier in RunCombinedModel
-evalCombined(mod, mod, 1:length(mod), [4.4])
+m = mod;
+m(9) = mod(1)/4.78; % the multiplier in RunCombinedModel
+evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'ec_no_kp.png')
-% no PEVK attachment
-mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
-mod(7) = 1e-6;% PEVK attachment
-mod(8) = 1e6; % PEVK detachment
-evalCombined(mod, mod, 1:length(mod), [4.4])
+%% no PEVK attachment
+m = mod;
+m(7) = 1e-6;% PEVK attachment
+m(8) = 1e6; % PEVK detachment
+evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'ec_no_PEVK.png')
+%% no alphaU dep
+m = mod;
+m(20) = mod(6);% PEVK attachment
+evalCombined(m, mod, 1:length(mod), [4.4])
+f = figure(144)
+title('ec_no_alphaU', 'Interpreter','none')
+saveas(f, 'ec_no_alphaU.png')
+%% no PEVK at 0 Ca
+m = mod;
+m(7) = 1e-6;% PEVK attachment
+m(8) = 1e6; % PEVK detachment
+evalCombined(m, mod, 1:length(mod), [10])
+f = figure(200)
+title('ec_no_PEVK_at_pCa10', 'Interpreter','none')
+saveas(f, 'ec_no_PEVK_at_pCa10.png')
 %%
+return
 tic
 % modSel = [1 2 3 5 6 10];
 % default is 403

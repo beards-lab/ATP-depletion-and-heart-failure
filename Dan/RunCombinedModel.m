@@ -193,7 +193,7 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
-rampSet = [2 4];
+rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
