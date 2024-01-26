@@ -439,7 +439,8 @@ for i_rds = 1:length(rds)
     % Tarr{i_rds} = t_s;
     % Farr{i_rds} = interp1(outT, outFr, t_s, "pchip", 'extrap');
     Tarr{i_rds} = outT;
-    Farr{i_rds} = outFr;
+    % Farr{i_rds} = outFr;
+    Farr{i_rds} = outF*Fmax;
     
 
 end
