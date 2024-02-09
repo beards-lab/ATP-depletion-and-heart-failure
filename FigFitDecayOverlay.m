@@ -42,12 +42,14 @@ x = [4.4271    0.2121    4.8964]
 % % pCa 4.4, optimizing just the tail
 % x = [4.3209    0.2100   13.6246];
 
-%% limit pCa time constant to the relaxed time constant
+% limit pCa time constant to the relaxed time constant
 % x = [8.6226    0.2100   11.3698];
-%% no Ca
+% no Ca
 aspect = 1.5;
 f = figure(2);
-% f.Position = [300 200 7.2*96 7.2*96/aspect];
+% normal size of 2-col figure on page is 7.2 inches
+% matlab's pixel is 1/96 of an inch
+f.Position = [300 200 7.2*96 7.2*96/aspect];
 x = [4.4271    0.2121    4.8964];
 [c rampShift] = fitfun(x)
 f = gcf();
@@ -57,13 +59,22 @@ f = gcf();
 % exportgraphics(f,'Figures/FigDecayOverlaypCa4.4_7.2.png','Resolution',300)
 % saveas(f, 'Figures/FigDecayOverlaypCa4Corr2.png')
 %% pCa
+aspect = 1.5;
+% rampShift = [5.3980    0.8234    0.2223   0.0100];
 load('pCa4dataNoAdj60sFremCorr.mat')
+x = [4.1240    0.2121   12.0286];
+% load('pCa4dataNoAdj60sFremCorrShifted.mat')
+% x = [4.0648    0.2121   12.0505];
+f = figure(4);
+f.Position = [300 200 7.2*96 7.2*96/aspect];
 % keep the b, fit a and Tss
-x = [4.1237    0.2121   12.0289];
-c = evalPowerFit(x, Farr, Tarr, true, rampShift, true);
+% x = [4.1237    0.2121   12.0289];
+% x = [4.1233    0.2121   12.0290];
+[c rspca] = evalPowerFit(x, Farr, Tarr, true, rampShift, true)
+
 %%
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
-    'TolX', 0.001, 'PlotFcns', @optimplotfval, 'MaxIter', 50);
+options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UseParallel', true, ...
+    'TolX', 0.0001, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
 % init(1:3) = [0 0 0]
 %% fit the no Ca
 init = x;
@@ -78,6 +89,8 @@ pcaFitFun = @(x)evalPowerFit([x(1), init(2), x(2)], Farr, Tarr, false, rampShift
 x = fminsearch(pcaFitFun, [init(1) init(3)], options)
 init([1 3]) = x;
 x = init;
+c = evalPowerFit(x, Farr, Tarr, true, rampShift, true)
+
 
 % pcaFitFun = @(x)evalPowerFit(x, Farr, Tarr, false, rampShift, true);
 % x = fminsearch(pcaFitFun, init, options)
@@ -113,37 +126,37 @@ c = params(3);
 
 %% biuld axes
 if plotResults
-    set(groot,'CurrentFigure',2); % replace figure(indFig) without stealing the focus
+    % set(groot,'CurrentFigure',2); % replace figure(indFig) without stealing the focus
     fug = gcf();
     clf;
     % set width adn height and offsets
-    w = 0.26; h = 0.85; x0 = 0.05; y0 = 0.1; gap = 0.003; centerShift = 0.04;
+    w = 0.255; h = 0.85; x0 = 0.08; y0 = 0.11; gap = 0.003; centerShift = 0.06;
     % data ranges - pca11
-    xrng1 = [-10 19]; xrng2 = [-2 27];xrng_add = [55 65]; yrng = [0.8 18];
+    xrng1 = [-10 19]; xrng2 = [-2 27];xrng_add = [55 65]; yrng = [0.8 21];
     % ylogtick = [1e0 1e1];
-    xlintick = -5:5:25;xlinticklab  = [string(floor((xlintick(1):5:xlintick(end))/5)*5) ""];
+    xlintick = 0:10:20;xlinticklab  = [string(floor((xlintick(1):10:xlintick(end))/5)*5) ""];
     ylogtick = [1 ceil((yrng(1):5:yrng(end))/5)*5];
     % data ranges - pca4
     if pCa
-        xrng = [-10 17]; xrng2 = [-2 61]; xrng_add = [0 0]; yrng = [0.8 35];
+        xrng1 = [-10 60]; xrng2 = [-2 60]; xrng_add = [0 0]; yrng = [0.8 35];
         xlintick = 0:20:60;xlinticklab = string(floor((xlintick(1):20:xlintick(end))/10)*10);
         ylogtick = [1 ceil((yrng(1):10:yrng(end))/10)*10];
     end
     
     % Font size
-    fs = 18;
+    fs = 12;
     
     [w1, w2] = getW1W2(w, gap, xrng1, xrng_add);
     
     % left
     % axes left main
-    a_lm = axes(fug, 'Position', [x0 y0 w1 h], 'XLim',xrng1,'XTick',floor((xrng1(1):5:xrng1(end))/5)*5, ... 
+    a_lm = axes(fug, 'Position', [x0 y0 w1 h], 'XLim',xrng1,'XTick',floor((xrng1(1):20:xrng1(end))/5)*5, ... 
         'YLim',[0 yrng(2)], 'FontSize',fs, 'YScale','linear', 'TickLabelInterpreter','latex'); 
     ylabel("$T$ (kPa)", 'Interpreter','latex'); xlabel("$t - t_r$ (s)", 'Interpreter', 'latex')
     hold on; box on; % keep the settings from overwritting
     % axes left adjacent
     if w2 > 0
-        a_la = axes(fug, 'Position', [x0+w1+gap y0 w2 h], 'Xlim', xrng_add,'XTick',floor((xrng_add(1):5:xrng_add(end))/5)*5, 'YTick', [],... 
+        a_la = axes(fug, 'Position', [x0+w1+gap y0 w2 h], 'Xlim', xrng_add,'XTick',floor((xrng_add(1):10:xrng_add(end))/5)*5, 'YTick', [],... 
             'YLim',[0 yrng(2)], 'FontSize',fs, 'YScale','linear', 'TickLabelInterpreter','latex'); 
         hold on;box on;
     else
@@ -160,7 +173,7 @@ if plotResults
     hold on; box on;
     
     if w2 > 0
-        a_ca = axes('Position', [0.5-w/2 + w1 + gap + centerShift y0 w2 h], 'Xlim', xrng_add,'XTick',floor((xrng_add(1):5:xrng_add(end))/5)*5, 'YTick', [],... 
+        a_ca = axes('Position', [0.5-w/2 + w1 + gap + centerShift y0 w2 h], 'Xlim', xrng_add,'XTick',floor((xrng_add(1):10:xrng_add(end))/5)*5, 'YTick', [],... 
         'YLim',yrng, 'FontSize',fs, 'YScale','log', 'TickLabelInterpreter','latex');
         hold on; box on;
     else
@@ -170,9 +183,9 @@ if plotResults
     
     
     % right
-    a_r = axes('Position', [1-x0-w  y0 w h],'XLim',[1e-2 1e4], ... 
+    a_r = axes('Position', [1-x0-w+x0/2  y0 w h],'XLim',[1e-2 1e4], ... 
         'YLim',yrng, 'FontSize',fs, 'XScale', 'log','YScale','log', 'TickLabelInterpreter','latex',...
-        YTick=ylogtick, YTickLabel=[], XTick=[1e-1 1 1e1 1e2 1e3 1e4]); 
+        YTick=ylogtick, YTickLabel=[], XTick=[1e-1 1e1 1e3]); 
     % ylabel("$T-T_{ss}$ (kPa)", 'Interpreter','latex');
     xlabel("$t - t_r + \tau_i$ (s)", 'Interpreter', 'latex');
     hold on; box on;
@@ -257,7 +270,7 @@ for i_rds = [4 3 2 1]
     end
 
     pf = @(x) a*(x).^(-b);
-    if ~pCa
+    if true || ~pCa
         % fit area right from the beginning
         t_ext = logspace(log10(1e-2), log10(1*60*60), 100);    
     else
@@ -270,20 +283,21 @@ for i_rds = [4 3 2 1]
     l_f = loglog(t_ext, pf_v, 'r:', ... %Color=cl(2, :)
         LineWidth=3);
     
-    if ~pCa
-        legend(l_f, sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b), ...
-        'Interpreter','latex', 'FontSize',fs, 'Location', 'northeast');
-    else
-        legend([l_fitarr l_f], 'Fit area', sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b), ...
-        'Interpreter','latex', 'FontSize',fs, Location='northeast');
-    end
+    % already in master legend
+    % if ~pCa
+    %     legend(l_f, sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b), ...
+    %     'Interpreter','latex', 'FontSize',fs, 'Location', 'northeast');
+    % else
+    %     legend([l_fitarr l_f], 'Fit area', sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b), ...
+    %     'Interpreter','latex', 'FontSize',fs, Location='northeast');
+    % end
 
     %
     axes(a_la);
     plot([-10 100], [c, c], 'k:', LineWidth=3);    
     axes(a_lm);
     l_tss = plot([-10 100], [c, c], 'k:', LineWidth=3);
-    text(2, c-1.5, sprintf('$T_{ss} = %0.2f$ kPa', c), 'Interpreter', 'Latex', 'FontSize',fs+2, 'FontWeight','bold')
+    text(2, c-1.5, sprintf('$T_{ss} = %0.2f$', c), 'Interpreter', 'Latex', 'FontSize',fs+2, 'FontWeight','bold')
 
     % title('A: Linear axis plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
     valids = isgraphics(l_lm);
@@ -292,12 +306,12 @@ for i_rds = [4 3 2 1]
     %adjust position
     if w1 > 0
         % get top-right corner
-        c_topright = get(a_la, 'Position');
+        ca_pos = get(a_la, 'Position');
     else
-        c_topright = get(a_lm, 'Position');
+        ca_pos = get(a_lm, 'Position');
     end    
     l_pos = leg.Position;
-    leg.Position = [c_topright(1) + c_topright(3) - l_pos(3) - 0.01 l_pos(2:4)];
+    leg.Position = [ca_pos(1) + ca_pos(3) - l_pos(3) - 0.01 l_pos(2:4)];
     
 
     % title('C: Log-log plot a_i(x-r_d - \tau_{0, i})^{\tau_i}, extrapolated to 24hrs')
@@ -311,28 +325,35 @@ for i_rds = [4 3 2 1]
     
     % show the fit in central too
     axes(a_cm);
-    semilogy(t_ext, pf_v, 'r:', ... %Color=cl(2, :)
+    l_f = semilogy(t_ext, pf_v, 'r:', ... %Color=cl(2, :)
         LineWidth=3);
 
     valids = isgraphics(l_cm);
-    legends = {sprintf('$t_r = 100$ s,$\\tau_i=%0.2f$ s', rampShift(1)),...
-                sprintf('$t_r = 10$ s,$\\tau_i=%0.2f$ s', rampShift(2)),...
-                sprintf('$t_r = 1$ s,$\\tau_i=%0.2f$ s', rampShift(3)),...
+    legends = { sprintf('$t_r = 100$ s,$\\tau_i=%0.2f$ s', rampShift(1)),...
+                sprintf('$t_r = 10$ s, $\\tau_i=%0.2f$ s', rampShift(2)),...
+                sprintf('$t_r = 1$ s,  $\\tau_i=%0.2f$ s', rampShift(3)),...
                 sprintf('$t_r = 0.1$ s,$\\tau_i=%0.2f$ s', rampShift(4))};
+    
     if ~pCa
-        leg = legend([l_cm(valids)], legends(valids), 'Interpreter','latex', 'FontSize',fs, Location='northeast');
+        leg_gr = [l_cm(valids) l_f];
+        [legends(valids) sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
+        reorder = [1 3 5 2 4];
     else
-        leg = legend([l_cm(valids) l_fitarr], [legends(valids) "Fit area"], 'Interpreter','latex', 'FontSize',fs, Location='northeast');
+        leg_gr = [l_cm(valids) l_fitarr l_f];
+        leg_txt = [legends(valids) "Power-law tail" sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
+        reorder = [1 3 5 2 4 6];
     end
+    leg = legend(leg_gr(reorder), leg_txt(reorder), 'Interpreter','latex', 'FontSize',fs, Location='northwest', NumColumns=2);
+    leg.ItemTokenSize=[15; 18];
     %adjust position
     if w2 > 0
         % get top-right corner
-        c_topright = get(a_ca, 'Position');
+        ca_pos = get(a_ca, 'Position');
     else
-        c_topright = get(a_cm, 'Position');
+        ca_pos = get(a_cm, 'Position');
     end    
     l_pos = leg.Position;
-    leg.Position = [c_topright(1) + c_topright(3) - l_pos(3) - 0.01 l_pos(2:4)];
+    leg.Position = [l_pos(1) l_pos(2) + 0.03 l_pos(3:4)];
 
     axes(a_ca);
     semilogy(t_ext, pf_v, 'r:', LineWidth=3);
