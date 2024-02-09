@@ -58,6 +58,8 @@ end
 % Nx   = 25;          % number of space steps
 Nx   = 25;          % number of space steps
 ds   = 1*(Lmax)/(Nx-1);      % space step size
+% use this to make sure the ds is big wnough
+% ds   = 1*(Lmax + 0.015)/(Nx-1);
 s  = (0:1:Nx-1)'.*ds; % strain vector
 Ng = 14; 
 delU = 0.0125*mod(19);
@@ -94,6 +96,7 @@ else
 end
 
 alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
+Fss = 3.2470*mod(10); % Parallel steady state force
 
 if pCa < 10
     kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
@@ -103,6 +106,13 @@ if pCa < 10
         % cant exceed the no Ca unfolding rate!
         alphaU = min(alphaU, mod(20)*(8.4137e5)*0.7);         % chain unfolding rate constant
     end
+    if ~isnan(mod(21))
+        Fss = 3.2470*mod(21);
+    end
+    if ~isnan(mod(22))
+        kp   = mod(22)*10203*0.7;      % proximal chain force constant high Ca
+    end
+        
 end
 kd   = mod(2)*14122;        % distal chain force constant
 alphaF = 0; % chain folding rate constant - not implemented yet
@@ -193,7 +203,10 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
-rampSet = [1 2 3 4];
+rampSet = [2 4];
+% rampSet = [4]; % nly 100ms
+% rampSet = [1 2 3 4];
+rampSet = [4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -225,18 +238,63 @@ for j = rampSet
   % S = [reshape(triu(ones(size(pu))),[(Ng+1)*Nx,1]); 1];
   % Sp = S*S';  % opts = odeset('JPattern',Sp');
 
-  [t0,x0] = ode15s(@dXdT,[-100:1:0],x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
-  [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V);
+  % [t0,x0] = ode15s(@dXdT,[-100:1:0],   x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  % [t1,x1] = ode15s(@dXdT,[0 Tend_ramp],x0(end,:),opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V);
+  % 
   
   % whole decay till the bitter end
   % [t2,x2] = ode15s(@dXdT,[Tend_ramp 200],x1(end,:),opts,Nx,Ng,ds,kA,kD,kS,Fc,RU,RF,mu,Ls0,nS,0);
   % limited decay
-  [t2,x2] = ode15s(@dXdT,[Tend_ramp Tend_ramp + 40],x1(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
+  % [t2,x2] = ode15s(@dXdT,[Tend_ramp Tend_ramp + 40],x1(end,:),[],Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,0);
   % only ramp up, no decay  
   % x2 = [];t2 = []; 
 
-  t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
-  x = [x1; x2(2:end, :)];
+  % t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
+  % x = [x1; x2(2:end, :)];
+
+  %% normal
+  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40];
+  velocities = [0 V 0];
+  %% repeated
+  % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
+  %     Tend_ramp + 40 Tend_ramp + 41;... % rampdown in 1s
+  %     Tend_ramp + 41 Tend_ramp + 41 + 60;... % hold down - wait for refold
+  %     Tend_ramp + 41 + 60 Tend_ramp + 41 + 60 + Tend_ramp;... ramp-up
+  %     Tend_ramp + 41 + 60 + Tend_ramp Tend_ramp + 41 + 60 + Tend_ramp + 40]; % final hold
+  % velocities = [0 V 0 ...
+  %     -Lmax/1 0 V 0];
+  % 10 heartbeats
+  times = [-100, 0];velocities = [0];
+  HR = 60;Tc = 60/HR;
+  sf = 0.2; % systole fraction
+  df = 0.4; % diastole fraction
+  Lmax = (2.1 - 1.9)/2;
+  Vc = Lmax/(Tc*sf);Vr = Lmax/(Tc*df);
+  for b = 1:10
+    % relaxation - blowing up
+    times = [times; times(end) times(end)+Lmax/Vr];
+    velocities = [velocities Vr];
+    % hold
+    times = [times; times(end) times(end)+Tc*(1-sf - df)];
+    velocities = [velocities 0];
+    % contraction
+    times = [times; times(end) times(end) + Lmax/Vc];
+    velocities = [velocities -Vc];
+    drawAllStates = true;
+  end
+
+            
+  % assert(length(times) == length(velocities), 'Must be same length')
+  t = []; x = [];
+  for i_section = 1:size(times, 1)
+      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,velocities(i_section));
+      t = [t; t1(2:end)];
+      x = [x; x1(2:end, :)];
+      % prep the init vector again
+      x0 = x1(end,:);
+  end
+  validRng = t >= 0;
+  t = t(validRng);x = x(validRng, :);
 
   %% ramp downm, wait and up again
   % Vdown = Lmax./0.1;
@@ -261,7 +319,8 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
         % decide for timepoints
         % fixed time or fraction of ramp durations?
         % time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
-        time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
+        % time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
+        time_snaps = [0.4, 0.442 0.48];
         % i_time_snaps = find(t > time_snaps)
     
         % disable
@@ -350,13 +409,13 @@ if drawAllStates
     
     subplot(132);
     plot(t, Force{j}, LineWidth=2);
-    % subplot(132);
-    % surf(0:Ng, Time{j}, states_a{j});
-    % shading(gca, 'interp')
-    % view(90, -90)
-    % ylabel('Time (s)'); xlabel('State occupancy (#)')
-    % title('States pa');
-    % colorbar;
+    subplot(132);
+    surf(0:Ng, Time{j}, states_a{j});
+    shading(gca, 'interp')
+    view(90, -90)
+    ylabel('Time (s)'); xlabel('State occupancy (#)')
+    title('States pa');
+    colorbar;
     
     subplot(133);
     surf((1:Nx)*ds, Time{j}, strains{j});
@@ -403,8 +462,7 @@ end
       return;
   end
   
-  % calculate a, so that the max value is the same  
-  Fss = 3.2470*mod(10); % reducing the param space
+  % calculate a, so that the max value is the same    
   a = (Fss - d)/((Lmax -b)^c);
   Force_par{j} = a*max(Length{j} - b, 0).^c + d;
   % calc force

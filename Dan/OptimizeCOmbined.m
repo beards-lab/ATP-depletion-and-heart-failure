@@ -205,8 +205,8 @@ evalCombined(mod, mod, 1:length(mod), [4.4 10])
 
 %% test evaluate Ca sensitivity importance - REDUCED
 % reduced candidate
-mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
-evalCombined(mod, mod, 1:length(mod), [4.4])
+mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241 1];
+evalCombined(mod, mod, 1:length(mod), [11])
 f = figure(144)
 saveas(f, 'rc_base.png')
 %% no Ca dep on kp
@@ -232,7 +232,7 @@ saveas(f, 'rc_no_alphaU.png')
 %% test evaluate Ca sensitivity importance - EXTENDED
 % extended candidate
 mod = [0.1382    0.0875    0.9117    1.3178    0.4802    1.1331    0.1095    0.7093    0.1545    1.5725    0.0000    1.4225    0.0027    0.5243    2.5843    0.5718    2.7233    1.0000    1.0000    1.1331];
-evalCombined(m, mod, 1:length(mod), [4.4])
+evalCombined(mod, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'ec_base.png')
 %% no Ca dep on kp
@@ -263,6 +263,31 @@ evalCombined(m, mod, 1:length(mod), [10])
 f = figure(200)
 title('ec_no_PEVK_at_pCa10', 'Interpreter','none')
 saveas(f, 'ec_no_PEVK_at_pCa10.png')
+%% Can I reproduce the fit with NO PEVK?
+m = mod;
+m = [m ones(1, 22-length(m))];
+% evalCombined(m, [mod 1 1], 1:22, [11])
+
+% disable PEVK
+% m(7) = 1e-6; m(8) = 1;
+m(16) = 1e-6;m(17) = 1e6;
+m(16) = NaN; m(17) = NaN;
+% increase the unfolding rate
+% m(6) = 1.5;
+m(7) = mod(7)*0.9;
+m(8) = mod(8)*1.2;
+% kp
+% m(1) = mod(1)*0.5;
+% kd
+% m(2) = mod(2)*0.5;
+m(20) = NaN;
+m(21) = NaN;
+% kd stiffening
+m(22) = mod(2)*5*2.2;
+% kp stiffening
+m(9) = mod(1)*2.2;
+evalCombined(m, [mod 1 1], 1:22, [11])
+modSel = [1:10 14 22];
 %%
 return
 tic
@@ -274,13 +299,13 @@ modSel = 1:length(mod);
 %%
 tic
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
-evalCombined(mod(modSel), mod, modSel, [4.4 10])
+evalCombined(mod(modSel), mod, modSel, [4.4 11])
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
 toc
 %%
-evalCombined(mod(modSel), mod, modSel, [6])
+evalCombined(mod(modSel), mod, modSel, [11])
 
 %%
 clf;
@@ -330,11 +355,16 @@ modSel = [2 3 4 5 6 7 8 9 10 11 12 13]; mod = [0.4804    0.1794    0.9727    1.6
 %%
 modSel = [1:10 14:19];
 modSel = 1:19;
-modSel = [1:17 20];
-
+modSel = [1:15 20];
+% got as a 1e-3 cutoff on prelim run sensitivity
+modSel = 0 < [1   0   0   0   0   1   1   1 1   1   0   1   1   1   1   0 0   0   0   0   1];
+mod = m;
+mod(20) = NaN;
+%%
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
-x = fminsearch(@evalCombined, init, options, mod, modSel);
+evalLin = @(optMods) evalCombined(optMods, mod, modSel, [4.4 11])
+x = fminsearch(evalLin, init, options);
 
 mod(modSel) = x;
 % mod = x;
@@ -342,11 +372,12 @@ mod(modSel) = x;
 save moddd;
 %% optim in log param space
 % mod = ones(1, 17);
-% mod = [mod ones(1, 17 - length(mod))];
+% mod = [mod ones(1, 21 - length(mod))];
+% mod(21) = mod(10)
 % modSel = [1:10 14:17];
 % modSel = [11 12 13];
 % modSel = 1:17;
-modSel = [1:17 20];
+% modSel = [1:17 21];
 
 % Ca sensitive only
 % modSel = [7 8 9 20];
@@ -354,9 +385,16 @@ modSel = [1:17 20];
 % mod(modSel) = [0.1052    0.7715    0.2400  590.8530];
 % pca 6
 % mod(modSel) = [0.0274    1.0723    0.1016 2.1787e+03];
+% 4.3e3
+% mod = [0.1644    0.0822    0.9186    1.2568    0.4835    1.1405    0.1305    0.8418    0.2723    1.6966         0    1.4225    0.0027    0.5050    2.5843       NaN       NaN    1.0000 1.0000       NaN       NaN    0.9618];
+% for all ramps
+% mod = [0.1608    0.0820    0.9177    1.2529    0.4815    1.1445    0.1302    0.8398    0.2715    1.6819         0    1.4225    0.0027    0.5112    2.5843       NaN       NaN    1.0000 1.0000       NaN       NaN    0.9612];
+% using prescribed Fss_noCa and FssCa
+mod = [0.3262    0.0269    0.8916    1.1183    0.4793   1.1058    6.1801    0.7867    0.1298    1.5060         0    1.4225    0.0027    0.5112    2.5843       NaN       NaN    1.0000    1.0000       NaN    4.1961    0.9254];
+modSel = [1:9 22]
 
 init = max(-10, log10(mod(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4 10]);
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4 11]);
 x = fminsearch(evalLogCombined, init, options);
 mod(modSel) = 10.^x;
 
@@ -417,6 +455,54 @@ ylabel('kC Value');
 set ( gca, 'xdir', 'reverse' );
 xlabel('pCa');
 legend('kA (PEVK attachment)', 'kC (stiffening proximal chain)')
+%% Optimizing the reduced set to pCa
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
+    'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 100);
+
+% mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
+mod5_5 = mod;mod5_8 = mod;mod6=mod;
+modSel = [7 8 9 22];
+
+init = max(-10, log10(mod5_5(modSel)));
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.5]);
+x = fminsearch(evalLogCombined, init, options);
+% mod5_5 = mod;
+mod5_5(modSel) = 10.^x;
+
+init = max(-10, log10(mod5_8(modSel)));
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.75]);
+x = fminsearch(evalLogCombined, init, options);
+% mod5_8 = mod;
+mod5_8(modSel) = 10.^x;
+
+init = max(-10, log10(mod6(modSel)));
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [6]);
+x = fminsearch(evalLogCombined, init, options);
+% mod6 = mod;
+mod6(modSel) = 10.^x;
+% compare 
+figure(39);
+clf;
+sclale = [-2 3];
+plotParams(mod, sclale)
+hold on;
+plotParams(mod5_5, sclale);
+plotParams(mod5_8, sclale);
+plotParams(mod6, sclale);
+%
+% evalCombined(mod6(modSel), mod, modSel, [5.5])
+%%
+modSet = [mod;mod5_5;mod5_8;mod6];
+pcax = [4.4, 5.5, 5.75, 6];
+% modSel = 1:20;
+modSet(:, modSel)
+figure(40);clf;
+tiledlayout(1,4);
+for i = 1:size(modSel, 2)
+    nexttile();
+    semilogy(-pcax, modSet(:, modSel(i)), 'x-');
+    legend(modNames{modSel(i)});
+end
 %%
 function totalCost = evalCombined(optMods, mod, modSel, pCas)
 
@@ -522,7 +608,7 @@ function totalCost = evalCombined(optMods, mod, modSel, pCas)
         totalCost = totalCost + cost*10;
     end    
 % return
-end
+end 
 
 function plotOnBackground(drawPlots, pCa)
     figInd = 100 + round(pCa*10);
@@ -547,14 +633,19 @@ function plotParams(mod, mm, resetGca)
 
     % modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU'};
     modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU', ...
-        'AlphaU_highCa'};
+        'AlphaU_pCa', 'Fss_pCa', 'kd_pCa'};
 
     indxs = strcat(string(1:length(modNames)), ':');
     modNames = strcat(indxs, modNames);
 
     if nargin < 2 || isempty(mm)
-        mi = min(floor(log10(mod)));
-        ma = mi + 3;
+        % try
+        %     mima = get(gca, 'RLim');
+        %     mi = mima(1);ma=mima(2);
+        % catch
+            mi = min(floor(log10(mod)));
+            ma = mi + 3;
+        % end
     else
         mi = mm(1);
         ma = mm(2);
