@@ -53,15 +53,14 @@ f.Position = [300 200 7.2*96 7.2*96/aspect];
 x = [4.4271    0.2121    4.8964];
 [c rampShift] = fitfun(x)
 f = gcf();
-% saveas(f, 'Figures/FigDecayOverlay.png')
-% exportgraphics(f,'Figures/FigDecayOverlay7.2.png','Resolution',300)
+exportgraphics(f,'Figures/FigDecayOverlay.png','Resolution',150)
 % saveas(f, 'Figures/FigDecayOverlaypCa4.png')
 % exportgraphics(f,'Figures/FigDecayOverlaypCa4.4_7.2.png','Resolution',300)
 % saveas(f, 'Figures/FigDecayOverlaypCa4Corr2.png')
 %% pCa
 aspect = 1.5;
 % rampShift = [5.3980    0.8234    0.2223   0.0100];
-load('pCa4dataNoAdj60sFremCorr.mat')
+pcadata = load('pCa4dataNoAdj60sFremCorr.mat');
 x = [4.1240    0.2121   12.0286];
 % load('pCa4dataNoAdj60sFremCorrShifted.mat')
 % x = [4.0648    0.2121   12.0505];
@@ -70,7 +69,9 @@ f.Position = [300 200 7.2*96 7.2*96/aspect];
 % keep the b, fit a and Tss
 % x = [4.1237    0.2121   12.0289];
 % x = [4.1233    0.2121   12.0290];
-[c rspca] = evalPowerFit(x, Farr, Tarr, true, rampShift, true)
+[c rspca] = evalPowerFit(x, pcadata.FarrCorr, pcadata.Tarr, true, rampShift, true)
+f = gcf();
+exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
 
 %%
 options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UseParallel', true, ...
@@ -297,7 +298,7 @@ for i_rds = [4 3 2 1]
     plot([-10 100], [c, c], 'k:', LineWidth=3);    
     axes(a_lm);
     l_tss = plot([-10 100], [c, c], 'k:', LineWidth=3);
-    text(2, c-1.5, sprintf('$T_{ss} = %0.2f$', c), 'Interpreter', 'Latex', 'FontSize',fs+2, 'FontWeight','bold')
+    text(9, c-1.0, sprintf('$T_{ss} = %0.2f$', c), 'Interpreter', 'Latex', 'FontSize',fs+2, 'FontWeight','bold')
 
     % title('A: Linear axis plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
     valids = isgraphics(l_lm);
@@ -336,7 +337,7 @@ for i_rds = [4 3 2 1]
     
     if ~pCa
         leg_gr = [l_cm(valids) l_f];
-        [legends(valids) sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
+        leg_txt = [legends(valids) sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
         reorder = [1 3 5 2 4];
     else
         leg_gr = [l_cm(valids) l_fitarr l_f];

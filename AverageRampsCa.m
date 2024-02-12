@@ -425,14 +425,18 @@ FarrRel = pca11data.Farr; TarrRel = pca11data.Tarr;
 rampShift = [5.3980    0.8234    0.2223   0.0100];
 xRel = [4.4271    0.2121    4.8964];
 ref60s = NaN;
-figure(9); clf;
-tiledlayout(2, 4)
-for i_rds = [0 4 3 2 1]
+f = figure(9); clf;
+aspect = 1.5;
+f.Position = [300 200 7.2*96 7.2*96/aspect];
+tiledlayout(1, 4, "Padding","compact", "TileSpacing","tight")
+% drawPlots = [4 3 1];
+for i_rds = [4 3 2 1]
     if i_rds == 0
         i_rds = 4;
-        % nexttile(1, [2 2])
+        nexttile(1, [1 1])
+        title('Ramp: 0.1s')
     else
-        % nexttile();
+        nexttile();
     end
     clear rmp rmpRel rmpRelRes;
     rmp = table(); rmpRel = table();
@@ -480,43 +484,64 @@ for i_rds = [0 4 3 2 1]
             (t >= 0).*(...
             f_k(ae.a, ae.b, FremFitShift, t)); % exponential approximation
 
-    % plot the raw force
-    pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :));
-    hold on;
+    
     % show the fits
+    cla;
     x_ax = 0.1:0.1:rmpRes.t(end);
-    plot(rmpRelRes.t, rmpRelRes.F);
-    pltFitRelax = plot(x_ax, f_fitRelax(x_ax), ':', LineWidth=2, Color=cl(2, :));
-    pltFitRemF = plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=2, Color=cl(3, :));
-    pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(4, :));
+
+    pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :),LineWidth=2 ); hold on;        
+    pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(1, :));
+    pltRelax = plot(rmpRelRes.t, rmpRelRes.F, Color=cl(2, :));
+    pltFitRelax = plot(x_ax, f_fitRelax(x_ax), ':', LineWidth=3, Color=cl(2, :));
+    pltFitRemF = plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=3, Color=cl(3, :));
     
     xp = rmpRes.t(fitRng);
-    pltFitZone = fill([xp(1) xp(end) xp(end) xp(1)], [-10 -10 60 60], [1 0.8 0.8], 'FaceAlpha',0.04, EdgeColor='none');
+    pltFitZone = fill([xp(1) xp(end) xp(end) xp(1)], [-10 -10 60 60], [1 0.8 0.8], 'FaceAlpha',0.24, EdgeColor='none');
     % show the remaining force approximation
-    pltApprx = plot(rmpRes.t, FremFun(rmpRes.t, rds(i_rds)), ':', LineWidth=3, Color=cl(5, :));
+    pltApprx = plot(rmpRes.t, FremFun(rmpRes.t, rds(i_rds)), '-.', LineWidth=3, Color=cl(4, :));
     
     % show the corrected dataset
     % clf;
-    pltCorr = loglog(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, rds(i_rds)), 'x-', Color=cl(6, :));    
+    pltCorr = loglog(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, rds(i_rds)), '-', Color=cl(5, :), LineWidth=3);    
+    %%
     % approximation zones
     % pltB = plot(rmpRes.t(fitrng), rmpRes.F(fitrng), 'x')
     % pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
     xlim([rmpRes.t(1), rmpRes.t(end)]);
-    ylim([-5, ceil(max(rmpRes.F)/10)*10])
+    % ylim([-2, ceil(max(rmpRes.F)/10)*10])
     %
     FarrCorr{i_rds} = rmp.F - FremFun(rmp.t, rds(i_rds));
     TarrCorr{i_rds} = rmp.t + rds(i_rds);
-    title(sprintf('Ramp %d s: $%0.2f (1 - exp(t-%0.4f))$',rds(i_rds), ae.a, ae.b), 'interpreter', 'LaTex');
+    title(sprintf('Ramp %g s',rds(i_rds)), 'interpreter', 'LaTex');
+
+    ylim([-2 48]);
+    if i_rds < 4
+        yticks([]);
+    else
+        yticks([0 10 20 30 40]);
+        ylabel('Tension (kPa)')
+    end
+    xlabel("t (s)")
+    if i_rds == 1
+        legend([pltF, pltFit, pltRelax, pltFitRelax, pltFitRemF, pltFitZone, pltApprx, pltCorr],...
+            "Averaged pCa 4.4 data", "Fit avg tension", "Relaxed tension", "Fit relaxed", "Remaining tension", "Data fit zone", "Aproximation of Frem", "Corrected tension", ...
+            Location="northeast");
+    end
 end
+fontsize(12, "points")
+f = gcf();
+exportgraphics(f,'Figures/Frem_Correction.png','Resolution',150)
+
+
 %%
-Farr = FarrCorr;
-Tarr = TarrCorr;
+% Farr = FarrCorr;
+% Tarr = TarrCorr;
 % save('pCa4dataNoAdj60sFremCorrShifted.mat', 'Tarr','Farr')
-save('pCa4dataNoAdj60sFremCorr.mat', 'Tarr','Farr')
+save('pCa4dataNoAdj60sFremCorr.mat', 'Tarr','FarrCorr', 'Farr')
 
 %% resample and save and plot the AVG
 for i_rds = [4 3 2 1]
-    t = Tarr{i_rds};
+    t = TarrCorr{i_rds};
     t_ignore = 0.01; 
     % resample up the peak and for the tail separately
     % t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds) - t_ignore) ...
@@ -535,7 +560,7 @@ for i_rds = [4 3 2 1]
     
     % force and length interpolation
     % save denormalized
-    FLSDint = interp1(t, [Farr{i_rds}, Larr{i_rds}, SDarr{i_rds}*FmaxArr{i_rds}], t_s, "pchip", 'extrap');
+    FLSDint = interp1(t, [FarrCorr{i_rds}, Larr{i_rds}, SDarr{i_rds}*FmaxArr{i_rds}], t_s, "pchip", 'extrap');
     
     tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
