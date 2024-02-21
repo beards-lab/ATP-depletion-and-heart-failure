@@ -73,6 +73,10 @@ f.Position = [300 200 7.2*96 7.2*96/aspect];
 f = gcf();
 exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
 
+%% model - relaxed
+% x = [4.4271    0.2121    4.8964];
+[c rspca] = evalPowerFit(x, Force, Time, true, [], false)
+% Farr = Force;Tarr = Time;
 %%
 options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UseParallel', true, ...
     'TolX', 0.0001, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
@@ -133,7 +137,7 @@ if plotResults
     % set width adn height and offsets
     w = 0.255; h = 0.85; x0 = 0.08; y0 = 0.11; gap = 0.003; centerShift = 0.06;
     % data ranges - pca11
-    xrng1 = [-10 19]; xrng2 = [-2 27];xrng_add = [55 65]; yrng = [0.8 21];
+    xrng1 = [-10 19]; xrng2 = [-2 27];xrng_add = [55 65]; yrng = [0.75 21];
     % ylogtick = [1e0 1e1];
     xlintick = 0:10:20;xlinticklab  = [string(floor((xlintick(1):10:xlintick(end))/5)*5) ""];
     ylogtick = [1 ceil((yrng(1):5:yrng(end))/5)*5];

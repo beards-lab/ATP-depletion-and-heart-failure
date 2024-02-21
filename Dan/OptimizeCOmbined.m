@@ -59,7 +59,7 @@ mod(13) = -2.8;
 % mod = [1.16970000000000	0.928400000000000	0.977400000000000	1.02340000000000	1.01370000000000	1.10320000000000	0.937900000000000	1.19500000000000	0.909900000000000	0.898800000000000	1	1	1 1 1];
 % mod = [0.0185    0.8479    0.4307    1.0234    1.0326 0.5971    0.9379    1.1950    0.9099    0.8988 1.0000    1.4450    0.7510    1.2811    2.7365];
 tic
-saSet = 1:19;
+saSet = 1:22;
 [c0_11, cost11_sap, cost11_sam] = runSa(11, mod, saSet);
 [c0_4, cost4_sap, cost4_sam] = runSa(4.4, mod, saSet);
 % normalize
@@ -303,9 +303,12 @@ evalCombined(mod(modSel), mod, modSel, [4.4 11])
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
+% rampSet = [2 3 4] % 18s
+% rampSet = [3] % 6s
+% rampSet = [4] % 3s
 toc
 %%
-evalCombined(mod(modSel), mod, modSel, [11])
+evalCombined(mod(modSel), mod11, modSel, [11 4.4])
 
 %%
 clf;
@@ -369,7 +372,7 @@ x = fminsearch(evalLin, init, options);
 mod(modSel) = x;
 % mod = x;
 
-save moddd;
+% save moddd;
 %% optim in log param space
 % mod = ones(1, 17);
 % mod = [mod ones(1, 21 - length(mod))];
@@ -390,8 +393,14 @@ save moddd;
 % for all ramps
 % mod = [0.1608    0.0820    0.9177    1.2529    0.4815    1.1445    0.1302    0.8398    0.2715    1.6819         0    1.4225    0.0027    0.5112    2.5843       NaN       NaN    1.0000 1.0000       NaN       NaN    0.9612];
 % using prescribed Fss_noCa and FssCa
-mod = [0.3262    0.0269    0.8916    1.1183    0.4793   1.1058    6.1801    0.7867    0.1298    1.5060         0    1.4225    0.0027    0.5112    2.5843       NaN       NaN    1.0000    1.0000       NaN    4.1961    0.9254];
-modSel = [1:9 22]
+% mod = [0.3262    0.0269    0.8916    1.1183    0.4793   1.1058    6.1801    0.7867    0.1298    1.5060         0    1.4225    0.0027    0.5112    2.5843       NaN       NaN    1.0000    1.0000       NaN    4.1961    0.9254];
+% updated the data to 60s decay
+% mod = [0.1877    0.1925    0.9268    1.3007    0.5661    1.3564    0.1461    1.2518    0.2298    1.7830         0    1.4225    0.0027    0.7030    2.5843       NaN       NaN    1.0000    1.0000       NaN       NaN    0.8902];
+modSel = [1:10 12 14 15 22];
+% fixed bug
+% mod = [0.1460, 0.4296, 0.8464, 1.3103, 0.6893, 3.1370, 0.0388, 1.1946, 0.1355, 1.7664,      0, 1.4225, 0.0027, 0.6908, 2.5843,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.6207];
+% optim all ramps
+mod = [0.1360, 0.4811, 0.8499, 1.3379, 0.6881, 2.9849, 0.0849, 1.1904, 0.1302, 1.6995,      0, 1.4243, 0.0027, 0.7668, 2.4840,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.4930]
 
 init = max(-10, log10(mod(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4 11]);
@@ -455,29 +464,64 @@ ylabel('kC Value');
 set ( gca, 'xdir', 'reverse' );
 xlabel('pCa');
 legend('kA (PEVK attachment)', 'kC (stiffening proximal chain)')
+%% test pCa
+figure(90);clf;hold on;
+isolateRunCombinedModel(mod, 5.5, true)
+figure(91);clf;hold on;
+isolateRunCombinedModel(mod, 5.75, true)
+figure(92);clf;hold on;
+isolateRunCombinedModel(mod, 6, true)
+figure(93);clf;hold on;
+isolateRunCombinedModel(mod, 6.25, true)
+
 %% Optimizing the reduced set to pCa
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
-    'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 100);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', false, ...
+    'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 50);
 
 % mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
 mod5_5 = mod;mod5_8 = mod;mod6=mod;
-modSel = [7 8 9 22];
+modSel = [7 9 22];
+modNames(modSel);
 
-init = max(-10, log10(mod5_5(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.5]);
-x = fminsearch(evalLogCombined, init, options);
+
+% lower and upper bounds are a functions of previous mods
+ub = @(m)[m(7) m(9) m(22)];
+lb = @(m)[1e-6 m(1)/4.78 m(2)];
+m_ub = nan(size(mod));m_ub(modSel) = ub(mod);
+m_lb = nan(size(mod));m_lb(modSel) = lb(mod);
+clf;
+plotParams(mod, [-2 2]);hold on;
+plotParams(m_ub, [-2 2]);hold on;
+plotParams(m_lb, [-2 2]);
+%%
+evalNewCombined = @(curmod) evalCombined(curmod, mod, 1:length(mod), [5.5]);
+modt = mod5_5;
+modt(8) = mod(8);
+evalNewCombined(modt)
+%%
+% save('ModsNoAss.mat', 'mod', 'mod6','mod5_8','mod5_5')
+
+% init = max(-10, log10(mod5_5(modSel)));
+% evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.5]);
+
+% x = fminsearch(evalLogCombined, init, options);
+evalLin = @(curmod) evalCombined(curmod, mod, modSel, [5.5]);
+x = fmincon(evalLin, mod5_5(modSel), [], [], [], [], lb(mod), ub(mod), [], options);
 % mod5_5 = mod;
-mod5_5(modSel) = 10.^x;
-
+mod5_5(modSel) = x;
+%%
 init = max(-10, log10(mod5_8(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.75]);
-x = fminsearch(evalLogCombined, init, options);
+% x = fminsearch(evalLogCombined, init, options);
+x = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(mod5_5)), log10(ub(mod5_5)), [], options);
 % mod5_8 = mod;
 mod5_8(modSel) = 10.^x;
-
+%%
 init = max(-10, log10(mod6(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [6]);
-x = fminsearch(evalLogCombined, init, options);
+% x = fminsearch(evalLogCombined, init, options);
+x = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(mod5_8)), log10(ub(mod5_8)), [], options);
+
 % mod6 = mod;
 mod6(modSel) = 10.^x;
 % compare 
@@ -492,17 +536,24 @@ plotParams(mod6, sclale);
 %
 % evalCombined(mod6(modSel), mod, modSel, [5.5])
 %%
-modSet = [mod;mod5_5;mod5_8;mod6];
-pcax = [4.4, 5.5, 5.75, 6];
+mod11 = mod;
+mod11(modSel) = [1e-6 mod(1)/4.78 mod(2)]
+modSet = [mod;mod5_5;mod5_8;mod6;mod11];
+pcax = [4.4, 5.5, 5.75, 6, 11];
 % modSel = 1:20;
-modSet(:, modSel)
+% modSet(:, modSel)
 figure(40);clf;
 tiledlayout(1,4);
 for i = 1:size(modSel, 2)
     nexttile();
     semilogy(-pcax, modSet(:, modSel(i)), 'x-');
+    
+    % pca11
+    % semilogy(-pcax, modSet(:, modSel(i)), '-');
+
     legend(modNames{modSel(i)});
 end
+
 %%
 function totalCost = evalCombined(optMods, mod, modSel, pCas)
 

@@ -9,6 +9,35 @@ dataset{4} = load('DataStruct20231027.mat');
 dataset{5} = load('DataStruct20231102.mat');
 dataset{6} = load('DataStruct20231107.mat');
 isMale = [1, 1, 0, 0, 1, 0];
+%%
+ts = [dataset{6}.dsc{1, 1}.datatable.t; ...
+    dataset{6}.dsc{1, 1}.datatable.t(end) + dataset{6}.dsc{2, 1}.datatable.t ;...
+    dataset{6}.dsc{1, 1}.datatable.t(end) + dataset{6}.dsc{2, 1}.datatable.t(end)  + dataset{6}.dsc{3, 1}.datatable.t];
+Ls = [dataset{6}.dsc{1, 1}.datatable.L; ...
+    dataset{6}.dsc{2, 1}.datatable.L ;...
+    dataset{6}.dsc{3, 1}.datatable.L];
+Fs = [dataset{6}.dsc{1, 1}.datatable.F; ...
+    dataset{6}.dsc{2, 1}.datatable.F ;...
+    dataset{6}.dsc{3, 1}.datatable.F];
+
+% Ls = 
+f = figure(1);clf;
+aspect = 1.5;
+% normal size of 2-col figure on page is 7.2 inches, half is 3.5 inch
+% matlab's pixel is 1/96 of an inch
+f.Position = [300 200 3.5*96 3.5*96/aspect];
+
+to = 2905;
+plot(ts-to, Ls, 'k--');
+ylim([0.75 1.2]);
+ylabel('Muscle length (1)', 'Interpreter','latex')
+yyaxis right;plot(ts-to, Fs, 'k-', LineWidth=2);
+xlim([0, 795]);ylim([0 20]);
+legend('ML', 'T', 'Interpreter','latex', 'FontSize',12, Location='northwest', NumColumns=2);
+xlabel('t (s)', 'Interpreter','latex');ylabel('Tension (kPa)', 'Interpreter','latex')
+fontsize(12, 'points');
+exportgraphics(f,'../Figures/RepreRamps.png','Resolution',150)
+
 %% cell for each ramp
 % ramp durations
 rds = [100, 10, 1, 0.1];
@@ -41,15 +70,21 @@ relaxed{4} = [2, 1, 9;3, 1, 9;4, 1, 6;5,1,6;6, 1, 6];
 % rmp = dtst{1, 1}.datatable;
 
 %
-figure(3);clf;hold on;
+f = figure(3);clf;hold on;
+aspect = 1.5;
+% normal size of 2-col figure on page is 7.2 inches, half is 3.5 inch
+% matlab's pixel is 1/96 of an inch
+f.Position = [300 200 3.5*96 3.5*96/aspect];
+
 clear peaks peaks_norm;
 
 for i_rds = 1:length(rds)
     % sp =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
+    sp =subplot(4, 1, i_rds);cla;
     % excluding 100s
-    if i_rds ~= 1 % skip plotting of 100s
-        sp =subplot(3, 4, (i_rds-2)*4 +  (1:2));cla;
-    end
+    % if i_rds ~= 1 % skip plotting of 100s
+    %     sp =subplot(3, 4, (i_rds-2)*4 +  (1:2));cla;
+    % end
     outF = [];sum_squared_diff = []; n = 1;clear leg;
     rampSet = relaxed{i_rds};
     clin = lines(size(rampSet, 1)+1);
@@ -90,13 +125,12 @@ for i_rds = 1:length(rds)
         % F = rmp.F;
         
         % if isMale(i_logtrace)
-        if i_rds ~= 1 % skip 100s
+        if true || i_rds ~= 1 % skip 100s
             semilogx(rmp.t, F, '-', LineWidth=0.5, Color=[clin(i_logtrace, :), 0.1]);hold on;
         end
         % else
         %     semilogx(rmp.t, F, ':', LineWidth=1.5);hold on;
         % end
-        set(gca, 'FontSize', 14);
         
         % base on obsolute peak
         peaks(i_rds, i_logtrace) = max(rmp.F);
@@ -120,6 +154,7 @@ for i_rds = 1:length(rds)
             Fmax = Fmax + (base_rel - Fmax)/n;
              
 			% estimate the standard error out of sum squared
+            % tested it works the same on-line as using final averaged outF
             sum_squared_diff = sum_squared_diff(1:L) + (F(1:L) - outF(1:L)).^2;
         end    
 
@@ -138,9 +173,11 @@ for i_rds = 1:length(rds)
     end
 %% resample and save
     
-    % resample up the peak and for the tail separately
+    % resample up the peak and for the tail separately, up to 60s
     t_s = [linspace(0, 1, 20)*rds(i_rds) ...
-        logspace(log10(rds(i_rds)), log10(outT(end)), 40)];
+           logspace(log10(rds(i_rds)), log10(min(60+rds(i_rds), outT(end))), 40)...        
+% logspace(log10(min(60+rds(i_rds), outT(end))), log10(min(300, outT(end))), 40)... % optionally get the longer tail
+        ];
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
@@ -149,9 +186,9 @@ for i_rds = 1:length(rds)
     % Force, Length and SD interpolation (relative to Fmax)
     FLSDint = interp1(outT, [outF, rmp.L(1:L), SD], t_s, "pchip", 'extrap');
     
-    tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1)*Fmax);
-    tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
-    % writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
+    tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1)*Fmax, FLSDint(:, 3)*Fmax);
+    tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F', 'SD'};
+    writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
     % semilogx(outT, outF, 'k-');hold on;
     % semilogx(t_s, FLSDint(:, 1) + FLSDint(:, 3), '--', Color=[clin(end, :), 1], LineWidth=2);
@@ -162,28 +199,40 @@ for i_rds = 1:length(rds)
     % fill([outT', fliplr(outT')], [(outF - SE*1.96)', fliplr((outF + SE*1.96)')], 'b');
 
     errorbar(t_s,FLSDint(:, 1),FLSDint(:, 3), '-', LineWidth=2, Color=clin(end, :))
-    
-    xlim([1e-2 2e2])
+    fontsize(14, 'points');
+    % pos = sp.Position;
+    % sp.Position = [0.1 pos(2),0.35, pos(4)];
+    xlim([1e-2 160])    
     yl = ylim;
-    ylabel('\itT_{m,rel}');
+    ylabel('$T_{rel}$', 'Interpreter','latex');
     yyaxis right; ylim(yl*Fmax);
-    ylabel('\itT_m (kPa)');
+    ylabel('T (kPa)', 'Interpreter','latex');
     % plot(rmp.t(1:L), outF(1:L) + (rmp.F(1:L) - outF(1:L))/n)
     leg{length(leg) +1} = 'Averaged';
     title(['Ramp ' num2str(rds(i_rds)) 's'])
-    if i_rds == 1
+
+    % if i_rds == 1
         % x = 0.1;y = 0.03;
         % legend(leg, 'Interpreter','none', 'Position', ...
         %     [sp.Position(1) + sp.Position(3) + x, sp.Position(2) - y, 1 - sp.Position(1) - sp.Position(3) - x, sp.Position(4)])
-    elseif i_rds == 4
-        xlabel('Time (s)')
+    if i_rds == 4
+        xlabel('t (s)')
+        xticks([0.1 10])
+    else
+        xticks([]);
     end   
     
     Tarr{i_rds} = outT;
     Farr{i_rds} = outF*Fmax;
+
 end
-% peak sum up
-subplot(4, 4, [3 16]);cla;
+save('pca11data.mat', "Farr", "Tarr");
+
+%% peak sum up
+aspect = 1
+f = figure(3);f.Position = [300 200 3.5*96 3.5*96/aspect];clf;
+
+% subplot(4, 4, [3 16]);cla;
 % remove zero peaks as NaNs to fix the average - only when something was missing
 peaks(peaks == 0) = NaN;
 
@@ -206,66 +255,31 @@ for i_pk = 1:size(peaks, 2)
 end
 % set(gca, 'YAxisLocation', 'right');
 % just for the legend
-plot(NaN, NaN, '-|',LineWidth=3, Color=clin(end, :))
+plot(NaN, NaN, 's-',LineWidth=2, Color=clin(end, :), MarkerSize=5)
 % validLeg = ~cellfun(@isempty,leg);
 % %# remove empty cells
 % leg_cleared = leg(validLeg);
 
-leg_cleared = {'20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
+% leg_cleared = {'20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
+% 5 longer datasets
+leg_cleared = {'20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
 legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
 
-plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=3, Color=clin(end, :))
-plot(x_ax, nanmean(peaks_norm, 2)', '|', LineWidth=5, Color=clin(end, :), MarkerSize=12)
+plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=2, Color=clin(end, :))
+plot(x_ax, nanmean(peaks_norm, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=5)
 
 
-xlabel('Ramp duration (s)');
+xlabel('Ramp duration (s)', Interpreter='latex');
 % xlim([0.08, 150])
-ylabel('Peak tension (kPa)')
+ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
+yl = ylim();
+yyaxis right;ylim(yl*Fmax);ylabel('T (kPa)', Interpreter='latex');
 % semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, MarkerSize=12)
 % set(gca, 'XTick', fliplr(rds));
 set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
+g = gca();
+g.YAxis(2).Color = [0 0 0];
 
-set(gca, 'FontSize', 14);
-title('Absolute peak height')
-
-% boxplot(peaks', 'Positions',rds)
-% end
-return;
-%% Overlap of the tails
-figure(7);
-clf;
-cg = gray(5);
-clin = lines(5);
-ylmi = Inf;ylma = -Inf;
-% c0space = -3:1:3;
-% cost_c0 = zeros(size(c0space));
-% for i_c0 = 1:length(c0space)
-rampShift = [-97, -8, -0.3, 0];
-rampShift = -[0 0 -0.9 -1.5 0]
-rampShiftY = [0 0 1.6  - 1.5 0]
-c0space = -[1 1 0 0];
-for i_rds = 4:-1:3
-    %%
-    Favg = movmean(Farr{i_rds}, [10 10]*i_rds) + c0space(i_rds);
-    ylmi = min(Favg(end), ylmi);ylma = max([Favg; ylma]);
-    loglog(Tarr{i_rds} + rampShift(i_rds), Favg + rampShiftY(i_rds), Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
-
-    % resample log equally from the peak
-    t_s = logspace(log10(rds(i_rds)*1.01), log10(Tarr{i_rds}(end)), 60);
-    % force interpolation
-    Fint = interp1(Tarr{i_rds}, Favg, t_s, "pchip", 'extrap');
-    % loglog(t_s + rampShift(i_rds), Fint, '-x', Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
-
-    % PowerFunction
-    pf = @(a, b, c, d, x) a*(x-rds(i_rds)).^(-b) + a*b*c*d*0;
-    [ae goodness] = fit(t_s', Fint', pf, 'StartPoint', [1, 0.1, 3, 0], 'Lower',[0 0 0 -Inf], 'Upper',[Inf 1 10, Inf]);
-    goodness.rmse
-    cost_c0(i_c0) = cost_c0(i_c0) + goodness.rmse;
-    t_ext = [t_s,logspace(log10(t_s(end)), log10(t_s(end)*10), 10)] + rampShift(i_rds);    
-    t_ext = [t_s linspace(30, 1000, 10)];
-    loglog(t_ext + rampShift(i_rds), pf(ae.a, ae.b, ae.c, ae.d, t_ext) + + rampShiftY(i_rds), '--', Color=[clin(5-i_rds, :)], LineWidth=2);
-end
-% end
-xlim([1e-1, 50])
-ylim([7 ylma])
-title('no Ca ramp overlap')
+set(gca, 'FontSize', 12);
+title('Peak tension - relaxed')
+exportgraphics(f,'Figures/AvgpPeaksRelaxed.png','Resolution',150)

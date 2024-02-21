@@ -83,6 +83,8 @@ delU = 0.0125*mod(19);
 % mod = 0;
 
 kp   = mod(1)*10203*0.7;      % proximal chain force constant
+kd   = mod(2)*14122;        % distal chain force constant
+
 if ~isnan(mod(16))
     kA   = mod(16)*0.1*16.44; % PEVK attachment rate
 else
@@ -110,11 +112,10 @@ if pCa < 10
         Fss = 3.2470*mod(21);
     end
     if ~isnan(mod(22))
-        kp   = mod(22)*10203*0.7;      % proximal chain force constant high Ca
+        kd   = mod(22)*14122;      % proximal chain force constant high Ca
     end
         
 end
-kd   = mod(2)*14122;        % distal chain force constant
 alphaF = 0; % chain folding rate constant - not implemented yet
 np = mod(3)*3.27; % proximal chain force exponent
 nd = mod(5)*3.25; % distal chain force exponent
@@ -205,8 +206,7 @@ Length = cell(1, 5);
 rampSet = 1:length(rds); %[1 2 3 4 5];
 rampSet = [2 4];
 % rampSet = [4]; % nly 100ms
-% rampSet = [1 2 3 4];
-rampSet = [4];
+rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -253,9 +253,9 @@ for j = rampSet
   % x = [x1; x2(2:end, :)];
 
   %% normal
-  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40];
+  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 60];
   velocities = [0 V 0];
-  %% repeated
+  %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
   %     Tend_ramp + 40 Tend_ramp + 41;... % rampdown in 1s
   %     Tend_ramp + 41 Tend_ramp + 41 + 60;... % hold down - wait for refold
@@ -263,26 +263,26 @@ for j = rampSet
   %     Tend_ramp + 41 + 60 + Tend_ramp Tend_ramp + 41 + 60 + Tend_ramp + 40]; % final hold
   % velocities = [0 V 0 ...
   %     -Lmax/1 0 V 0];
-  % 10 heartbeats
-  times = [-100, 0];velocities = [0];
-  HR = 60;Tc = 60/HR;
-  sf = 0.2; % systole fraction
-  df = 0.4; % diastole fraction
-  Lmax = (2.1 - 1.9)/2;
-  Vc = Lmax/(Tc*sf);Vr = Lmax/(Tc*df);
-  for b = 1:10
-    % relaxation - blowing up
-    times = [times; times(end) times(end)+Lmax/Vr];
-    velocities = [velocities Vr];
-    % hold
-    times = [times; times(end) times(end)+Tc*(1-sf - df)];
-    velocities = [velocities 0];
-    % contraction
-    times = [times; times(end) times(end) + Lmax/Vc];
-    velocities = [velocities -Vc];
-    drawAllStates = true;
-  end
-
+  %% 10 heartbeats
+  % times = [-100, 0];velocities = [0];
+  % HR = 600;Tc = 60/HR;
+  % sf = 0.2; % systole fraction
+  % df = 0.4; % diastole fraction
+  % Lmax = (2.2 - 1.9)/2;
+  % Vc = Lmax/(Tc*sf);Vr = Lmax/(Tc*df);
+  % for b = 1:10
+  %   % relaxation - blowing up
+  %   times = [times; times(end) times(end)+Lmax/Vr];
+  %   velocities = [velocities Vr];
+  %   % hold
+  %   times = [times; times(end) times(end)+Tc*(1-sf - df)];
+  %   velocities = [velocities 0];
+  %   % contraction
+  %   times = [times; times(end) times(end) + Lmax/Vc];
+  %   velocities = [velocities -Vc];
+  %   drawAllStates = true;
+  % end
+%%
             
   % assert(length(times) == length(velocities), 'Must be same length')
   t = []; x = [];
@@ -482,7 +482,13 @@ end
 
     % ttoc = toc;
   % fprintf("Ramp %0.1fs takes %1.1fs \n", Tend_ramp, ttoc)
-    
+  %% plot the beating
+  % g = gcf;
+  % figure(2000+pCa*10);clf;
+  % plot(Time{j}, Force{j}, Time{j}, Force{j} - Force_par{j});
+  % legend('Tension total', 'Tension viscous (kPa)');
+  % title(sprintf('pCa %0.1f, HR %0.0f bpm', pCa, HR));
+  % figure(g);
 end
 
 % Get error for the whole ramp-up and decay
@@ -540,7 +546,6 @@ if pCa < 10
 end
 
 cost = Ep*100 + sum([En{1:end}], 'all');
-
 
 if exist('drawPlots', 'var') && ~drawPlots
     return;
@@ -677,7 +682,6 @@ end
 % fig = gcf;
 % set(gcf, 'Position', [50 50 1200 700])
 % saveas(fig, ['..\Figures\Fig_' fig.Name], 'png')
-
 return;
 
 %% Overlap plots

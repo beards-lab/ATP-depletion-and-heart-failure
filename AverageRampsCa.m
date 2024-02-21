@@ -61,8 +61,8 @@ rds = [100, 10, 1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % only final dataset
 pCa = 4.4;
-% pCa = 5.5;
-% pCa = 5.75;
+pCa = 5.5;
+pCa = 5.75;
 % pCa = 6;
 % pCa = 6.25;
 limit60sPlus = true;
@@ -110,167 +110,167 @@ relaxed{3} = [1, 1, 7;2, 1, 8;3, 1, 8;4,1,7;5, 1, 7;6, 1, 7];
 relaxed{4} = [1, 1, 6;2, 1, 9;3, 1, 9;4,1,6;5, 1, 6;6, 1, 6];
 
 %% Adjustment of remaining active force
-figure(6); clf; 
-clf;
-
-% linear
-% FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*FremMax(1).*(rd-t)./rd) + ... % 
-%             (t >= rd).*FremMax(2).*(t-rd)/(t(end)*0 + 300 -rd);
-% first order
-% k = .015;
-% s = 1;
-
-% exponential
-% FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*FremMax(1).*(rd-t)./rd)) +... % 
+% figure(6); clf; 
+% clf;
+% 
+% % linear
+% % FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*FremMax(1).*(rd-t)./rd) + ... % 
+% %             (t >= rd).*FremMax(2).*(t-rd)/(t(end)*0 + 300 -rd);
+% % first order
+% % k = .015;
+% % s = 1;
+% 
+% % exponential
+% % FremFun = @(t, rd, FremMax) min(FremMax(1), (t < rd).*((1-s).*FremMax(1) + s.*FremMax(1).*(rd-t)./rd)) +... % 
+% %             (t >= rd).*(...
+% %             s*FremMax(2).*...
+% %             (1-exp(-k*(t-rd))) +...
+% %             (1-s).*FremMax(2)); % exponential approximation
+% % s.*FremMax(2)/(1-exp(-k*(t(end) - rd))).*... % scaling to hit the FremMax at the end
+% 
+% % get the pCa 11 long hold for decay fitting 
+% % row = dataset#, col 1 measurement set, col 2 ramp index
+% i_Relax_100ms_hold300 = [1 10;1 9;1 9;1 6;1 6;1 6];
+% % indexes of validation datasets
+% % same or one step slower
+% i_validation = [2 4;3 9;3 9;3 10;3 10;3 10];
+% % 10s ramp up
+% i_validation = [2 3;3 8;3 8;3 8;3 8;3 8];
+% i_validation = [];
+% tiledlayout(2,5);
+% cl = lines(7);
+% 
+% for i_dtst = 0:length(i_pca100ms_hold)
+%     if i_dtst == 0
+%         % representative fit
+%         nexttile([2 2]);
+%         i_dtst = 5;
+%         repre = true;
+%     else
+%         nexttile();
+%         repre = false;
+%     end
+%     dtst = dataset{i_dtst}.dsc{i_pca100ms_hold(i_dtst, 1), i_pca100ms_hold(i_dtst, 2)};
+%     dtst_relaxed = dataset{i_dtst}.dsc{i_Relax_100ms_hold300(i_dtst, 1), i_Relax_100ms_hold300(i_dtst, 2)};
+%     rmp = dtst.datatableZDCorr;
+%     rmpRel = dtst_relaxed.datatableZDCorr;
+% 
+% 
+%     i_0 = find(rmp.t >= 10, 1);
+%     % i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
+%     dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
+%     % i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
+%     % int_avg
+%     rmp.F = movmean(rmp.F, [8 8]);
+%     rmp.t = rmp.t - 10;
+%     rmpRes = rmp(1:100:end, :);
+%     rmpRelRes = rmpRel(1:100:end, :);
+%     rmpRelRes.t = rmpRelRes.t - 10;
+%     fitRelRng = rmpRelRes.t > dtst_relaxed.rd & rmpRelRes.t < 300;
+% 
+%     % fit the relaxed decay first
+%     f_fitRelax = @(a, b, c, x) a*(x-dtst_relaxed.rd).^(-b) + c;
+%     [rae rgood] = fit(rmpRelRes.t(fitRelRng), rmpRelRes.F(fitRelRng), f_fitRelax, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0]);    
+% 
+%     % plot(rmpRel.t-10, rmpRel.F, rmpRelRes.t(fitRelRng), rmpRelRes.F(fitRelRng),...
+%     %     rmpRelRes.t(fitRelRng), f_fitRelax(rae.a, rae.b, rae.c, rmpRelRes.t(fitRelRng)))
+% 
+%     fprintf('Dataset %d: %0.1f(t)^(-%0.2f) + %0.2f\n', i_dtst, rae.a, rae.b, rae.c);    
+%     %% remaining force at the beginning and at the end
+%     FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
+% 
+%     % identify the exponential coefficient by fitting
+%     t_fit_start = 30;    
+%     % we have hold, we can identify the remaining force rise
+%     % hold time segmentation not fully reliable
+%     % fitrng = rmpRes.t > t_fit_start & rmpRes.t < dtst.holdTime;
+%     if t_fit_start > rmpRes.t(end) - 40 - 5
+%         % 30s hold only - we basically ignore the rampup and fit a straight line
+%         fitRng = rmpRes.t > t_fit_start;
+%     else
+%         fitRng = rmpRes.t > t_fit_start & rmpRes.t < rmpRes.t(end) - 40;
+%     end
+% 
+%     f_k = @(a, b, c, x) a*(1-exp(-b*x)) + c;
+%     f_fit = @(a, b, c, x) f_k(a, b, c, x) + f_fitRelax(rae.a, rae.b, rae.c, x);
+%     [ae good] = fit(rmpRes.t(fitRng), rmpRes.F(fitRng), f_fit, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0], 'Upper', [100, 0.1, 100]);    
+% 
+%     % Match that by the fit function
+%     FremFitShift = FremMax(2) - f_k(ae.a, ae.b, 0, rmpRes.t(end));
+%     % minRemForce = f_fit(ae.a, ae.b, FremFitShift, dtst.rd);
+%     FremFun = @(t, rd) (t <= 0)*FremMax(1) + ...
+%             (t > 0 & t < rd).*max(-10, min(FremMax(1), (f_k(ae.a, ae.b, FremFitShift, rd) - FremMax(1))/rd*t + FremMax(1))) +... % 
 %             (t >= rd).*(...
-%             s*FremMax(2).*...
-%             (1-exp(-k*(t-rd))) +...
-%             (1-s).*FremMax(2)); % exponential approximation
-% s.*FremMax(2)/(1-exp(-k*(t(end) - rd))).*... % scaling to hit the FremMax at the end
-
-% get the pCa 11 long hold for decay fitting 
-% row = dataset#, col 1 measurement set, col 2 ramp index
-i_Relax_100ms_hold300 = [1 10;1 9;1 9;1 6;1 6;1 6];
-% indexes of validation datasets
-% same or one step slower
-i_validation = [2 4;3 9;3 9;3 10;3 10;3 10];
-% 10s ramp up
-i_validation = [2 3;3 8;3 8;3 8;3 8;3 8];
-i_validation = [];
-tiledlayout(2,5);
-cl = lines(7);
-
-for i_dtst = 0:length(i_pca100ms_hold)
-    if i_dtst == 0
-        % representative fit
-        nexttile([2 2]);
-        i_dtst = 5;
-        repre = true;
-    else
-        nexttile();
-        repre = false;
-    end
-    dtst = dataset{i_dtst}.dsc{i_pca100ms_hold(i_dtst, 1), i_pca100ms_hold(i_dtst, 2)};
-    dtst_relaxed = dataset{i_dtst}.dsc{i_Relax_100ms_hold300(i_dtst, 1), i_Relax_100ms_hold300(i_dtst, 2)};
-    rmp = dtst.datatableZDCorr;
-    rmpRel = dtst_relaxed.datatableZDCorr;
-   
-    
-    i_0 = find(rmp.t >= 10, 1);
-    % i_end = find(rmp.t >= 10+28+rds(i_rds), 1);
-    dt = (rmp.t(end) - rmp.t(1))/(length(rmp.t)-1);
-    % i_end = find(rmp.L > 1.15, 1, 'last') - 0.5/dt;
-    % int_avg
-    rmp.F = movmean(rmp.F, [8 8]);
-    rmp.t = rmp.t - 10;
-    rmpRes = rmp(1:100:end, :);
-    rmpRelRes = rmpRel(1:100:end, :);
-    rmpRelRes.t = rmpRelRes.t - 10;
-    fitRelRng = rmpRelRes.t > dtst_relaxed.rd & rmpRelRes.t < 300;
-
-    % fit the relaxed decay first
-    f_fitRelax = @(a, b, c, x) a*(x-dtst_relaxed.rd).^(-b) + c;
-    [rae rgood] = fit(rmpRelRes.t(fitRelRng), rmpRelRes.F(fitRelRng), f_fitRelax, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0]);    
-
-    % plot(rmpRel.t-10, rmpRel.F, rmpRelRes.t(fitRelRng), rmpRelRes.F(fitRelRng),...
-    %     rmpRelRes.t(fitRelRng), f_fitRelax(rae.a, rae.b, rae.c, rmpRelRes.t(fitRelRng)))
-        
-    fprintf('Dataset %d: %0.1f(t)^(-%0.2f) + %0.2f\n', i_dtst, rae.a, rae.b, rae.c);    
-    %% remaining force at the beginning and at the end
-    FremMax = [mean(rmp.F(1:i_0-1/dt)), mean(rmp.F(length(rmp.F)-1/dt:end))];
-
-    % identify the exponential coefficient by fitting
-    t_fit_start = 30;    
-    % we have hold, we can identify the remaining force rise
-    % hold time segmentation not fully reliable
-    % fitrng = rmpRes.t > t_fit_start & rmpRes.t < dtst.holdTime;
-    if t_fit_start > rmpRes.t(end) - 40 - 5
-        % 30s hold only - we basically ignore the rampup and fit a straight line
-        fitRng = rmpRes.t > t_fit_start;
-    else
-        fitRng = rmpRes.t > t_fit_start & rmpRes.t < rmpRes.t(end) - 40;
-    end
-    
-    f_k = @(a, b, c, x) a*(1-exp(-b*x)) + c;
-    f_fit = @(a, b, c, x) f_k(a, b, c, x) + f_fitRelax(rae.a, rae.b, rae.c, x);
-    [ae good] = fit(rmpRes.t(fitRng), rmpRes.F(fitRng), f_fit, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0], 'Upper', [100, 0.1, 100]);    
-        
-    % Match that by the fit function
-    FremFitShift = FremMax(2) - f_k(ae.a, ae.b, 0, rmpRes.t(end));
-    % minRemForce = f_fit(ae.a, ae.b, FremFitShift, dtst.rd);
-    FremFun = @(t, rd) (t <= 0)*FremMax(1) + ...
-            (t > 0 & t < rd).*max(-10, min(FremMax(1), (f_k(ae.a, ae.b, FremFitShift, rd) - FremMax(1))/rd*t + FremMax(1))) +... % 
-            (t >= rd).*(...
-            f_k(ae.a, ae.b, FremFitShift, t)); % exponential approximation
-
-    % plot the raw force
-    pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :));
-    hold on;
-    % show the fits
-    x_ax = 0.1:0.1:350;
-    if repre
-        pltFitRelax = plot(x_ax, f_fitRelax(rae.a, rae.b, rae.c, x_ax), ':', LineWidth=2, Color=cl(2, :));
-        pltFitRemF = plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=2, Color=cl(3, :));
-    end
-    pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(4, :));
-    xp = rmpRes.t(fitRng);
-    pltFitZone = fill([xp(1) xp(end) xp(end) xp(1)], [0 0 50 50], [1 0.8 0.8], 'FaceAlpha',0.4, EdgeColor='none');
-    % show the remaining force approximation
-    pltApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd), ':', LineWidth=3, Color=cl(5, :));
-    
-    % show the corrected dataset
-    pltCorr = plot(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, dtst.rd), '-', Color=cl(6, :));    
-    % approximation zones
-    % pltB = plot(rmpRes.t(fitrng), rmpRes.F(fitrng), 'x')
-    % pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
-    xlim([rmp.t(1), rmp.t(end)]);
-    if repre
-        legend([pltF, pltFitZone, pltFit, pltFitRelax, pltFitRemF, pltApprx, pltCorr], ...
-            {'Measured data', 'Fitting zone', 'Data fit combined', 'Fit of relaxed decay', 'Fit of F_{rem}', ...
-            'Approximation of F_{rem}', 'Corrected data'}, 'AutoUpdate','off')
-        title({sprintf('Representative remaining force correction for pCa %0.2f', pCa), sprintf('(dataset %d)', i_dtst)});
-        xlabel('Time (s)');ylabel('Tension (kPa)')
-    else
-        title(sprintf('Dataset %d correction', i_dtst));
-    end
-    FremFunArr{i_dtst} = FremFun;
-    
-    %% repeat for the validation ramp, using the same parametrization of the FremFun
-    if length(i_validation) >= i_dtst
-        dtst = dataset{i_dtst}.dsc{i_validation(i_dtst, 1), i_validation(i_dtst, 2)};
-        rmp = dtst.datatableZDCorr;
-        set(gca,'ColorOrderIndex',1)
-        F = movmean(rmp.F, [16 16]);
-        rmp.t = rmp.t - 10;
-        % plot the raw force
-        pltF = plot(rmp.t, F, ':');
-        % show the remaining force approximation
-        pltApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd), '--');
-        % show the corrected dataset
-        pltCorr = plot(rmp.t, F - FremFun(rmp.t, dtst.rd), '-');    
-    end
-    set(gca, 'FontSize', 14);
-    ylim([-5, 50])
-    % %% Test fit the corrected one
-    % FcBarca = rmpRes.F - FremFun(rmpRes.t, dtst.rd);
-    % f_fitRelaxt = @(a, b, c, x) rae.a*(x-dtst_relaxed.rd).^(-rae.b) + c + a*b*c*0;
-    % [raet rgoodt] = fit(rmpRes.t(fitRng)-dtst.rd, FcBarca(fitRng), f_fitRelaxt, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0]);    
-    % % figure(21);clf;
-    % plot(rmpRes.t, FcBarca);
-    % hold on;
-    % % plot(rmpRes.t(fitRng), FcBarca(fitRng));
-    % x = 0.1:0.1:300;
-    % plot(x+dtst.rd, f_fitRelaxt(rae.a, rae.b, raet.c, x), '-', 'Linewidth', 4);
-    % 
-    % plot(x+dtst.rd, f_fitRelaxt(raet.a, raet.b, raet.c, x), '-', 'Linewidth', 4);
-end
+%             f_k(ae.a, ae.b, FremFitShift, t)); % exponential approximation
+% 
+%     % plot the raw force
+%     pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :));
+%     hold on;
+%     % show the fits
+%     x_ax = 0.1:0.1:350;
+%     if repre
+%         pltFitRelax = plot(x_ax, f_fitRelax(rae.a, rae.b, rae.c, x_ax), ':', LineWidth=2, Color=cl(2, :));
+%         pltFitRemF = plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=2, Color=cl(3, :));
+%     end
+%     pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(4, :));
+%     xp = rmpRes.t(fitRng);
+%     pltFitZone = fill([xp(1) xp(end) xp(end) xp(1)], [0 0 50 50], [1 0.8 0.8], 'FaceAlpha',0.4, EdgeColor='none');
+%     % show the remaining force approximation
+%     pltApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd), ':', LineWidth=3, Color=cl(5, :));
+% 
+%     % show the corrected dataset
+%     pltCorr = plot(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, dtst.rd), '-', Color=cl(6, :));    
+%     % approximation zones
+%     % pltB = plot(rmpRes.t(fitrng), rmpRes.F(fitrng), 'x')
+%     % pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
+%     xlim([rmp.t(1), rmp.t(end)]);
+%     if repre
+%         legend([pltF, pltFitZone, pltFit, pltFitRelax, pltFitRemF, pltApprx, pltCorr], ...
+%             {'Measured data', 'Fitting zone', 'Data fit combined', 'Fit of relaxed decay', 'Fit of F_{rem}', ...
+%             'Approximation of F_{rem}', 'Corrected data'}, 'AutoUpdate','off')
+%         title({sprintf('Representative remaining force correction for pCa %0.2f', pCa), sprintf('(dataset %d)', i_dtst)});
+%         xlabel('Time (s)');ylabel('Tension (kPa)')
+%     else
+%         title(sprintf('Dataset %d correction', i_dtst));
+%     end
+%     FremFunArr{i_dtst} = FremFun;
+% 
+%     %% repeat for the validation ramp, using the same parametrization of the FremFun
+%     if length(i_validation) >= i_dtst
+%         dtst = dataset{i_dtst}.dsc{i_validation(i_dtst, 1), i_validation(i_dtst, 2)};
+%         rmp = dtst.datatableZDCorr;
+%         set(gca,'ColorOrderIndex',1)
+%         F = movmean(rmp.F, [16 16]);
+%         rmp.t = rmp.t - 10;
+%         % plot the raw force
+%         pltF = plot(rmp.t, F, ':');
+%         % show the remaining force approximation
+%         pltApprx = plot(rmp.t, FremFun(rmp.t, dtst.rd), '--');
+%         % show the corrected dataset
+%         pltCorr = plot(rmp.t, F - FremFun(rmp.t, dtst.rd), '-');    
+%     end
+%     set(gca, 'FontSize', 14);
+%     ylim([-5, 50])
+%     % %% Test fit the corrected one
+%     % FcBarca = rmpRes.F - FremFun(rmpRes.t, dtst.rd);
+%     % f_fitRelaxt = @(a, b, c, x) rae.a*(x-dtst_relaxed.rd).^(-rae.b) + c + a*b*c*0;
+%     % [raet rgoodt] = fit(rmpRes.t(fitRng)-dtst.rd, FcBarca(fitRng), f_fitRelaxt, 'StartPoint', [1, 0.01, 5], 'Lower', [0, 0, 0]);    
+%     % % figure(21);clf;
+%     % plot(rmpRes.t, FcBarca);
+%     % hold on;
+%     % % plot(rmpRes.t(fitRng), FcBarca(fitRng));
+%     % x = 0.1:0.1:300;
+%     % plot(x+dtst.rd, f_fitRelaxt(rae.a, rae.b, raet.c, x), '-', 'Linewidth', 4);
+%     % 
+%     % plot(x+dtst.rd, f_fitRelaxt(raet.a, raet.b, raet.c, x), '-', 'Linewidth', 4);
+% end
 
 %% Average all data
 % figure(5);clf;
 
 figure(4);clf;hold on;
 
-clear peaks peaks_norm leg;
+clear sp peaks peaks_norm leg;
 
 for i_rds = 1:length(rds)
     sp{i_rds} =subplot(4, 4, (i_rds-1)*4 +  (1:2));cla;
@@ -279,6 +279,8 @@ for i_rds = 1:length(rds)
     %     sp = subplot(3, 4, (i_rds-2)*4 +  (1:2));cla;
     % end
     outF = [];sum_squared_diff = []; n = 1;clear leg;
+    % clear output arr
+    Farr{i_rds} = outF;
     rampSet = pCaData{i_rds};
     if isempty(rampSet)
         continue;
@@ -286,8 +288,8 @@ for i_rds = 1:length(rds)
     clin = lines(size(rampSet, 1)+1);
 
     for i_logtrace = 1:size(rampSet, 1)
-        if limit60sPlus && rampSet(i_logtrace, 1) == 1
-            % we want only decays 60s+
+        if limit60sPlus && rampSet(i_logtrace, 1) == 1                 
+            % we want only decays 60s+            
             continue;
         end
 
@@ -439,9 +441,13 @@ for i_rds = [4 3 2 1]
         nexttile();
     end
     clear rmp rmpRel rmpRelRes;
+    if isempty(Farr{i_rds})
+        FarrCorr{i_rds} = [];
+        continue;
+    end
     rmp = table(); rmpRel = table();
 
-    rmp.F = movmean(Farr{i_rds}, [8 8]);
+    rmp.F = movmean(Farr{i_rds}, [0 0]);
     rmp.t = Tarr{i_rds} - rds(i_rds);
     rmpRes = rmp(1:50:end, :);
     rmpRel.F = movmean(FarrRel{i_rds}, [8 8]);
@@ -489,8 +495,8 @@ for i_rds = [4 3 2 1]
     cla;
     x_ax = 0.1:0.1:rmpRes.t(end);
 
-    pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :),LineWidth=2 ); hold on;        
-    pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(1, :));
+    pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :),LineWidth=1 ); hold on;        
+    pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(1, :)*0.8);
     pltRelax = plot(rmpRelRes.t, rmpRelRes.F, Color=cl(2, :));
     pltFitRelax = plot(x_ax, f_fitRelax(x_ax), ':', LineWidth=3, Color=cl(2, :));
     pltFitRemF = plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=3, Color=cl(3, :));
@@ -503,7 +509,8 @@ for i_rds = [4 3 2 1]
     % show the corrected dataset
     % clf;
     pltCorr = loglog(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, rds(i_rds)), '-', Color=cl(5, :), LineWidth=3);    
-    %%
+    pltFrem0 = plot(-1 - rds(i_rds), FremMax, 'x', MarkerSize=10, LineWidth=3, Color=cl(4, :))
+    %
     % approximation zones
     % pltB = plot(rmpRes.t(fitrng), rmpRes.F(fitrng), 'x')
     % pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
@@ -514,6 +521,7 @@ for i_rds = [4 3 2 1]
     TarrCorr{i_rds} = rmp.t + rds(i_rds);
     title(sprintf('Ramp %g s',rds(i_rds)), 'interpreter', 'LaTex');
 
+
     ylim([-2 48]);
     if i_rds < 4
         yticks([]);
@@ -523,9 +531,13 @@ for i_rds = [4 3 2 1]
     end
     xlabel("t (s)")
     if i_rds == 1
-        legend([pltF, pltFit, pltRelax, pltFitRelax, pltFitRemF, pltFitZone, pltApprx, pltCorr],...
-            "Averaged pCa 4.4 data", "Fit avg tension", "Relaxed tension", "Fit relaxed", "Remaining tension", "Data fit zone", "Aproximation of Frem", "Corrected tension", ...
-            Location="northeast");
+        legend([pltF, pltFit, pltApprx,...
+            pltRelax, pltFitRelax, pltFrem0,  ...
+            pltCorr, pltFitRemF, pltFitZone],...
+            "T_m", "T_{highCa,i}", "T_{rem,i,aligned}",...
+            "Relaxed tension", "T_{rel,i}",'T_{rem,0}', ...
+            "T_{corr}", "T_{rem,i}", "t > 15",...             
+            Location="northeast", NumColumns=3);
     end
 end
 fontsize(12, "points")
@@ -537,10 +549,15 @@ exportgraphics(f,'Figures/Frem_Correction.png','Resolution',150)
 % Farr = FarrCorr;
 % Tarr = TarrCorr;
 % save('pCa4dataNoAdj60sFremCorrShifted.mat', 'Tarr','Farr')
-save('pCa4dataNoAdj60sFremCorr.mat', 'Tarr','FarrCorr', 'Farr')
+if pCa == 4.4
+    save('pCa4dataNoAdj60sFremCorr.mat', 'Tarr','FarrCorr', 'Farr')
+end
 
 %% resample and save and plot the AVG
 for i_rds = [4 3 2 1]
+    if isempty(FarrCorr{i_rds})
+        continue;
+    end
     t = TarrCorr{i_rds};
     t_ignore = 0.01; 
     % resample up the peak and for the tail separately
@@ -550,7 +567,7 @@ for i_rds = [4 3 2 1]
 
     % resample up the peak and for the tail separately
     t_s = [linspace(0, 1, 20)*(rds(i_rds) - t_ignore) ...
-        logspace(log10(rds(i_rds) + t_ignore), log10(t(end)), 40)];
+        logspace(log10(rds(i_rds) + t_ignore), log10(min(60+rds(i_rds), t(end))), 40)];
 
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
@@ -562,8 +579,8 @@ for i_rds = [4 3 2 1]
     % save denormalized
     FLSDint = interp1(t, [FarrCorr{i_rds}, Larr{i_rds}, SDarr{i_rds}*FmaxArr{i_rds}], t_s, "pchip", 'extrap');
     
-    tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1));
-    tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F'};
+    tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1), FLSDint(:, 3));
+    tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F', 'SD'};
     writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
 %% plot the AVG
 
@@ -599,8 +616,11 @@ end
 % normtype = 'Norm to steady state'
 % normtype = 'Norm to relaxed peaks for each ramp'
 % normtype = 'Norm to highest relaxed peak'
-normtype = 'Norm to Fmax'
-subplot(4, 4, [3 16]);cla;
+% normtype = 'Norm to Fmax'
+% subplot(4, 4, [3 16]);cla;
+aspect = 1
+f = figure;
+f.Position = [300 200 3.5*96 3.5*96/aspect];clf;
 
 % figure(11);
 % subplot(1, 5, 5);cla reset;
@@ -618,6 +638,10 @@ cv = nanstd(peaks_norm')./nanmean(peaks_norm');
 fprintf('Coefficient of variance: %1.3f \n', sum(cv));
 
 clin = lines(size(peaks_norm, 2)+1);
+if limit60sPlus
+    % shift by one bc we skipped
+    clin(2:end, :) = clin(1:end-1, :);
+end
 for i_pk = 1:size(peaks_norm, 2)
     if all(isnan(peaks_norm(:, i_pk)))
         % it was just a placeholder
@@ -632,30 +656,35 @@ for i_pk = 1:size(peaks_norm, 2)
 end
 
 % just for the legend
-plot(NaN, NaN, '-|',LineWidth=3, Color=clin(end, :))
+plot(NaN, NaN, 's-',LineWidth=2, Color=clin(end, :), MarkerSize=5)
 %# find non-empty legend
 % validLeg = ~cellfun(@isempty,leg);
 % %# remove empty cells
 % leg_cleared = leg(validLeg);
 leg_cleared = {'20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
+leg_cleared = {'20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
 
-legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
+% legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
 
-plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=3, Color=clin(end, :))
-plot(x_ax, nanmean(peaks_norm, 2)', '|', LineWidth=5, Color=clin(end, :), MarkerSize=12)
+plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=2, Color=clin(end, :))
+plot(x_ax, nanmean(peaks_norm, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=5)
 
 % plot(x_ax, nanmedian(peaks_norm, 2)', '--', LineWidth=3, Color=clin(end, :))
 % plot(x_ax, nanmedian(peaks_norm, 2)', '_', LineWidth=5, Color=clin(end, :), MarkerSize=12)
 
-xlabel('Ramp duration (s)');
+
+xlabel('Ramp duration (s)', Interpreter='latex');
 % xlim([0.08, 150])
-% ylabel('Peak tension (kPa)')
+ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
+ylim([0 1]);
+yl = ylim();
+yyaxis right;ylim(yl*Fmax);ylabel('T (kPa)', Interpreter='latex');
 % semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, MarkerSize=12)
 % set(gca, 'XTick', fliplr(rds));
 set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
+g = gca();
+g.YAxis(2).Color = [0 0 0];
 
-set(gca, 'FontSize', 14);
-title(sprintf('Averaging peaks (%1.3f)\n %s', sum(cv), normtype))
-
-yl = ylim();
-ylim([0, yl(2)]);
+set(gca, 'FontSize', 12);
+title(sprintf('Peak tension - pCa %0.2g', pCa));
+exportgraphics(f,sprintf('Figures/AvgpPeakspCa%0.2g.png', pCa),'Resolution',150)
