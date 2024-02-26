@@ -9,7 +9,7 @@ dataset{4} = load('DataStruct20231027.mat');
 dataset{5} = load('DataStruct20231102.mat');
 dataset{6} = load('DataStruct20231107.mat');
 isMale = [1, 1, 0, 0, 1, 0];
-%%
+%% Figure representative ramps
 ts = [dataset{6}.dsc{1, 1}.datatable.t; ...
     dataset{6}.dsc{1, 1}.datatable.t(end) + dataset{6}.dsc{2, 1}.datatable.t ;...
     dataset{6}.dsc{1, 1}.datatable.t(end) + dataset{6}.dsc{2, 1}.datatable.t(end)  + dataset{6}.dsc{3, 1}.datatable.t];
@@ -20,23 +20,67 @@ Fs = [dataset{6}.dsc{1, 1}.datatable.F; ...
     dataset{6}.dsc{2, 1}.datatable.F ;...
     dataset{6}.dsc{3, 1}.datatable.F];
 
-% Ls = 
+
+ts = ts(1:189864); Ls = Ls(1:189864); Fs = Fs(1:189864);
 f = figure(1);clf;
-aspect = 1.5;
+% tiledlayout('flow', 'TileSpacing','none')
+% nexttile;
+aspect = 3;
 % normal size of 2-col figure on page is 7.2 inches, half is 3.5 inch
 % matlab's pixel is 1/96 of an inch
-f.Position = [300 200 3.5*96 3.5*96/aspect];
+f.Position = [300 200 7.2*96 7.2*96/aspect];
+yl1 = [0.75 1.2];
+yl2 = [-2.5 20];
+gc = axes('Position', [0.1 0.2 0.39 0.75], 'Box','on', 'BoxStyle','full');
 
-to = 2905;
-plot(ts-to, Ls, 'k--');
-ylim([0.75 1.2]);
-ylabel('Muscle length (1)', 'Interpreter','latex')
-yyaxis right;plot(ts-to, Fs, 'k-', LineWidth=2);
-xlim([0, 795]);ylim([0 20]);
-legend('ML', 'T', 'Interpreter','latex', 'FontSize',12, Location='northwest', NumColumns=2);
-xlabel('t (s)', 'Interpreter','latex');ylabel('Tension (kPa)', 'Interpreter','latex')
+% PNB area
+to = 2905; % time offset panel A
+% time offset panel A - relaxed fast to slow area
+to = 898.62;
+plot(ts-to, Ls, 'k--'); ylim(yl1);
+ylabel('Muscle length ($L/L_0$)', 'Interpreter','latex')
+yyaxis right; plot(ts-to, Fs, 'k-', LineWidth=2);
+% PNB area
+% xlim([0, 795]);ylim([-5 15]);
+% fast to slow area
+xlim([-50, 1000]);ylim(yl2);
+
+
+% leg = legend('ML', 'T', 'Interpreter','latex', 'FontSize',12, NumColumns=2, Location='northwest');
+% leg.Position = leg.Position + [0 0.07 0 0];
+% ylabel('Tension (kPa)', 'Interpreter','latex')
+xlabel('$t$ (s)', 'Interpreter','latex');
 fontsize(12, 'points');
-exportgraphics(f,'../Figures/RepreRamps.png','Resolution',150)
+gc = gca; 
+gc.YAxis(2).Color = [0 0 0];
+% gc.YAxis(2).Visible = "off";
+gc.YAxis(2).TickLabel = [];
+gc.XTick = [0 200 400 600 800];
+
+
+gc = axes('Position', [0.51 0.2 0.39 0.75], 'Box','on', 'BoxStyle','full');
+
+plot(ts-to + 0.1, Ls, 'k--');ylim(yl1);
+% ylabel('Muscle length ($L/L_0$)', 'Interpreter','latex')
+yyaxis right; plot(ts-to + 0.1, Fs, 'k-', LineWidth=2);
+% PNB area
+% xlim([0, 795]);ylim([-5 15]);
+% fast to slow area
+xlim([-0.05, 0.25]);ylim(yl2);
+
+leg = legend('ML', 'T', 'Interpreter','latex', 'FontSize',12, NumColumns=1, Location='southeast');
+leg.Position = leg.Position + [0 0.07 0 0];
+xlabel('$t$ (s)', 'Interpreter','latex');
+ylabel('Tension (kPa)', 'Interpreter','latex')
+fontsize(12, 'points');
+gc = gca; 
+gc.YAxis(2).Color = [0 0 0];
+% gc.YAxis(1).Visible = "off";
+gc.YAxis(1).TickLabel = [];
+% gc.Position = gc.Position + [0.05 0 0 0];
+gc.XTick = [0 0.1 0.2];
+
+exportgraphics(f,'Figures/RepreRamps.png','Resolution',150)
 
 %% cell for each ramp
 % ramp durations
@@ -227,10 +271,14 @@ for i_rds = 1:length(rds)
 
 end
 save('pca11data.mat', "Farr", "Tarr");
+peaks11 = peaks;
+%% peak sum up - run BEFORE AverageRampsCa
+peaks = peaks11;
+aspect = 3;
+f = figure(3);f.Position = [300 200 7.2*96 7.2*96/aspect];clf;
 
-%% peak sum up
-aspect = 1
-f = figure(3);f.Position = [300 200 3.5*96 3.5*96/aspect];clf;
+gc = axes('Position', [0.1 0.1 0.39 0.8], 'Box','on', 'BoxStyle','full');
+% gc = axes('Position', [0.6 0.1 0.39 0.8], 'Box','on', 'BoxStyle','full', 'Color','r');
 
 % subplot(4, 4, [3 16]);cla;
 % remove zero peaks as NaNs to fix the average - only when something was missing
@@ -240,9 +288,13 @@ peaks(peaks == 0) = NaN;
 % for x axis we go from fastest to slowest
 x_ax = length(rds):-1:1;
 
-boxplot(fliplr(peaks_norm'), PlotStyle="traditional", Notch="off");hold on;
+boxplot(fliplr(peaks'), PlotStyle="traditional", Notch="off", Colors="k");hold on;
 
+% colors
 clin = lines(size(peaks, 2)+1);
+% BW only
+clin = repmat([0 0 0], [size(peaks, 2)+1, 1]);
+clear lp
 for i_pk = 1:size(peaks, 2)
     if all(isnan(peaks(:, i_pk))) || all (peaks(:, i_pk) == 0)
         % it was just a placeholder
@@ -250,36 +302,35 @@ for i_pk = 1:size(peaks, 2)
         continue;
     end    
     % set(gca, 'colororderindex', 1);
-    plot(x_ax, peaks_norm(:, i_pk)', '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));hold on;    
+    lp = plot(x_ax', peaks(:, i_pk), '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));
+    hold on;    
     % semilogx(rds, as(:, i_pk), 'x:', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
 end
 % set(gca, 'YAxisLocation', 'right');
 % just for the legend
-plot(NaN, NaN, 's-',LineWidth=2, Color=clin(end, :), MarkerSize=5)
+lp(length(lp)+1) = plot(NaN, NaN, 's-',LineWidth=2, Color=clin(end, :), MarkerSize=5)
 % validLeg = ~cellfun(@isempty,leg);
 % %# remove empty cells
 % leg_cleared = leg(validLeg);
 
 % leg_cleared = {'20230919 M','20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
 % 5 longer datasets
-leg_cleared = {'20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
-legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
+% leg_cleared = {'20230927 M','20230928 F','20231027 F','20231102 M','20231107 F', 'Averaged'};
+% summed up
+leg_cleared = {'Individual data', 'Averaged data'};
+legend(lp(end-1:end), leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','best')
 
-plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=2, Color=clin(end, :))
-plot(x_ax, nanmean(peaks_norm, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=5)
+plot(x_ax, nanmean(peaks, 2)', '-', LineWidth=2, Color=clin(end, :))
+plot(x_ax, nanmean(peaks, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=5)
 
 
-xlabel('Ramp duration (s)', Interpreter='latex');
-% xlim([0.08, 150])
-ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
-yl = ylim();
-yyaxis right;ylim(yl*Fmax);ylabel('T (kPa)', Interpreter='latex');
-% semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, MarkerSize=12)
-% set(gca, 'XTick', fliplr(rds));
+xlabel('$t_r$ (s)', Interpreter='latex');
+% ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
+% yl = ylim();yyaxis right;ylim(yl*Fmax);
+ylabel('T (kPa)', Interpreter='latex');
 set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
-g = gca();
-g.YAxis(2).Color = [0 0 0];
-
+% g = gca();g.YAxis(2).Color = [0 0 0];
+ylim([0 inf])
 set(gca, 'FontSize', 12);
 title('Peak tension - relaxed')
-exportgraphics(f,'Figures/AvgpPeaksRelaxed.png','Resolution',150)
+% exportgraphics(f,'Figures/AvgpPeaksRelaxed.png','Resolution',150)

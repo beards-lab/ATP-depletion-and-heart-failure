@@ -13,6 +13,7 @@ if any(mod < 0)
     return;
 end
 drawAllStates = false;
+drawFig1 = false;
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
 rds = fliplr([0.1, 1, 10, 100]);
@@ -62,7 +63,7 @@ ds   = 1*(Lmax)/(Nx-1);      % space step size
 % ds   = 1*(Lmax + 0.015)/(Nx-1);
 s  = (0:1:Nx-1)'.*ds; % strain vector
 Ng = 14; 
-delU = 0.0125*mod(19);
+delU = 0.0125*mod(19)*14/Ng;
 % so all unfolded make Ng*delU slack, i.e. 11*0.137=0.1375um
 
 
@@ -99,7 +100,7 @@ end
 
 alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
 Fss = 3.2470*mod(10); % Parallel steady state force
-
+% Fss = 4.9;
 if pCa < 10
     kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = mod(7)*16.44;
@@ -130,45 +131,64 @@ alphaF_0 = 0.05*mod(15);
 % value. 
 slack = (0:Ng).*delU;
 Fp = kp*(max(0,s-slack)/Lref).^(np); 
-%% visualizing the Force plot
-% clf;
-% plot(repmat(s, [1, Ng]), Fp(:, 1:Ng), 'linewidth', 2); 
-% legend('\itF_{p,1}', '\itF_{p,2}', '\itF_{p,3}', '\it...', 'Location', 'Northwest');
-% xlabel('Strain (um)');ylabel('Tension (kPa)');
-% set(gca, 'FontSize', 14)
-% set(gcf, 'Position', [500  240  400  300])
-% ylim([0 60])
-% xlabel('s (\mum)');ylabel(['\itt_p (kPa)']);
-% mesh(Fp)
-%%
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
 RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
-
-%% visualizing the unfolding rate = fig 1C
-% clf;hold on;
-% plot(repmat(s, [1 Ng]), RU, '-','linewidth', 2);
-% plot(repmat(s(end), [Ng, 1])', RU(end, :)', 'ks', 'linewidth', 2);
-% for n = 1:4
-%     text(s(end) + 0.01, RU(end, n), ['{\itU}_{' num2str(n)  '\rightarrow' num2str(n+1) '}'], 'Fontsize', 14)
-% end
-% text(s(end) + 0.01, RU(end, 5), '...', 'FontSize',14, 'FontWeight','bold')
-% xlabel('s (\mum)');ylabel(['{\itU_{n\rightarrown+1}  (s^{-1})}']);
-% set(gca, 'FontSize', 14)
-% 
-% axes('position', [0.25 0.5 0.35 0.4], 'YAxisLocation','right')
-% plot(1:Ng, RU(end, :), 'ks-', 'linewidth', 2);
-% xlabel('\itn')
-% text(4, max(RU(end, 1))*0.8, ['\itU_{n\rightarrown+1}' char(10) 'at ' num2str(s(end)) '\mum'], 'FontSize',14, 'FontWeight','bold')
-% set(gca, 'FontSize', 14)
-% set(gcf, 'Position', [500  240  400  300])
-% % set(gca, 'YAxisLocation', 'right');
-% set(gca, 'YTickLabel', {})
 % clf;mesh(RU)
+%% visualizing the Force plot - fig 1A&B
+if drawFig1
+    f = figure(3); clf;
+    set(gcf, 'Position', [500  300  7.2*96 3.5*96])
+    gc = axes('Position', [0.1, 0.2, 0.35, 0.7]);
+    plot(s, Fp(:, 1), 'k-', 'linewidth', 2); hold on;
+    plot(s, Fp(:, 2), 'k-.', 'linewidth', 2); hold on;
+    plot(s, Fp(:, 3), 'k--', 'linewidth', 2); hold on;
+    plot(repmat(s, [1, Ng-3]), Fp(:, 4:Ng), ':', 'linewidth', 2, 'Color', 'k'); 
+    legend('$F_{p,1}$', '$F_{p,2}$', '$F_{p,3}$', '$F_{p,4-14}$', 'Location', 'Northwest', Interpreter='latex');
+    xlabel('s (\mum)', Interpreter='latex');ylabel('T (kPa)', Interpreter='latex');
+    set(gca, 'FontSize', 12)
+    aspect = 1.5;
+    
+    ylim([0 inf]);xlim([0 inf])
+    xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel('$t_p$ (kPa)', Interpreter='latex');
+    % visualizing the unfolding rate = fig 1C
+    % clf;hold on;
+    axes('position', [0.55 0.2 0.35, 0.7]);hold on;
+    
+    plot(s, RU(:, 1), 'k-','linewidth', 2);
+    plot(s, RU(:, 2), 'k-.','linewidth', 2);
+    plot(s, RU(:, 3), 'k--','linewidth', 2);
+    plot(repmat(s, [1 Ng-3]), RU(:, 4:end), 'k:','linewidth', 2);
+    
+    plot(repmat(s(end), [Ng, 1])', RU(end, :)', 'ks', 'linewidth', 2);
+    for n = 1:3
+        text(s(end) + 0.01, RU(end, n), ['$U_{' num2str(n)  '\rightarrow ' num2str(n+1) '}$'], 'Fontsize', 12, Interpreter='latex')
+    end
+    text(s(end) + 0.01, RU(end, 4), '...', 'FontSize',14, 'FontWeight','bold')
+    xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel(['$U_{n\rightarrow n+1}$  (s$^{-1}$)'], Interpreter='latex');
+    gc = gca;
+    set(gca, 'FontSize', 12);
+    aspect = 1.5;
+    % set(gcf, 'Position', [500  300  3.5*96 3.5*96/aspect])
+    % gc.Position = gc.Position + [0 0 -0.1 0];
+    set(gca, 'TickLength',[0.025 0.025]);
+    
+    % inset 
+    axes('position', [0.62 0.55 0.21 0.35], 'YAxisLocation','right')
+    plot(1:Ng, RU(end, :), 'ks-', 'linewidth', 2);
+    xlabel('n')
+    text(4, max(RU(end, 1))*0.7, ["$U_{n\rightarrow n+1}$ at" sprintf("%0.3f $\\mu$m", max(s))], 'FontSize',14, 'FontWeight','normal', Interpreter='latex')
+    set(gca, 'FontSize', 12);
+    % set(gcf, 'Position', [500  240  400  300])
+    % set(gca, 'YAxisLocation', 'right');
+    set(gca, 'YTick',[0 200 400], 'XTick', [0 5 10], 'TickLength',[0.05 0.025]);
+    exportgraphics(f,'../Figures/ModelRates.png','Resolution',150)
+end
 %% Folding rate design and visualization
 % RF = alphaF*(max(0,delU-s))  % folding rates from state n+1 to n            
-RF = alphaF_0 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+% RF = alphaF_0 + alphaF*(slack(1:Ng) - s).*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
+RF = alphaF_0;
 % RF = 0.1 + alphaF*(slack(1:Ng) > s);  % folding rates from state n+1 to n            
 % mesh(RF);view(3)
 
@@ -206,7 +226,7 @@ Length = cell(1, 5);
 rampSet = 1:length(rds); %[1 2 3 4 5];
 rampSet = [2 4];
 % rampSet = [4]; % nly 100ms
-rampSet = [1 2 3 4];
+% rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -253,7 +273,7 @@ for j = rampSet
   % x = [x1; x2(2:end, :)];
 
   %% normal
-  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 60];
+  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 300];
   velocities = [0 V 0];
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
@@ -310,21 +330,31 @@ for j = rampSet
 %%
 Time{j} = t;
 states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
-    
+% save pca4statesenv
+% load pca4statesenv
+% drawAllStates = 1;
+% save relaxstatesenv
+% load relaxstatesenv
     if drawAllStates
         % save current figure
         g = gcf;
         % open up a new one
-        figure(50+j); clf;
+        f = figure(50+j); clf; tiledlayout(3, 2, 'TileSpacing','compact', Padding='compact');
+        aspect = 2;
+        % normal size of 2-col figure on page is 7.2 inches
+        % matlab's pixel is 1/96 of an inch
+        f.Position = [300 200 7.2*96 7.2*96/aspect];
+
         % decide for timepoints
         % fixed time or fraction of ramp durations?
         % time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
         % time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
-        time_snaps = [0.4, 0.442 0.48];
+        time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), t(end)];
         % i_time_snaps = find(t > time_snaps)
     
         % disable
-        % time_snaps = [];i_time_snaps = [];
+        % time_snaps = [];
+        i_time_snaps = [];
         for i = 1:length(time_snaps)
             if time_snaps(i) > t
                 break;
@@ -353,22 +383,56 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
         if any(ismember(i_time_snaps, i))
             i_snap = find(i_time_snaps == i);
             % snap{i_snap} = 
-            subplot(2, length(i_time_snaps), i_snap);cla;
-            surf(s, 0:Ng, pu', 'EdgeColor','none');hold on;
-            surf(s, 0:Ng, Fp')
-            colormap(1-gray);
-            xlim([0, s(end)]);
-            shading(gca, 'interp')
-            % view(90, -90); 
-            xlabel('s'); ylabel('State');
-            title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
+            % subplot(2, length(i_time_snaps), i_snap);cla;
+            % surf(s, 0:Ng, pu', 'EdgeColor','none');hold on;
+            % surf(s, 0:Ng, Fp')
+            % colormap(1-gray);
+            % xlim([0, s(end)]);
+            % shading(gca, 'interp')
+            % % view(90, -90); 
+            % xlabel('s'); ylabel('State');
+            % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
             
     
             % next line
-            subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
-            plot(repmat(s, [1 Ng+1]), pu(:, 1:Ng+1), 's-')
-            legend('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'Location', 'best');
-            axis([0, s(end), 0, max(max(x))])
+            nt = nexttile;
+            % identify leading states
+            lead_i = sum(pu(:, 1:Ng+1)) > 10;
+            pup = pu;
+            pap = pa;
+            pup(pup < 1e-1) = NaN;
+            pap(pap < 1e-1) = NaN;
+            % leadpa_i = sum(pa(:, 1:Ng+1)) > .1;
+            % subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
+            
+            % sum of all states, converting to %
+            ss = (sum(pu(:)) + sum(pa(:)))/100;
+            phpa = stem(repmat(s, [1 sum(lead_i)]), pup(:, lead_i)/ss, ':', 'LineWidth', 1.5, MarkerSize=7);
+            if length(pa) > 1
+                hold on;
+                ca = gca;
+                ca.ColorOrderIndex = 1;
+                phpu = stem(repmat(s, [1 sum(lead_i)]), pap(:, lead_i)*10/ss, ':', 'filled', LineWidth=1.5, MarkerSize=5);
+                if true || i_snap == 1
+                leg = legend([phpa,phpu], [strcat("$S_U$ ", string(find(lead_i == 1))), ...
+                    strcat("$S_A$ ", string(find(lead_i == 1)), " (x10)")],'Location', 'best', NumColumns=2, Interpreter='latex');                
+                else
+                    leg = legend(phpa, strcat("State ", string(find(lead_i == 1))), 'Location', 'best');
+                end
+            else
+                leg = legend(phpa, strcat("State ", string(find(lead_i == 1))), 'Location', 'best');
+            end
+            xlabel('$s$ ($\mu$m)', Interpreter='latex');          
+            if nt.Position(1) < 0.4
+                % left aligned
+                ylabel('$P_S$ (\%)', Interpreter='latex')
+            end
+            
+            
+            
+            leg.ItemTokenSize = [10 10];
+            axis([0, s(end), 0, ceil(max(pu(:))/10)*10])
+            title(leg, sprintf('t = %g', round(t(i), 3)))
             
             % ignore pa for a moment
             % if ~(pa == 0)
@@ -394,43 +458,42 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
     %     outStruct{j, 3}.pu = pu;
     % end
     end
+%
+% if drawAllStates
+%     figure(60+j); clf;
+%     set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
+%     subplot(131);
+%     h = surf(0:Ng, Time{j}, states{j}, 'EdgeColor','none');
+%     shading(gca, 'interp')
+%     view(90, -90)
+%     ylabel('Time (s)'); xlabel('State occupancy (#)')
+%     title('States pu');
+%     colorbar;
+% 
+%     subplot(132);
+%     plot(t, Force{j}, LineWidth=2);
+%     subplot(132);
+%     surf(0:Ng, Time{j}, states_a{j});
+%     shading(gca, 'interp')
+%     view(90, -90)
+%     ylabel('Time (s)'); xlabel('State occupancy (#)')
+%     title('States pa');
+%     colorbar;
+% 
+%     subplot(133);
+%     surf((1:Nx)*ds, Time{j}, strains{j});
+%     shading(gca, 'interp')
+%     view(90, -90)
+%     ylabel('Time (s)'); xlabel('Strains (um)')
+%     title('Strains');
+% 
+%     colorbar;
+% 
+%     % set to preset figure
+%     figure(g);
+% end
 
-%%
-if drawAllStates
-    figure(60+j); clf;
-    set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
-    subplot(131);
-    h = surf(0:Ng, Time{j}, states{j}, 'EdgeColor','none');
-    shading(gca, 'interp')
-    view(90, -90)
-    ylabel('Time (s)'); xlabel('State occupancy (#)')
-    title('States pu');
-    colorbar;
-    
-    subplot(132);
-    plot(t, Force{j}, LineWidth=2);
-    subplot(132);
-    surf(0:Ng, Time{j}, states_a{j});
-    shading(gca, 'interp')
-    view(90, -90)
-    ylabel('Time (s)'); xlabel('State occupancy (#)')
-    title('States pa');
-    colorbar;
-    
-    subplot(133);
-    surf((1:Nx)*ds, Time{j}, strains{j});
-    shading(gca, 'interp')
-    view(90, -90)
-    ylabel('Time (s)'); xlabel('Strains (um)')
-    title('Strains');
-    
-    colorbar;
-    
-    % set to preset figure
-    figure(g);
-end
-
-%%
+%
 
     
     % show state occupation at the end of the ramp
@@ -467,6 +530,22 @@ end
   Force_par{j} = a*max(Length{j} - b, 0).^c + d;
   % calc force
   Force{j} = Force{j} + Force_par{j}; 
+    
+  if drawAllStates
+        nexttile([1 2]);
+        semilogx(Time{j}, Force{j});hold on;
+        scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'o', 'filled');
+        xlim([1e-3 inf]);
+        % nexttile([1 1]);
+        % loglog(Time{j}, Force{j});hold on;
+        % scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'o', 'filled');
+        % xlim([1e-3 inf])
+        xlabel('$t$ (s)', Interpreter='latex');
+        legend('Tension', 'Insets');
+        ylabel('$T$ (kPa)', Interpreter='latex')
+        exportgraphics(f,sprintf('../Figures/States%g.png', pCa),'Resolution',150)
+
+    end
 
   if any(isnan(Force{j}))
       disp('error');
@@ -550,6 +629,11 @@ cost = Ep*100 + sum([En{1:end}], 'all');
 if exist('drawPlots', 'var') && ~drawPlots
     return;
 end
+
+% save data for decay overlay loglog plot
+% Tarr = t_int;Farr = Ftot_int(1:4);
+% save('..\pca11modeldata.mat', 'Tarr', 'Farr')
+% save('..\pca11modeldataDoubleStates.mat', 'Tarr', 'Farr')
 try
 
 %%

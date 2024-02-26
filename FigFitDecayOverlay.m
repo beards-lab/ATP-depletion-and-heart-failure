@@ -74,8 +74,15 @@ f = gcf();
 exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
 
 %% model - relaxed
-% x = [4.4271    0.2121    4.8964];
-[c rspca] = evalPowerFit(x, Force, Time, true, [], false)
+f = figure(4);
+f.Position = [300 200 7.2*96 7.2*96/aspect];
+load pca11modeldata.mat
+load pca11modeldataDoubleStates.mat
+% data fit
+x = [4.4271    0.2121    4.8964];
+% model fit
+% x = [2.2393    0.5408    6.8351];
+[c rspca] = evalPowerFit(x, Farr, Tarr, true, [], false)
 % Farr = Force;Tarr = Time;
 %%
 options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UseParallel', true, ...
@@ -86,7 +93,7 @@ init = x;
 fitfunOpt = @(init) evalPowerFit(init, Farr, Tarr, false);
 x = fminsearch(fitfunOpt, init, options)
 
-[c rampShift] = fitfun(x);
+[c rampShift] = evalPowerFit(x, Farr, Tarr, true);
 %% fit pCa - fixed power exponent b
 % init = [x(1) x(3)]
 init = x;

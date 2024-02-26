@@ -61,8 +61,8 @@ rds = [100, 10, 1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % only final dataset
 pCa = 4.4;
-pCa = 5.5;
-pCa = 5.75;
+% pCa = 5.5;
+% pCa = 5.75;
 % pCa = 6;
 % pCa = 6.25;
 limit60sPlus = true;
@@ -529,7 +529,7 @@ for i_rds = [4 3 2 1]
         yticks([0 10 20 30 40]);
         ylabel('Tension (kPa)')
     end
-    xlabel("t (s)")
+    xlabel("$t$ (s)", Interpreter="latex")
     if i_rds == 1
         legend([pltF, pltFit, pltApprx,...
             pltRelax, pltFitRelax, pltFrem0,  ...
@@ -611,33 +611,38 @@ for i_rds = [4 3 2 1]
         xlabel('Time (s)')
     end    
 end
+peaks44 = peaks;
 %% peak sum up figure
+peaks = peaks44;
 % normtype = 'Norm to highest peak'
 % normtype = 'Norm to steady state'
 % normtype = 'Norm to relaxed peaks for each ramp'
 % normtype = 'Norm to highest relaxed peak'
 % normtype = 'Norm to Fmax'
 % subplot(4, 4, [3 16]);cla;
-aspect = 1
-f = figure;
-f.Position = [300 200 3.5*96 3.5*96/aspect];clf;
+aspect = 3;
+f = figure(3); f.Position = [-800 200 7.2*96 7.2*96/aspect];
+
+gc = axes('Position', [0.6 0.1 0.39 0.8], 'Box','on', 'BoxStyle','full', 'Color','r');
 
 % figure(11);
 % subplot(1, 5, 5);cla reset;
 % remove zero peaks as NaNs to fix the average - only when something was missing
-peaks_norm(peaks_norm == 0) = NaN;
+peaks(peaks == 0) = NaN;
 
 % for x axis we go from fastest to slowest
 x_ax = length(rds):-1:1;
 
 
-boxplot(fliplr(peaks_norm'), PlotStyle="traditional", Notch="off");hold on;
+boxplot(fliplr(peaks'), PlotStyle="traditional", Notch="off", Color='k');hold on;
 
 % coefficient of variance
 cv = nanstd(peaks_norm')./nanmean(peaks_norm');
 fprintf('Coefficient of variance: %1.3f \n', sum(cv));
-
-clin = lines(size(peaks_norm, 2)+1);
+% colors
+clin = lines(size(peaks, 2)+1);
+% BW only
+clin = repmat([0 0 0], [size(peaks, 2)+1, 1]);
 if limit60sPlus
     % shift by one bc we skipped
     clin(2:end, :) = clin(1:end-1, :);
@@ -649,8 +654,9 @@ for i_pk = 1:size(peaks_norm, 2)
         continue;
     end
     % set(gca, 'colororderindex', 1);
+   
     
-    plot(x_ax, peaks_norm(:, i_pk), '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));hold on;    
+    plot(x_ax, peaks(:, i_pk), '.:', 'MarkerSize',12, LineWidth=1.5, Color=clin(i_pk, :));hold on;    
     % semilogx(rds, peaks_relaxed(:, i_pk), 'x-', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
     % semilogx(rds, as(:, i_pk), 'x:', 'MarkerSize',12, LineWidth=0.5, Color=clin(i_pk, :));hold on;
 end
@@ -666,25 +672,27 @@ leg_cleared = {'20230927 M','20230928 F','20231027 F','20231102 M','20231107 F',
 
 % legend(leg_cleared, 'Interpreter','none', 'AutoUpdate','off', 'Location','northeast')
 
-plot(x_ax, nanmean(peaks_norm, 2)', '-', LineWidth=2, Color=clin(end, :))
-plot(x_ax, nanmean(peaks_norm, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=5)
+plot(x_ax, nanmean(peaks, 2)', '-', LineWidth=2, Color=clin(end, :))
+plot(x_ax, nanmean(peaks, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=5)
 
 % plot(x_ax, nanmedian(peaks_norm, 2)', '--', LineWidth=3, Color=clin(end, :))
 % plot(x_ax, nanmedian(peaks_norm, 2)', '_', LineWidth=5, Color=clin(end, :), MarkerSize=12)
 
 
-xlabel('Ramp duration (s)', Interpreter='latex');
+xlabel('$t_r$ (s)', Interpreter='latex');
 % xlim([0.08, 150])
-ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
-ylim([0 1]);
-yl = ylim();
-yyaxis right;ylim(yl*Fmax);ylabel('T (kPa)', Interpreter='latex');
+% ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
+% ylim([0 1]);
+% yl = ylim();
+% yyaxis right;ylim(yl*Fmax);
+ylabel('T (kPa)', Interpreter='latex');
 % semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, MarkerSize=12)
 % set(gca, 'XTick', fliplr(rds));
 set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
 g = gca();
-g.YAxis(2).Color = [0 0 0];
-
+% g.YAxis(2).Color = [0 0 0];
+ylim([0 inf])
 set(gca, 'FontSize', 12);
 title(sprintf('Peak tension - pCa %0.2g', pCa));
-exportgraphics(f,sprintf('Figures/AvgpPeakspCa%0.2g.png', pCa),'Resolution',150)
+% exportgraphics(f,sprintf('Figures/AvgpPeakspCa%0.2g.png', pCa),'Resolution',150)
+exportgraphics(f,sprintf('Figures/AvgpPeaks.png', pCa),'Resolution',150)

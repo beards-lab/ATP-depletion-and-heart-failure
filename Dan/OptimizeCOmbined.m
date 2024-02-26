@@ -299,7 +299,7 @@ modSel = 1:length(mod);
 %%
 tic
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
-evalCombined(mod(modSel), mod, modSel, [4.4 11])
+evalCombined(mod(modSel), mod, modSel, [11])
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
@@ -307,8 +307,10 @@ evalCombined(mod(modSel), mod, modSel, [4.4 11])
 % rampSet = [3] % 6s
 % rampSet = [4] % 3s
 toc
-%%
-evalCombined(mod(modSel), mod11, modSel, [11 4.4])
+%% All four ramps costing 1e4
+
+mod = [0.1360    0.4811    0.8499    1.3379    0.6881    2.9849    0.0849    1.1904    0.1302    1.6995         0    1.4243    0.0027    0.7668    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
+evalCombined(mod(modSel), mod, modSel, [11])
 
 %%
 clf;
@@ -396,11 +398,15 @@ mod(modSel) = x;
 % mod = [0.3262    0.0269    0.8916    1.1183    0.4793   1.1058    6.1801    0.7867    0.1298    1.5060         0    1.4225    0.0027    0.5112    2.5843       NaN       NaN    1.0000    1.0000       NaN    4.1961    0.9254];
 % updated the data to 60s decay
 % mod = [0.1877    0.1925    0.9268    1.3007    0.5661    1.3564    0.1461    1.2518    0.2298    1.7830         0    1.4225    0.0027    0.7030    2.5843       NaN       NaN    1.0000    1.0000       NaN       NaN    0.8902];
-modSel = [1:10 12 14 15 22];
+
+% modSel = [1:10 12 14 15 22];
 % fixed bug
 % mod = [0.1460, 0.4296, 0.8464, 1.3103, 0.6893, 3.1370, 0.0388, 1.1946, 0.1355, 1.7664,      0, 1.4225, 0.0027, 0.6908, 2.5843,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.6207];
 % optim all ramps
-mod = [0.1360, 0.4811, 0.8499, 1.3379, 0.6881, 2.9849, 0.0849, 1.1904, 0.1302, 1.6995,      0, 1.4243, 0.0027, 0.7668, 2.4840,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.4930]
+
+% mod = [0.1360, 0.4811, 0.8499, 1.3379, 0.6881, 2.9849, 0.0849, 1.1904, 0.1302, 1.6995,      0, 1.4243, 0.0027, 0.7668, 2.4840,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.4930]
+
+mod(modSel) = [0.1430    0.4722    0.8480    1.3586    0.6889    2.7826 mod(11)];
 
 init = max(-10, log10(mod(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4 11]);
@@ -411,7 +417,7 @@ mod(modSel) = 10.^x;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
     'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
 
-modSel = [11 12 13];
+% modSel = [11 12 13];
 init = log10(mod(modSel));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel);
 [x, FV, EF, OUT] = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(modSel)), log(ub(modSel)), [], options);
