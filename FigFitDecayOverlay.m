@@ -74,14 +74,16 @@ f = gcf();
 exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
 
 %% model - relaxed
-f = figure(4);
+f = figure(5);
 f.Position = [300 200 7.2*96 7.2*96/aspect];
-load pca11modeldata.mat
-load pca11modeldataDoubleStates.mat
+load ..\pca11modeldata.mat
+% load pca11modeldataDoubleStates.mat
 % data fit
 x = [4.4271    0.2121    4.8964];
 % model fit
 % x = [2.2393    0.5408    6.8351];
+% retuned model fit with 1e3 alphaU mod
+% x = [2.0713    0.5512    6.8491];
 [c rspca] = evalPowerFit(x, Farr, Tarr, true, [], false)
 % Farr = Force;Tarr = Time;
 %%
@@ -257,8 +259,8 @@ for i_rds = [4 3 2 1]
             axes(a_la); plot(t_s_ru + rampShift(i_rds)*0 - rds(i_rds), Fint_ru + c, '-', Color=cc, LineWidth=clw);
             % plot(t_ext+rampShift(i_rds)-rds(i_rds), c+pf(ae.a, ae.b, t_ext), '--', Color=[clin(5-i_rds, :)], LineWidth=4);
             axes(a_r);
-            loglog(t_s_ru + rampShift(i_rds) - rds(i_rds), Fint_ru +0*c, '-', Color=[cc], LineWidth=clw);
-            loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint +0*c, '-', Color=cc, LineWidth=clw);
+            loglog(t_s_ru + rampShift(i_rds) - rds(i_rds), Fint_ru +0*c, '|-', Color=[cc], LineWidth=clw);
+            loglog(t_s + rampShift(i_rds) - rds(i_rds), Fint +0*c, '|-', Color=cc, LineWidth=clw);
             xp = t_s + rampShift(i_rds) - rds(i_rds);            
             axes(a_cm);
             l_cm(i_rds) = semilogy(t_s_ru + rampShift(i_rds) - rds(i_rds), Fint_ru + c*0, '-', Color=cc, LineWidth=clw);

@@ -559,7 +559,7 @@ for i_rds = [4 3 2 1]
         continue;
     end
     t = TarrCorr{i_rds};
-    t_ignore = 0.01; 
+    t_ignore = 0.001; 
     % resample up the peak and for the tail separately
     % t_s = [linspace(0, 1, 20)*(rmp.t(i_0) + rds(i_rds) - t_ignore) ...
     %     logspace(log10(rmp.t(i_0) + rds(i_rds) + t_ignore), log10(rmp.t(i_0) + rds(i_rds) + 10), 20) ...
@@ -567,7 +567,7 @@ for i_rds = [4 3 2 1]
 
     % resample up the peak and for the tail separately
     t_s = [linspace(0, 1, 20)*(rds(i_rds) - t_ignore) ...
-        logspace(log10(rds(i_rds) + t_ignore), log10(min(60+rds(i_rds), t(end))), 40)];
+           rds(i_rds) + logspace(log10(t_ignore), log10(min(60, t(end) - rds(i_rds))), 40)];
 
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];

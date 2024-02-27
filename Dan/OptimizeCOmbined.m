@@ -299,7 +299,7 @@ modSel = 1:length(mod);
 %%
 tic
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
-evalCombined(mod(modSel), mod, modSel, [11])
+evalCombined(mod(modSel), mod, modSel, [11 4.4])
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])
@@ -309,8 +309,26 @@ evalCombined(mod(modSel), mod, modSel, [11])
 toc
 %% All four ramps costing 1e4
 
-mod = [0.1360    0.4811    0.8499    1.3379    0.6881    2.9849    0.0849    1.1904    0.1302    1.6995         0    1.4243    0.0027    0.7668    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
+% optimized Fss
+% mod = [0.1360    0.4811    0.8499    1.3379    0.6881    2.9849    0.0849    1.1904    0.1302    1.6995         0    1.4243    0.0027    0.7668    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
+
+% Fss fixed at data fitted 4.9
+% mod = [0.1455    0.4841    0.8456    1.3729    0.6897    2.8866    0.0849    1.1904    0.1302    1.5060         0    1.4243    0.0027    0.7660    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN   0.4930];
+
+% Fss fixed at 4.89 and baked into the params, 
+% reoptimized at modSel = [1    2     3     4     5     6    14] for pCa 11
+% mod = [0.2806    9.3110    0.9803    1.9501    0.9566 1.0098e+03 0.0849    1.1904    0.1302    1.5060         0    1.4243    0.0027    0.7076    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
+
+% reoptim for pca 11 AND 4.4 with 2.3e4 for all ramps
+% mod = [0.2729    6.9247    0.9816    1.9550    0.9273  908.8536    0.0297    1.1195    0.1996    1.5060         0    1.4243    0.0027    0.8796    2.5534       NaN       NaN    1.0000    1.0000       NaN       NaN    4.9791];
+
+% optim all ramps, pCa 11 AND 4.4 with 1.9e4 in 58s with modSel = [1     2     3     4     5     6     7     9    14    22];
+mod = [0.266    6.682    0.971    1.936    0.924    1033.800    0.021    1.119    0.212    1.506    0.000    1.424    0.003    0.946    2.553    NaN    NaN    1.000    1.000    NaN    NaN    5.310]
+
+% modSel = 1:length(mod);
+tic
 evalCombined(mod(modSel), mod, modSel, [11])
+toc
 
 %%
 clf;
@@ -338,7 +356,7 @@ hold on;
 % modSel = [1 2 3 5 6 8 10 11 12 13 15];
 % mod = [    0.0140    0.3630    0.4241    1.0234    0.7953    0.2941    0.2514     0.8819    0.0135    0.8988    0.7571    4.3872    0.7510    1.2811    1.6652];
 % cost = 301.7
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 1000);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
 % x0 = x0([1:4 6:10 13]);
 % x0 = [0.5795    1.6029    0.9047    1.0569    0.9236    0.6627    1.0497    0.9465    1.0641    0.7124];
 
@@ -402,14 +420,12 @@ mod(modSel) = x;
 % modSel = [1:10 12 14 15 22];
 % fixed bug
 % mod = [0.1460, 0.4296, 0.8464, 1.3103, 0.6893, 3.1370, 0.0388, 1.1946, 0.1355, 1.7664,      0, 1.4225, 0.0027, 0.6908, 2.5843,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.6207];
-% optim all ramps
 
+% optim all ramps
 % mod = [0.1360, 0.4811, 0.8499, 1.3379, 0.6881, 2.9849, 0.0849, 1.1904, 0.1302, 1.6995,      0, 1.4243, 0.0027, 0.7668, 2.4840,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.4930]
 
-mod(modSel) = [0.1430    0.4722    0.8480    1.3586    0.6889    2.7826 mod(11)];
-
 init = max(-10, log10(mod(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4 11]);
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [11 4.4]);
 x = fminsearch(evalLogCombined, init, options);
 mod(modSel) = 10.^x;
 
@@ -585,6 +601,7 @@ function totalCost = evalCombined(optMods, mod, modSel, pCas)
     % pCa 11 decay with reduced mu
     % mod =  [0.0299    0.8084    0.4798    1.0000    1.0862    1.6973    1.0000    1.0000    1.0000    1.2983    1.0000    1.0000    1.0000    0.1    0.50000];
     % modSel = [1 2 3 5 6 10];
+    
 
     % % mod([1:4 6:10 13]) = optMods;
     % modSel = [11, 12, 13];

@@ -100,7 +100,7 @@ end
 
 alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
 Fss = 3.2470*mod(10); % Parallel steady state force
-% Fss = 4.9;
+% Fss = 4.89;
 if pCa < 10
     kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = mod(7)*16.44;
@@ -146,7 +146,7 @@ if drawFig1
     plot(s, Fp(:, 3), 'k--', 'linewidth', 2); hold on;
     plot(repmat(s, [1, Ng-3]), Fp(:, 4:Ng), ':', 'linewidth', 2, 'Color', 'k'); 
     legend('$F_{p,1}$', '$F_{p,2}$', '$F_{p,3}$', '$F_{p,4-14}$', 'Location', 'Northwest', Interpreter='latex');
-    xlabel('s (\mum)', Interpreter='latex');ylabel('T (kPa)', Interpreter='latex');
+    
     set(gca, 'FontSize', 12)
     aspect = 1.5;
     
@@ -226,7 +226,7 @@ Length = cell(1, 5);
 rampSet = 1:length(rds); %[1 2 3 4 5];
 rampSet = [2 4];
 % rampSet = [4]; % nly 100ms
-% rampSet = [1 2 3 4];
+rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -335,6 +335,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
 % drawAllStates = 1;
 % save relaxstatesenv
 % load relaxstatesenv
+% drawAllStates = true;
     if drawAllStates
         % save current figure
         g = gcf;
@@ -631,8 +632,8 @@ if exist('drawPlots', 'var') && ~drawPlots
 end
 
 % save data for decay overlay loglog plot
-% Tarr = t_int;Farr = Ftot_int(1:4);
-% save('..\pca11modeldata.mat', 'Tarr', 'Farr')
+Tarr = t_int;Farr = Ftot_int(1:4);
+save(sprintf('..\\pca%gmodeldata.mat', pCa), 'Tarr', 'Farr')
 % save('..\pca11modeldataDoubleStates.mat', 'Tarr', 'Farr')
 try
 
@@ -679,7 +680,7 @@ for j = max(rampSet):-1:1
     
     semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
-    axis([1e-2, 1e2, 0, ym]);  
+    axis([1e-2, 3e2, 0, ym]);  
     set(gca,'Fontsize',14)
     title('Tension response to muscle length ramp-up')
     xlabel('Time (s)')
@@ -701,7 +702,7 @@ for j = max(rampSet):-1:1
     
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
     % axis([1e-2, 1e2, 0, ym]);  
-    xlim([1e-2, 1e2]);
+    xlim([1e-2, 3e2]);
     ymaxScale = max(ymaxScale, max(Force{j} - Fss_true));
     yminScale = (Force{j}(end) - Fss_true); % this should be around the same
     ylim([max(1e-2, 0.8*yminScale), 1.2*ymaxScale])

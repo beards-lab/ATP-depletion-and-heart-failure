@@ -114,7 +114,7 @@ relaxed{4} = [2, 1, 9;3, 1, 9;4, 1, 6;5,1,6;6, 1, 6];
 % rmp = dtst{1, 1}.datatable;
 
 %
-f = figure(3);clf;hold on;
+f = figure(2);clf;hold on;
 aspect = 1.5;
 % normal size of 2-col figure on page is 7.2 inches, half is 3.5 inch
 % matlab's pixel is 1/96 of an inch
@@ -215,14 +215,27 @@ for i_rds = 1:length(rds)
         % semilogx(rmp.t + rampShift(i_rds), rmp.F, '-', Color=[clin(i_logtrace, :), 0.1]);hold on;
         % figure(3);        
     end
+
 %% resample and save
     
-    % resample up the peak and for the tail separately, up to 60s
-    t_s = [linspace(0, 1, 20)*rds(i_rds) ...
-           logspace(log10(rds(i_rds)), log10(min(60+rds(i_rds), outT(end))), 40)...        
-% logspace(log10(min(60+rds(i_rds), outT(end))), log10(min(300, outT(end))), 40)... % optionally get the longer tail
-        ];
-    % resample log equally
+    if outT(end) < 200
+        % resample up the peak and for the tail separately, up to 60s
+        t_s = [linspace(0, 1, 20)*rds(i_rds) ...
+               rds(i_rds) + logspace(log10(1e-3), log10(min(60, outT(end) - rds(i_rds))), 40)...        
+    % logspace(log10(min(60+rds(i_rds), outT(end))), log10(min(300, outT(end))), 40)... % optionally get the longer tail
+            ];
+    else
+        % resample up the peak and for the tail separately, up to 300s
+
+        t_s = [linspace(0, 1, 20)*rds(i_rds) ...
+               rds(i_rds) + logspace(log10(1e-3), log10(min(300, outT(end) - rds(i_rds))), 46)...        
+            ];
+        % I do not know how to get 50 samples with the extension, it just
+        % overlaps in the plot somehow
+        clf;
+        plot(1:length(t_s), t_s, 1:length(t_s2), t_s2)
+    end
+    %% resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
     % remove consequent duplicates at joints
     t_s = t_s(~[false t_s(2:end) == t_s(1:end-1)]);
@@ -259,7 +272,8 @@ for i_rds = 1:length(rds)
         % x = 0.1;y = 0.03;
         % legend(leg, 'Interpreter','none', 'Position', ...
         %     [sp.Position(1) + sp.Position(3) + x, sp.Position(2) - y, 1 - sp.Position(1) - sp.Position(3) - x, sp.Position(4)])
-    if i_rds == 4
+    xlim([1e-2 300]);
+    if true || i_rds == 4
         xlabel('t (s)')
         xticks([0.1 10])
     else
