@@ -224,9 +224,9 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
-rampSet = [2 4];
-% rampSet = [4]; % nly 100ms
-rampSet = [1 2 3 4];
+% rampSet = [2 4];
+rampSet = [4]; % nly 100ms
+% rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -658,7 +658,7 @@ ylabel('Tension (kPa)')
 xlabel('Time (s)')
 set(gca,'Fontsize',14)
 title(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost), 'Parent',sp);
-set(sp, 'XLim', [-1 30+max(rds)]);
+set(sp, 'XLim', [-1 300]);
 set(sp, 'YLim', [0 ym*1])
 
 % shift of peaks to have the same tail - just guessed

@@ -567,7 +567,8 @@ for i_rds = [4 3 2 1]
 
     % resample up the peak and for the tail separately
     t_s = [linspace(0, 1, 20)*(rds(i_rds) - t_ignore) ...
-           rds(i_rds) + logspace(log10(t_ignore), log10(min(60, t(end) - rds(i_rds))), 40)];
+            rds(i_rds) + linspace(t_ignore, min(60, t(end) - rds(i_rds)), 40)];...        
+           % rds(i_rds) + logspace(log10(t_ignore), log10(min(60, t(end) - rds(i_rds))), 40)];
 
     % resample log equally
     % t_s = [logspace(log10(1e-3), log10(outT(end)), 40)];
@@ -578,7 +579,7 @@ for i_rds = [4 3 2 1]
     % force and length interpolation
     % save denormalized
     FLSDint = interp1(t, [FarrCorr{i_rds}, Larr{i_rds}, SDarr{i_rds}*FmaxArr{i_rds}], t_s, "pchip", 'extrap');
-    
+    figure(7);hold on;plot(t_s, FLSDint(:, 1), 's-');
     tab_rmpAvg = table(t_s' + 2, FLSDint(:, 2), FLSDint(:, 1), FLSDint(:, 3));
     tab_rmpAvg.Properties.VariableNames = {'Time', 'L', 'F', 'SD'};
     writetable(tab_rmpAvg, ['data/' dsName '_' num2str(rds(i_rds)) 's.csv']);
