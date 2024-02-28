@@ -62,8 +62,8 @@ ds   = 1*(Lmax)/(Nx-1);      % space step size
 % use this to make sure the ds is big wnough
 % ds   = 1*(Lmax + 0.015)/(Nx-1);
 s  = (0:1:Nx-1)'.*ds; % strain vector
-Ng = 14; 
-delU = 0.0125*mod(19)*14/Ng;
+Ng = 15; 
+delU = 0.01*mod(19)*14/Ng;
 % so all unfolded make Ng*delU slack, i.e. 11*0.137=0.1375um
 
 
@@ -83,28 +83,29 @@ delU = 0.0125*mod(19)*14/Ng;
 % g0 = mod;
 % mod = 0;
 
-kp   = mod(1)*10203*0.7;      % proximal chain force constant
-kd   = mod(2)*14122;        % distal chain force constant
+kp   = mod(1)*600; % ok      % proximal chain force constant
+kd   = mod(2)*500; % ok       % distal chain force constant
 
 if ~isnan(mod(16))
     kA   = mod(16)*0.1*16.44; % PEVK attachment rate
 else
-    kA   = mod(7)*16.44;
+    kA   = mod(7)*200;
 end
 
 if ~isnan(mod(17))
     kD   = mod(17)*14.977; % PEVK detachment rate
 else
-    kD   = mod(8)*14.977; % PEVK detachment rate
+    kD   = mod(8)*50; % PEVK detachment rate
 end
 
-alphaU = mod(6)*(8.4137e5)*0.7;         % chain unfolding rate constant
-Fss = 3.2470*mod(10); % Parallel steady state force
-% Fss = 4.89;
+alphaU = mod(6)*1e6;         % chain unfolding rate constant
+% Fss = 3.2470*mod(10); % Parallel steady state force
+Fss = 4.89;
+Fss = 3.2842;
 if pCa < 10
-    kp   = mod(9)*10203*4.78*0.7;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
-    kA   = mod(7)*16.44;
-    kD   = mod(8)*14.977; % PEVK detachment rate
+    kp   = mod(9)*600;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
+    kA   = mod(7)*200;
+    kD   = mod(8)*50; % PEVK detachment rate
     if ~isnan(mod(20))
         % cant exceed the no Ca unfolding rate!
         alphaU = min(alphaU, mod(20)*(8.4137e5)*0.7);         % chain unfolding rate constant
@@ -118,23 +119,24 @@ if pCa < 10
         
 end
 alphaF = 0; % chain folding rate constant - not implemented yet
-np = mod(3)*3.27; % proximal chain force exponent
-nd = mod(5)*3.25; % distal chain force exponent
+np = mod(3)*2; % proximal chain force exponent
+nd = mod(5)*2; % distal chain force exponent
 nU = mod(4)*6.0; % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
-mu = 1*mod(14); % small enough not to affect the result
+mu = mod(14)*0.2; % small enough not to affect the result
 Lref  = 0.9*mod(18); % reference sarcomere length (um)
-alphaF = 100;
-alphaF_0 = 0.05*mod(15);
+alphaF = 0;
+alphaF_0 = 0*0.05*mod(15);
 
 % Calculate proximal globular chain force Fp(s,n) for every strain and
 % value. 
 slack = (0:Ng).*delU;
-Fp = kp*(max(0,s-slack)/Lref).^(np); 
+% Fp = kp*(max(0,s-slack)/Lref).^(np); 
+Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
-RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
+RU = alphaU*(Lref^nU)*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 % clf;mesh(RU)
 %% visualizing the Force plot - fig 1A&B
 if drawFig1
@@ -224,8 +226,8 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
-% rampSet = [2 4];
-rampSet = [4]; % nly 100ms
+rampSet = [2 4];
+% rampSet = [4]; % nly 100ms
 % rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
@@ -517,9 +519,9 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
   
-  b = 0.05*mod(11);
-  c = 7*mod(12);
-  d = 1*mod(13);
+  b = 0*0.05*mod(11);
+  c = 8*mod(12);
+  d = 0*1*mod(13);
   % apply constraints
   if b < 0 || c <= 0 || d < 0 
       cost = inf;
@@ -694,7 +696,7 @@ for j = max(rampSet):-1:1
     % tss = Time{j}(end) - rds(j);
     % Fss_true = Fss - (4.22*tss^-0.21);
     Fss_true = Force_par{j}(end);
-
+shift(j) = 0;
     loglog(datatables{j}.Time-2 + shift(j),datatables{j}.F - Fss_true,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
     hold on;
     loglog(Time{j} + shift(j),Force{j} - Fss_true,'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 

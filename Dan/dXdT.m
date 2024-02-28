@@ -12,7 +12,7 @@ end
 L = x(end);
 
 % Calculate the un-attached chain velocities for every pu(s,n) entry
-deltaF = kd*max(0,(L-s)/Lref).^nd - Fp;
+deltaF = kd*(Lref^nd)*max(0,(L-s)/Lref).^nd - Fp;
 Vp = deltaF/mu;
 
 ij = (1:Nx)' + Nx*(0:Ng); % matrix of Ng X Nx indices over all elements

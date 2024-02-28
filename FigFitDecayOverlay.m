@@ -75,8 +75,9 @@ exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
 
 %% model - relaxed
 f = figure(5);
+aspect = 1.5;
 f.Position = [300 200 7.2*96 7.2*96/aspect];
-load ..\pca11modeldata.mat
+% load ..\pca11modeldata.mat
 % load pca11modeldataDoubleStates.mat
 % data fit
 x = [4.4271    0.2121    4.8964];
@@ -84,6 +85,8 @@ x = [4.4271    0.2121    4.8964];
 % x = [2.2393    0.5408    6.8351];
 % retuned model fit with 1e3 alphaU mod
 % x = [2.0713    0.5512    6.8491];
+% tail-optimized fit using Dan's parameter space
+x = [5.2749    0.3628    5.4011]
 [c rspca] = evalPowerFit(x, Farr, Tarr, true, [], false)
 % Farr = Force;Tarr = Time;
 %%

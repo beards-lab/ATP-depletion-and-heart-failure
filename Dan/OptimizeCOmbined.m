@@ -313,7 +313,7 @@ toc
 % mod = [0.1360    0.4811    0.8499    1.3379    0.6881    2.9849    0.0849    1.1904    0.1302    1.6995         0    1.4243    0.0027    0.7668    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
 
 % Fss fixed at data fitted 4.9
-mod = [0.1455    0.4841    0.8456    1.3729    0.6897    2.8866    0.0849    1.1904    0.1302    1.5060         0    1.4243    0.0027    0.7660    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN   0.4930];
+% mod = [0.1455    0.4841    0.8456    1.3729    0.6897    2.8866    0.0849    1.1904    0.1302    1.5060         0    1.4243    0.0027    0.7660    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN   0.4930];
 
 % Fss fixed at 4.89 and baked into the params, 
 % reoptimized at modSel = [1    2     3     4     5     6    14] for pCa 11
@@ -325,7 +325,11 @@ mod = [0.1455    0.4841    0.8456    1.3729    0.6897    2.8866    0.0849    1.1
 % optim all ramps, pCa 11 AND 4.4 with 1.9e4 in 58s with modSel = [1     2     3     4     5     6     7     9    14    22];
 % mod = [0.266    6.682    0.971    1.936    0.924    1033.800    0.021    1.119    0.212    1.506    0.000    1.424    0.003    0.946    2.553    NaN    NaN    1.000    1.000    NaN    NaN    5.310]
 
+% optim for better tail only
+% mod = [1.0777   16.5334    0.5891    0.6831    2.2466    1.4398    1.0000    1.0000    1.0000    1.0000    1.0000    1.0102    0.9400    1.0181    1.0000    1.0000    1.0000    1.0000    0.9985    1.0000    1.0000    1.0000];
+
 % modSel = 1:length(mod);
+mod = ones(1, 22);
 tic
 evalCombined(mod(modSel), mod, modSel, [11])
 toc
@@ -386,7 +390,7 @@ mod(20) = NaN;
 %%
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
-evalLin = @(optMods) evalCombined(optMods, mod, modSel, [4.4 11])
+evalLin = @(optMods) evalCombined(optMods, mod, modSel, [11])
 x = fminsearch(evalLin, init, options);
 
 mod(modSel) = x;
@@ -425,8 +429,16 @@ mod(modSel) = x;
 % mod = [0.1360, 0.4811, 0.8499, 1.3379, 0.6881, 2.9849, 0.0849, 1.1904, 0.1302, 1.6995,      0, 1.4243, 0.0027, 0.7668, 2.4840,    NaN,    NaN, 1.0000, 1.0000,    NaN,    NaN, 0.4930]
 
 % pCa 11 only
-mod = [1.3111    0.0572    1.0882    0.9839    0.5485    0.0672    0.0849    1.1904    0.1302    1.5060         0    3.1310    0.0027    0.3576    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
-modSel = [1:6 12 14 19];
+% mod = [1.3111    0.0572    1.0882    0.9839    0.5485    0.0672    0.0849    1.1904    0.1302    1.5060         0    3.1310    0.0027    0.3576    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
+% modSel = [1:6 12 14 19];
+
+% optim for tail only: pCa11 0.1s ramp, 300s linear sampling
+% mod = [1.8533    0.0821    1.1321    0.9230    0.6111    0.0301    0.0849    1.1904    0.1302    1.5060         0    2.8146    0.0027    0.8606    2.4840       NaN       NaN    1.0000    0.9400       NaN       NaN    0.4930];
+% reinint to match Dan's model
+% mod = ones(22, 1); modSel = [1:6 13 14];
+
+% best fit to dan's init params
+modSel = [1:6 12 14]; mod = [1.0906   16.8733    0.5964    0.6912    2.1513    1.4117    1.0000    1.0000    1.0000    1.0000    1.0000    1.0004    0.9400    1.0222    1.0000    1.0000    1.0000    1.0000    0.9985    1.0000    1.0000    1.0000];
 
 init = max(-10, log10(mod(modSel)));
 evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [11]);
