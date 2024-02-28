@@ -409,7 +409,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
             % subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
             
             % sum of all states, converting to %
-            ss = (sum(pu(:)) + sum(pa(:)))/100;
+            ss = (sum(pu(:)) + sum(pa(:)))*ds;
             phpa = stem(repmat(s, [1 sum(lead_i)]), pup(:, lead_i)/ss, ':', 'LineWidth', 1.5, MarkerSize=7);
             if length(pa) > 1
                 hold on;
@@ -435,7 +435,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
             
             leg.ItemTokenSize = [10 10];
             axis([0, s(end), 0, ceil(max(pu(:))/10)*10])
-            title(leg, sprintf('t = %g', round(t(i), 3)))
+            title(leg, sprintf('t = %g (%g)', round(t(i), 3), ss))
             
             % ignore pa for a moment
             % if ~(pa == 0)
