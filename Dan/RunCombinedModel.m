@@ -63,7 +63,7 @@ ds   = 1*(Lmax)/(Nx-1);      % space step size
 % ds   = 1*(Lmax + 0.015)/(Nx-1);
 s  = (0:1:Nx-1)'.*ds; % strain vector
 Ng = 15; 
-delU = 0.01*mod(19)*14/Ng;
+delU = 0.01*mod(19)*15/Ng;
 % so all unfolded make Ng*delU slack, i.e. 11*0.137=0.1375um
 
 
@@ -87,13 +87,13 @@ kp   = mod(1)*600; % ok      % proximal chain force constant
 kd   = mod(2)*500; % ok       % distal chain force constant
 
 if ~isnan(mod(16))
-    kA   = mod(16)*0.1*16.44; % PEVK attachment rate
+    kA   = mod(16)*200; % PEVK attachment rate
 else
     kA   = mod(7)*200;
 end
 
 if ~isnan(mod(17))
-    kD   = mod(17)*14.977; % PEVK detachment rate
+    kD   = mod(17)*50; % PEVK detachment rate
 else
     kD   = mod(8)*50; % PEVK detachment rate
 end
@@ -375,7 +375,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
     else
         pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
     end
-    Fd = kd* max(0,(Length{j}(i) - s)/Lref).^nd; 
+    Fd = kd*(Lref^nd)* max(0,(Length{j}(i) - s)/Lref).^nd; 
     Force_pa{j} = ds*sum(sum(Fd.*pa ));
     Force{j}(i) =  ds*sum(sum(Fd.*pu )) + Force_pa{j};
     states{j}(i, 1:Ng+1) = sum(pu);
@@ -765,7 +765,14 @@ catch e
     disp(e.message)
 end
 %%
-
+return;
+Tss =  (0.50e6)*0.225^8;
+figure(11); 
+loglog(Time{4}-0.1,Force{4}-Tss, ...
+       Time{3}-1.0,Force{3}-Tss, ...
+       Time{2}-10,Force{2}-Tss, Time{1}-10,Force{1}-Tss); 
+grid
+save('../modeltesting2.mat', 'Time', 'Force', 'Tss')
 % fig = gcf;
 % set(gcf, 'Position', [50 50 1200 700])
 % saveas(fig, ['..\Figures\Fig_' fig.Name], 'png')

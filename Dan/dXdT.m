@@ -27,7 +27,7 @@ if ~isempty(pa)
 
 end
 
-% % UPWIND differencing for sliding (+ direction) for pu
+% UPWIND differencing for sliding (+ direction) for pu
 g(ij(1,:)) = g(ij(1,:)) - (1/ds)*(pu(1,:).*max(0,Vp(1,:)))';
 
 % positive velocities - extending
@@ -50,7 +50,7 @@ g(ij(end,:)) = g(ij(end,:)) + (1/ds)*(pu(end,:).*min(0,Vp(end,:)))';
 % unfolding rate for pu states
 UR = RU.*pu(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
 FR = RF.*pu(ij(:,2:Ng+1)); % rate of probabilty transitions from n+1 to n states
-if t > 19 
+if t > 9 
     a = 1;
 end
 g(ij(:,2:(Ng+1))) = g(ij(:,2:(Ng+1))) + UR - FR;
