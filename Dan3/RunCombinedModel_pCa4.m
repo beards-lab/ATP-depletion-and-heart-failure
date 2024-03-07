@@ -7,7 +7,7 @@ datatable5 = readtable('Data\bakers_passiveStretch_pCa4_1000ms.csv');
 datatable6 = readtable('Data\bakers_passiveStretch_pCa4_10000ms.csv');
 
 g0 = ones(1,11);
-kA   = g0(7)*1000;
+kA   = g0(7)*5*200;
 kD   = g0(8)*50;
 kC   = g0(1)*4*600 ;      % proximal chain force constant
 kS   = g0(2)*4*500;        % distal chain force constant

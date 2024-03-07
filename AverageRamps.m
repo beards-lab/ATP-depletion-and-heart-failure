@@ -220,18 +220,23 @@ for i_rds = 1:length(rds)
     
     if outT(end) < 200
         % resample up the peak and for the tail separately, up to 60s
-        t_s = [linspace(0, 1, 20)*rds(i_rds) ...
-                rds(i_rds) + linspace(0, min(60, outT(end) - rds(i_rds)), 40)...        
-               % rds(i_rds) + logspace(log10(1e-3), log10(min(60, outT(end) - rds(i_rds))), 40)...        
-    % logspace(log10(min(60+rds(i_rds), outT(end))), log10(min(300, outT(end))), 40)... % optionally get the longer tail
-            ];
+        % t_s = [linspace(0, 1, 20)*rds(i_rds), ...                
+        %        rds(i_rds) + linspace(0, min(60, outT(end) - rds(i_rds)), 40*4)];
+        % t_s = [linspace(0, 1, 20)*rds(i_rds), ...                
+        %        rds(i_rds) + logspace(log10(1e-3), log10(min(60, outT(end) - rds(i_rds))), 40)];
+        t_s = [linspace(0, 1, 20)*rds(i_rds), ...                
+               logspace(log10(rds(i_rds)), log10(rds(i_rds) + min(60, outT(end) - rds(i_rds))), 80)];
+        
+
     else
         % resample up the peak and for the tail separately, up to 300s
+        % t_s = [linspace(0, 1, 20)*rds(i_rds), ...                
+        %        rds(i_rds) + linspace(0, min(300, outT(end) - rds(i_rds)), 40*4*5)];
+        % t_s = [linspace(0, 1, 20)*rds(i_rds), ...                
+        %        rds(i_rds) + logspace(log10(1e-3), log10(min(300, outT(end) - rds(i_rds))), 50)];
+        t_s = [linspace(0, 1, 20)*rds(i_rds), ...                
+               logspace(log10(rds(i_rds)), log10(rds(i_rds) + min(300, outT(end) - rds(i_rds))), 100)];
 
-        t_s = [linspace(0, 1, 20)*rds(i_rds) ...
-                rds(i_rds) + linspace(0, min(300, outT(end) - rds(i_rds)), 40*5)...        
-               % rds(i_rds) + logspace(log10(1e-3), log10(min(300, outT(end) - rds(i_rds))), 46)...        
-            ];
         % I do not know how to get 50 samples with the extension, it just
         % overlaps in the plot somehow
         % clf;
@@ -310,7 +315,7 @@ boxplot(fliplr(peaks'), PlotStyle="traditional", Notch="off", Colors="k");hold o
 clin = lines(size(peaks, 2)+1);
 % BW only
 clin = repmat([0 0 0], [size(peaks, 2)+1, 1]);
-clear lp
+clear lp;
 for i_pk = 1:size(peaks, 2)
     if all(isnan(peaks(:, i_pk))) || all (peaks(:, i_pk) == 0)
         % it was just a placeholder
@@ -324,7 +329,7 @@ for i_pk = 1:size(peaks, 2)
 end
 % set(gca, 'YAxisLocation', 'right');
 % just for the legend
-lp(length(lp)+1) = plot(NaN, NaN, 's-',LineWidth=2, Color=clin(end, :), MarkerSize=5)
+lp(length(lp)+1) = plot(NaN, NaN, 's-',LineWidth=2, Color=clin(end, :), MarkerSize=5);
 % validLeg = ~cellfun(@isempty,leg);
 % %# remove empty cells
 % leg_cleared = leg(validLeg);

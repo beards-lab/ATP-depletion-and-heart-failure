@@ -1,4 +1,4 @@
-function g  = dXdT(t,x,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,V)
+function g  = dXdT(t,x,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,kDf, V)
 s  = (0:1:Nx-1)'.*ds;
 
 pu = reshape( x(1:(Ng+1)*Nx), [Nx,Ng+1]);
@@ -19,8 +19,9 @@ ij = (1:Nx)' + Nx*(0:Ng); % matrix of Ng X Nx indices over all elements
 
 % Attach/dettach rectifier connector - only for Ca
 if ~isempty(pa)
-    g(ij)             = g(ij)             - kA*x(ij) + kD*x(ij + (Ng+1)*Nx);
-    g(ij + (Ng+1)*Nx) = g(ij + (Ng+1)*Nx) + kA*x(ij) - kD*x(ij + (Ng+1)*Nx);
+    detach = kD*x(ij + (Ng+1)*Nx).*(1 + kDf*max(0, deltaF+Fp));
+    g(ij)             = g(ij)             - kA*x(ij) + detach;
+    g(ij + (Ng+1)*Nx) = g(ij + (Ng+1)*Nx) + kA*x(ij) - detach;
 
 % g(ij)             = g(ij)             - kA*x(ij) + kD*x(ij + (Ng+1)*Nx).*max(0,deltaF);
 % g(ij + (Ng+1)*Nx) = g(ij + (Ng+1)*Nx) + kA*x(ij) - kD*x(ij + (Ng+1)*Nx).*max(0,deltaF);
@@ -57,7 +58,7 @@ g(ij(:,2:(Ng+1))) = g(ij(:,2:(Ng+1))) + UR - FR;
 g(ij(:,1:Ng))     = g(ij(:,1:Ng))     - UR + FR;
 
 % unfolding for pa states
-if ~isempty(pa)
+if false || ~isempty(pa)
     NxNg = Nx*(Ng+1);
     UR = RU.*pa(ij(:,1:Ng)); % rate of probabilty transitions from n to n+1 states
     g(ij(:,2:(Ng+1))+NxNg) = g(ij(:,2:(Ng+1))+NxNg) + UR - FR;

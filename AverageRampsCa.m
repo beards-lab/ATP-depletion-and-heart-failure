@@ -567,7 +567,8 @@ for i_rds = [4 3 2 1]
 
     % resample up the peak and for the tail separately
     t_s = [linspace(0, 1, 20)*(rds(i_rds) - t_ignore) ...
-            rds(i_rds) + linspace(t_ignore, min(60, t(end) - rds(i_rds)), 40)];...        
+        logspace(log10(rds(i_rds)), log10(rds(i_rds) + min(60, t(end) - rds(i_rds))), 80)];
+            % rds(i_rds) + linspace(t_ignore, min(60, t(end) - rds(i_rds)), 40)];...        
            % rds(i_rds) + logspace(log10(t_ignore), log10(min(60, t(end) - rds(i_rds))), 40)];
 
     % resample log equally

@@ -205,16 +205,22 @@ evalCombined(mod, mod, 1:length(mod), [4.4 10])
 
 %% test evaluate Ca sensitivity importance - REDUCED
 % reduced candidate
-mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241 1];
-evalCombined(mod, mod, 1:length(mod), [11])
+% mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241 1];
+evalCombined(mod, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'rc_base.png')
 %% no Ca dep on kp
 m = mod;
-m(9) = mod(1)/4.78; % the multiplier in RunCombinedModel
+m(9) = mod(1); % the multiplier in RunCombinedModel
 evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'rc_no_kp.png')
+%% no Ca dep on kd
+m = mod;
+m(22) = mod(2); % the multiplier in RunCombinedModel
+evalCombined(m, mod, 1:length(mod), [4.4])
+f = figure(144)
+saveas(f, 'rc_no_kd.png')
 %% no PEVK attachment
 m=mod;
 m(7) = 1e-6;% PEVK attachment
@@ -247,7 +253,7 @@ m(7) = 1e-6;% PEVK attachment
 m(8) = 1e6; % PEVK detachment
 evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
-saveas(f, 'ec_no_PEVK.png')
+% saveas(f, 'ec_no_PEVK.png')
 %% no alphaU dep
 m = mod;
 m(20) = mod(6);% PEVK attachment
@@ -328,11 +334,66 @@ toc
 % optim for better tail only
 % mod = [1.0777   16.5334    0.5891    0.6831    2.2466    1.4398    1.0000    1.0000    1.0000    1.0000    1.0000    1.0102    0.9400    1.0181    1.0000    1.0000    1.0000    1.0000    0.9985    1.0000    1.0000    1.0000];
 
-% modSel = 1:length(mod);
-mod = ones(1, 22);
+% reinint to match Dan's model
+% mod = ones(22, 1); modSel = [1:6 13 14];
+
+% best fit to dan's init params
+modSel = [1:6 12 14]; mod = [1.0906   16.8733    0.5964    0.6912    2.1513    1.4117    1.0000    1.0000    1.0000    1.0000    1.0000    1.0004    0.9400    1.0222    1.0000    1.0000    1.0000    1.0000    0.9985    1.0000    1.0000    1.0000];
+mod = [0.1152   11.2004    0.4241    1.0295    1.8167    3.3966    1.0000 1.0000    1.0000    1.0000    1.0000   15.7907    1.0000   41.1979 1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
+% resampling data in logspace to fit the peak better
+mod = [0.1227    5.7413    0.3624    0.8583    1.6670    4.4089    1.0000   1.0000    1.0000    1.0000    1.0000   23.7214    1.0000   47.2949 1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
+mod = [0.1035    6.5217    0.3626    0.8185    1.7903    4.7326    1.0000    1.0000    1.0000    1.3824    1.0000    1.0000    1.0000   84.2683    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
+% mod = [0.0973    2.9994    0.3890    1.0250    1.5260    6.4763    1.0000    1.0000    1.0000    1.0056    0.9924    3.6707    0.9998  146.8509    1.0046    1.0075    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
+
+% modSel = [1     2     3     4     5     6    14]; mod = [0.1499    6.4878    0.3322    0.7361    1.6326    4.6280    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    0.9201    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
+% optim relaxed WITH PEVK, resampling the data log since START of the ramp - does not sample the
+% peak as dense for longer ramps
+% modSel = [1     2     3     4     5     6    12    14    15    16]; 
+% mod = [0.1360    4.9380    0.4368    1.0218    1.6463    6.4469    1.0000    1.0000    1.0000    1.0000    1.0000    2.8594    1.0000   13.8852   1.0412    1.0079    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
+% throwing in couple more params, still pCa 10 in log space from ramp begin
+% modSel = [1     2     3     4     5     6    10    11    12    13    14   15    16];
+% testing pCa
+% mod([20 21]) = NaN; modSel = [7 8 9 22];
+% mod([16, 17]) = NaN;
+% solo pCa 
+modSel = [7     8     9    22]; mod = [0.1035    6.5217    0.3626    0.8185    1.7903    4.7326    2.1097    1.7771    0.3800    1.3824    1.0000    1.0000    1.0000   84.2683    1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN   19.3337];
+% combined
+modSel = [1     2     3     4     5     6     7     8     9    22]; mod = [0.0780    2.7953    0.4019    0.9791    1.5029    4.4448    2.6626    2.1066    0.2870    1.3824    1.0000    1.0000    1.0000   84.2683   1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN    8.3950];
+% actually pretty good combined. Final candidate?
+mod = [0.0921    2.2736    0.3899    0.9107    1.4463    6.2490    2.6767    2.3335    0.3324    1.3824    1.0000    1.0000    1.0000   84.2683    1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN    6.4155 0];
+% reopt for Ca only, incl. the Ca dependency
+% modSel = [7     8     9    22 23]; mod = [0.0921    2.2736    0.3899    0.9107    1.4463    6.2490    3.5190    1.7304    0.3318    1.3824    1.0000    1.0000    1.0000   84.2683    1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN    7.6587    0.8273];
 tic
-evalCombined(mod(modSel), mod, modSel, [11])
+% knock off of PEVK, reoptim. alphaU did not help here
+% mod([7 8 9 22]) = [1e-6 1e6 0.3282   11.2732];
+% add alphaU, reoptim it all
+modSel = [1     2     3     4     5     6     9    20 22];
+% % mod([7 8 9 20 22]) = [1e-6 1e6 0.3282   mod(20)/0.7 11.2732];
+% mod(modSel) = [0.1106    2.0271    0.4126    0.9117    1.4129    6.7698    0.3801   14.6443    9.5714];
+
+% no unfolding of bound states costs 39.85
+% mod = [0.0944    2.5913    0.4081     0.9095    1.4934    2.6794   90.0356  373.9408    0.2881    1.3824    1.0000    1.0000    1.0000   89.8580    1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN   11.5157         0]
+% mod(12) = 1;mod(14) = 1;
+% mod(10) = 0.1;mod(15) = 10;
+% get init from Dan's codes
+% modSel = [7 8 9 22]; mod(modSel) = [5 1 4 4].*mod([16 17 1 2]);
+% mod([20 21]) = NaN;
+% figure(144)
+% mod(23 - length(mod)) = NaN;
+
+%%
+mod = [0.0921    2.2736    0.3899    0.9107    1.4463    6.2490    2.6767    2.3335    0.3324    1.3824    1.0000    1.0000    1.0000   84.2683    1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN    6.4155 0];
+mod(3) = 0.5;
+% tic
+% mod([7 8]) = [1e-6 1e6];
+% mod([9 22]) =  [ 0.3282      11.2732];
+% mod([7 8]) = [100/200 500/50];
+% mod(7) = 40;
+% mod(8) = 1000;
+% mod(20) = NaN;
+evalCombined(mod(modSel), mod, modSel, [11 4.4])
 toc
+% modSel = [1:6 7 8 9 14 20 22]
 
 %%
 clf;
@@ -388,15 +449,24 @@ modSel = 0 < [1   0   0   0   0   1   1   1 1   1   0   1   1   1   1   0 0   0 
 mod = m;
 mod(20) = NaN;
 %%
+% mod(12) = 1;mod(14) = 10;
+% mod(15) = 1;
+% modSel = [1:6 10 15];
+% modSel = [1:6 12 14 15 16]
+% modSel = [1:6 7 8 9 22];
 init = mod(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
-evalLin = @(optMods) evalCombined(optMods, mod, modSel, [11])
+evalLin = @(optMods) evalCombined(optMods, mod, modSel, [11 4.4])
 x = fminsearch(evalLin, init, options);
-
-mod(modSel) = x;
-% mod = x;
-
-% save moddd;
+%%
+% mod(modSel) = x;
+% mod
+% save("mod.mat", "mod")
+% modSel = [1     2     3     4     5     6     7     8     9    22 23];
+init = mod(modSel);
+% evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
+evalLin = @(optMods) evalCombined(optMods, mod, modSel, [4.4 11])
+x = fminsearch(evalLin, init, options);
 %% optim in log param space
 % mod = ones(1, 17);
 % mod = [mod ones(1, 21 - length(mod))];
@@ -434,17 +504,10 @@ mod(modSel) = x;
 
 % optim for tail only: pCa11 0.1s ramp, 300s linear sampling
 % mod = [1.8533    0.0821    1.1321    0.9230    0.6111    0.0301    0.0849    1.1904    0.1302    1.5060         0    2.8146    0.0027    0.8606    2.4840       NaN       NaN    1.0000    0.9400       NaN       NaN    0.4930];
-% reinint to match Dan's model
-% mod = ones(22, 1); modSel = [1:6 13 14];
-
-% best fit to dan's init params
-% modSel = [1:6 12 14]; mod = [1.0906   16.8733    0.5964    0.6912    2.1513    1.4117    1.0000    1.0000    1.0000    1.0000    1.0000    1.0004    0.9400    1.0222    1.0000    1.0000    1.0000    1.0000    0.9985    1.0000    1.0000    1.0000];
-% mod = [0.1152   11.2004    0.4241    1.0295    1.8167    3.3966    1.0000 1.0000    1.0000    1.0000    1.0000   15.7907    1.0000   41.1979 1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000];
-
 init = max(-10, log10(mod(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [11]);
+evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4]);
 x = fminsearch(evalLogCombined, init, options);
-mod(modSel) = 10.^x;
+mod(modSel) = 10.^x; 
 
 %% optim with bounded params
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
@@ -525,7 +588,7 @@ modNames(modSel);
 
 % lower and upper bounds are a functions of previous mods
 ub = @(m)[m(7) m(9) m(22)];
-lb = @(m)[1e-6 m(1)/4.78 m(2)];
+lb = @(m)[1e-6 m(1) m(2)];
 m_ub = nan(size(mod));m_ub(modSel) = ub(mod);
 m_lb = nan(size(mod));m_lb(modSel) = lb(mod);
 clf;
@@ -533,10 +596,10 @@ plotParams(mod, [-2 2]);hold on;
 plotParams(m_ub, [-2 2]);hold on;
 plotParams(m_lb, [-2 2]);
 %%
-evalNewCombined = @(curmod) evalCombined(curmod, mod, 1:length(mod), [5.5]);
-modt = mod5_5;
-modt(8) = mod(8);
-evalNewCombined(modt)
+% evalNewCombined = @(curmod) evalCombined(curmod, mod, 1:length(mod), [5.5]);
+% modt = mod5_5;
+% modt(8) = mod(8);
+% evalNewCombined(modt)
 %%
 % save('ModsNoAss.mat', 'mod', 'mod6','mod5_8','mod5_5')
 
@@ -724,7 +787,7 @@ function plotParams(mod, mm, resetGca)
 
     % modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU'};
     modNames = {'k_p(NoCa)', 'k_d', 'n_p', 'n_U', 'n_d', 'alphaU', 'k_{PEVK,A}', 'k_{PEVK,D}', 'k_p(highCa)', 'Fss', 'b', 'c', 'd', 'mu', 'alphaF_0','k_{PEVK,A} (low Ca)', 'k_{PEVK,D} (low Ca)', 'Lref', 'delU', ...
-        'AlphaU_pCa', 'Fss_pCa', 'kd_pCa'};
+        'AlphaU_pCa', 'Fss_pCa', 'kd_pCa', 'kDf'};
 
     indxs = strcat(string(1:length(modNames)), ':');
     modNames = strcat(indxs, modNames);

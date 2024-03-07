@@ -100,8 +100,8 @@ end
 
 alphaU = mod(6)*1e6;         % chain unfolding rate constant
 % Fss = 3.2470*mod(10); % Parallel steady state force
-Fss = 4.89;
-Fss = 3.2842;
+% Fss = 4.89;
+Fss = 3.2842*mod(10);
 if pCa < 10
     kp   = mod(9)*600;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
     kA   = mod(7)*200;
@@ -114,10 +114,11 @@ if pCa < 10
         Fss = 3.2470*mod(21);
     end
     if ~isnan(mod(22))
-        kd   = mod(22)*14122;      % proximal chain force constant high Ca
+        kd   = mod(22)*500;      % proximal chain force constant high Ca
     end
         
 end
+kDf = mod(23)*0.1;
 alphaF = 0; % chain folding rate constant - not implemented yet
 np = mod(3)*2; % proximal chain force exponent
 nd = mod(5)*2; % distal chain force exponent
@@ -126,7 +127,7 @@ nF = 1; % folding rate exponent (not implemented yet)
 mu = mod(14)*0.2; % small enough not to affect the result
 Lref  = 0.9*mod(18); % reference sarcomere length (um)
 alphaF = 0;
-alphaF_0 = 0*0.05*mod(15);
+alphaF_0 = 1e-3*mod(15);
 
 % Calculate proximal globular chain force Fp(s,n) for every strain and
 % value. 
@@ -139,15 +140,33 @@ Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np);
 RU = alphaU*(Lref^nU)*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 % clf;mesh(RU)
 %% visualizing the Force plot - fig 1A&B
+drawFig1 = true;
 if drawFig1
+    Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
+
+    % do not plot zeros
+    Fp(Fp == 0) = NaN;
+    % sx = s(1):0.1:s(end);
+    sx = s;
+    % Fp = interp1(s, Fp(:, :), sx);
     f = figure(3); clf;
     set(gcf, 'Position', [500  300  7.2*96 3.5*96])
     gc = axes('Position', [0.1, 0.2, 0.35, 0.7]);
-    plot(s, Fp(:, 1), 'k-', 'linewidth', 2); hold on;
-    plot(s, Fp(:, 2), 'k-.', 'linewidth', 2); hold on;
-    plot(s, Fp(:, 3), 'k--', 'linewidth', 2); hold on;
-    plot(repmat(s, [1, Ng-3]), Fp(:, 4:Ng), ':', 'linewidth', 2, 'Color', 'k'); 
-    legend('$F_{p,1}$', '$F_{p,2}$', '$F_{p,3}$', '$F_{p,4-14}$', 'Location', 'Northwest', Interpreter='latex');
+    pl1 = plot(sx, Fp(:, 1), 'k-', 'linewidth', 2); hold on;
+    pl2 = plot(sx, Fp(:, 2), 'k-.', 'linewidth', 2); hold on;
+    pl3 = plot(sx, Fp(:, 3), 'k--', 'linewidth', 2); hold on;
+    plN = plot(repmat(sx, [1, Ng-3]), Fp(:, 4:Ng), ':', 'linewidth', 2, 'Color', 'k'); 
+    
+    plot(s([6, 24]), [20 20], 'k');scatter(s(24), [20], 'k>', 'filled');
+    sx_20 = zeros(1, Ng);
+    for n = 1:Ng
+        i_s = find(Fp(:, n) > 0, 1);
+        sx_20(n) = interp1(Fp(i_s:end, n), s(i_s:end), 20);
+    end
+    scatter(sx_20, repmat(20, [1 Ng]), 'kx', linewidth=1.5)   
+    % markers = interp1(s, Fp(1, :))
+    % scatter(s([6:24]), repmat(20, size(6:24, 1)), 'ko')
+    legend([pl1, pl2, pl3, plN(1)], '$F_{p,0}$', '$F_{p,1}$', '$F_{p,2}$', '$F_{p,3-14}$', 'Location', 'Northwest', Interpreter='latex');
     
     set(gca, 'FontSize', 12)
     aspect = 1.5;
@@ -186,6 +205,11 @@ if drawFig1
     % set(gca, 'YAxisLocation', 'right');
     set(gca, 'YTick',[0 200 400], 'XTick', [0 5 10], 'TickLength',[0.05 0.025]);
     exportgraphics(f,'../Figures/ModelRates.png','Resolution',150)
+
+    % reconstruct Fp again without the NaN's
+    Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
+    % Fp(isnan(Fp() == NaN) = 0;
+
 end
 %% Folding rate design and visualization
 % RF = alphaF*(max(0,delU-s))  % folding rates from state n+1 to n            
@@ -227,7 +251,7 @@ Time = cell(1, 5);
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
 rampSet = [2 4];
-% rampSet = [4]; % nly 100ms
+rampSet = [4]; % nly 100ms
 % rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
@@ -275,7 +299,7 @@ for j = rampSet
   % x = [x1; x2(2:end, :)];
 
   %% normal
-  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 300];
+  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 1300];
   velocities = [0 V 0];
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
@@ -309,7 +333,7 @@ for j = rampSet
   % assert(length(times) == length(velocities), 'Must be same length')
   t = []; x = [];
   for i_section = 1:size(times, 1)
-      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,velocities(i_section));
+      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,kDf,velocities(i_section));
       t = [t; t1(2:end)];
       x = [x; x1(2:end, :)];
       % prep the init vector again
@@ -332,6 +356,7 @@ for j = rampSet
 %%
 Time{j} = t;
 states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
+maxPu = 0; maxPa = 0;
 % save pca4statesenv
 % load pca4statesenv
 % drawAllStates = 1;
@@ -342,7 +367,8 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
         % save current figure
         g = gcf;
         % open up a new one
-        f = figure(50+j); clf; tiledlayout(3, 2, 'TileSpacing','compact', Padding='compact');
+        layout_x = 2 + (pCa < 10)
+        f = figure(50+j); clf; tiledlayout(layout_x, 4, 'TileSpacing','compact', Padding='compact');
         aspect = 2;
         % normal size of 2-col figure on page is 7.2 inches
         % matlab's pixel is 1/96 of an inch
@@ -384,58 +410,106 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
 
     if drawAllStates
         if any(ismember(i_time_snaps, i))
-            i_snap = find(i_time_snaps == i);
-            % snap{i_snap} = 
-            % subplot(2, length(i_time_snaps), i_snap);cla;
-            % surf(s, 0:Ng, pu', 'EdgeColor','none');hold on;
-            % surf(s, 0:Ng, Fp')
-            % colormap(1-gray);
-            % xlim([0, s(end)]);
-            % shading(gca, 'interp')
-            % % view(90, -90); 
-            % xlabel('s'); ylabel('State');
-            % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
-            
-    
-            % next line
-            nt = nexttile;
-            % identify leading states
-            lead_i = sum(pu(:, 1:Ng+1)) > 10;
-            pup = pu;
-            pap = pa;
-            pup(pup < 1e-1) = NaN;
-            pap(pap < 1e-1) = NaN;
-            % leadpa_i = sum(pa(:, 1:Ng+1)) > .1;
-            % subplot(2, length(i_time_snaps), length(i_time_snaps) + i_snap);
-            
             % sum of all states, converting to %
             ss = (sum(pu(:)) + sum(pa(:)))*ds;
-            phpa = stem(repmat(s, [1 sum(lead_i)]), pup(:, lead_i)/ss, ':', 'LineWidth', 1.5, MarkerSize=7);
-            if length(pa) > 1
-                hold on;
-                ca = gca;
-                ca.ColorOrderIndex = 1;
-                phpu = stem(repmat(s, [1 sum(lead_i)]), pap(:, lead_i)*10/ss, ':', 'filled', LineWidth=1.5, MarkerSize=5);
-                if true || i_snap == 1
-                leg = legend([phpa,phpu], [strcat("$S_U$ ", string(find(lead_i == 1))), ...
-                    strcat("$S_A$ ", string(find(lead_i == 1)), " (x10)")],'Location', 'best', NumColumns=2, Interpreter='latex');                
-                else
-                    leg = legend(phpa, strcat("State ", string(find(lead_i == 1))), 'Location', 'best');
+            maxPu = max(maxPu, sum(pu(:)));
+            maxPa = max(maxPa, sum(pa(:)));
+            i_snap = find(i_time_snaps == i);
+
+
+            % next plot
+            nt = nexttile(i_snap);            
+            %% 3D plot
+            % surf(0:Ng, s, pa*ds*100, 'EdgeColor', 'none');hold on;
+            % % contour(0:Ng, s, pu*ds*100, 'EdgeColor','red');hold on;
+            % 
+            % % surf(s, 0:Ng, Fp')
+            % colormap(1-gray);
+            % % xlim([0, s(end)]);
+            % % shading(gca, 'interp')
+            % % view(90, -90); 
+            % clim([0 maxPu]);
+            % % xlabel('s'); ylabel('State');
+            % % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
+            % if i_snap == 1
+            %     xlabel('# State');
+            % elseif i_snap == length(i_time_snaps)
+            %     cb = colorbar;
+            %     title(cb, '%')
+            % end
+            % ylabel('$s$ ($\mu$m)', Interpreter='latex');
+            %% 2D shaded plot - unattached
+            surface(s, 0:Ng, pu'*ds*100, 'EdgeColor','none');hold on;
+            % surf(s, 0:Ng, Fp')
+            colormap(1-gray);
+            % xlim([0, s(end)]);
+            % shading(gca, 'interp')
+            % view(90, -90); 
+            clim([0 maxPu]);
+            % xlabel('s'); ylabel('State');
+            % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
+            if i_snap == 1
+                ylabel('n');
+            elseif i_snap == length(i_time_snaps)
+                cb = colorbar;
+                title(cb, 'P_{u} %')
+            end
+            xlabel('$s$ ($\mu$m)', Interpreter='latex');
+            %% 2D shaded plot - attached
+            if pCa < 10
+                nexttile(i_snap + 4);
+                surface(s, 0:Ng, pa'*ds*100, 'EdgeColor','none');hold on;
+                % surf(s, 0:Ng, Fp')
+                colormap(1-gray);
+                % xlim([0, s(end)]);
+                % shading(gca, 'interp')
+                % view(90, -90); 
+                clim([0 maxPa]);
+                % xlabel('s'); ylabel('State');
+                % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
+                if i_snap == 1
+                    ylabel('n');
+                elseif i_snap == length(i_time_snaps)
+                    cb = colorbar;
+                    title(cb, 'P_{a} (%)')
                 end
-            else
-                leg = legend(phpa, strcat("State ", string(find(lead_i == 1))), 'Location', 'best');
+                xlabel('$s$ ($\mu$m)', Interpreter='latex');
             end
-            xlabel('$s$ ($\mu$m)', Interpreter='latex');          
-            if nt.Position(1) < 0.4
-                % left aligned
-                ylabel('$P_S$ (\%)', Interpreter='latex')
-            end
+            %% lollipop plot
+            % % identify leading states
+            % lead_i = sum(pu(:, 1:Ng+1)) > 10;
+            % % Disabling unimportant states
+            % pup = pu;pup(pup < 1e-1) = NaN;
+            % pap = pa;pap(pap < 1e-1) = NaN;
+            % 
+            % phpa = stem(repmat(s, [1 sum(lead_i)]), pup(:, lead_i)/ss, ':', 'LineWidth', 1.5, MarkerSize=7);
+            % if length(pa) > 1
+            %     hold on;
+            %     ca = gca;
+            %     ca.ColorOrderIndex = 1;
+            %     phpu = stem(repmat(s, [1 sum(lead_i)]), pap(:, lead_i)*10/ss, ':', 'filled', LineWidth=1.5, MarkerSize=5);
+            %     if true || i_snap == 1
+            %     leg = legend([phpa,phpu], [strcat("$S_U$ ", string(find(lead_i == 1))), ...
+            %         strcat("$S_A$ ", string(find(lead_i == 1)), " (x10)")],'Location', 'best', NumColumns=2, Interpreter='latex');                
+            %     else
+            %         leg = legend(phpa, strcat("State ", string(find(lead_i == 1))), 'Location', 'best');
+            %     end
+            % else
+            %     leg = legend(phpa, strcat("State ", string(find(lead_i == 1))), 'Location', 'best');
+            % end
+            % xlabel('$s$ ($\mu$m)', Interpreter='latex');          
+            % if nt.Position(1) < 0.4
+            %     % left aligned
+            %     ylabel('$P_S$ (\%)', Interpreter='latex')
+            % end
+            % title(leg, sprintf('t = %g (%g)', round(t(i), 3), ss));
+            % leg.ItemTokenSize = [10 10];
+            % axis([0, s(end), 0, ceil(max(pu(:))/10)*10]);
+            %%
             
             
             
-            leg.ItemTokenSize = [10 10];
-            axis([0, s(end), 0, ceil(max(pu(:))/10)*10])
-            title(leg, sprintf('t = %g (%g)', round(t(i), 3), ss))
+
             
             % ignore pa for a moment
             % if ~(pa == 0)
@@ -461,7 +535,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
     %     outStruct{j, 3}.pu = pu;
     % end
     end
-%
+%% Continuous states in time: time vs. state occupancy plot
 % if drawAllStates
 %     figure(60+j); clf;
 %     set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
@@ -519,9 +593,9 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
   
-  b = 0*0.05*mod(11);
+  b = 0.01*mod(11);
   c = 8*mod(12);
-  d = 0*1*mod(13);
+  d = 0.01*mod(13);
   % apply constraints
   if b < 0 || c <= 0 || d < 0 
       cost = inf;
@@ -535,7 +609,7 @@ states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
   Force{j} = Force{j} + Force_par{j}; 
     
   if drawAllStates
-        nexttile([1 2]);
+        nexttile([1 4]);
         semilogx(Time{j}, Force{j});hold on;
         scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'o', 'filled');
         xlim([1e-3 inf]);
@@ -603,7 +677,7 @@ for j = rampSet
     % no weighing, already in the data
     w = 1;
 %%
-    Es{j} = w.*(Ftot_int{j} - datatable_cur.F).^2; % error set
+    Es{j} = w.*((Ftot_int{j} - datatable_cur.F)/max(Ftot_int{j})).^2; % error set
     Es{j}(isnan(Es{j})) = 0; % zero outside bounds
     En{j} = 1e3*sum(Es{j})/length(Es{j}); % normalized error
     
@@ -621,7 +695,7 @@ for j = 1:length(PeakModel)
     end
 end
 
-Ep = nansum((PeakData(:, 2) - PeakModel(:)).^2);
+Ep = nansum(((PeakData(:, 2) - PeakModel(:))/max(Ftot_int{j})).^2);
 % discarding peak fit for high Ca's
 if pCa < 10
     Ep = 0;
@@ -635,10 +709,109 @@ end
 
 % save data for decay overlay loglog plot
 Tarr = t_int;Farr = Ftot_int(1:4);
+% save pcagraphingenv.mat
+% save relaxgraphingenv.mat
 save(sprintf('..\\pca%gmodeldata.mat', pCa), 'Tarr', 'Farr')
 % save('..\pca11modeldataDoubleStates.mat', 'Tarr', 'Farr')
 try
 
+aspect = 2;
+% normal size of 2-col figure on page is 7.2 inches
+% matlab's pixel is 1/96 of an inch
+% f.Position = [300 200 7.2*96 7.2*96/aspect];
+
+clf;
+% colors = lines(max(rampSet)+1); colors(1:end-1, :) = colors(2:end, :);
+colors = gray(5);
+% colors(1:end-1, :) = colors(2:end, :);
+fs = 12;
+tiledlayout(3, 4, 'TileSpacing', 'compact')
+% prepare in advance so that it wont draw over my inset
+sp = nexttile(1, [2 4]);hold on;
+
+ym = 0;
+for j = max(rampSet):-1:1
+    if isempty(Force{j})
+        continue;
+    end
+    hd{j} = errorbar(datatables{j}.Time-2,datatables{j}.F,datatables{j}.SD, '-', LineWidth=2, Color=colors(3, :), CapSize=0);
+    set([hd{j}.Bar, hd{j}.Line], 'ColorType', 'truecoloralpha', 'ColorData', [hd{j}.Line.ColorData(1:3); 255*0.4])
+    hm{j} = semilogx(Time{j},Force{j},'-', 'linewidth',2, 'Color', 'k'); 
+    hph{j} = plot(nan, nan, 'x',Color=[1 1 1]); % just a placeholder
+    % set(h.Cap, 'EdgeColorType', 'truecoloralpha', 'EdgeColorData', [h.Cap.EdgeColorData(1:3); 255*alpha])
+    ym = max([ym Force{j}, datatables{j}.F']);
+    set(sp, 'TickLength', [0.0125 0.05]);
+    set(sp, 'TickLabelInterpreter', 'latex');
+    ylabel('$T$ (kPa)', Interpreter='latex')
+    
+    if rds(j) > 1
+        tp = [rds(j)*1.4, max(Force{j})*1.2];
+    else
+        tp = [rds(j)*0.95, max(Force{j})*0.95];
+    end
+    text(tp(1), tp(2), ...
+        sprintf('$t_r$ = %g s', rds(j)),...
+        'horizontalAlignment', 'right', VerticalAlignment='bottom', Interpreter='latex');    
+end
+xlim([1e-2, 160])
+ylim([0 ceil((ym)/5)*5])
+yl = ylim();
+sp.XScale='log';
+% hl = legend([hph{1} hph{2} hph{3} hph{4} hd{4} hd{3} hd{2} hd{1} hm{4} hm{3} hm{2} hm{1}], ...
+%     't_r 0.1 s:', '  t_r 1 s:',' t_r 10 s:','t_r 100 s:',...
+%     'Data', 'Data', 'Data', 'Data', ...    
+%     'Model', 'Model', 'Model', 'Model',...
+%     NumColumns=3);
+hl = legend([hd{1} hm{1}], ...
+    'Data',...    
+    'Model',...
+    NumColumns=3);
+
+hl.ItemTokenSize = [30, 20];
+hl.Box = 'off';
+% title('Model fit', Interpreter='latex')
+
+    % 'MData Ramp-up 0.1 s', 'MData Ramp-up 0.1 s', 'MData Ramp-up 0.1 s', 'MData Ramp-up 0.1 s'...
+    % )
+
+% nexttile;
+% semilogx(PeakData(:, 1), PeakData(:, 2), 'ko', LineWidth=2);hold on;
+% semilogx(PeakData(:, 1), PeakModel, 'x', 'MarkerEdgeColor', [1 1 1]*0.5, LineWidth=2, MarkerSize=8);
+% axis([1e-1 1e2 0 ym])
+% semilogx(PeakData(:, 1), PeakModel, '--', Color=[1 1 1]*0.5, LineWidth=1);
+% hl = legend('Data', 'Model', 'Location', 'best')
+% title(hl, 'Peaks')
+% ylabel('Tension (kPa)', Interpreter='latex')
+
+for j = max(rampSet):-1:1
+    if isempty(Force{j})
+        continue;
+    end
+    sp = nexttile;hold on;
+    h = errorbar(datatables{j}.Time-2,datatables{j}.F,datatables{j}.SD, '-', LineWidth=2, Color=colors(3, :), CapSize=0);
+    set([h.Bar, h.Line], 'ColorType', 'truecoloralpha', 'ColorData', [h.Line.ColorData(1:3); 255])
+    plot(Time{j},Force{j},'-', 'linewidth',2, 'Color', 'k'); 
+    xlim([0 min(rds(j)*3, 160)]);
+    xl = xlim;
+    ylim(yl)
+    yticks([0 20 40]);
+    xticks([0 rds(j), rds(j)*2])
+    if j == 4
+        ylabel('$T$ (kPa)', Interpreter='latex')
+    else
+        yticklabels([]);
+    end
+    xlabel('$t$ (s)', Interpreter='latex', HorizontalAlignment='left');
+    set(sp, 'TickLength', [0.05 0.05]);
+    set(sp, 'TickLabelInterpreter', 'latex')
+    tit = text(xl(2), min(yl(2)-5, max(Force{j})), sprintf('$t_r$ = %g', rds(j)), 'Interpreter', 'latex', ...
+        HorizontalAlignment='right', VerticalAlignment='bottom');
+    % tit.Position = tit.Position + [0 max(Force{j}) 0];
+
+end    
+fontsize(12, 'points');
+
+return
 %%
 % zoomIns = [0 200 0 10;...
 %            0 20 0 15;...
@@ -678,7 +851,10 @@ for j = max(rampSet):-1:1
     subplot(221)
     semilogx(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
     hold on;
-    semilogx(t_int{j},Es{j},'--','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
+    
+    yyaxis right;
+    semilogx(t_int{j},cumsum(Es{j}),'--','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
+    yyaxis left;
     
     semilogx(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
     % semilogx(t_int{j},Es{j},':', 'linewidth',1, 'Color', colors(j+1, :)*0.9); 
@@ -696,7 +872,8 @@ for j = max(rampSet):-1:1
     % tss = Time{j}(end) - rds(j);
     % Fss_true = Fss - (4.22*tss^-0.21);
     Fss_true = Force_par{j}(end);
-shift(j) = 0;
+    Fss_true = Force{j}(end) - Force_par{j}(end);
+% shift(j) = 0;
     loglog(datatables{j}.Time-2 + shift(j),datatables{j}.F - Fss_true,'-','linewidth',2, 'Color', [colors(j+1, :), 0.3]);
     hold on;
     loglog(Time{j} + shift(j),Force{j} - Fss_true,'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8); 
@@ -753,7 +930,7 @@ x = pos1(1) + pos1(3) - w; y = pos1(2) + pos1(4) - h;
 axes('Position',[x, y, w, h]);
 semilogx(PeakData(:, 1), PeakData(:, 2), 'ko', LineWidth=2);hold on;
 semilogx(PeakData(:, 1), PeakModel, 'x', 'MarkerEdgeColor', [1 1 1]*0.5, LineWidth=2, MarkerSize=8);
-axis([1e-1 1e1 0 ym])
+axis([1e-1 1e2 0 max([ym PeakData(:, 2)'])])
 semilogx(PeakData(:, 1), PeakModel, '--', Color=[1 1 1]*0.5, LineWidth=1);
 legend('Peaks (Data)', 'Peaks (Model)', 'Location', 'southeast')
 %%

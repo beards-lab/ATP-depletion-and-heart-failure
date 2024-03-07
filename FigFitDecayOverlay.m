@@ -53,41 +53,47 @@ f.Position = [300 200 7.2*96 7.2*96/aspect];
 x = [4.4271    0.2121    4.8964];
 [c rampShift] = fitfun(x)
 f = gcf();
-exportgraphics(f,'Figures/FigDecayOverlay.png','Resolution',150)
+% exportgraphics(f,'Figures/FigDecayOverlay.png','Resolution',150)
 % saveas(f, 'Figures/FigDecayOverlaypCa4.png')
 % exportgraphics(f,'Figures/FigDecayOverlaypCa4.4_7.2.png','Resolution',300)
 % saveas(f, 'Figures/FigDecayOverlaypCa4Corr2.png')
 %% pCa
 aspect = 1.5;
 % rampShift = [5.3980    0.8234    0.2223   0.0100];
-pcadata = load('pCa4dataNoAdj60sFremCorr.mat');
-x = [4.1240    0.2121   12.0286];
+% pcadata = load('pCa4dataNoAdj60sFremCorr.mat');
+pcadata = load('..\pca4.4modeldata.mat');
+pcadata.FarrCorr = pcadata.Farr;pcadata.TarrCorr = pcadata.Tarr;
+Farr = pcadata.FarrCorr;Tarr = pcadata.TarrCorr;
+% x = [4.1240    0.2121   12.0286];
 % load('pCa4dataNoAdj60sFremCorrShifted.mat')
 % x = [4.0648    0.2121   12.0505];
 f = figure(4);
 f.Position = [300 200 7.2*96 7.2*96/aspect];
 % keep the b, fit a and Tss
 % x = [4.1237    0.2121   12.0289];
-% x = [4.1233    0.2121   12.0290];
+x = [4.1233    0.2121   12.0290];
 [c rspca] = evalPowerFit(x, pcadata.FarrCorr, pcadata.Tarr, true, rampShift, true)
 f = gcf();
-exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
+% exportgraphics(f,'Figures/FigDecayOverlaypCa4.png','Resolution',150)
 
 %% model - relaxed
 f = figure(5);
 aspect = 1.5;
 f.Position = [300 200 7.2*96 7.2*96/aspect];
-% load ..\pca11modeldata.mat
+load ..\pca11modeldata.mat
 % load pca11modeldataDoubleStates.mat
 % data fit
-x = [4.4271    0.2121    4.8964];
+% x = [4.4271    0.2121    4.8964];
 % model fit
 % x = [2.2393    0.5408    6.8351];
 % retuned model fit with 1e3 alphaU mod
 % x = [2.0713    0.5512    6.8491];
 % tail-optimized fit using Dan's parameter space
-x = [5.2749    0.3628    5.4011]
+% x = [5.2749    0.3628    5.4011]
+x = [3.3117    0.2878    5.8467]
+x = [3.3117    0.2878 4.8964]
 [c rspca] = evalPowerFit(x, Farr, Tarr, true, [], false)
+% exportgraphics(f,'Figures/FigDecayOverlayModelRelaxed.png','Resolution',150)
 % Farr = Force;Tarr = Time;
 %%
 options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UseParallel', true, ...
