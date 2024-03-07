@@ -63,8 +63,9 @@ ds   = 1*(Lmax)/(Nx-1);      % space step size
 % ds   = 1*(Lmax + 0.015)/(Nx-1);
 s  = (0:1:Nx-1)'.*ds; % strain vector
 Ng = 15; 
-delU = 0.01*mod(19)*15/Ng;
-% so all unfolded make Ng*delU slack, i.e. 11*0.137=0.1375um
+% so all unfolded make mod(19) = Ng*delU slack, i.e. ~0.15 um. individual delU is about 0.01
+delU = mod(19)/Ng;
+
 
 
 % propose a function to kA = f(pCa)
@@ -83,51 +84,51 @@ delU = 0.01*mod(19)*15/Ng;
 % g0 = mod;
 % mod = 0;
 
-kp   = mod(1)*600; % ok      % proximal chain force constant
-kd   = mod(2)*500; % ok       % distal chain force constant
+kp   = mod(1); % ok      % proximal chain force constant
+kd   = mod(2); % ok       % distal chain force constant
 
 if ~isnan(mod(16))
-    kA   = mod(16)*200; % PEVK attachment rate
+    kA   = mod(16); % PEVK attachment rate
 else
-    kA   = mod(7)*200;
+    kA   = mod(7);
 end
 
 if ~isnan(mod(17))
-    kD   = mod(17)*50; % PEVK detachment rate
+    kD   = mod(17); % PEVK detachment rate
 else
-    kD   = mod(8)*50; % PEVK detachment rate
+    kD   = mod(8); % PEVK detachment rate
 end
 
-alphaU = mod(6)*1e6;         % chain unfolding rate constant
+alphaU = mod(6);         % chain unfolding rate constant
 % Fss = 3.2470*mod(10); % Parallel steady state force
 % Fss = 4.89;
-Fss = 3.2842*mod(10);
+Fss = mod(10);
 if pCa < 10
-    kp   = mod(9)*600;      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
-    kA   = mod(7)*200;
-    kD   = mod(8)*50; % PEVK detachment rate
+    kp   = mod(9);      % proximal chain force constantkS   = g0(2)*14122;        % distal chain force constant
+    kA   = mod(7);
+    kD   = mod(8); % PEVK detachment rate
     if ~isnan(mod(20))
         % cant exceed the no Ca unfolding rate!
-        alphaU = min(alphaU, mod(20)*(8.4137e5)*0.7);         % chain unfolding rate constant
+        alphaU = min(alphaU, mod(20));         % chain unfolding rate constant
     end
     if ~isnan(mod(21))
-        Fss = 3.2470*mod(21);
+        Fss = mod(21);
     end
     if ~isnan(mod(22))
-        kd   = mod(22)*500;      % proximal chain force constant high Ca
+        kd   = mod(22);      % proximal chain force constant high Cabist
     end
         
 end
-kDf = mod(23)*0.1;
+kDf = mod(23);
 alphaF = 0; % chain folding rate constant - not implemented yet
-np = mod(3)*2; % proximal chain force exponent
-nd = mod(5)*2; % distal chain force exponent
-nU = mod(4)*6.0; % unfolding rate exponent
+np = mod(3); % proximal chain force exponent
+nd = mod(5); % distal chain force exponent
+nU = mod(4); % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
-mu = mod(14)*0.2; % small enough not to affect the result
-Lref  = 0.9*mod(18); % reference sarcomere length (um)
+mu = mod(14); % small enough not to affect the result
+Lref  = mod(18); % reference sarcomere length (um)
 alphaF = 0;
-alphaF_0 = 1e-3*mod(15);
+alphaF_0 = mod(15);
 
 % Calculate proximal globular chain force Fp(s,n) for every strain and
 % value. 
@@ -140,12 +141,12 @@ Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np);
 RU = alphaU*(Lref^nU)*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 % clf;mesh(RU)
 %% visualizing the Force plot - fig 1A&B
-drawFig1 = true;
+drawFig1 = false;
 if drawFig1
     Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
 
     % do not plot zeros
-    Fp(Fp == 0) = NaN;
+    % Fp(Fp == 0) = NaN;
     % sx = s(1):0.1:s(end);
     sx = s;
     % Fp = interp1(s, Fp(:, :), sx);
@@ -251,7 +252,7 @@ Time = cell(1, 5);
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
 rampSet = [2 4];
-rampSet = [4]; % nly 100ms
+% rampSet = [4]; % nly 100ms
 % rampSet = [1 2 3 4];
 for j = rampSet
   if isempty(datatables{j})
@@ -593,9 +594,9 @@ maxPu = 0; maxPa = 0;
   % a*(-b + Lmax).^c + d = 1.2716*3;
   % a*(-b + Lmax).^c = 1.2716*3 - d;
   
-  b = 0.01*mod(11);
-  c = 8*mod(12);
-  d = 0.01*mod(13);
+  b = mod(11);
+  c = mod(12);
+  d = mod(13);
   % apply constraints
   if b < 0 || c <= 0 || d < 0 
       cost = inf;
