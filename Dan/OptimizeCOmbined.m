@@ -314,7 +314,8 @@ evalCombined(mod(modSel), mod, modSel, [11 4.4])
 % rampSet = [4] % 3s
 toc
 %% All four ramps costing 1e4
-mod2par = [10293*0.7, 14122, 3.27, 6, 3.25, (8.4137e5)/0.7, 16.44, 14.977, 10203*4.78*0.7, 3.2470, 0.05, 7, 1, 1, 0.05, 0.1*16.44, 14.977, 0.9, 0.1*15 , (8.4137e5)*0.7, 3.2470, 14122, 0.1];
+mod2params = [10293*0.7, 14122, 3.27, 6.0, 3.25, (8.4137e5)/0.7, 16.44, 14.977, 10203*4.78*0.7, 3.2470, 0.05, 7, 1, 1, 0.05, 0.1*16.44, 14.977, 0.9, 0.1*15 , (8.4137e5)*0.7, 3.2470, 14122, 0.1];
+mod2params = [10203*0.7, 14122, 3.27, 6.0, 3.25, (8.4137e5)*0.7, 16.44, 14.977, 10203*4.78*0.7, 3.2470, 0.05, 7, 1, 1, 0.05, 0.1*16.44, 14.977, 0.9, 0.0125*14, 0.7*8.4137e5, 3.2470, 14122, 0.1];
 % optimized Fss
 mod = [0.1360    0.4811    0.8499    1.3379    0.6881    2.9849    0.0849    1.1904    0.1302    1.6995         0    1.4243    0.0027    0.7668    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
 
@@ -335,9 +336,12 @@ mod = [0.1360    0.4811    0.8499    1.3379    0.6881    2.9849    0.0849    1.1
 % optim for better tail only
 % mod = [1.0777   16.5334    0.5891    0.6831    2.2466    1.4398    1.0000    1.0000    1.0000    1.0000    1.0000    1.0102    0.9400    1.0181    1.0000    1.0000    1.0000    1.0000    0.9985    1.0000    1.0000    1.0000];
 mod(23) = 0;
-params = mod.*mod2par;
-evalCombined(params(modSel), params, modSel, [11 4.4])
-
+mod(15) = 0;
+params = mod.*mod2params;
+params(10) = 4.89;
+tic
+evalCombined(params(modSel), params, modSel, [11])
+toc
 %% reinint to match Dan's model
 % mod = ones(22, 1); modSel = [1:6 13 14];
 
@@ -384,9 +388,6 @@ modSel = [1     2     3     4     5     6     9    20 22];
 % mod([20 21]) = NaN;
 % figure(144)
 % mod(23 - length(mod)) = NaN;
-
-%%
-mod = [0.0921    2.2736    0.3899    0.9107    1.4463    6.2490    2.6767    2.3335    0.3324    1.3824    1.0000    1.0000    1.0000   84.2683    1.0000    1.0000    1.0000    1.0000    1.0000       NaN       NaN    6.4155 0];
 mod(15) = 0;
 % mod(3) = 0.5;
 % tic
@@ -397,10 +398,23 @@ mod(15) = 0;
 % mod(8) = 1000;
 % mod(20) = NaN;
 mod2param = [600, 500, 2, 6, 2, 1e6, 200, 50, 600, 3.2842, 0.01, 8, 0.01, 0.2, 1e-3, 200, 50, 0.9, 0.01*15, (8.4137e5)*0.7, 3.2470, 500, 0.1];
-params = mod.*mod2param;
+% create abs params and fix Lref in Dan's codes
+params = mod.*mod2param; params([1 2 6]) = params([1 2 6]).*[(Lref^params(3)), (Lref^params(5)), (Lref^params(4))];
+% Nice fit including pCa4.4 0.1s, predicting rest
+params = [367, 3e+04, 2.3, 9, 2.33, 3.24e+06, 4.98, 84.9, 1.36e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 3.94e+04, 0, ];
+
 evalCombined(params(modSel), params, modSel, [11 4.4])
 toc
 % modSel = [1:6 7 8 9 14 20 22]
+
+%% 
+tic
+% modSel = [1:6    11    12    14]; params = [367, 2.39e+04, 2.3, 9, 2.33, 3.24e+06, 1.4, 17.8, 4.44e+03, 4.89, 1.2e-10, 17.6, 0.0027, 0.792, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 6.96e+03, 0, ];
+% modSel = [11 12 13 14];
+% params([7 8 9 22 23]) = [5 60 1380 3e4 0];
+modSel = [7 8 22];
+evalCombined(params(modSel), params, modSel, [11])
+toc
 
 %%
 clf;
@@ -461,18 +475,20 @@ mod(20) = NaN;
 % modSel = [1:6 10 15];
 % modSel = [1:6 12 14 15 16]
 % modSel = [1:6 7 8 9 22];
-init = mod(modSel);
+init = params(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
-evalLin = @(optMods) evalCombined(optMods, mod, modSel, [11 4.4])
+
+evalLin = @(optMods) evalCombined(optMods, params, modSel, [11])
 x = fminsearch(evalLin, init, options);
+params(modSel) = x;
 %%
 % mod(modSel) = x;
 % mod
 % save("mod.mat", "mod")
 % modSel = [1     2     3     4     5     6     7     8     9    22 23];
-init = mod(modSel);
+init = params(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
-evalLin = @(optMods) evalCombined(optMods, mod, modSel, [4.4 11])
+evalLin = @(optParams) evalCombined(optParams, params, modSel, [4.4])
 x = fminsearch(evalLin, init, options);
 %% optim in log param space
 % mod = ones(1, 17);
@@ -507,14 +523,23 @@ x = fminsearch(evalLin, init, options);
 
 % pCa 11 only
 % mod = [1.3111    0.0572    1.0882    0.9839    0.5485    0.0672    0.0849    1.1904    0.1302    1.5060         0    3.1310    0.0027    0.3576    2.4840       NaN       NaN    1.0000    1.0000       NaN       NaN    0.4930];
-% modSel = [1:6 12 14 19];
+% modSel = [1:6 11 12 14];
 
 % optim for tail only: pCa11 0.1s ramp, 300s linear sampling
 % mod = [1.8533    0.0821    1.1321    0.9230    0.6111    0.0301    0.0849    1.1904    0.1302    1.5060         0    2.8146    0.0027    0.8606    2.4840       NaN       NaN    1.0000    0.9400       NaN       NaN    0.4930];
-init = max(-10, log10(mod(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [4.4]);
+init = max(-10, log10(params(modSel)));
+evalLogCombined = @(logMod) evalCombined(10.^logMod, params, modSel, [4.4]);
 x = fminsearch(evalLogCombined, init, options);
-mod(modSel) = 10.^x; 
+params(modSel) = 10.^x; 
+% list params
+a = [modSel; params(modSel)]; sprintf('%d: %1.3g\n', a(:))
+% list params for save
+disp(['params = [' sprintf('%1.3g, ', params(:)) '];'])
+
+
+% params = [367, 2.39e+04, 2.3, 9, 2.33, 3.24e+06, 1.4, 17.8, 4.44e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 6.96e+03, 0, ];
+% modSel = [7 8 9 22]; params([7 8 9 22]) = [10 50 params([1 2])];params = [367, 3e+04, 2.3, 9, 2.33, 3.24e+06, 7.77, 47.2, 1.4e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 1.42e+04, 0, ];
+% params = [367, 3e+04, 2.3, 9, 2.33, 3.24e+06, 0.698, 7.38, 1.33e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 6.9e+03, 0, ];
 
 %% optim with bounded params
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', true, ...
@@ -584,60 +609,92 @@ figure(93);clf;hold on;
 isolateRunCombinedModel(mod, 6.25, true)
 
 %% Optimizing the reduced set to pCa
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'UseParallel', false, ...
-    'TolX', 0.01, 'PlotFcns', @optimplotfval, 'MaxIter', 50);
+options = optimset('Display','iter', 'TolFun', 1e-6, 'Algorithm','sqp', 'UseParallel', false, ...
+    'TolX', 1e-4, 'PlotFcns', @optimplotfval, 'MaxIter', 50);
 
 % mod = [0.2880    0.0763    0.9277    1.7014    0.5508  632.7487    0.2108    0.5573    0.2802    1.5806    1.0005    1.3387    0.1604    0.5548    1.1785    NaN    NaN    1.0000    1.0000  415.4241];
-mod5_5 = mod;mod5_8 = mod;mod6=mod;
-modSel = [7 9 22];
+mod5_5 = params;mod5_8 = params;mod6=params;
+modSel = [7  9 22];
 modNames(modSel);
 
 
 % lower and upper bounds are a functions of previous mods
 ub = @(m)[m(7) m(9) m(22)];
 lb = @(m)[1e-6 m(1) m(2)];
-m_ub = nan(size(mod));m_ub(modSel) = ub(mod);
-m_lb = nan(size(mod));m_lb(modSel) = lb(mod);
+m_ub = nan(size(mod));m_ub(modSel) = ub(params);
+m_lb = nan(size(mod));m_lb(modSel) = lb(params);
 clf;
-plotParams(mod, [-2 2]);hold on;
-plotParams(m_ub, [-2 2]);hold on;
-plotParams(m_lb, [-2 2]);
+plotParams(params, [-1 3]);hold on;
+plotParams(m_ub, [-1 3]);hold on;
+plotParams(m_lb, [-1 3]);
 %%
 % evalNewCombined = @(curmod) evalCombined(curmod, mod, 1:length(mod), [5.5]);
 % modt = mod5_5;
 % modt(8) = mod(8);
 % evalNewCombined(modt)
 %%
+tic
+% 2.3214
+% evalLin([4.9816 1.3607e3 3.9386e4])
+%
+% mod5_5(modSel) = [1.1816 1.2607e3 3.9386e4];
+mod5_5(modSel) = [2.4850 1.2607e+03 3.9386e+04];
+evalLin([3 370.4209 2.028e+04])
+%%
+modSel = [7 8 9];
+evalCombFixRat = @(params) evalCombined([params(1:21) params(2)*params(9)/params(1) params(23)], params, 1:23, [4.4]);
+evalLin = @(curmod) evalCombFixRat([params(1:6) curmod params(10:end)]);
+x = fminsearch(evalLin, params(modSel), options);
+%%
+tic
+mod = mod5_5;
+mod(22) = NaN; % auto settings
+evalCombined(mod, mod, 1:23, [5.5]);
+% evalLin(params(modSel))
+
+toc
+%%
 % save('ModsNoAss.mat', 'mod', 'mod6','mod5_8','mod5_5')
 
 % init = max(-10, log10(mod5_5(modSel)));
 % evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.5]);
 
+mod5_5 = params;mod5_8 = params;mod6=params;
+modSel = [7 9];
+
 % x = fminsearch(evalLogCombined, init, options);
-evalLin = @(curmod) evalCombined(curmod, mod, modSel, [5.5]);
-x = fmincon(evalLin, mod5_5(modSel), [], [], [], [], lb(mod), ub(mod), [], options);
+evalLin = @(curmod) evalCombined([curmod params(2)*params(9)/params(1)], mod5_5, [modSel 22], [5.5]);
+% x = fmincon(evalLin, mod5_5(modSel), [], [], [], [], lb(params), ub(params), [], options);
+% x = fmincon(evalLin, mod5_5(modSel), [], [], [], [], [], [], [], options);
+x = fminsearch(evalLin, mod5_5(modSel), options);
 % mod5_5 = mod;
 mod5_5(modSel) = x;
 %%
-init = max(-10, log10(mod5_8(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.75]);
+% init = max(-10, log10(mod5_8(modSel)));
+% evalLogCombined = @(logMod) evalCombined(10.^logMod, params, modSel, [5.75]);
 % x = fminsearch(evalLogCombined, init, options);
-x = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(mod5_5)), log10(ub(mod5_5)), [], options);
-% mod5_8 = mod;
-mod5_8(modSel) = 10.^x;
-%%
-init = max(-10, log10(mod6(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [6]);
-% x = fminsearch(evalLogCombined, init, options);
-x = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(mod5_8)), log10(ub(mod5_8)), [], options);
+% x = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(mod5_5)), log10(ub(mod5_5)), [], options);
+% mod5_8(modSel) = 10.^x;
+evalLin = @(curmod) evalCombined(curmod, mod5_5, modSel, [5.75]);
+x = fminsearch(evalLin, mod5_5(modSel), options);
+mod5_8(modSel) = x;
 
-% mod6 = mod;
-mod6(modSel) = 10.^x;
+%%
+% init = max(-10, log10(mod6(modSel)));
+% evalLogCombined = @(logMod) evalCombined(10.^logMod, params, modSel, [6]);
+% x = fminsearch(evalLogCombined, init, options);
+% x = fmincon(evalLogCombined, init, [], [], [], [], log10(lb(mod5_8)), log10(ub(mod5_8)), [], options);
+% mod6(modSel) = 10.^x;
+
+evalLin = @(curmod) evalCombined(curmod, mod5_8, modSel, [6]);
+x = fminsearch(evalLin, mod5_8(modSel), options);
+mod6(modSel) = x;
+%%
 % compare 
 figure(39);
 clf;
-sclale = [-2 3];
-plotParams(mod, sclale)
+sclale = [-1 6];
+plotParams(params, sclale)
 hold on;
 plotParams(mod5_5, sclale);
 plotParams(mod5_8, sclale);
@@ -645,8 +702,9 @@ plotParams(mod6, sclale);
 %
 % evalCombined(mod6(modSel), mod, modSel, [5.5])
 %%
-mod11 = mod;
-mod11(modSel) = [1e-6 mod(1)/4.78 mod(2)]
+mod = params;
+mod11 = params;
+mod11(modSel) = [1e-6 mod(1)]
 modSet = [mod;mod5_5;mod5_8;mod6;mod11];
 pcax = [4.4, 5.5, 5.75, 6, 11];
 % modSel = 1:20;
@@ -656,12 +714,21 @@ tiledlayout(1,4);
 for i = 1:size(modSel, 2)
     nexttile();
     semilogy(-pcax, modSet(:, modSel(i)), 'x-');
+
     
     % pca11
     % semilogy(-pcax, modSet(:, modSel(i)), '-');
 
     legend(modNames{modSel(i)});
 end
+
+disp(['mod5_5 = [' sprintf('%1.3g, ', mod5_5(modSel)) '];'])
+disp(['mod5_8 = [' sprintf('%1.3g, ', mod5_8(modSel)) '];'])
+disp(['mod6 = [' sprintf('%1.3g, ', mod6(modSel)) '];'])
+%% save last iteration
+mod5_5 = [0.000165, 1.2e+03, ];
+mod5_8 = [0.000188, 1.04e+03, ];
+mod6 = [0.000238, 396,];
 
 %%
 function totalCost = evalCombined(optMods, mod, modSel, pCas)
@@ -713,8 +780,8 @@ function totalCost = evalCombined(optMods, mod, modSel, pCas)
             f.Name = 'Parameter modifiers';
         end      
         clf;
-        plotParams(baseMods, [-2, 1]);hold on;
-        plotParams(mod, [-2, 1]);hold off;
+        % plotParams(baseMods, [-1, 4]);hold on;
+        plotParams(mod./baseMods, [-1, 1]);hold off;
     end
 
 

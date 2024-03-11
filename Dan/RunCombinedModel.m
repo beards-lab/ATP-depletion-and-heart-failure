@@ -116,6 +116,8 @@ if pCa < 10
     end
     if ~isnan(mod(22))
         kd   = mod(22);      % proximal chain force constant high Cabist
+    else
+        kd = mod(2)*mod(9)/mod(1); % scaled to kp_ca in the same ratio as kd_relaxed to kp_relaxed
     end
         
 end
@@ -134,16 +136,16 @@ alphaF_0 = mod(15);
 % value. 
 slack = (0:Ng).*delU;
 % Fp = kp*(max(0,s-slack)/Lref).^(np); 
-Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
+Fp = kp*(max(0,s-slack)/Lref).^(np); 
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
-RU = alphaU*(Lref^nU)*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
+RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 % clf;mesh(RU)
 %% visualizing the Force plot - fig 1A&B
 drawFig1 = false;
 if drawFig1
-    Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
+    Fp = kp*(max(0,s-slack)/Lref).^(np); 
 
     % do not plot zeros
     % Fp(Fp == 0) = NaN;
@@ -208,7 +210,7 @@ if drawFig1
     exportgraphics(f,'../Figures/ModelRates.png','Resolution',150)
 
     % reconstruct Fp again without the NaN's
-    Fp = kp*(Lref^np)*(max(0,s-slack)/Lref).^(np); 
+    Fp = kp*(max(0,s-slack)/Lref).^(np); 
     % Fp(isnan(Fp() == NaN) = 0;
 
 end
@@ -300,7 +302,8 @@ for j = rampSet
   % x = [x1; x2(2:end, :)];
 
   %% normal
-  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 1300];
+  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 1000];
+  % times = [-100, 0;0 Tend_ramp];
   velocities = [0 V 0];
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
@@ -402,7 +405,7 @@ maxPu = 0; maxPa = 0;
     else
         pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
     end
-    Fd = kd*(Lref^nd)* max(0,(Length{j}(i) - s)/Lref).^nd; 
+    Fd = kd*max(0,(Length{j}(i) - s)/Lref).^nd; 
     Force_pa{j} = ds*sum(sum(Fd.*pa ));
     Force{j}(i) =  ds*sum(sum(Fd.*pu )) + Force_pa{j};
     states{j}(i, 1:Ng+1) = sum(pu);
@@ -679,7 +682,7 @@ for j = rampSet
     w = 1;
 %%
     Es{j} = w.*((Ftot_int{j} - datatable_cur.F)/max(Ftot_int{j})).^2; % error set
-    Es{j}(isnan(Es{j})) = 0; % zero outside bounds
+    Es{j} = Es{j}(~isnan(Es{j})); % zero outside bounds
     En{j} = 1e3*sum(Es{j})/length(Es{j}); % normalized error
     
     PeakData(j, 1) = rds(j);
@@ -721,12 +724,16 @@ aspect = 2;
 % matlab's pixel is 1/96 of an inch
 % f.Position = [300 200 7.2*96 7.2*96/aspect];
 
-clf;
+cf = clf;
 % colors = lines(max(rampSet)+1); colors(1:end-1, :) = colors(2:end, :);
 colors = gray(5);
 % colors(1:end-1, :) = colors(2:end, :);
 fs = 12;
-tiledlayout(3, 4, 'TileSpacing', 'compact')
+tl = tiledlayout(3, 4, 'TileSpacing', 'compact');
+reportCosts = true;
+if reportCosts 
+    title(tl, sprintf('pCa %g costs %g', pCa, round(cost, 3)));    
+end
 % prepare in advance so that it wont draw over my inset
 sp = nexttile(1, [2 4]);hold on;
 
@@ -789,6 +796,9 @@ for j = max(rampSet):-1:1
         continue;
     end
     sp = nexttile;hold on;
+    if reportCosts 
+        title(sp, sprintf('Ramp %g costs %g', rds(j), round(En{j}, 3)));    
+    end
     h = errorbar(datatables{j}.Time-2,datatables{j}.F,datatables{j}.SD, '-', LineWidth=2, Color=colors(3, :), CapSize=0);
     set([h.Bar, h.Line], 'ColorType', 'truecoloralpha', 'ColorData', [h.Line.ColorData(1:3); 255])
     plot(Time{j},Force{j},'-', 'linewidth',2, 'Color', 'k'); 
