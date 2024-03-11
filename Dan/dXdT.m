@@ -9,7 +9,7 @@ else
     pa = [];
     g = zeros((Ng+1)*Nx + 1,1);
 end
-L = x(end);
+L = max(0,x(end));
 
 % Calculate the un-attached chain velocities for every pu(s,n) entry
 deltaF = kd*max(0,(L-s)/Lref).^nd - Fp;
@@ -58,9 +58,9 @@ else
     FR = 0;
 end
 
-% if t > 9 
-%     a = 1;
-% end
+if t > 9 
+    a = 1;
+end
 g(ij(:,2:(Ng+1))) = g(ij(:,2:(Ng+1))) + UR - FR;
 g(ij(:,1:Ng))     = g(ij(:,1:Ng))     - UR + FR;
 
@@ -72,5 +72,8 @@ if false || ~isempty(pa)
     g(ij(:,1:Ng)+NxNg)     = g(ij(:,1:Ng)+NxNg)     - UR + FR;
 end
 
-
-g(end) = V;
+if isa(V, 'function_handle')
+    g(end) = V(t);
+else
+    g(end) = V;
+end

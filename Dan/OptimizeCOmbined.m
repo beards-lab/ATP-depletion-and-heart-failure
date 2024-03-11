@@ -305,7 +305,7 @@ modSel = 1:length(mod);
 %%
 tic
 % mod(10) = 1; mod(11) = 1;mod(12) = 0.5;mod(13) = 0;mod(1) = 0.8;mod(2) = 0.12;
-evalCombined(mod(modSel), mod, modSel, [11 4.4])
+evalCombined(mod(modSel), mod, modSel, [11])
 % evalCombined(mod_pca6)
 % evalCombined(mod)
 % evalCombined([1 1 1 1 1 1])

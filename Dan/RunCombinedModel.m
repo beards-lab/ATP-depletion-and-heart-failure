@@ -253,9 +253,10 @@ Force = cell(1, 5);
 Time = cell(1, 5); 
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
-rampSet = [2 4];
-% rampSet = [4]; % nly 100ms
+% rampSet = [2 4];
+rampSet = [4]; % nly 100ms
 % rampSet = [1 2 3 4];
+rampSet = [3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -264,18 +265,8 @@ for j = rampSet
   % tic
   V = Vlist(j); % ramp velocity
 
-  pu = zeros(Nx,1)*PU;
-  pa = zeros(Nx,1)*PA;
-  pu(1,1) = 1/ds; 
-  if pCa >= 11
-    x0 = reshape(pu,[(Ng+1)*Nx,1]);
-  else
-    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
-  end
-  x0 = [x0; 0]; 
   Tend_ramp = Lmax/V; % length of ramp
 
-  opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);
   % testing tolerances, all with +/- same total cost
   % abstol 1e-6 7.7s,  1e-3 3.6s, 1e-1 2.7s and 1e1 3.1s
   % reltol 1e-3 (normal) 7.7s, 1e-1 6.8s and 8s for 1e-5 
@@ -304,7 +295,32 @@ for j = rampSet
   %% normal
   times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 1000];
   % times = [-100, 0;0 Tend_ramp];
-  velocities = [0 V 0];
+  velocities = {0 V 0};
+  L_0 = 0;
+  %% sinusoidal driving
+  bpm = 600;  
+  % cycle time
+  % Tc = 60/bpm;
+  Tc = rds(j);
+  bpm = 60/Tc;
+  times = [-100, 0;0 10*Tc];  
+  positions = @(t)Lmax/2*cos(2*pi*t/Tc);
+  % differentiating positions
+  V = @(t)2/2*Lmax*pi/Tc *sin(2*pi*t/Tc);
+
+  % syms fpos(t);
+  % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
+  % fvel = diff(fpos)
+  % s = v*t;
+  % s = I(v) + v
+  % v = ds/dt   
+  
+  velocities = {0, V};
+  L_0 = 0;%Lmax/2;
+  % x_ = 0:0.01:10;
+  % % plot(x_, positions(x_), x_, velocities(x_), x_, cumsum(velocities(x_)));
+  % plot(x_, fpos(x_), x_, velocities(x_), x_, fvel(x_), x_, cumsum(fvel(x_)));
+  drawAllStates = 1;
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
   %     Tend_ramp + 40 Tend_ramp + 41;... % rampdown in 1s
@@ -333,11 +349,20 @@ for j = rampSet
   %   drawAllStates = true;
   % end
 %%
-            
+  pu = zeros(Nx,1)*PU;
+  pa = zeros(Nx,1)*PA;
+  pu(1,1) = 1/ds; 
+  if pCa >= 11
+    x0 = reshape(pu,[(Ng+1)*Nx,1]);
+  else
+    x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
+  end
+  x0 = [x0; L_0]; 
+  opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);          
   % assert(length(times) == length(velocities), 'Must be same length')
   t = []; x = [];
   for i_section = 1:size(times, 1)
-      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,kDf,velocities(i_section));
+      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,kDf,velocities{i_section});
       t = [t; t1(2:end)];
       x = [x; x1(2:end, :)];
       % prep the init vector again
@@ -383,6 +408,7 @@ maxPu = 0; maxPa = 0;
         % time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
         % time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
         time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), t(end)];
+        time_snaps = [Tc/2, Tc, 3*Tc/2, 2*Tc];
         % i_time_snaps = find(t > time_snaps)
     
         % disable
@@ -649,6 +675,26 @@ maxPu = 0; maxPa = 0;
   % legend('Tension total', 'Tension viscous (kPa)');
   % title(sprintf('pCa %0.1f, HR %0.0f bpm', pCa, HR));
   % figure(g);
+
+    %% Plot sinusoidal outcome
+    figure(60+j);clf;    tiledlayout("flow");
+    t = Time{j};
+    x = Length{j};
+    y = Force{j};
+    y2 = Force{j} - Force_par{j};
+    z = zeros(size(Force{j}));
+    col = 1:length(Length{j});
+    
+    x_ = @(t) t - floor(t/Tc)*Tc;
+    nexttile;
+    plot(t, x, t, y);legend('Length', 'Force');
+    nexttile;
+    plot(x_(t), x, x_(t), y);legend('Length', 'Force');
+    nexttile;
+    surface([x;x],[y;y],[z;z],[col;col],...
+            'facecol','no',...
+            'edgecol','interp',...
+            'linew',2);
 end
 
 % Get error for the whole ramp-up and decay
