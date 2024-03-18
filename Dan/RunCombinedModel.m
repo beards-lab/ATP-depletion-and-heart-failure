@@ -14,6 +14,9 @@ if any(mod < 0)
 end
 drawAllStates = false;
 drawFig1 = false;
+exportRun = false;
+
+figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stealing the focus
 
 % rds = fliplr([0.02 0.1, 1, 10 100]);
 rds = fliplr([0.1, 1, 10, 100]);
@@ -142,13 +145,13 @@ Fp = kp*(max(0,s-slack)/Lref).^(np);
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
 RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 % clf;mesh(RU)
-%% visualizing the Force plot - fig 1A&B
 drawFig1 = false;
+%% visualizing the Force plot - fig 1A&B
 if drawFig1
-    Fp = kp*(max(0,s-slack)/Lref).^(np); 
+    % Fp = kp*(max(0,s-slack)/Lref).^(np); 
 
     % do not plot zeros
-    % Fp(Fp == 0) = NaN;
+    % Fp(Fp < 1e-1) = NaN;
     % sx = s(1):0.1:s(end);
     sx = s;
     % Fp = interp1(s, Fp(:, :), sx);
@@ -160,22 +163,22 @@ if drawFig1
     pl3 = plot(sx, Fp(:, 3), 'k--', 'linewidth', 2); hold on;
     plN = plot(repmat(sx, [1, Ng-3]), Fp(:, 4:Ng), ':', 'linewidth', 2, 'Color', 'k'); 
     
-    plot(s([6, 24]), [20 20], 'k');scatter(s(24), [20], 'k>', 'filled');
-    sx_20 = zeros(1, Ng);
-    for n = 1:Ng
-        i_s = find(Fp(:, n) > 0, 1);
-        sx_20(n) = interp1(Fp(i_s:end, n), s(i_s:end), 20);
-    end
-    scatter(sx_20, repmat(20, [1 Ng]), 'kx', linewidth=1.5)   
-    % markers = interp1(s, Fp(1, :))
-    % scatter(s([6:24]), repmat(20, size(6:24, 1)), 'ko')
-    legend([pl1, pl2, pl3, plN(1)], '$F_{p,0}$', '$F_{p,1}$', '$F_{p,2}$', '$F_{p,3-14}$', 'Location', 'Northwest', Interpreter='latex');
+    % arrow
+    % t0 = 5;
+    % plot(s([14, 24]), [t0 t0], 'k');scatter(s(14), [t0], 'k>', 'filled');
+    % sx_20 = zeros(1, Ng);
+    % for n = 1:Ng
+    %     i_s = find(Fp(:, n) > 0, 1);
+    %     sx_20(n) = interp1(Fp(i_s:end, n), s(i_s:end), t0);
+    % end
+    % scatter(sx_20, repmat(t0, [1 Ng]), 'kx', linewidth=1.5)   
+    legend([pl1, pl2, pl3, plN(1)], '$\sigma_p(0,s)$', '$\sigma_p(1,s)$', '$\sigma_p(2,s)$', '$\sigma_p(3..14,s)$', 'Location', 'Northwest', Interpreter='latex');
     
     set(gca, 'FontSize', 12)
     aspect = 1.5;
     
     ylim([0 inf]);xlim([0 inf])
-    xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel('$t_p$ (kPa)', Interpreter='latex');
+    xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel('$\sigma_p(n,s)$ (kPa)', Interpreter='latex');
     % visualizing the unfolding rate = fig 1C
     % clf;hold on;
     axes('position', [0.55 0.2 0.35, 0.7]);hold on;
@@ -190,7 +193,7 @@ if drawFig1
         text(s(end) + 0.01, RU(end, n), ['$U_{' num2str(n)  '\rightarrow ' num2str(n+1) '}$'], 'Fontsize', 12, Interpreter='latex')
     end
     text(s(end) + 0.01, RU(end, 4), '...', 'FontSize',14, 'FontWeight','bold')
-    xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel(['$U_{n\rightarrow n+1}$  (s$^{-1}$)'], Interpreter='latex');
+    xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel(['$U_{n\rightarrow n+1}(n, s)$  (s$^{-1}$)'], Interpreter='latex');
     gc = gca;
     set(gca, 'FontSize', 12);
     aspect = 1.5;
@@ -201,16 +204,17 @@ if drawFig1
     % inset 
     axes('position', [0.62 0.55 0.21 0.35], 'YAxisLocation','right')
     plot(1:Ng, RU(end, :), 'ks-', 'linewidth', 2);
-    xlabel('n')
+    xlabel('$n$', Interpreter='latex')
     text(4, max(RU(end, 1))*0.7, ["$U_{n\rightarrow n+1}$ at" sprintf("%0.3f $\\mu$m", max(s))], 'FontSize',14, 'FontWeight','normal', Interpreter='latex')
     set(gca, 'FontSize', 12);
     % set(gcf, 'Position', [500  240  400  300])
     % set(gca, 'YAxisLocation', 'right');
     set(gca, 'YTick',[0 200 400], 'XTick', [0 5 10], 'TickLength',[0.05 0.025]);
     exportgraphics(f,'../Figures/ModelRates.png','Resolution',150)
+    exportgraphics(f,'../Figures/ModelRates.eps','Resolution',150)
 
     % reconstruct Fp again without the NaN's
-    Fp = kp*(max(0,s-slack)/Lref).^(np); 
+    % Fp = kp*(max(0,s-slack)/Lref).^(np); 
     % Fp(isnan(Fp() == NaN) = 0;
 
 end
@@ -254,7 +258,7 @@ Time = cell(1, 5);
 Length = cell(1, 5); 
 rampSet = 1:length(rds); %[1 2 3 4 5];
 % rampSet = [2 4];
-rampSet = [4]; % nly 100ms
+% rampSet = [3]; % nly 100ms
 % rampSet = [1 2 3 4];
 rampSet = [3 4];
 for j = rampSet
@@ -298,29 +302,19 @@ for j = rampSet
   velocities = {0 V 0};
   L_0 = 0;
   %% sinusoidal driving
-  bpm = 600;  
   % cycle time
-  % Tc = 60/bpm;
   Tc = rds(j);
-  bpm = 60/Tc;
   times = [-100, 0;0 10*Tc];  
-  positions = @(t)Lmax/2*cos(2*pi*t/Tc);
+  positions = @(t)-Lmax/2*cos(2*pi*t/Tc) + Lmax/2;
   % differentiating positions
   V = @(t)2/2*Lmax*pi/Tc *sin(2*pi*t/Tc);
 
-  % syms fpos(t);
-  % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
-  % fvel = diff(fpos)
-  % s = v*t;
-  % s = I(v) + v
-  % v = ds/dt   
-  
+  % syms fpos(t);   % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
+
   velocities = {0, V};
   L_0 = 0;%Lmax/2;
-  % x_ = 0:0.01:10;
-  % % plot(x_, positions(x_), x_, velocities(x_), x_, cumsum(velocities(x_)));
-  % plot(x_, fpos(x_), x_, velocities(x_), x_, fvel(x_), x_, cumsum(fvel(x_)));
-  drawAllStates = 1;
+  x_ = 0:Tc/100:Tc;
+  plot(x_, positions(x_), '-', x_, V(x_), x_, cumsum(V(x_)).*[1 diff(x_)], '--');
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
   %     Tend_ramp + 40 Tend_ramp + 41;... % rampdown in 1s
@@ -381,7 +375,6 @@ for j = rampSet
   % 
   % t = [t1(1:end); t2(2:end); t3(2:end); t4(2:end); t5(2:end); t6(2:end)];% prevent overlap at tend_ramp
   % x = [x1; x2(2:end, :); x3(2:end, :); x4(2:end, :); x5(2:end, :); x6(2:end, :)];
-  
 %%
 Time{j} = t;
 states{j} = [];states_a{j} = [];    strains{j} = []; i_time_snaps = [];
@@ -397,7 +390,7 @@ maxPu = 0; maxPa = 0;
         g = gcf;
         % open up a new one
         layout_x = 2 + (pCa < 10)
-        f = figure(50+j); clf; tiledlayout(layout_x, 4, 'TileSpacing','compact', Padding='compact');
+        f = figure(50+pCa*10+j); clf; tiledlayout(layout_x, 4, 'TileSpacing','compact', Padding='loose');
         aspect = 2;
         % normal size of 2-col figure on page is 7.2 inches
         % matlab's pixel is 1/96 of an inch
@@ -408,7 +401,7 @@ maxPu = 0; maxPa = 0;
         % time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
         % time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
         time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), t(end)];
-        time_snaps = [Tc/2, Tc, 3*Tc/2, 2*Tc];
+        % time_snaps = [Tc/2, Tc, 3*Tc/2, 2*Tc];
         % i_time_snaps = find(t > time_snaps)
     
         % disable
@@ -469,9 +462,17 @@ maxPu = 0; maxPa = 0;
             % end
             % ylabel('$s$ ($\mu$m)', Interpreter='latex');
             %% 2D shaded plot - unattached
-            surface(s, 0:Ng, pu'*ds*100, 'EdgeColor','none');hold on;
+            surface(s, 0:Ng, pu'*ds*100, 'EdgeColor',[1 1 1]*0.9);hold on;box on;
+            % [x,y,z]=meshgrid(s,0:Ng,-1);
+            % surface(x, y, z)
+            h = 10;lw = 0.5;
+            line([s(1) s(1)], [0, Ng], [h h], Color='black', linewidth=lw)
+            line([s(end) s(end)], [0, Ng], [h h], Color='black', linewidth=lw)
+            line([s(1) s(end)], [0, 0], [h h], Color='black', linewidth=lw)
+            line([s(1) s(end)], [Ng, Ng], [h h], Color='black', linewidth=lw)
+            % imagesc(s, 0:Ng, pu'*ds*100);
             % surf(s, 0:Ng, Fp')
-            colormap(1-gray);
+            colormap(flipud(hot));
             % xlim([0, s(end)]);
             % shading(gca, 'interp')
             % view(90, -90); 
@@ -479,18 +480,30 @@ maxPu = 0; maxPa = 0;
             % xlabel('s'); ylabel('State');
             % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
             if i_snap == 1
-                ylabel('n');
+                ylabel('$n$', Interpreter='latex');
             elseif i_snap == length(i_time_snaps)
                 cb = colorbar;
-                title(cb, 'P_{u} %')
+                title(cb, 'Unatt %')
             end
-            xlabel('$s$ ($\mu$m)', Interpreter='latex');
+            if pCa >= 10
+                % xlabel is done by attached panels
+                xlabel('$s$ ($\mu$m)', Interpreter='latex');
+            else
+                ga = gca;
+                ga.XTick = [];
+            end 
             %% 2D shaded plot - attached
             if pCa < 10
                 nexttile(i_snap + 4);
-                surface(s, 0:Ng, pa'*ds*100, 'EdgeColor','none');hold on;
+                surface(s, 0:Ng, pa'*ds*100, 'EdgeColor',[1 1 1]*0.9);hold on;box on;
+                line([s(1) s(1)], [0, Ng], [h h], Color='black', linewidth=lw)
+                line([s(end) s(end)], [0, Ng], [h h], Color='black', linewidth=lw)
+                line([s(1) s(end)], [0, 0], [h h], Color='black', linewidth=lw)
+                line([s(1) s(end)], [Ng, Ng], [h h], Color='black', linewidth=lw)
+
                 % surf(s, 0:Ng, Fp')
-                colormap(1-gray);
+                % colormap(1-gray);
+                colormap(flipud(hot));
                 % xlim([0, s(end)]);
                 % shading(gca, 'interp')
                 % view(90, -90); 
@@ -498,12 +511,13 @@ maxPu = 0; maxPa = 0;
                 % xlabel('s'); ylabel('State');
                 % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
                 if i_snap == 1
-                    ylabel('n');
+                    ylabel('$n$', Interpreter='latex')
                 elseif i_snap == length(i_time_snaps)
                     cb = colorbar;
-                    title(cb, 'P_{a} (%)')
+                    title(cb, 'Att %')
                 end
                 xlabel('$s$ ($\mu$m)', Interpreter='latex');
+                box on;
             end
             %% lollipop plot
             % % identify leading states
@@ -565,7 +579,7 @@ maxPu = 0; maxPa = 0;
     %     outStruct{j, 3}.pu = pu;
     % end
     end
-%% Continuous states in time: time vs. state occupancy plot
+% Continuous states in time: time vs. state occupancy plot
 % if drawAllStates
 %     figure(60+j); clf;
 %     set(gcf, 'Name', sprintf('States for pCa %d at %0.1f ramp', pCa, rds(j)) );
@@ -640,17 +654,17 @@ maxPu = 0; maxPa = 0;
     
   if drawAllStates
         nexttile([1 4]);
-        semilogx(Time{j}, Force{j});hold on;
-        scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'o', 'filled');
+        semilogx(Time{j}, Force{j}, 'k-');hold on;
+        scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'ko', 'filled');
         xlim([1e-3 inf]);
         % nexttile([1 1]);
         % loglog(Time{j}, Force{j});hold on;
         % scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'o', 'filled');
         % xlim([1e-3 inf])
         xlabel('$t$ (s)', Interpreter='latex');
-        legend('Tension', 'Insets');
-        ylabel('$T$ (kPa)', Interpreter='latex')
-        exportgraphics(f,sprintf('../Figures/States%g.png', pCa),'Resolution',150)
+        legend('Tension', 'Insets', 'Location','northwest');
+        ylabel('$\Theta$ (kPa)', Interpreter='latex')
+        exportgraphics(f,sprintf('../Figures/States%g_%gs.png', pCa, rds(j)),'Resolution',150)
 
     end
 
@@ -677,24 +691,61 @@ maxPu = 0; maxPa = 0;
   % figure(g);
 
     %% Plot sinusoidal outcome
-    figure(60+j);clf;    tiledlayout("flow");
-    t = Time{j};
-    x = Length{j};
-    y = Force{j};
+    aspect = 2;
+    figure(900 + j*10 + round(pCa));clf;    tiledlayout(2,2, TileSpacing="compact");
+    set(gcf, 'Position', [500  300  7.2*96 7.2*96/aspect])
+    rng = Time{j} < 20;
+    t = Time{j}(rng)';
+    x = Length{j}(rng) + 0.95;
+    y = Force{j}(rng);
     y2 = Force{j} - Force_par{j};
-    z = zeros(size(Force{j}));
-    col = 1:length(Length{j});
+    z = zeros(size(t));
+    col = linspace(0, t(end), length(t));
     
+    % t = Time{j}';
+    % x = Length{j};
+    % y = Force{j} + 0.95;
+    % z = zeros(size(Force{j}));
+    % col = 1:length(t);
+
+    size(t) 
+    size(x)
+    size(y)
+    size(z)
+    size(col)
+
     x_ = @(t) t - floor(t/Tc)*Tc;
+    lw = 1
     nexttile;
-    plot(t, x, t, y);legend('Length', 'Force');
-    nexttile;
-    plot(x_(t), x, x_(t), y);legend('Length', 'Force');
-    nexttile;
+    plot(t, x, 'k', linewidth = lw);
+    % plot(t, x, t, y);legend('Length', 'Force');
+    xlabel('$t$ (s)', Interpreter='latex');
+    ylabel('$L$ ($\mu$m)', Interpreter='latex');
+    ylim([0.95, 1.2])
+    
+    nexttile(2, [2 1]);
     surface([x;x],[y;y],[z;z],[col;col],...
             'facecol','no',...
             'edgecol','interp',...
-            'linew',2);
+            'linew',lw);
+
+    colormap(flipud(hot));
+    
+    ylabel('$\Theta$ (kPa)', Interpreter='latex');
+    xlabel('$L$ ($\mu$m)', Interpreter='latex');
+    cb = colorbar;
+    title(cb, 't (s)')
+    
+    
+    nexttile;
+    % plot(x_(t), x, x_(t), y);legend('Length', 'Force');
+    plot(t, y, 'k', linewidth = lw);
+    xlabel('$t$ (s)', Interpreter='latex');
+    ylabel('$\Theta$ (kPa)', Interpreter='latex');
+
+    fontsize(12, 'points');
+    exportgraphics(gcf,sprintf('../Figures/FigBeating%g_%gs.png', pCa, rds(j)),'Resolution',150)
+
 end
 
 % Get error for the whole ramp-up and decay
@@ -757,31 +808,53 @@ if exist('drawPlots', 'var') && ~drawPlots
     return;
 end
 
-% save data for decay overlay loglog plot
-Tarr = t_int;Farr = Ftot_int(1:4);
-% save pcagraphingenv.mat
-% save relaxgraphingenv.mat
-save(sprintf('..\\pca%gmodeldata.mat', pCa), 'Tarr', 'Farr')
-% save('..\pca11modeldataDoubleStates.mat', 'Tarr', 'Farr')
+if exportRun
+    % save data for decay overlay loglog plot
+    Tarr = t_int;Farr = Ftot_int(1:4);
+    % if pCa < 10
+    %     save pcagraphingenv.mat
+    % else
+    %     save relaxgraphingenv.mat
+    % end
+    save(sprintf('..\\pca%gmodeldata.mat', pCa), 'Tarr', 'Farr')
+    % save('..\pca11modeldataDoubleStates.mat', 'Tarr', 'Farr')
+end
+
 try
+tic
+set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
+cf = clf;
 
 aspect = 2;
 % normal size of 2-col figure on page is 7.2 inches
 % matlab's pixel is 1/96 of an inch
 % f.Position = [300 200 7.2*96 7.2*96/aspect];
 
-cf = clf;
+% f.Position = [300 200 7.2*96 7.2*96/aspect];
 % colors = lines(max(rampSet)+1); colors(1:end-1, :) = colors(2:end, :);
 colors = gray(5);
 % colors(1:end-1, :) = colors(2:end, :);
 fs = 12;
-tl = tiledlayout(3, 4, 'TileSpacing', 'compact');
-reportCosts = true;
+% tl = tiledlayout(3, 4, 'TileSpacing', 'compact');
+rws_s = 4;rws_l = rws_s*4;rws_loglog = 6;
+tl = tiledlayout(3, rws_loglog+rws_l, "Padding","compact", "TileSpacing","compact");
+tile_semilogx = nexttile(1, [2, rws_l]);
+tile_loglog = nexttile(rws_l + 1, [3, rws_loglog]);
+tile_r(1) = nexttile((rws_loglog+rws_l)*2 + 1, [1 rws_s]);
+tile_r(2) = nexttile((rws_loglog+rws_l)*2 + 1 + rws_s, [1 rws_s]);
+tile_r(3) = nexttile((rws_loglog+rws_l)*2 + 1 + 2*rws_s, [1 rws_s]);
+tile_r(4) = nexttile((rws_loglog+rws_l)*2 + 1 + 3*rws_s, [1 rws_s]);
+tile_positions = [tile_semilogx.Position;tile_loglog.Position;...
+    tile_r(1).Position;tile_r(2).Position;tile_r(3).Position;tile_r(4).Position]
+clf;
+
+reportCosts = false;
 if reportCosts 
     title(tl, sprintf('pCa %g costs %g', pCa, round(cost, 3)));    
 end
-% prepare in advance so that it wont draw over my inset
-sp = nexttile(1, [2 4]);hold on;
+% tile_semilogx = nexttile(1, [2, rws_l]);hold on;
+% tile_semilogx = subplot(3, rws_l + rws_loglog, );hold on;
+tile_semilogx = axes('Position', tile_positions(1, :));hold on;
 
 ym = 0;
 for j = max(rampSet):-1:1
@@ -794,9 +867,9 @@ for j = max(rampSet):-1:1
     hph{j} = plot(nan, nan, 'x',Color=[1 1 1]); % just a placeholder
     % set(h.Cap, 'EdgeColorType', 'truecoloralpha', 'EdgeColorData', [h.Cap.EdgeColorData(1:3); 255*alpha])
     ym = max([ym Force{j}, datatables{j}.F']);
-    set(sp, 'TickLength', [0.0125 0.05]);
-    set(sp, 'TickLabelInterpreter', 'latex');
-    ylabel('$T$ (kPa)', Interpreter='latex')
+    set(tile_semilogx, 'TickLength', [0.0125 0.05]);
+    set(tile_semilogx, 'TickLabelInterpreter', 'latex');
+    ylabel('$\Theta$ (kPa)', Interpreter='latex')
     
     if rds(j) > 1
         tp = [rds(j)*1.4, max(Force{j})*1.2];
@@ -810,7 +883,8 @@ end
 xlim([1e-2, 160])
 ylim([0 ceil((ym)/5)*5])
 yl = ylim();
-sp.XScale='log';
+tile_semilogx.XScale='log';
+box on;
 % hl = legend([hph{1} hph{2} hph{3} hph{4} hd{4} hd{3} hd{2} hd{1} hm{4} hm{3} hm{2} hm{1}], ...
 %     't_r 0.1 s:', '  t_r 1 s:',' t_r 10 s:','t_r 100 s:',...
 %     'Data', 'Data', 'Data', 'Data', ...    
@@ -823,12 +897,15 @@ hl = legend([hd{1} hm{1}], ...
 
 hl.ItemTokenSize = [30, 20];
 hl.Box = 'off';
+
 % title('Model fit', Interpreter='latex')
 
     % 'MData Ramp-up 0.1 s', 'MData Ramp-up 0.1 s', 'MData Ramp-up 0.1 s', 'MData Ramp-up 0.1 s'...
     % )
+    %%
 
-% nexttile;
+% tile_semilogx.Position = tile_positions(1, :).*[1 1 1 1]
+%% nexttile;
 % semilogx(PeakData(:, 1), PeakData(:, 2), 'ko', LineWidth=2);hold on;
 % semilogx(PeakData(:, 1), PeakModel, 'x', 'MarkerEdgeColor', [1 1 1]*0.5, LineWidth=2, MarkerSize=8);
 % axis([1e-1 1e2 0 ym])
@@ -836,12 +913,28 @@ hl.Box = 'off';
 % hl = legend('Data', 'Model', 'Location', 'best')
 % title(hl, 'Peaks')
 % ylabel('Tension (kPa)', Interpreter='latex')
+%% loglog plot
+% tile_loglog = nexttile(rws_l + 1, [3, rws_loglog]);
+tile_loglog = axes('Position', tile_positions(2, :).*[1.05 1.8 1 1] + [0 0 0 -0.0440] );box on;
+% tile_loglog.Position = tile_positions(2, :).*[1.05 1.8 1 1] + [0 0 0 -0.0440] 
+%% best fit from FigFitDecayOverlay
+if pCa > 10
+    x = [4.7976    0.2392    4.8212];
+    [c rspca] = evalPowerFit(x, Farr, Tarr, 'loglogOnly', [], false)
+else
+    x = [17.9381    0.2339    4.3359];
+    [c rspca] = evalPowerFit(x, Farr, Tarr, 'loglogOnly', [], true)
+end
 
+
+%%
 for j = max(rampSet):-1:1
     if isempty(Force{j})
         continue;
     end
-    sp = nexttile;hold on;
+    % sp = nexttile((rws_loglog+rws_l)*2 + 1 + (4-j)*rws_s, [1 rws_s]);
+    sp = axes('Position', tile_positions(7-j, :).*[1 1.8 1.2 0.8] + (4-j).*[-0.008 0 0 0]);box on;
+    hold on;
     if reportCosts 
         title(sp, sprintf('Ramp %g costs %g', rds(j), round(En{j}, 3)));    
     end
@@ -854,7 +947,7 @@ for j = max(rampSet):-1:1
     yticks([0 20 40]);
     xticks([0 rds(j), rds(j)*2])
     if j == 4
-        ylabel('$T$ (kPa)', Interpreter='latex')
+        ylabel('$\Theta$ (kPa)', Interpreter='latex')
     else
         yticklabels([]);
     end
@@ -864,10 +957,17 @@ for j = max(rampSet):-1:1
     tit = text(xl(2), min(yl(2)-5, max(Force{j})), sprintf('$t_r$ = %g', rds(j)), 'Interpreter', 'latex', ...
         HorizontalAlignment='right', VerticalAlignment='bottom');
     % tit.Position = tit.Position + [0 max(Force{j}) 0];
-
+    % pos = sp.Position;
+    % sp.Position = pos + [0 0 0.1 0];
+    fontsize(12, 'points');
 end    
-fontsize(12, 'points');
 
+
+aspect = 1.5;
+set(cf, 'Position', [500  300  7.2*96 7.2*96/aspect])
+exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.png', pCa),'Resolution',150)
+exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.eps', pCa))
+toc
 return
 %%
 % zoomIns = [0 200 0 10;...
@@ -884,14 +984,14 @@ colors = lines(max(rampSet)+1);
 ym = ceil( max(cell2mat(Force)) / 5 ) * 5;
 
 % prepare in advance so that it wont draw over my inset
-sp = subplot(212);hold on;
-pos = get(sp, 'Position');
+tile_semilogx = subplot(212);hold on;
+pos = get(tile_semilogx, 'Position');
 ylabel('Tension (kPa)')
 xlabel('Time (s)')
 set(gca,'Fontsize',14)
-title(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost), 'Parent',sp);
-set(sp, 'XLim', [-1 300]);
-set(sp, 'YLim', [0 ym*1])
+title(sprintf('Force response to %.2g ML ramp-up at pCa=%g, costing %1.4e€', Lmax, pCa, cost), 'Parent',tile_semilogx);
+set(tile_semilogx, 'XLim', [-1 300]);
+set(tile_semilogx, 'YLim', [0 ym*1])
 
 % shift of peaks to have the same tail - just guessed
 % shift = [-94, -7.2, -0.35, 0];
@@ -953,9 +1053,9 @@ for j = max(rampSet):-1:1
 
 %% secondary plots - timebase. Need to cut out
 
-    plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.15], Parent=sp);
-    plot(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8, Parent=sp);
-    plot(t_int{j},Es{j},'--|','linewidth',2, 'Color', [colors(j+1, :), 0.3], Parent=sp);
+    plot(datatables{j}.Time-2,datatables{j}.F,'-','linewidth',2, 'Color', [colors(j+1, :), 0.15], Parent=tile_semilogx);
+    plot(Time{j},Force{j},'-', 'linewidth',1, 'Color', colors(j+1, :)*0.8, Parent=tile_semilogx);
+    plot(t_int{j},Es{j},'--|','linewidth',2, 'Color', [colors(j+1, :), 0.3], Parent=tile_semilogx);
 
     % plot(t_int{j},Ftot_int{j},'r','linewidth',2.5);
     % max out of all

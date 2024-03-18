@@ -412,8 +412,8 @@ tic
 % modSel = [1:6    11    12    14]; params = [367, 2.39e+04, 2.3, 9, 2.33, 3.24e+06, 1.4, 17.8, 4.44e+03, 4.89, 1.2e-10, 17.6, 0.0027, 0.792, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 6.96e+03, 0, ];
 % modSel = [11 12 13 14];
 % params([7 8 9 22 23]) = [5 60 1380 3e4 0];
-modSel = [7 8 22];
-evalCombined(params(modSel), params, modSel, [11])
+% modSel = [7 8 22];
+evalCombined(params(modSel), params, modSel, [4.4])
 toc
 
 %%
@@ -658,7 +658,7 @@ toc
 
 % init = max(-10, log10(mod5_5(modSel)));
 % evalLogCombined = @(logMod) evalCombined(10.^logMod, mod, modSel, [5.5]);
-
+params(22) = NaN;
 mod5_5 = params;mod5_8 = params;mod6=params;
 modSel = [7 9];
 
@@ -726,9 +726,17 @@ disp(['mod5_5 = [' sprintf('%1.3g, ', mod5_5(modSel)) '];'])
 disp(['mod5_8 = [' sprintf('%1.3g, ', mod5_8(modSel)) '];'])
 disp(['mod6 = [' sprintf('%1.3g, ', mod6(modSel)) '];'])
 %% save last iteration
-mod5_5 = [0.000165, 1.2e+03, ];
-mod5_8 = [0.000188, 1.04e+03, ];
-mod6 = [0.000238, 396,];
+params(22) = NaN;
+modSel = [7 9];
+mod5_5 = params;mod5_8 = params;mod6 = params;
+mod5_5(modSel) = [0.000165, 1.2e+03];
+mod5_8(modSel) = [0.000188, 1.04e+03];
+mod6(modSel) = [0.000238, 396];
+%% Running all
+modSel = 1:23;
+evalCombined(mod5_5, params, modSel, [5.5]);
+evalCombined(mod5_8, params, modSel, [5.75]);
+evalCombined(mod6, params, modSel, [6]);
 
 %%
 function totalCost = evalCombined(optMods, mod, modSel, pCas)
@@ -838,7 +846,10 @@ function totalCost = evalCombined(optMods, mod, modSel, pCas)
 % return
 end 
 
-function plotOnBackground(drawPlots, pCa)
+function plotOnBackground(drawPlots, pCa, cols)
+    if nargin < 3
+        cols = 2;
+    end
     figInd = 100 + round(pCa*10);
     if drawPlots
         try 
@@ -846,6 +857,15 @@ function plotOnBackground(drawPlots, pCa)
         catch 
             f = figure(figInd); % if indFig is not an exsting figure it creates it (and steal the focus)
             f.Name = ['pCa ' num2str(pCa)];
+            if cols == 1
+                aspect = 2;
+                % normal size of 2-col figure on page is 7.2 inches
+                % matlab's pixel is 1/96 of an inch
+                f.Position = [300 200 3.5*96 3.5*96/aspect];
+            else
+                aspect = 1.5;
+                f.Position = [300 200 7.2*96 7.2*96/aspect];
+            end
         end
     end
 end
