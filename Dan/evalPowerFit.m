@@ -284,10 +284,15 @@ for i_rds = [4 3 2 1]
     uistack(a_cm, "top"); % make sure the central is not overlapped y
     elseif strcmp(plotResults, 'loglogOnly')
         % limited legend
-           legends = { sprintf('$\\tau_i=%0.2f$ s', rampShift(1)),...
-                    sprintf('$\\tau_i=%0.2f$ s', rampShift(2)),...
-                    sprintf('$\\tau_i=%0.2f$ s', rampShift(3)),...
-                    sprintf('$\\tau_i=%0.2f$ s', rampShift(4))};
+           % legends = { sprintf('$\\tau_i=%0.2f$ s', rampShift(1)),...
+           %          sprintf('$\\tau_i=%0.2f$ s', rampShift(2)),...
+           %          sprintf('$\\tau_i=%0.2f$ s', rampShift(3)),...
+           %          sprintf('$\\tau_i=%0.2f$ s', rampShift(4))};
+        legends = { sprintf('$t_r = 100$ s'),...
+                    sprintf('$t_r = 10$ s'),...
+                    sprintf('$t_r = 1$ s'),...
+                    sprintf('$t_r = 0.1$ s')};
+           
         
         valids = isgraphics(l_r);
         % if ~pCa
@@ -304,8 +309,8 @@ for i_rds = [4 3 2 1]
         % end
         leg = legend(leg_gr(reorder), leg_txt(reorder), 'Interpreter','latex', 'FontSize',fs, Location='northeast', NumColumns=1);
         leg.ItemTokenSize=[15; 18];
-        leg.BoxFace.ColorType='truecoloralpha'
-        leg.BoxFace.ColorData=uint8(255*[1 1 1 0.75]')
+        leg.BoxFace.ColorType='truecoloralpha';
+        leg.BoxFace.ColorData=uint8(255*[1 1 1 0.75]');
         l_pos = leg.Position;
         leg.Position = [l_pos(1) + 0.01 l_pos(2) + 0.01 l_pos(3:4)];
     end

@@ -248,12 +248,14 @@ evalCombined(m, mod, 1:length(mod), [4.4])
 f = figure(144)
 saveas(f, 'ec_no_kp.png')
 %% no PEVK attachment
-m = mod;
-m(7) = 1e-6;% PEVK attachment
-m(8) = 1e6; % PEVK detachment
-evalCombined(m, mod, 1:length(mod), [4.4])
+m = params;
+m(7) = 1e-9;% PEVK attachment
+m(8) = 1e9; % PEVK detachment
+evalCombined(m, params, 1:length(mod), [4.4])
 f = figure(144)
 % saveas(f, 'ec_no_PEVK.png')
+
+
 %% no alphaU dep
 m = mod;
 m(20) = mod(6);% PEVK attachment
@@ -313,6 +315,33 @@ evalCombined(mod(modSel), mod, modSel, [11])
 % rampSet = [3] % 6s
 % rampSet = [4] % 3s
 toc
+%% Knockouts
+m = params;
+evalCombined(m, params, 1:length(mod), [11 4.4])
+f = figure(144)
+exportgraphics(f,sprintf('../Figures/FigKnockoutBase_pCa%g.png', 4.4),'Resolution',150)
+f = figure(210)
+exportgraphics(f,sprintf('../Figures/FigKnockoutBase_pCa%g.png', 11),'Resolution',150)
+
+
+% no PEVK attachment
+m = params;
+m(7) = 1e-9;% PEVK attachment
+m(8) = 1e9; % PEVK detachment
+evalCombined(m, params, 1:length(mod), [4.4])
+f = figure(144)
+exportgraphics(f,sprintf('../Figures/FigKnockoutPEVK_pCa%g.png', 4.4),'Resolution',150)
+
+% no viscosity attachment
+m = params;
+m(14) = 1e-3;% 
+evalCombined(m, params, 1:length(mod), [11 4.4])
+f = figure(144)
+exportgraphics(f,sprintf('../Figures/FigKnockoutVisc_pCa%g.png', 4.4),'Resolution',150)
+f = figure(210)
+exportgraphics(f,sprintf('../Figures/FigKnockoutVisc_pCa%g.png', 11),'Resolution',150)
+
+
 %% All four ramps costing 1e4
 mod2params = [10293*0.7, 14122, 3.27, 6.0, 3.25, (8.4137e5)/0.7, 16.44, 14.977, 10203*4.78*0.7, 3.2470, 0.05, 7, 1, 1, 0.05, 0.1*16.44, 14.977, 0.9, 0.1*15 , (8.4137e5)*0.7, 3.2470, 14122, 0.1];
 mod2params = [10203*0.7, 14122, 3.27, 6.0, 3.25, (8.4137e5)*0.7, 16.44, 14.977, 10203*4.78*0.7, 3.2470, 0.05, 7, 1, 1, 0.05, 0.1*16.44, 14.977, 0.9, 0.0125*14, 0.7*8.4137e5, 3.2470, 14122, 0.1];

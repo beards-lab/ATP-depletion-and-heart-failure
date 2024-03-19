@@ -14,7 +14,7 @@ if any(mod < 0)
 end
 drawAllStates = false;
 drawFig1 = false;
-exportRun = false;
+exportRun = true;
 
 figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stealing the focus
 
@@ -259,8 +259,8 @@ Length = cell(1, 5);
 rampSet = 1:length(rds); %[1 2 3 4 5];
 % rampSet = [2 4];
 % rampSet = [3]; % nly 100ms
-% rampSet = [1 2 3 4];
-rampSet = [3 4];
+rampSet = [1 2 3 4];
+% rampSet = [3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -297,24 +297,24 @@ for j = rampSet
   % x = [x1; x2(2:end, :)];
 
   %% normal
-  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 1000];
+  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 10000];
   % times = [-100, 0;0 Tend_ramp];
   velocities = {0 V 0};
   L_0 = 0;
   %% sinusoidal driving
-  % cycle time
-  Tc = rds(j);
-  times = [-100, 0;0 10*Tc];  
-  positions = @(t)-Lmax/2*cos(2*pi*t/Tc) + Lmax/2;
-  % differentiating positions
-  V = @(t)2/2*Lmax*pi/Tc *sin(2*pi*t/Tc);
-
-  % syms fpos(t);   % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
-
-  velocities = {0, V};
-  L_0 = 0;%Lmax/2;
-  x_ = 0:Tc/100:Tc;
-  plot(x_, positions(x_), '-', x_, V(x_), x_, cumsum(V(x_)).*[1 diff(x_)], '--');
+  % % cycle time
+  % Tc = rds(j);
+  % times = [-100, 0;0 10*Tc];  
+  % positions = @(t)-Lmax/2*cos(2*pi*t/Tc) + Lmax/2;
+  % % differentiating positions
+  % V = @(t)2/2*Lmax*pi/Tc *sin(2*pi*t/Tc);
+  % 
+  % % syms fpos(t);   % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
+  % 
+  % velocities = {0, V};
+  % L_0 = 0;%Lmax/2;
+  % x_ = 0:Tc/100:Tc;
+  % plot(x_, positions(x_), '-', x_, V(x_), x_, cumsum(V(x_)).*[1 diff(x_)], '--');
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
   %     Tend_ramp + 40 Tend_ramp + 41;... % rampdown in 1s
@@ -690,61 +690,43 @@ maxPu = 0; maxPa = 0;
   % title(sprintf('pCa %0.1f, HR %0.0f bpm', pCa, HR));
   % figure(g);
 
-    %% Plot sinusoidal outcome
-    aspect = 2;
-    figure(900 + j*10 + round(pCa));clf;    tiledlayout(2,2, TileSpacing="compact");
-    set(gcf, 'Position', [500  300  7.2*96 7.2*96/aspect])
-    rng = Time{j} < 20;
-    t = Time{j}(rng)';
-    x = Length{j}(rng) + 0.95;
-    y = Force{j}(rng);
-    y2 = Force{j} - Force_par{j};
-    z = zeros(size(t));
-    col = linspace(0, t(end), length(t));
-    
-    % t = Time{j}';
-    % x = Length{j};
-    % y = Force{j} + 0.95;
-    % z = zeros(size(Force{j}));
-    % col = 1:length(t);
-
-    size(t) 
-    size(x)
-    size(y)
-    size(z)
-    size(col)
-
-    x_ = @(t) t - floor(t/Tc)*Tc;
-    lw = 1
-    nexttile;
-    plot(t, x, 'k', linewidth = lw);
-    % plot(t, x, t, y);legend('Length', 'Force');
-    xlabel('$t$ (s)', Interpreter='latex');
-    ylabel('$L$ ($\mu$m)', Interpreter='latex');
-    ylim([0.95, 1.2])
-    
-    nexttile(2, [2 1]);
-    surface([x;x],[y;y],[z;z],[col;col],...
-            'facecol','no',...
-            'edgecol','interp',...
-            'linew',lw);
-
-    colormap(flipud(hot));
-    
-    ylabel('$\Theta$ (kPa)', Interpreter='latex');
-    xlabel('$L$ ($\mu$m)', Interpreter='latex');
-    cb = colorbar;
-    title(cb, 't (s)')
-    
-    
-    nexttile;
-    % plot(x_(t), x, x_(t), y);legend('Length', 'Force');
-    plot(t, y, 'k', linewidth = lw);
-    xlabel('$t$ (s)', Interpreter='latex');
-    ylabel('$\Theta$ (kPa)', Interpreter='latex');
-
-    fontsize(12, 'points');
-    exportgraphics(gcf,sprintf('../Figures/FigBeating%g_%gs.png', pCa, rds(j)),'Resolution',150)
+    % %% Plot sinusoidal outcome
+    % aspect = 2;
+    % figure(900 + j*10 + round(pCa));clf;    tiledlayout(2,2, TileSpacing="compact");
+    % set(gcf, 'Position', [500  300  7.2*96 7.2*96/aspect])
+    % rng = Time{j} < 20;
+    % t = Time{j}(rng)';
+    % x = Length{j}(rng) + 0.95;
+    % y = Force{j}(rng);
+    % y2 = Force{j} - Force_par{j};
+    % z = zeros(size(t));
+    % col = linspace(0, t(end), length(t));   
+    % x_ = @(t) t - floor(t/Tc)*Tc;
+    % lw = 1
+    % 
+    % nexttile;
+    % plot(t, x, 'k', linewidth = lw);
+    % % plot(t, x, t, y);legend('Length', 'Force');
+    % xlabel('$t$ (s)', Interpreter='latex');    ylabel('$L$ ($\mu$m)', Interpreter='latex');
+    % ylim([0.95, 1.2])
+    % 
+    % nexttile(2, [2 1]);
+    % surface([x;x],[y;y],[z;z],[col;col],...
+    %         'facecol','no',...
+    %         'edgecol','interp',...
+    %         'linew',lw);
+    % 
+    % colormap(flipud(hot));    
+    % ylabel('$\Theta$ (kPa)', Interpreter='latex');     xlabel('$L$ ($\mu$m)', Interpreter='latex');
+    % cb = colorbar;     title(cb, 't (s)')       
+    % 
+    % nexttile;
+    % % plot(x_(t), x, x_(t), y);legend('Length', 'Force');
+    % plot(t, y, 'k', linewidth = lw);
+    % xlabel('$t$ (s)', Interpreter='latex');
+    % ylabel('$\Theta$ (kPa)', Interpreter='latex');
+    % fontsize(12, 'points');
+    % exportgraphics(gcf,sprintf('../Figures/FigBeating%g_%gs.png', pCa, rds(j)),'Resolution',150)
 
 end
 
@@ -808,6 +790,7 @@ if exist('drawPlots', 'var') && ~drawPlots
     return;
 end
 
+Tarr = t_int;Farr = Ftot_int(1:4);
 if exportRun
     % save data for decay overlay loglog plot
     Tarr = t_int;Farr = Ftot_int(1:4);
@@ -845,7 +828,7 @@ tile_r(2) = nexttile((rws_loglog+rws_l)*2 + 1 + rws_s, [1 rws_s]);
 tile_r(3) = nexttile((rws_loglog+rws_l)*2 + 1 + 2*rws_s, [1 rws_s]);
 tile_r(4) = nexttile((rws_loglog+rws_l)*2 + 1 + 3*rws_s, [1 rws_s]);
 tile_positions = [tile_semilogx.Position;tile_loglog.Position;...
-    tile_r(1).Position;tile_r(2).Position;tile_r(3).Position;tile_r(4).Position]
+    tile_r(1).Position;tile_r(2).Position;tile_r(3).Position;tile_r(4).Position];
 clf;
 
 reportCosts = false;
@@ -920,10 +903,10 @@ tile_loglog = axes('Position', tile_positions(2, :).*[1.05 1.8 1 1] + [0 0 0 -0.
 %% best fit from FigFitDecayOverlay
 if pCa > 10
     x = [4.7976    0.2392    4.8212];
-    [c rspca] = evalPowerFit(x, Farr, Tarr, 'loglogOnly', [], false)
+    [c rspca] = evalPowerFit(x, Force, Time, 'loglogOnly', [], false);
 else
     x = [17.9381    0.2339    4.3359];
-    [c rspca] = evalPowerFit(x, Farr, Tarr, 'loglogOnly', [], true)
+    [c rspca] = evalPowerFit(x, Force, Time, 'loglogOnly', [], true);
 end
 
 
@@ -964,9 +947,11 @@ end
 
 
 aspect = 1.5;
-set(cf, 'Position', [500  300  7.2*96 7.2*96/aspect])
-exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.png', pCa),'Resolution',150)
-exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.eps', pCa))
+set(cf, 'Position', [500  300  7.2*96 7.2*96/aspect]);
+if exportRun
+    exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.png', pCa),'Resolution',150)
+    exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.eps', pCa))
+end
 toc
 return
 %%
