@@ -433,7 +433,16 @@ params = mod.*mod2param; params([1 2 6]) = params([1 2 6]).*[(Lref^params(3)), (
 % Nice fit including pCa4.4 0.1s, predicting rest
 params = [367, 3e+04, 2.3, 9, 2.33, 3.24e+06, 4.98, 84.9, 1.36e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 3.94e+04, 0, ];
 
-evalCombined(params(modSel), params, modSel, [11 4.4])
+convertLref = ones(size(params));
+% convert alphaU and kd and kp, to Lref = L_0 = 1 mum
+% kp = 1 9 np = 3, kd = 2 22 nd = 5, alphaU = 6 20 nu = 4
+kpcorr = 1/(params(18)^params(3)); kdcorr = 1/(params(18)^params(5)); alphaUCorr = 1/(params(18)^params(4));
+convertLref([1 2 6 9 18 20 22]) = [kpcorr kdcorr alphaUCorr kpcorr 1/params(18) alphaUCorr kdcorr];
+params = params.*convertLref;
+
+tic
+mod(14) = 0.1;
+evalCombined(params(modSel), params, modSel, [11])
 toc
 % modSel = [1:6 7 8 9 14 20 22]
 
@@ -444,8 +453,8 @@ tic
 % params([7 8 9 22 23]) = [5 60 1380 3e4 0];
 % modSel = [7 8 22];
 m = params;
-m(14) = 1e-1;
-evalCombined(m(modSel), m, modSel, [11 4.4])
+m(14) = 1;
+evalCombined(m(modSel), m, modSel, [11])
 % evalCombined(params(modSel), params, modSel, [11])
 toc
 %%

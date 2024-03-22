@@ -24,7 +24,7 @@ if any(mod < 0)
 end
 drawAllStates = false;
 drawFig1 = false;
-exportRun = true;
+exportRun = false;
 
 figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stealing the focus
 
@@ -141,7 +141,7 @@ nd = mod(5); % distal chain force exponent
 nU = mod(4); % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
 mu = mod(14); % small enough not to affect the result
-Lref  = mod(18); % reference sarcomere length (um)
+L_0  = mod(18); % reference sarcomere length (um)
 alphaF = 0;
 alphaF_0 = mod(15);
 
@@ -149,13 +149,13 @@ alphaF_0 = mod(15);
 % value. 
 slack = (0:Ng).*delU;
 % Fp = kp*(max(0,s-slack)/Lref).^(np); 
-Fp = kp*(max(0,s-slack)/Lref).^(np); 
+Fp = kp*(max(0,s-slack)/L_0).^(np); 
 % Calculate the globular chain folding/unfolding probability transition
 % rates
 % RU = alphaU*(max(0,s-slack(1:Ng))).^nU; % unfolding rates from state n to (n+1)
-RU = alphaU*((max(0,s-slack(1:Ng))/Lref).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
+RU = alphaU*((max(0,s-slack(1:Ng))/L_0).^nU).*(ones(Nx,1).*(Ng - (0:Ng-1))); % unfolding rates from state n to (n+1)
 % clf;mesh(RU)
-drawFig1 = false;
+% drawFig1 = false;
 %% visualizing the Force plot - fig 1A&B
 if drawFig1
     % Fp = kp*(max(0,s-slack)/Lref).^(np); 
@@ -220,7 +220,7 @@ if drawFig1
     % set(gcf, 'Position', [500  240  400  300])
     % set(gca, 'YAxisLocation', 'right');
     set(gca, 'YTick',[0 200 400], 'XTick', [0 5 10], 'TickLength',[0.05 0.025]);
-    exportgraphics(f,'../Figures/ModelRates.png','Resolution',150)
+    exportgraphics(f,'../Figures/ModelRates2.png','Resolution',150)
     exportgraphics(f,'../Figures/ModelRates.eps','Resolution',150)
 
     % reconstruct Fp again without the NaN's
@@ -307,7 +307,7 @@ for j = rampSet
       times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 10000];
       % times = [-100, 0;0 Tend_ramp];
       velocities = {0 V 0};
-      L_0 = 0;
+      L0 = 0;
   elseif strcmp(simtype, 'sin')
     %% sinusoidal driving
       % cycle time
@@ -320,7 +320,7 @@ for j = rampSet
       % syms fpos(t);   % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
     
       velocities = {0, V};
-      L_0 = 0;%Lmax/2;
+      L0 = 0;%Lmax/2;
       x_ = 0:Tc/100:Tc;
       plot(x_, positions(x_), '-', x_, V(x_), x_, cumsum(V(x_)).*[1 diff(x_)], '--');
   end
@@ -360,12 +360,12 @@ for j = rampSet
   else
     x0 = reshape([pu, pa],[2*(Ng+1)*Nx,1]);
   end
-  x0 = [x0; L_0]; 
+  x0 = [x0; L0]; 
   opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);          
   % assert(length(times) == length(velocities), 'Must be same length')
   t = []; x = [];
   for i_section = 1:size(times, 1)
-      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,kDf,velocities{i_section});
+      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf,velocities{i_section});
       t = [t; t1(2:end)];
       x = [x; x1(2:end, :)];
       % prep the init vector again
@@ -437,7 +437,7 @@ maxPu = 0; maxPa = 0;
     else
         pa = reshape( xi((Ng+1)*Nx+1:2*(Ng+1)*Nx), [Nx,Ng+1]);
     end
-    Fd = kd*max(0,(Length{j}(i) - s)/Lref).^nd; 
+    Fd = kd*max(0,(Length{j}(i) - s)/L_0).^nd; 
     Force_pa{j} = ds*sum(sum(Fd.*pa ));
     Force{j}(i) =  ds*sum(sum(Fd.*pu )) + Force_pa{j};
     states{j}(i, 1:Ng+1) = sum(pu);
@@ -843,7 +843,7 @@ if exportRun
 end
 
 try
-tic
+% tic
 set(groot,'CurrentFigure',figInd); % replace figure(indFig) without stealing the focus
 cf = clf;
 
@@ -939,6 +939,7 @@ hl.Box = 'off';
 % tile_loglog = nexttile(rws_l + 1, [3, rws_loglog]);
 tile_loglog = axes('Position', tile_positions(2, :).*[1.05 1.8 1 1] + [0 0 0 -0.0440] );box on;
 % tile_loglog.Position = tile_positions(2, :).*[1.05 1.8 1 1] + [0 0 0 -0.0440] 
+return;
 %% best fit from FigFitDecayOverlay
 if pCa > 10
     x = [4.7976    0.2392    4.8212];
@@ -991,7 +992,7 @@ if exportRun
     exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.png', pCa),'Resolution',150)
     exportgraphics(cf,sprintf('../Figures/ModelFitpCa%g.eps', pCa))
 end
-toc
+% toc
 return
 %%
 % zoomIns = [0 200 0 10;...

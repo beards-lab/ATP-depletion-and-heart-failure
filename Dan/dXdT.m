@@ -1,4 +1,4 @@
-function g  = dXdT(t,x,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,Lref,nd,kDf, V)
+function g  = dXdT(t,x,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf, V)
 s  = (0:1:Nx-1)'.*ds;
 
 pu = reshape( x(1:(Ng+1)*Nx), [Nx,Ng+1]);
@@ -12,7 +12,7 @@ end
 L = max(0,x(end));
 
 % Calculate the un-attached chain velocities for every pu(s,n) entry
-deltaF = kd*max(0,(L-s)/Lref).^nd - Fp;
+deltaF = kd*max(0,(L-s)/L_0).^nd - Fp;
 Vp = deltaF/mu;
 
 ij = (1:Nx)' + Nx*(0:Ng); % matrix of Ng X Nx indices over all elements
