@@ -1,5 +1,15 @@
 % Assuming mod = ones(10,1)
 % assuming pCa = Inf
+load SoHot.mat;
+% simtype = 'sin';
+simtype = 'ramp';
+% simtype = 'rampbeat';
+
+% rampSet = [1];
+% rampSet = [2 4];
+% rampSet = [3]; % nly 100ms
+rampSet = [1 2 3 4];
+% rampSet = [4];
 
 % pCa 11 - load Relaxed, do not run the extended, PEVK attachment model
 % pCa 10 - load Relaxed, run the PEVK attachment model
@@ -256,11 +266,6 @@ Vlist = Lmax./rds;
 Force = cell(1, 5); 
 Time = cell(1, 5); 
 Length = cell(1, 5); 
-rampSet = 1:length(rds); %[1 2 3 4 5];
-% rampSet = [2 4];
-% rampSet = [3]; % nly 100ms
-rampSet = [1 2 3 4];
-% rampSet = [3 4];
 for j = rampSet
   if isempty(datatables{j})
       fprintf('Skipping pCa %0.2f %0.0fs dataset\n', pCa, rds(j))
@@ -296,25 +301,29 @@ for j = rampSet
   % t = [t1(1:end); t2(2:end)];% prevent overlap at tend_ramp
   % x = [x1; x2(2:end, :)];
 
-  %% normal
-  times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 10000];
-  % times = [-100, 0;0 Tend_ramp];
-  velocities = {0 V 0};
-  L_0 = 0;
-  %% sinusoidal driving
-  % % cycle time
-  % Tc = rds(j);
-  % times = [-100, 0;0 10*Tc];  
-  % positions = @(t)-Lmax/2*cos(2*pi*t/Tc) + Lmax/2;
-  % % differentiating positions
-  % V = @(t)2/2*Lmax*pi/Tc *sin(2*pi*t/Tc);
-  % 
-  % % syms fpos(t);   % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
-  % 
-  % velocities = {0, V};
-  % L_0 = 0;%Lmax/2;
-  % x_ = 0:Tc/100:Tc;
-  % plot(x_, positions(x_), '-', x_, V(x_), x_, cumsum(V(x_)).*[1 diff(x_)], '--');
+  
+  if strcmp(simtype, 'ramp')
+      %% normal
+      times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 10000];
+      % times = [-100, 0;0 Tend_ramp];
+      velocities = {0 V 0};
+      L_0 = 0;
+  elseif strcmp(simtype, 'sin')
+    %% sinusoidal driving
+      % cycle time
+      Tc = rds(j);
+      times = [-100, 0;0 10*Tc];  
+      positions = @(t)-Lmax/2*cos(2*pi*t/Tc) + Lmax/2;
+      % differentiating positions
+      V = @(t)2/2*Lmax*pi/Tc *sin(2*pi*t/Tc);
+    
+      % syms fpos(t);   % fpos(t) = @(t)Lmax*sin(2*pi*t/Tc);
+    
+      velocities = {0, V};
+      L_0 = 0;%Lmax/2;
+      x_ = 0:Tc/100:Tc;
+      plot(x_, positions(x_), '-', x_, V(x_), x_, cumsum(V(x_)).*[1 diff(x_)], '--');
+  end
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up
   %     Tend_ramp + 40 Tend_ramp + 41;... % rampdown in 1s
@@ -389,8 +398,9 @@ maxPu = 0; maxPa = 0;
         % save current figure
         g = gcf;
         % open up a new one
-        layout_x = 2 + (pCa < 10)
+        layout_x = 2 + (pCa < 10);
         f = figure(50+pCa*10+j); clf; tiledlayout(layout_x, 4, 'TileSpacing','compact', Padding='loose');
+        fontsize(12, 'points')
         aspect = 2;
         % normal size of 2-col figure on page is 7.2 inches
         % matlab's pixel is 1/96 of an inch
@@ -400,8 +410,11 @@ maxPu = 0; maxPa = 0;
         % fixed time or fraction of ramp durations?
         % time_snaps = [0, 0.1, 1, 10, 30, 40, 100]
         % time_snaps = [0, rds(j), rds(j) + 30, 60, 120, 160];
-        time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), t(end)];
-        % time_snaps = [Tc/2, Tc, 3*Tc/2, 2*Tc];
+        if strcmp(simtype, 'ramp')
+            time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), max(1000, rds(j)*10)];
+        elseif strcmp(simtype, 'sin')
+            time_snaps = [Tc/2, Tc, 3*Tc/2, 2*Tc];
+        end
         % i_time_snaps = find(t > time_snaps)
     
         % disable
@@ -435,13 +448,13 @@ maxPu = 0; maxPa = 0;
         if any(ismember(i_time_snaps, i))
             % sum of all states, converting to %
             ss = (sum(pu(:)) + sum(pa(:)))*ds;
-            maxPu = max(maxPu, sum(pu(:)));
-            maxPa = max(maxPa, sum(pa(:)));
-            i_snap = find(i_time_snaps == i);
+            maxPu = max(maxPu, sum(pu(:))*ds*100);
+            maxPa = max(maxPa, sum(pa(:))*ds*100);
+            i_snap = find(i_time_snaps == i, 1, 'first');
 
 
             % next plot
-            nt = nexttile(i_snap);            
+            tl = nexttile(i_snap);            
             %% 3D plot
             % surf(0:Ng, s, pa*ds*100, 'EdgeColor', 'none');hold on;
             % % contour(0:Ng, s, pu*ds*100, 'EdgeColor','red');hold on;
@@ -462,28 +475,38 @@ maxPu = 0; maxPa = 0;
             % end
             % ylabel('$s$ ($\mu$m)', Interpreter='latex');
             %% 2D shaded plot - unattached
-            surface(s, 0:Ng, pu'*ds*100, 'EdgeColor',[1 1 1]*0.9);hold on;box on;
-            % [x,y,z]=meshgrid(s,0:Ng,-1);
-            % surface(x, y, z)
-            h = 10;lw = 0.5;
-            line([s(1) s(1)], [0, Ng], [h h], Color='black', linewidth=lw)
-            line([s(end) s(end)], [0, Ng], [h h], Color='black', linewidth=lw)
-            line([s(1) s(end)], [0, 0], [h h], Color='black', linewidth=lw)
-            line([s(1) s(end)], [Ng, Ng], [h h], Color='black', linewidth=lw)
+            imagesc(s, 0:Ng, pu'*ds*100);hold on; box on;
+            set(gca,'YDir','normal');
+            mesh([s  - ds/2; s(end) + ds/2], (0:Ng+1) - 0.5, zeros(size(pu') + [1 1]), LineStyle='-', EdgeColor=[1 1 1]*0.9, FaceColor='none')
+            contour(s, 0:Ng, pu'*ds*100, [0.01 0.01], 'k-', LineWidth=2)
+
+            % surface(s, 0:Ng, pu'*ds*100, 'EdgeColor',[1 1 1]*0.9);hold on;box on;
+            % % [x,y,z]=meshgrid(s,0:Ng,-1);
+            % % surface(x, y, z)
+            % h = 10;lw = 0.5;
+            % line([s(1) s(1)], [0, Ng], [h h], Color='black', linewidth=lw)
+            % line([s(end) s(end)], [0, Ng], [h h], Color='black', linewidth=lw)
+            % line([s(1) s(end)], [0, 0], [h h], Color='black', linewidth=lw)
+            % line([s(1) s(end)], [Ng, Ng], [h h], Color='black', linewidth=lw)
             % imagesc(s, 0:Ng, pu'*ds*100);
             % surf(s, 0:Ng, Fp')
-            colormap(flipud(hot));
+            colormap(SoHot);
+            
             % xlim([0, s(end)]);
             % shading(gca, 'interp')
             % view(90, -90); 
-            clim([0 maxPu]);
+            clim([0 round(maxPu)]);
             % xlabel('s'); ylabel('State');
             % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
             if i_snap == 1
                 ylabel('$n$', Interpreter='latex');
             elseif i_snap == length(i_time_snaps)
                 cb = colorbar;
+                cb.Ticks = [0 50 round(maxPu)];
                 title(cb, 'Unatt %')
+                set(tl, "YTick", [])
+            else
+                set(tl, "YTick", [])
             end
             if pCa >= 10
                 % xlabel is done by attached panels
@@ -492,32 +515,47 @@ maxPu = 0; maxPa = 0;
                 ga = gca;
                 ga.XTick = [];
             end 
+            fontsize(12, 'points')
             %% 2D shaded plot - attached
             if pCa < 10
-                nexttile(i_snap + 4);
-                surface(s, 0:Ng, pa'*ds*100, 'EdgeColor',[1 1 1]*0.9);hold on;box on;
-                line([s(1) s(1)], [0, Ng], [h h], Color='black', linewidth=lw)
-                line([s(end) s(end)], [0, Ng], [h h], Color='black', linewidth=lw)
-                line([s(1) s(end)], [0, 0], [h h], Color='black', linewidth=lw)
-                line([s(1) s(end)], [Ng, Ng], [h h], Color='black', linewidth=lw)
+                aspect = 1.4; % make the plots rectangular for pca as well
+                f.Position = [300 200 7.2*96 7.2*96/aspect];
+
+                tl = nexttile(i_snap + 4);
+                % surface(s, 0:Ng, pa'*ds*100, 'EdgeColor',[1 1 1]*0.9);hold on;box on;                
+                
+                imagesc(s, 0:Ng, pa'*ds*100);hold on; box on;
+                set(gca,'YDir','normal');
+                mesh([s  - ds/2; s(end) + ds/2], (0:Ng+1) - 0.5, zeros(size(pa') + [1 1]), LineStyle='-', EdgeColor=[1 1 1]*0.9, FaceColor='none')
+                contour(s, 0:Ng, pa'*ds*100, [0.01 0.01], 'k-', LineWidth=2)
+
+                % line([s(1) s(1)], [0, Ng], [h h], Color='black', linewidth=lw)
+                % line([s(end) s(end)], [0, Ng], [h h], Color='black', linewidth=lw)
+                % line([s(1) s(end)], [0, 0], [h h], Color='black', linewidth=lw)
+                % line([s(1) s(end)], [Ng, Ng], [h h], Color='black', linewidth=lw)
 
                 % surf(s, 0:Ng, Fp')
                 % colormap(1-gray);
-                colormap(flipud(hot));
+                colormap(SoHot);
                 % xlim([0, s(end)]);
                 % shading(gca, 'interp')
                 % view(90, -90); 
-                clim([0 maxPa]);
+                clim([0 round(maxPa)]);
                 % xlabel('s'); ylabel('State');
                 % title(sprintf('U (%fs), S= %0.1f', t(i), sum(pu(:))));
                 if i_snap == 1
                     ylabel('$n$', Interpreter='latex')
                 elseif i_snap == length(i_time_snaps)
                     cb = colorbar;
+                    cb.Ticks = [0 round(maxPa)];
                     title(cb, 'Att %')
+                    set(tl, "YTick", [])
+                else
+                    set(tl, "YTick", [])
                 end
                 xlabel('$s$ ($\mu$m)', Interpreter='latex');
                 box on;
+                fontsize(12, 'points')
             end
             %% lollipop plot
             % % identify leading states
@@ -656,7 +694,7 @@ maxPu = 0; maxPa = 0;
         nexttile([1 4]);
         semilogx(Time{j}, Force{j}, 'k-');hold on;
         scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'ko', 'filled');
-        xlim([1e-3 inf]);
+        xlim([1e-3 max(1300, rds(j)*10) + 30]);
         % nexttile([1 1]);
         % loglog(Time{j}, Force{j});hold on;
         % scatter(Time{j}(i_time_snaps), Force{j}(i_time_snaps), 'o', 'filled');
@@ -664,8 +702,8 @@ maxPu = 0; maxPa = 0;
         xlabel('$t$ (s)', Interpreter='latex');
         legend('Tension', 'Insets', 'Location','northwest');
         ylabel('$\Theta$ (kPa)', Interpreter='latex')
+        fontsize(12, 'points')
         exportgraphics(f,sprintf('../Figures/States%g_%gs.png', pCa, rds(j)),'Resolution',150)
-
     end
 
   if any(isnan(Force{j}))
@@ -690,44 +728,45 @@ maxPu = 0; maxPa = 0;
   % title(sprintf('pCa %0.1f, HR %0.0f bpm', pCa, HR));
   % figure(g);
 
-    % %% Plot sinusoidal outcome
-    % aspect = 2;
-    % figure(900 + j*10 + round(pCa));clf;    tiledlayout(2,2, TileSpacing="compact");
-    % set(gcf, 'Position', [500  300  7.2*96 7.2*96/aspect])
-    % rng = Time{j} < 20;
-    % t = Time{j}(rng)';
-    % x = Length{j}(rng) + 0.95;
-    % y = Force{j}(rng);
-    % y2 = Force{j} - Force_par{j};
-    % z = zeros(size(t));
-    % col = linspace(0, t(end), length(t));   
-    % x_ = @(t) t - floor(t/Tc)*Tc;
-    % lw = 1
-    % 
-    % nexttile;
-    % plot(t, x, 'k', linewidth = lw);
-    % % plot(t, x, t, y);legend('Length', 'Force');
-    % xlabel('$t$ (s)', Interpreter='latex');    ylabel('$L$ ($\mu$m)', Interpreter='latex');
-    % ylim([0.95, 1.2])
-    % 
-    % nexttile(2, [2 1]);
-    % surface([x;x],[y;y],[z;z],[col;col],...
-    %         'facecol','no',...
-    %         'edgecol','interp',...
-    %         'linew',lw);
-    % 
-    % colormap(flipud(hot));    
-    % ylabel('$\Theta$ (kPa)', Interpreter='latex');     xlabel('$L$ ($\mu$m)', Interpreter='latex');
-    % cb = colorbar;     title(cb, 't (s)')       
-    % 
-    % nexttile;
-    % % plot(x_(t), x, x_(t), y);legend('Length', 'Force');
-    % plot(t, y, 'k', linewidth = lw);
-    % xlabel('$t$ (s)', Interpreter='latex');
-    % ylabel('$\Theta$ (kPa)', Interpreter='latex');
-    % fontsize(12, 'points');
-    % exportgraphics(gcf,sprintf('../Figures/FigBeating%g_%gs.png', pCa, rds(j)),'Resolution',150)
+  if strcmp(simtype, 'sin')  
+  %% Plot sinusoidal outcome
+    aspect = 2;
+    figure(900 + j*10 + round(pCa));clf;    tiledlayout(2,2, TileSpacing="compact");
+    set(gcf, 'Position', [500  300  7.2*96 7.2*96/aspect])
+    rng = Time{j} < 20;
+    t = Time{j}(rng)';
+    x = Length{j}(rng) + 0.95;
+    y = Force{j}(rng);
+    y2 = Force{j} - Force_par{j};
+    z = zeros(size(t));
+    col = linspace(0, t(end), length(t));   
+    x_ = @(t) t - floor(t/Tc)*Tc;
+    lw = 1
 
+    nexttile;
+    plot(t, x, 'k', linewidth = lw);
+    % plot(t, x, t, y);legend('Length', 'Force');
+    xlabel('$t$ (s)', Interpreter='latex');    ylabel('$L$ ($\mu$m)', Interpreter='latex');
+    ylim([0.95, 1.2])
+
+    nexttile(2, [2 1]);
+    surface([x;x],[y;y],[z;z],[col;col],...
+            'facecol','no',...
+            'edgecol','interp',...
+            'linew',lw);
+    clim([0 50 100])
+    colormap(turbo);    
+    ylabel('$\Theta$ (kPa)', Interpreter='latex');     xlabel('$L$ ($\mu$m)', Interpreter='latex');
+    cb = colorbar;  cb. title(cb, 't (s)');
+
+    nexttile;
+    % plot(x_(t), x, x_(t), y);legend('Length', 'Force');
+    plot(t, y, 'k', linewidth = lw);
+    xlabel('$t$ (s)', Interpreter='latex');
+    ylabel('$\Theta$ (kPa)', Interpreter='latex');
+    fontsize(12, 'points');
+    exportgraphics(gcf,sprintf('../Figures/FigHysteresis%g_%gs.png', pCa, rds(j)),'Resolution',150)
+  end
 end
 
 % Get error for the whole ramp-up and decay
@@ -799,7 +838,7 @@ if exportRun
     % else
     %     save relaxgraphingenv.mat
     % end
-    save(sprintf('..\\pca%gmodeldata.mat', pCa), 'Tarr', 'Farr')
+    % save(sprintf('..\\pca%gmodeldata.mat', pCa), 'Tarr', 'Farr')
     % save('..\pca11modeldataDoubleStates.mat', 'Tarr', 'Farr')
 end
 

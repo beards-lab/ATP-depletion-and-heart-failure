@@ -496,26 +496,25 @@ for i_rds = [4 3 2 1]
     x_ax = 0.1:0.1:rmpRes.t(end);
 
     pltF = plot(rmpRes.t, rmpRes.F, '-', Color=cl(1, :),LineWidth=1 ); hold on;        
-    pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(1, :)*0.8);
-    pltRelax = plot(rmpRelRes.t, rmpRelRes.F, Color=cl(2, :));
-    pltFitRelax = plot(x_ax, f_fitRelax(x_ax), ':', LineWidth=3, Color=cl(2, :));
+    % pltFit = plot(x_ax, f_fit(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=4, Color=cl(1, :)*0.8);
+    % pltRelax = plot(rmpRelRes.t, rmpRelRes.F, Color=cl(2, :));
+    % pltFitRelax = plot(x_ax, f_fitRelax(x_ax), ':', LineWidth=3, Color=cl(2, :));
     pltFitRemF = plot(x_ax, f_k(ae.a, ae.b, ae.c, x_ax), ':', LineWidth=3, Color=cl(3, :));
     
     xp = rmpRes.t(fitRng);
-    pltFitZone = fill([xp(1) xp(end) xp(end) xp(1)], [-10 -10 60 60], [1 0.8 0.8], 'FaceAlpha',0.24, EdgeColor='none');
+    % pltFitZone = fill([xp(1) xp(end) xp(end) xp(1)], [-10 -10 60 60], [1 0.8 0.8], 'FaceAlpha',0.24, EdgeColor='none');
+    
     % show the remaining force approximation
     pltApprx = plot(rmpRes.t, FremFun(rmpRes.t, rds(i_rds)), '-.', LineWidth=3, Color=cl(4, :));
     
     % show the corrected dataset
     % clf;
     pltCorr = loglog(rmpRes.t, rmpRes.F - FremFun(rmpRes.t, rds(i_rds)), '-', Color=cl(5, :), LineWidth=3);    
-    pltFrem0 = plot(-1 - rds(i_rds), FremMax, 'x', MarkerSize=10, LineWidth=3, Color=cl(4, :))
+    % pltFrem0 = plot(-1 - rds(i_rds), FremMax, 'x', MarkerSize=10, LineWidth=3, Color=cl(4, :));
+    
     %
     % approximation zones
-    % pltB = plot(rmpRes.t(fitrng), rmpRes.F(fitrng), 'x')
-    % pltB = plot(rmp.t(1:i_0-1/dt), rmp.F(1:i_0-1/dt), rmp.t(length(rmp.F)-1/dt:end), rmp.F(length(rmp.F)-1/dt:end), LineWidth=2, Color=[0.8500    0.3250    0.0980]);
     xlim([rmpRes.t(1), rmpRes.t(end)]);
-    % ylim([-2, ceil(max(rmpRes.F)/10)*10])
     %
     FarrCorr{i_rds} = rmp.F - FremFun(rmp.t, rds(i_rds));
     TarrCorr{i_rds} = rmp.t + rds(i_rds);
@@ -527,17 +526,24 @@ for i_rds = [4 3 2 1]
         yticks([]);
     else
         yticks([0 10 20 30 40]);
-        ylabel('Tension (kPa)')
+        ylabel('$\Theta$ (kPa)', Interpreter='latex')
     end
-    xlabel("$t$ (s)", Interpreter="latex")
+    xlabel("$t - t_r$ (s)", Interpreter="latex")
     if i_rds == 1
-        legend([pltF, pltFit, pltApprx,...
-            pltRelax, pltFitRelax, pltFrem0,  ...
-            pltCorr, pltFitRemF, pltFitZone],...
-            "T_m", "T_{highCa,i}", "T_{rem,i,aligned}",...
-            "Relaxed tension", "T_{rel,i}",'T_{rem,0}', ...
-            "T_{corr}", "T_{rem,i}", "t > 15",...             
-            Location="northeast", NumColumns=3);
+        % leg = legend([pltF, pltFit, pltApprx,...
+        %     pltRelax, pltFitRelax, pltFrem0,  ...
+        %     pltCorr, pltFitRemF, pltFitZone],...
+        %     "$\Theta_A$", "$\Theta_F$", '$\Theta^*$', ...
+        %     "Relaxed stress", "$\sim C_1 (t-t_r)^{-\alpha}$","$\Theta_\infty$",...
+        %     "$\Theta_{corr} = \Theta_A - \Theta^*$", "$\sim C_2(1-e^{-b(t-t_r)})$", "$t - t_r > 15$",...             
+        %     Location="northeast", NumColumns=3, Interpreter="latex");
+        leg = legend([pltF, pltApprx,...            
+            pltCorr, pltFitRemF ],...
+            "$\Theta_A$", '$\Theta^*$', ...
+            "$\Theta_{corr} = \Theta_A - \Theta^*$", "$\sim C_2(1-e^{-b(t-t_r)})$", ...             
+            Location="northeast", NumColumns=2, Interpreter="latex");
+        
+        leg.ItemTokenSize = [12 12]
     end
 end
 fontsize(12, "points")
@@ -622,8 +628,8 @@ peaks = peaks44;
 % normtype = 'Norm to highest relaxed peak'
 % normtype = 'Norm to Fmax'
 % subplot(4, 4, [3 16]);cla;
-aspect = 3;
-f = figure(3); f.Position = [-800 200 7.2*96 7.2*96/aspect];
+aspect = 2;
+f = figure(3); f.Position = [800 200 7.2*96 7.2*96/aspect];
 
 gc = axes('Position', [0.6 0.1 0.39 0.8], 'Box','on', 'BoxStyle','full', 'Color','r');
 
@@ -687,7 +693,7 @@ xlabel('$t_r$ (s)', Interpreter='latex');
 % ylim([0 1]);
 % yl = ylim();
 % yyaxis right;ylim(yl*Fmax);
-ylabel('T (kPa)', Interpreter='latex');
+ylabel('$\Theta$ (kPa)', Interpreter='latex');
 % semilogx(rds, mean(peaks, 2)', '_', LineWidth=3, MarkerSize=12)
 % set(gca, 'XTick', fliplr(rds));
 set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
@@ -695,6 +701,7 @@ g = gca();
 % g.YAxis(2).Color = [0 0 0];
 ylim([0 inf])
 set(gca, 'FontSize', 12);
-title(sprintf('Peak tension - pCa %0.2g', pCa));
+% title(sprintf('Peak stress - pCa %0.2g', pCa));
+title(sprintf('Peak stress - pCa %g', 4.51));
 % exportgraphics(f,sprintf('Figures/AvgpPeakspCa%0.2g.png', pCa),'Resolution',150)
-exportgraphics(f,sprintf('Figures/AvgpPeaks.png', pCa),'Resolution',150)
+exportgraphics(f,sprintf('Figures/AvgpPeaks.png'),'Resolution',150)

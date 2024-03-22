@@ -68,10 +68,10 @@ yyaxis right; plot(ts-to + 0.1, Fs, 'k-', LineWidth=2);
 % fast to slow area
 xlim([-0.05, 0.25]);ylim(yl2);
 
-leg = legend('ML', 'T', 'Interpreter','latex', 'FontSize',12, NumColumns=1, Location='southeast');
+leg = legend('ML ($L/L_0$)', '$\Theta$ (kPa)', 'Interpreter','latex', 'FontSize',12, NumColumns=1, Location='southeast');
 leg.Position = leg.Position + [0 0.07 0 0];
 xlabel('$t$ (s)', 'Interpreter','latex');
-ylabel('Tension (kPa)', 'Interpreter','latex')
+ylabel('Stress (kPa)', 'Interpreter','latex')
 fontsize(12, 'points');
 gc = gca; 
 gc.YAxis(2).Color = [0 0 0];
@@ -295,7 +295,7 @@ save('pca11data.mat', "Farr", "Tarr");
 peaks11 = peaks;
 %% peak sum up - run BEFORE AverageRampsCa
 peaks = peaks11;
-aspect = 3;
+aspect = 2;
 f = figure(3);f.Position = [300 200 7.2*96 7.2*96/aspect];clf;
 
 gc = axes('Position', [0.1 0.1 0.39 0.8], 'Box','on', 'BoxStyle','full');
@@ -348,10 +348,10 @@ plot(x_ax, nanmean(peaks, 2)', 's', LineWidth=3, Color=clin(end, :), MarkerSize=
 xlabel('$t_r$ (s)', Interpreter='latex');
 % ylabel('$T_{rel}$ (kPa)', Interpreter='latex')
 % yl = ylim();yyaxis right;ylim(yl*Fmax);
-ylabel('T (kPa)', Interpreter='latex');
+ylabel('$\Theta$ (kPa)', Interpreter='latex');
 set(gca, 'XTickLabel', {'0.1', '1', '10', '100'});
 % g = gca();g.YAxis(2).Color = [0 0 0];
 ylim([0 inf])
 set(gca, 'FontSize', 12);
-title('Peak tension - relaxed')
+title('Peak stress - relaxed')
 % exportgraphics(f,'Figures/AvgpPeaksRelaxed.png','Resolution',150)

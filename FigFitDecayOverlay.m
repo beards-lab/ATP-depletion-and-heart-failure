@@ -53,7 +53,7 @@ f.Position = [300 200 7.2*96 7.2*96/aspect];
 x = [4.4271    0.2121    4.8964];
 [c rampShift] = fitfun(x)
 f = gcf();
-% exportgraphics(f,'Figures/FigDecayOverlay.png','Resolution',150)
+exportgraphics(f,'../Figures/FigDecayOverlay.png','Resolution',150)
 % saveas(f, 'Figures/FigDecayOverlaypCa4.png')
 % exportgraphics(f,'Figures/FigDecayOverlaypCa4.4_7.2.png','Resolution',300)
 % saveas(f, 'Figures/FigDecayOverlaypCa4Corr2.png')
@@ -61,6 +61,7 @@ f = gcf();
 aspect = 1.5;
 % rampShift = [5.3980    0.8234    0.2223   0.0100];
 pcadata = load('../pCa4dataNoAdj60sFremCorr.mat');
+% pcadata = load('../pca4data60sNoFremCorr.mat');
 % pcadata = load('..\pca4.4modeldata.mat');
 % pcadata.FarrCorr = pcadata.Farr;pcadata.TarrCorr = pcadata.Tarr;
 % Farr = pcadata.FarrCorr;Tarr = pcadata.Tarr;
@@ -75,9 +76,13 @@ f.Position = [300 200 7.2*96 7.2*96/aspect];
 % x = [4.1233    0.2121   12.0290];
 % x = [16.2753    0.2990    6.5963];
 x = [18.5295    0.2121    3.4365];
-x = [20.8050    0.1941    4.5377]; % incomplete fit somehow
-% x = [11.3305    0.3950   13.4757]; % alternative
-x = [11.4470    0.3895   13.3954]; % best fit in 0-10 zone
+% x = [20.8050    0.1941    4.5377]; % incomplete fit somehow
+% % x = [11.3305    0.3950   13.4757]; % alternative
+% alternative: fit all, incl. b: uncorrected data
+% x = [11.4470    0.3895   13.3954]; % best fit in 0-10 zone
+x = [11.3325    0.3949   13.4736]; % even better
+% alternative: fit all, incl. b: corrected data
+% x = [13.2146    0.3448    8.8122]
 [c rspca] = evalPowerFit(x, Farr, Tarr, true, [], true)
 f = gcf();
 % exportgraphics(f,'../Figures/FigDecayOverlaypCa4.png','Resolution',150)

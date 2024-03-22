@@ -324,18 +324,19 @@ f = figure(210)
 exportgraphics(f,sprintf('../Figures/FigKnockoutBase_pCa%g.png', 11),'Resolution',150)
 
 
-% no PEVK attachment
+%% no PEVK attachment
 m = params;
-m(7) = 1e-9;% PEVK attachment
+m(7) = 0;% PEVK attachment
 m(8) = 1e9; % PEVK detachment
 evalCombined(m, params, 1:length(mod), [4.4])
 f = figure(144)
 exportgraphics(f,sprintf('../Figures/FigKnockoutPEVK_pCa%g.png', 4.4),'Resolution',150)
 
-% no viscosity attachment
+%% little viscosity attachment
 m = params;
-m(14) = 1e-3;% 
-evalCombined(m, params, 1:length(mod), [11 4.4])
+m(14) = 1e-1;% 
+evalCombined(m, params, 1:length(mod), [11])
+%%
 f = figure(144)
 exportgraphics(f,sprintf('../Figures/FigKnockoutVisc_pCa%g.png', 4.4),'Resolution',150)
 f = figure(210)
@@ -442,9 +443,15 @@ tic
 % modSel = [11 12 13 14];
 % params([7 8 9 22 23]) = [5 60 1380 3e4 0];
 % modSel = [7 8 22];
-evalCombined(params(modSel), params, modSel, [4.4])
+m = params;
+m(14) = 1e-1;
+evalCombined(m(modSel), m, modSel, [11 4.4])
+% evalCombined(params(modSel), params, modSel, [11])
 toc
-
+%%
+for i = 1:length(params)
+    fprintf('%d: %s = %f\n', i, modNames{i}, params(i))
+end
 %%
 clf;
 modNames{16} = 'k_{PEVK,A} (low Ca)';

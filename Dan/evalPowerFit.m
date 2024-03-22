@@ -79,7 +79,7 @@ if plotResults == true
     a_cm = axes('Position', [0.5-w/2 + centerShift y0 w1 h], 'XLim',xrng2,'XTick', xlintick, 'XTickLabel',xlinticklab, ... 
         'YLim',yrng, 'FontSize',fs, 'YScale','log', 'TickLabelInterpreter','latex',...
         YTick=ylogtick); 
-    ylabel("$\Theta-\Theta_{ss}$ (kPa)", 'Interpreter','latex');xlabel("$t - t_r + \tau_i$ (s)", 'Interpreter', 'latex');
+    ylabel("$\Theta-\Theta_\infty$ (kPa)", 'Interpreter','latex');xlabel("$t - t_r + \tau_i$ (s)", 'Interpreter', 'latex');
     hold on; box on;
     
     if w2 > 0
@@ -97,7 +97,7 @@ if plotResults == true
     a_r = axes(fug, 'Position', [1-x0-w+x0/2  y0 w h], YTickLabel=[]);
 elseif strcmp(plotResults, 'loglogOnly')
     a_r = gca;
-    ylabel("$\Theta-\Theta_{ss}$ (kPa)", 'Interpreter','latex');
+    ylabel("$\Theta-\Theta_\infty$ (kPa)", 'Interpreter','latex');
 end
 
 if exist('a_r', 'var')
@@ -219,11 +219,11 @@ for i_rds = [4 3 2 1]
     plot([-10 100], [c, c], 'k:', LineWidth=3);    
     axes(a_lm);
     l_tss = plot([-10 100], [c, c], 'k:', LineWidth=3);
-    text(9, c-1.0, sprintf('$\\Theta_{ss} = %0.2f$', c), 'Interpreter', 'Latex', 'FontSize',fs+2, 'FontWeight','bold')
+    text(9, c-1.0, sprintf('$\\Theta_\\infty = %0.2f$', c), 'Interpreter', 'Latex', 'FontSize',fs+2, 'FontWeight','bold')
 
     % title('A: Linear axis plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
     valids = isgraphics(l_lm);
-    legends = {'$t_r = 100$ s','$t_r = 10$ s','$t_r = 1$ s','$t_r = 0.1$ s','$\Theta_{ss}$'};
+    legends = {'$t_r = 100$ s','$t_r = 10$ s','$t_r = 1$ s','$t_r = 0.1$ s','$\Theta_\infty$'};
     leg = legend([l_lm(valids) l_tss], legends([valids true]), 'Interpreter','latex', 'FontSize',fs);
     %adjust position
     if w2 > 0
@@ -299,7 +299,7 @@ for i_rds = [4 3 2 1]
             leg_gr = [l_f l_r(valids)];
             fit_txt = sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b);
             disp(fit_txt)
-            fit_txt = "$\Theta_{PF}$";
+            fit_txt = sprintf("$\\Theta \\sim t^{-%0.2g}$", b);
             leg_txt = [fit_txt legends(valids)];
             reorder = [5 4 3 2 1];
         % else
