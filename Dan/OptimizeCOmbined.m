@@ -459,7 +459,7 @@ evalCombined(m(modSel), m, modSel, [11])
 toc
 %%
 for i = 1:length(params)
-    fprintf('%d: %s = %f\n', i, modNames{i}, params(i))
+    fprintf('%d: %s = %g\n', i, modNames{i}, params(i))
 end
 %%
 clf;
