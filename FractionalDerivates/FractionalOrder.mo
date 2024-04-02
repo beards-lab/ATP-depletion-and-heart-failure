@@ -2392,7 +2392,7 @@ Slab"),       Rectangle(
       model StressStrainStep
         extends Modelica.Icons.Example;
         Modelica.Mechanics.Translational.Components.Fixed fixed1
-          annotation (Placement(transformation(extent={{-50,-10},{-30,10}})));
+          annotation (Placement(transformation(extent={{-90,-10},{-70,10}})));
         Modelica.Mechanics.Translational.Sources.Position      position
           annotation (Placement(transformation(extent={{60,-10},{40,10}})));
         replaceable
@@ -2414,10 +2414,10 @@ Slab"),       Rectangle(
           annotation (Placement(transformation(extent={{30,10},{10,-10}})));
         Modelica.Mechanics.Translational.Components.Damper damper(d=0.0655)
           annotation (Placement(transformation(extent={{-22,16},{-2,36}})));
+        Modelica.Mechanics.Translational.Components.Spring spring(c=1000)
+          annotation (Placement(transformation(extent={{-52,-10},{-32,10}})));
       equation
 
-        connect(fixed1.flange, slab1.flange_a)
-          annotation (Line(points={{-40,0},{-20,0}},         color={0,127,0}));
         connect(ramp.y, position.s_ref)
           annotation (Line(points={{73,0},{62,0}}, color={0,0,127}));
         connect(position.flange, forceSensor.flange_a)
@@ -2425,9 +2425,13 @@ Slab"),       Rectangle(
         connect(slab1.flange_b, forceSensor.flange_b)
           annotation (Line(points={{0,0},{10,0}}, color={0,127,0}));
         connect(damper.flange_a, fixed1.flange) annotation (Line(points={{-22,
-                26},{-40,26},{-40,0}}, color={0,127,0}));
+                26},{-60,26},{-60,0},{-80,0}}, color={0,127,0}));
         connect(damper.flange_b, forceSensor.flange_b)
           annotation (Line(points={{-2,26},{10,26},{10,0}}, color={0,127,0}));
+        connect(fixed1.flange, spring.flange_a)
+          annotation (Line(points={{-80,0},{-52,0}}, color={0,127,0}));
+        connect(spring.flange_b, slab1.flange_a)
+          annotation (Line(points={{-32,0},{-20,0}}, color={0,127,0}));
         annotation (          experiment(StopTime=10));
       end StressStrainStep;
 
@@ -2439,11 +2443,25 @@ Slab"),       Rectangle(
             phase=3.1415926535898,
             offset=0.95 + 0.225),
           damper(d=0.001),
-          slab1(s_rel0=0.5));
+          redeclare ViscoelasticExpSlab slab1(
+            k_r=1330,
+            n=4.0,
+            lambda=0.18,
+            s_rel0=0.87,
+            A=1.0,
+            k_u=1330.0,
+            Tk=1));
+        annotation (experiment(
+            StopTime=10,
+            Tolerance=1e-05,
+            __Dymola_Algorithm="Cvode"));
       end StressStrainSin;
 
       model StressStrainStepOptim
-        extends StressStrainStep(damper(d=0.065));
+        extends StressStrainStep(
+          damper(d=0.065),
+          spring(c=100),
+          slab1(s_rel0=0.92));
         Modelica.Blocks.Tables.CombiTable1Ds combiTable1Ds(
           tableOnFile=false,
           table=[2,0.94971,0.411311337603269,0.220727496205047;
@@ -2625,7 +2643,9 @@ Slab"),       Rectangle(
         "Model of an exponential viscoelastic material, using fractional derivatives"
         extends
           Modelica.Mechanics.Translational.Interfaces.PartialCompliantWithRelativeStates;
-        parameter Real k = 1e6 "ViscoelasticityConstant";
+        parameter Real k_u=1e6 "ViscoelasticityConstant - unfolding";
+        parameter Real k_r=k_u "ViscoelasticityConstant - refolding"
+          annotation (Evaluate=false);
         parameter Real n = 2 "ViscoelasticityConstant";
         parameter Real lambda(min=0,max=1) = 0.5
           "Alpha (0 = elastic, 1 = viscous)";
@@ -2636,10 +2656,34 @@ Slab"),       Rectangle(
           initType=Modelica.Blocks.Types.Init.SteadyState)                   annotation (Placement(transformation(extent={{-24,-12},
                   {-44,8}})));
 
+          Real dsrel;
+      //     Real k(start = k_u);
+          parameter Real Tk = 1e-3;
+
+      //   Approximations.OustaloupOperator partialder2(order=3, lambda=lambda,
+      //     initType=Modelica.Blocks.Types.Init.SteadyState)                   annotation (Placement(transformation(extent={{-24,-12},
+      //             {-44,8}})));
+
       equation
         //f = d^alpha/dt k*(s-s0)
-        partialder.u = k*(s_rel - s_rel0)^n;
+        dsrel = der(s_rel);
+      //   if dsrel > 0 then
+      //     unfolding
+      //     der(k)*Tk = k_u - k;
+      //   else
+      //     der(k)*Tk = k_r - k;
+      //   end if;
+      //
+        when dsrel > 0 then
+          // switching sides
+          reinit(partialder.x_internal, partialder.x_start);
+        end when;
+
+        partialder.u = k_u*(s_rel - s_rel0)^n;
+      //   partialder2.u = k_r*(s_rel - s_rel0)^n;
+
         f = partialder.y;
+      //   f = partialder.y;
 
         annotation (
            Icon(coordinateSystem(
@@ -2666,11 +2710,17 @@ Slab"),       Rectangle(
       end ViscoelasticExpSlab;
 
       model StressStrainStepOptim_Exp
-        extends StressStrainStepOptim(redeclare ViscoelasticExpSlab slab1(
-            k=50,
-            n=1,
-            lambda=0.12,
-            s_rel0=1));
+        extends StressStrainStepOptim(redeclare Modelica.Blocks.Sources.Cosine
+            ramp(
+            amplitude=0.225,
+            f=1,
+            phase=3.1415926535898,
+            offset=0.95 + 0.225), redeclare ViscoelasticExpSlab slab1(
+            n=4.0,
+            lambda=0.18,
+            s_rel0=0.87,
+            A=1.0,
+            k_u=1330.0));
       end StressStrainStepOptim_Exp;
     end Viscoelasticity;
 
