@@ -453,7 +453,8 @@ tic
 % params([7 8 9 22 23]) = [5 60 1380 3e4 0];
 % modSel = [7 8 22];
 m = params;
-m(14) = 1;
+modSel = 1:length(m);
+% m(14) = 1;
 evalCombined(m(modSel), m, modSel, [11])
 % evalCombined(params(modSel), params, modSel, [11])
 toc
