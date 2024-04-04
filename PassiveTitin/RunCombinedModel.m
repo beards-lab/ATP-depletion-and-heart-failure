@@ -7,6 +7,7 @@ simtype = 'ramp';
 % simtype = 'ktr';
 % simtype = 'stairs-up'
 simtype = 'slackset'
+simtype = 'atpprotocol'
 
 % rampSet = [1];
 % rampSet = [2 4];
@@ -377,7 +378,60 @@ for j = rampSet
         velocities = [velocities,vels];
       end
       L0 = 0.05;
+  elseif strcmp(simtype, 'atpprotocol')
+      %% copypaste all three above
+      % ktr 
+      dt1 = 1e-3; % drop down
+      dt2 = 100e-3; % hold down
+      dt3 = 10e-3; % ramp up
+      dt4 = 5e-3; % hold up
+      dt5 = 1e-3; % drop to base
+      t = [cumsum([0 dt1 dt2 dt3 dt4 dt5]) 1]; % ending times
+      times = [[-100 t(1:end-1)]',t']  % generate starting times and merge two columns
+      level0 = 1.1;
+      level1 = 0.95;
+      level2 = 1.11;      
+      velocities = {0 (level1-level0)/dt1 0*dt2 (level2-level1)/dt3 0*dt4 (level0-level2)/dt5 0};
+      L0 = 0.05; % starting at L0 = 1 ML   
+      % stairs
+      levels = linspace(0, 0.1, 10) + 0.05;
+      levels = levels([1:8 10]);
+      t_hold = 20e-3;
+      t_ramp = 20e-3;
+      % % times = [-100, 0];
+      % % times = [times;0 t_hold];
+      % velocities = {0 0};
+      % L0 = levels(1); % starting at L0 = 1 ML   
+      for i_lev = 2:length(levels)
+          times = [times;times(end) times(end) + t_ramp];
+          velocities{end + 1} = (levels(i_lev) - levels(i_lev - 1))/t_ramp;
+          times = [times;times(end) times(end) + t_hold];
+          velocities{end + 1} = 0;
+      end      
+      % slack
 
+      level0 = 1.1;
+      % 8 10 12 14 16 % depresion
+      depLevels = level0*(1 - [8 10 12 14 16]/100); % depresion
+      topLevels = [repmat(level0, [1 length(depLevels) - 1]) 1]; % rebound
+      dt1 = 1e-3; % drop time
+      dt2 = 100e-3; % hold time
+      dt3 = 20e-3; % rise time
+      dt4 = 0.4; % wait time
+      t = cumsum([dt1 dt2 dt3 dt4]);
+      
+      % times = [-100, 0;0 0.5;0.5 1];
+      % velocities = {0 0.1/0.5 0};
+      for i = 1:length(depLevels)
+        tims_ = [[0 t(1:end-1)]',t'] + times(end);
+        times = [times;tims_];
+        vels = {(depLevels(i) - level0)/dt1, 0, (topLevels(i) - depLevels(i))/dt3, 0};
+        velocities = [velocities,vels];
+      end
+      % L0 = 0.05;
+      
+      
+     
   end
   %% repeated - refolding
   % times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 40;... % normal ramp-up

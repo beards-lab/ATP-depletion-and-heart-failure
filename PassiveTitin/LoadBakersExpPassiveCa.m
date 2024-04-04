@@ -24,13 +24,13 @@ clear;clc;
 % rds = fliplr([0.1 1 10 100]);
 
 % ramp height 0.95 - 1.175, i.e. 1.9 - 2.35um
-% S1 = dir('data/PassiveCaSrc2/20230518_renamed');
-% S1 = dir('data/PassiveCaSrc2/20230919');
-% S1 = dir('data/PassiveCaSrc2/20230927');
-% S1 = dir('data/PassiveCaSrc2/20230928');
-S1 = dir('data/PassiveCaSrc2/20231027');
-% S1 = dir('data/PassiveCaSrc2/20231102');
-% S1 = dir('data/PassiveCaSrc2/20231107');
+% S1 = dir('../data/PassiveCaSrc2/20230518_renamed');
+% S1 = dir('../data/PassiveCaSrc2/20230919');
+% S1 = dir('../data/PassiveCaSrc2/20230927');
+% S1 = dir('../data/PassiveCaSrc2/20230928');
+S1 = dir('../data/PassiveCaSrc2/20231027');
+% S1 = dir('../data/PassiveCaSrc2/20231102');
+% S1 = dir('../data/PassiveCaSrc2/20231107');
 
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});

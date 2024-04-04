@@ -458,10 +458,15 @@ modSel = 1:length(m);
 evalCombined(m(modSel), m, modSel, [11])
 % evalCombined(params(modSel), params, modSel, [11])
 toc
-%%
+%% print out params 
+fprintf('\n params = [')
 for i = 1:length(params)
-    fprintf('%d: %s = %g\n', i, modNames{i}, params(i))
+    % table
+    % fprintf('%d: %s = %f\n', i, modNames{i}, params(i))
+    % array
+    fprintf('%1.3g, ', params(i))
 end
+fprintf('];')
 %%
 clf;
 modNames{16} = 'k_{PEVK,A} (low Ca)';

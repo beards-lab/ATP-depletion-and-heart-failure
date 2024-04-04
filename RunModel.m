@@ -1,7 +1,7 @@
 %% demonstrates basic model usage
 
 % load optimized params
-g = load('gopt.csv');
+% g = load('gopt.csv');
 % Set defaults
 params = getParams([], g);
 

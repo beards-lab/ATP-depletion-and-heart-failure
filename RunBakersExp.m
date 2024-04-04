@@ -110,7 +110,7 @@ if ~isempty(params.ghostSave)
     save(['Ghost_' params.ghostSave '_FV'], 'ghost');
 end
 
-return;
+% return;
 %% KTR EXPERIMENT
 params = params0;
 params.SL0 = 2.0;
@@ -150,7 +150,7 @@ if params.PlotEachSeparately
         axes('position',[0.55 0.6 0.4 0.35]); 
     end
     hold on;
-    datastruct = load('data/bakers_ktr_8.mat');
+    datastruct = load('../data/bakers_ktr_8.mat');
     datatable = datastruct.datatable;
     yyaxis right;
     plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
@@ -182,7 +182,7 @@ if params.PlotEachSeparately
 end
 %% RAMP UP
 params = params0;
-datastruct = load('data/bakers_rampup2_8.mat');
+datastruct = load('../data/bakers_rampup2_8.mat');
 datatable = datastruct.datatable;    
 velocitytable = datastruct.velocitytable;
 velocitytable(1, 1) = -1; % enough time to get to steady state
@@ -240,7 +240,7 @@ if params.PlotEachSeparately
 end
 %% SLACK
 params = params0;
-datastruct = load('data/bakers_slack8mM.mat');
+datastruct = load('../data/bakers_slack8mM.mat');
 datatable = datastruct.datatable;    
 velocitytable = datastruct.velocitytable(4:end, :);
 params.Velocity = velocitytable(:, 2);
