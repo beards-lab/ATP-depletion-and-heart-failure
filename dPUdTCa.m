@@ -153,8 +153,12 @@ MgATP = params.MgATP;
 Pi = params.Pi;
 MgADP = params.MgADP;
 
-g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+% g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+% removed + 1 in the denominator, because there is no unbound fraction
+g1 = (MgADP/params.K_D)/(MgADP/params.K_D + MgATP/params.K_T1);
+% g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+g2 = (MgATP/params.K_T1)/(MgADP/params.K_D + MgATP/params.K_T1);
+
 % g3 = MgATP/(MgATP + K_T2);
 g4 = MgATP/(MgATP + params.K_T3);
 f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
@@ -249,7 +253,11 @@ p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
 if params.UseTORNegShift
-    XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3);
+    % creates instable oscillations without suppressing the force enough.
+    % params.TK ~ 1e3
+    % XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*(s>0).*min(exp(s*params.TK)/(1+params.TK), params.TK);
+
+    XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
 else
 %     % test using interp
 %     try

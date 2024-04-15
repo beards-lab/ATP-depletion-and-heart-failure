@@ -429,6 +429,7 @@ mod(15) = 0;
 % mod(20) = NaN;
 mod2param = [600, 500, 2, 6, 2, 1e6, 200, 50, 600, 3.2842, 0.01, 8, 0.01, 0.2, 1e-3, 200, 50, 0.9, 0.01*15, (8.4137e5)*0.7, 3.2470, 500, 0.1];
 % create abs params and fix Lref in Dan's codes
+Lref = 0.9;
 params = mod.*mod2param; params([1 2 6]) = params([1 2 6]).*[(Lref^params(3)), (Lref^params(5)), (Lref^params(4))];
 % Nice fit including pCa4.4 0.1s, predicting rest
 params = [367, 3e+04, 2.3, 9, 2.33, 3.24e+06, 4.98, 84.9, 1.36e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 3.94e+04, 0, ];
@@ -455,7 +456,7 @@ tic
 m = params;
 modSel = 1:length(m);
 % m(14) = 1;
-evalCombined(m(modSel), m, modSel, [11])
+evalCombined(m(modSel), m, modSel, [11 4.4])
 % evalCombined(params(modSel), params, modSel, [11])
 toc
 %% print out params 

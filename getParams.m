@@ -66,7 +66,12 @@ end
         'UseKstiff3', false, ... % uses additional parameter kstiff3 for overstroke stifness (=kstiff2 otherwise)
         'EvalAtp', [1],... % which ATPs should be evaluated from the range [8 4 2] mM - so [1 3] evals 8mM and 2mM and [1] evals 8mM only 
         'SaveBest', true, ... % save g on each iter, if better than previous
-        'ghostSave', '', 'ghostLoad', '');
+        'ghostSave', '', 'ghostLoad', '', ...
+        'UseTitinModel', false, ...
+        'RunForceVelocity', true, ...
+        'RunKtr', true, ...
+        'RunStairs', true, ...
+        'RunSlack', true);
  
     params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
 
@@ -147,10 +152,12 @@ end
 
     %% SIMULATION PARAMETERS
     if params.UseCalculatedN
-        params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
-        params.LXBpivot = params.SL0;
-        params.ss = params.N;
+        % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
+        % params.LXBpivot = params.SL0;
+        params.LXBpivot = params.Slim_l + (params.Slim_r - params.Slim_l)/2;
+        % params.ss = params.N;
         params.s = ((params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot)/2;
+        params.ss = length(params.s);
 %         params.s_i0 = 0; % not used in this context, searched for in each iteration
     else
     

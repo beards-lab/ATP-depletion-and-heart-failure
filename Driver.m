@@ -19,7 +19,7 @@ params.g = [1.3581    1.0578    0.0299    0.4113    1.1269    0.5243    3.3260  
 params.SL0 = 2.2;
 % params.Slim = 0.18;
 params.Slim = 0.3;
-params.dS = 10e-3;
+params.dS = 1e-3;
 % params.N = 30;
 params.MgATP = 8;
 params.SimTitle = '';
@@ -73,12 +73,13 @@ ghostLoad = '';
 % params.UseOverlap = true;
 % params.UsePassive = true;
 
-params.UseTORNegShift = false;
-params.UseMutualPairingAttachment = false;
-params.UseSlack = false;
+params.UseTORNegShift = true;
+params.UseMutualPairingAttachment = false; % just breaks the sim
+params.UseSlack = true;
 params.UseOverlap = true;
 params.UsePassive = true;
-params.UseSerialStiffness = false;
+params.UseSerialStiffness = true;
+params.kSE = 5e3;
 params.UseKstiff3 = true;
 
 % params.alpha1 = 0;
@@ -92,8 +93,9 @@ params.kstiff2 = 14000;
 params.kstiff3 = 1400;
 % params.kstiff2 = 7000;
 % params.kstiff1 = 700000;
-params.k1 = 4000;
-params.k2 = 10000;
+params.ka = 373*0.5;
+params.k1 = 4000*0.5;
+params.k2 = 10000*0.5;
 params.k3 = 100;
 params.dr = 0.01;
 params.mu = 1e-6;
@@ -116,6 +118,9 @@ plotTransitions = true;
 params.PlotFullscreen = true;
 % init
 clf;
+
+% optimized for force-velocity only
+params.g = [1.3581*1    1.05788*0.9    0.0299    0.4113    1.1269    0.5243    3.3260    1.0322    0.0274    1.7252    1.6593    0.0212];
 
 % save as default, applying the modifiers
 params0 = getParams(params, params.g, false, true);
@@ -143,14 +148,24 @@ tic
 % params0 = load('gaOutput2_params.mat').params;
 % params0 = load('bestParams.mat').params;
 params0.PlotEachSeparately = true;
+params0.PlotFullscreen = false;
 % params0.UseKstiff3 = false;
-params0.dS = 0.01;
+params0.dS = 0.005;
 params0.ksr0 = params0.ksr0;
 params0.sigma0 = params0.sigma0;
-params0.EvalAtp = [1 2 3]
-params0.UseAtpOnUNR = true;
-params0.kstiff3 = params0.kstiff2;
+params0.EvalAtp = [1];
+% params0.UseAtpOnUNR = true;
+% params0.kstiff3 = params0.kstiff2;
 params0.UseOverlap = true;
+params0.UseTitinModel = false;
+
+params0.TK = 50000;
+params0.TK0 = 0.01;
+
+params0.RunForceVelocity = false;
+params0.RunKtr = true;
+params0.RunSlack = false;
+params0.RunStairs = false;
 
 RunBakersExp;
 toc
@@ -159,34 +174,36 @@ xlim('auto')
 ylim('auto')
 
 return
+%%
+StatesInTime;
 %% SA
 E = [];
 params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'};
 paramsfn = params0.mods;
 % paramsfn = fieldnames(params)
 params_d = params0;
-RunBakersExp; e0 = E;
-for i = 1:length(paramsfn)
+% RunBakersExp; e0 = E;
+for i = 3:length(paramsfn)
     disp(['Computing ' char(paramsfn{i}) '..'])
     params0 = params_d;
     params0.(paramsfn{i}) = params0.(paramsfn{i})*0.95;
     RunBakersExp;
-    e_d = E; % E -- delta
+    e_d(i) = sum(E); % E -- delta
     params0 = params_d;
     params0.(paramsfn{i}) = params0.(paramsfn{i})*1.05;
     RunBakersExp;
-    epd = E;% e + delta 
+    epd(i) = sum(E);% e + delta 
 
-    err_1(i) = min(e_d, epd);
+    % err_1(i) = min(e_d, epd);
 end
 params0 = params_d;
 figure;bar(err_1);hold on;plot([1 length(paramsfn)], [e0 e0])    
 
 %% OPTIM
 % return
-% params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'}; % tune everything
-params0.mods = {"K_T1", "K_T3"};
-g = ones(size(params0.mods))
+params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'}; % tune everything
+% params0.mods = {"K_T1", "K_T3"};
+% g = ones(size(params0.mods))
 % optimized
 g = [1.4054    0.7373];
 
