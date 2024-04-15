@@ -244,10 +244,16 @@ if exist('plotTransitions', 'var')
     s = -0.2:0.02:0.2; p1 = ones(size(s)); p2 = p1;p3 = p1;
 end
 
-p12PU = f1*params.kd*p1; % p1 to PU
-p12p2 = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
-p12p2_r = params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
-p22p3 = params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
+% p12PU = f1*params.kd*p1; % p1 to PU
+p12PU = params.kd*p1; % p1 to PU
+
+% p12p2 = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
+p12p2 = params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
+% p12p2_r = params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
+p12p2_r = f1*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
+% p22p3 = params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
+p22p3 = f2*params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
+% p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 
 
