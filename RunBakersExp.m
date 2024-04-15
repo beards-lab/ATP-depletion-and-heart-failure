@@ -120,7 +120,7 @@ if params0.RunKtr
     params = params0;
     params.SL0 = 2.0;
     params.dS = 0.008;
-    params.Slim_l = 0.8;
+    params.Slim_l = 1.6;
     params.Slim_r = 2.2;
     % params.UseSlack = true;
     % params.PlotFullscreen = true;
@@ -135,7 +135,7 @@ if params0.RunKtr
     pos_ML = [1   , 1,0.8,0.8, 1.05,1.05,     1, 1 ];
 
     % putting the numbers as a difference
-    times = cumsum([0 , 1,0.2/v,0.01 - 0.2/v,0.25/v, 0.005 - 0.25/v, 0.05/v, 1]);
+    times = cumsum([0 , 1.0004,0.2/v,0.01005 - 0.2/v,0.25/v, 0.0045 - 0.25/v, 0.05/v, 1]);
     params.Velocity = diff(pos_ML)./diff(times);
     [t, out] = evaluateModel(@dPUdTCa, times - times(end-1) + 1, params);
     out.t = out.t - 1;
@@ -156,7 +156,9 @@ if params0.RunKtr
     if params.PlotEachSeparately
         %
         % clf;
-        if ~params.PlotFullscreen
+        if params.PlotFullscreen
+            clf;
+        else
             % axes('position',[0.55 0.6 0.4 0.35]);
             nexttile;
         end
@@ -164,7 +166,7 @@ if params0.RunKtr
         datastruct = load('data/bakers_ktr_8.mat');
         datatable = datastruct.datatable;
         yyaxis right;
-        plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+        plot(datatable(:, 1) ,datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
         yyaxis left;
 
 
@@ -190,6 +192,7 @@ if params0.RunKtr
         % set(gca,'fontsize',14,'ylim',[0 1.1], 'xlim', [-0.05 0.45]);  box on;
         title(sprintf('Speed of the transient: %1.1f s^{-1}', Ktr));
         xlim([-0.02, 0.1]);
+        % xlim([1, 1.0008])
 
         if exist('gp', 'var') && isvalid(gp)
             legend(['Ghost ' params.ghostLoad], 'F data', 'F sim','SL data*', 'SL sim*', 'LXB sim*', 'Location', 'southeast');

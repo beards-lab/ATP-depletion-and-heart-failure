@@ -154,7 +154,8 @@ end
     if params.UseCalculatedN
         % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
         % params.LXBpivot = params.SL0;
-        params.LXBpivot = params.Slim_l + (params.Slim_r - params.Slim_l)/2;
+        % params.LXBpivot = params.Slim_l + (params.Slim_r - params.Slim_l)/2;
+        params.LXBpivot = params.Slim_l;
         % params.ss = params.N;
         params.s = ((params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot)/2;
         params.ss = length(params.s);

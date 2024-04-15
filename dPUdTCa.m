@@ -5,6 +5,12 @@ function [f, outputs] = dPUdTCa(t,PU,params)
 %  third 2N-1 entries represent p3(s,t)
 %  third-last entry is U_NR, the fraction of myosin heads in not-relaxed state
 % then second last NP and last SL 
+% persistent xxx;
+% if isempty(xxx)
+%     xxx = 0;
+% end
+% disp(xxx);
+% xxx = xxx + 1;
 
 vel = params.Vums;
 Ca_i = params.Ca;
@@ -83,12 +89,12 @@ dS = params.dS;
 % IMPORTANT: s MUST be around 0 somewhere!
 s_p0 = 1 + round(-s(1)/params.dS, 6); % strain position in space at 0
 
-if isnan(s_p0)
+if isnan(s_p0) || floor(s_p0) < 0
+    % this can happen during numerical rottfinding iteration step, should be avoided in the result
     s_i0 = 1; % just hold on..
     s_i1 = 1;
     s_i0k = 0;
-elseif floor(s_p0) < 0
-    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
+    % warning(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
 elseif floor(s_p0) == 0
     s_i0 = 1;
     s_i1 = 1;
@@ -110,16 +116,16 @@ else
     end
 end
 
-if params.UseSpaceDiscretization
-    try
-    s = s - s(s_i0); % subtrck the space difference
-    catch e
-        disp('wat')
-    end
-    if abs(s(s_i0)) > 1e-4
-        disp('')
-    end
-end
+% if params.UseSpaceDiscretization
+%     try
+%     s = s - s(s_i0); % subtrck the space difference
+%     catch e
+%         disp('wat')
+%     end
+%     if abs(s(s_i0)) > 1e-4
+%         disp('')
+%     end
+% end
 
 
 % calculation of moments of strain distributions
@@ -145,23 +151,8 @@ else
     p3_1_stroke = dS*sum(s.*p3);
 end
 
-Pu = N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0); % unattached permissive fraction
+Pu = max(0, N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0)); % unattached permissive fraction
 
-% quasi-equilibrium binding factor functions
-% TODO move to evalModel for optim
-MgATP = params.MgATP;
-Pi = params.Pi;
-MgADP = params.MgADP;
-
-% g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-% removed + 1 in the denominator, because there is no unbound fraction
-g1 = (MgADP/params.K_D)/(MgADP/params.K_D + MgATP/params.K_T1);
-% g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
-g2 = (MgATP/params.K_T1)/(MgADP/params.K_D + MgATP/params.K_T1);
-
-% g3 = MgATP/(MgATP + K_T2);
-g4 = MgATP/(MgATP + params.K_T3);
-f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
 
 % g1 = 0;
 % g2 = 1;%0.95;
@@ -226,27 +217,32 @@ else
     dLSEdt = 0;
 end
 
-% dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
-if params.UseAtpOnUNR
-    dU_NR = + g4*params.ksr0*exp(F_total/params.sigma0)*U_SR - params.kmsr*U_NR*Pu; 
-else
-    dU_NR = params.ksr0*(exp(F_active/params.sigma0))*U_SR - params.kmsr*U_NR*Pu;
-end
-% dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
-% dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
-% dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
-% dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
-% dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
-
 %% TRANSITIONS
 if exist('plotTransitions', 'var')
     % debug the transitions
     s = -0.2:0.02:0.2; p1 = ones(size(s)); p2 = p1;p3 = p1;
 end
 
-% p12PU = f1*params.kd*p1; % p1 to PU
-p12PU = params.kd*p1; % p1 to PU
 
+% quasi-equilibrium binding factor functions
+% TODO move to evalModel for optim
+MgATP = params.MgATP;
+Pi = params.Pi;
+MgADP = params.MgADP;
+
+% g1 = (MgADP/params.K_D)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+% removed + 1 in the denominator, because there is no unbound fraction
+g1 = (MgADP/params.K_D)/(MgADP/params.K_D + MgATP/params.K_T1);
+% g2 = (MgATP/params.K_T1)/(1 + MgADP/params.K_D + MgATP/params.K_T1);
+g2 = (MgATP/params.K_T1)/(MgADP/params.K_D + MgATP/params.K_T1);
+
+% g3 = MgATP/(MgATP + K_T2);
+g4 = MgATP/(MgATP + params.K_T3);
+f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
+
+PU2p1 = params.ka*Pu*U_NR; % to loosely attachemnt state
+% p12PU = f1*params.kd*p1; % p1 to PU
+PU2p1_r = params.kd*p1 + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
 % p12p2 = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
 p12p2 = params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
 % p12p2_r = params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
@@ -256,7 +252,9 @@ p22p3 = f2*params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
 % p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 
-
+% if any(p1 < 0)
+    % disp('vole')
+% end
 % XB_TOR = max(-1, g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3));
 if params.UseTORNegShift
     % creates instable oscillations without suppressing the force enough.
@@ -275,10 +273,23 @@ else
 %     end
 end
 
+% dU_NR = + ksr0*U_SR - kmsr*U_NR*Pu  ; 
+if params.UseAtpOnUNR
+    dU_NR = + g4*params.ksr0*exp(F_total/params.sigma0)*U_SR - params.kmsr*U_NR*Pu; 
+else
+    dU_NR = params.ksr0*(exp(F_active/params.sigma0))*U_SR - params.kmsr*U_NR*Pu;
+end
+% dU_NR = ksr0*exp(F_active/sigma0)*U_SR - kmsr*U_NR*Pu;
+% dU_NR = + ksr0*exp(F_active/sigma0)*U_SR*(1 + 3*U_NR) - kmsr*U_NR*(1 + 3*U_SR)*Pu  ; 
+% dU_NR = + ksr*(1/(1.0 - MgATP/10))*(exp(F_active/sigma0))*U_SR - 50*kmsr*(1.0 - g3)*U_NR*Pu  ; 
+% dU_NR = + ksr0*(1 + F_active/sigma0 )*U_SR - kmsr*U_NR*Pu  ; 
+% dU_NR = + ksr0*U_SR - kmsr*exp(-F_active/sigma0)*U_NR*Pu  ; 
+
+
 if exist('plotTransitions', 'var')
     % debug transitions only
     figure(87);
-    plot(s, p12PU, s, p12p2, s, p12p2_r,'--', s, p22p3, s,  p22p3_r, '--', s, XB_TOR, 'Linewidth', 2);
+    plot(s, PU2p1_r, s, p12p2, s, p12p2_r,'--', s, p22p3, s,  p22p3_r, '--', s, XB_TOR, 'Linewidth', 2);
     legend(...
     'p12PU',... = f1*params.kd*p1; % p1 to PU
     'p12p2',... = f2*params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
@@ -291,19 +302,19 @@ if exist('plotTransitions', 'var')
 end
 %%
 % governing flows
-dp1   = - p12PU -  p12p2 + p12p2_r;
+dp1   = - PU2p1_r -  p12p2 + p12p2_r;
 dp2   = + p12p2 - p12p2_r  - p22p3 +  p22p3_r;
 dp3   = + p22p3 - p22p3_r - XB_TOR;
 
 try
 if params.UseMutualPairingAttachment
-    dp1(s_i0) = dp1(s_i0) + params.ka*Pu*(params.Amax - (p1_0 + p2_0 + p3_0))*U_NR/dS; % attachment
+    dp1(s_i0) = dp1(s_i0) + PU2p1*(params.Amax - (p1_0 + p2_0 + p3_0))/dS; % attachment
 else
     if params.UseSpaceInterpolation
-        dp1(s_i0) = dp1(s_i0) + s_i0k*(params.ka*Pu*U_NR/dS); % attachment
-        dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(params.ka*Pu*U_NR/dS); % attachment
+        dp1(s_i0) = dp1(s_i0) + s_i0k*(PU2p1/dS); % attachment
+        dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(PU2p1/dS); % attachment
     else
-        dp1(s_i0) = dp1(s_i0) + (params.ka*Pu*U_NR/dS); % attachment
+        dp1(s_i0) = dp1(s_i0) + (PU2p1/dS); % attachment
     end
 end
 catch e

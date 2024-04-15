@@ -11,6 +11,8 @@ params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "
 % optimized for force-velocity only
 params.g = [1.3581    1.0578    0.0299    0.4113    1.1269    0.5243    3.3260    1.0322    0.0274    1.7252    1.6593    0.0212];
 
+params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0'};
+
 % g = x2;
 % g = p_OptimGA;
 % g = ones(30, 1);
@@ -93,13 +95,17 @@ params.kstiff2 = 14000;
 params.kstiff3 = 1400;
 % params.kstiff2 = 7000;
 % params.kstiff1 = 700000;
-params.ka = 373;
-params.kd = 102*2;
-params.k1 = 4000*0.8;
-params.k2 = 10000*0.8;
+params.ka = 137.3;
+params.kd = 10.2;
+params.k1 = 160;
+% params.k_1 = 170*1e6; % NA
+params.k2 = 10000;
+% params.k_2 = 140*1e6; % NA
 params.k3 = 100;
 params.dr = 0.01;
 params.mu = 1e-6;
+params.TK = 10000;
+params.TK0 = 0.01;
 
 % set zero transition slopes
 params.alpha1 = 0;
@@ -151,7 +157,7 @@ tic
 params0.PlotEachSeparately = true;
 params0.PlotFullscreen = false;
 % params0.UseKstiff3 = false;
-params0.dS = 0.005;
+params0.dS = 0.01;
 params0.ksr0 = params0.ksr0;
 params0.sigma0 = params0.sigma0;
 params0.EvalAtp = [1];
@@ -160,18 +166,16 @@ params0.EvalAtp = [1];
 params0.UseOverlap = true;
 params0.UseTitinModel = false;
 
-params0.TK = 50000;
-params0.TK0 = 0.01;
-
 params0.RunForceVelocity = false;
 params0.RunKtr = true;
 params0.RunSlack = false;
 params0.RunStairs = false;
 
 RunBakersExp;
+xlim([-0.05, 0.15])
 toc
 E
-xlim('auto')
+% xlim('auto')
 ylim('auto')
 
 return
@@ -183,8 +187,8 @@ params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", 
 paramsfn = params0.mods;
 % paramsfn = fieldnames(params)
 params_d = params0;
-% RunBakersExp; e0 = E;
-for i = 3:length(paramsfn)
+RunBakersExp; e0 = sum(E);
+for i = 6:length(paramsfn)
     disp(['Computing ' char(paramsfn{i}) '..'])
     params0 = params_d;
     params0.(paramsfn{i}) = params0.(paramsfn{i})*0.95;
@@ -198,7 +202,10 @@ for i = 3:length(paramsfn)
     % err_1(i) = min(e_d, epd);
 end
 params0 = params_d;
-figure;bar(err_1);hold on;plot([1 length(paramsfn)], [e0 e0])    
+%%
+err_1 = min(e_d, epd)
+figure;bar([e_d; epd]');hold on;plot([1 length(paramsfn)], [e0 e0])    
+xticklabels(params0.mods)
 
 %% OPTIM
 % return
