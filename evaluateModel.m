@@ -5,10 +5,28 @@ function [Force, out] = evaluateModel(fcn, T, params)
 % default: opts = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, 'ValuesInTime', 0);
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
-    
+
     params = getParams(params, params.g,false); % update the init vectors
-    PU = params.PU0;
+    PU0 = params.PU0;
     out = [];
+    ss = params.ss;
+
+    function  [value, isterminal, direction] = movingWindow(t, y, ~)
+        SL = y(3*ss + 3);
+        LSE = y(3*ss + 4); % length of the serial stiffness
+        s = params.s([1, end]) + (-(SL - LSE) + params.LXBpivot)/2;
+        s_p0 = 1 + round(-s(1)/params.dS, 6);
+        value(1) = floor(s_p0) - 1;
+        direction(1) = -1;
+
+        value(2) = ceil(s_p0) - params.ss;
+        direction(2) = 1;
+        isterminal = [true,true];
+        if any(abs(value)< 1e-3)
+            a = 3;
+        end
+    end
+    
 
     if params.UseTitinModel
         addpath(genpath('PassiveTitin'));
@@ -23,7 +41,8 @@ function [Force, out] = evaluateModel(fcn, T, params)
         params.v = params.Velocity(vs);
         params.Vums = params.v*params.ML; % velocity in um/s
 
-        opts = odeset();%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
+
+        opts = odeset('Events', @movingWindow);%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
         
         % test odess
 %         tic
@@ -47,7 +66,42 @@ function [Force, out] = evaluateModel(fcn, T, params)
 %         disp(['Ode45: ' num2str(length(t))])
 %         toc
 %         tic        
-        [t,PU] = ode15s(fcn,[ts tend],PU(end,:), opts, params);
+t = ts;
+% no event for initialization
+te = [];
+while t < tend
+    
+    if ~isempty(te)
+        % we have an event from previous run
+        fprintf('Hovna took %d steps\n', length(t))
+        nds = params.WindowsOverflowStepCount;
+        if ie == 1
+            % move right            
+            PU0(1:ss-nds) = PU0(1+nds:ss);
+            PU0(ss+1:2*ss-nds) = PU0(ss+1+nds:2*ss);
+            PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
+            % zero the new space
+            PU0(ss-nds:ss) = 0; PU0(2*ss-nds:2*ss) = 0;PU0(3*ss-nds:3*ss) = 0;
+            params.LXBpivot = params.LXBpivot - nds*params.dS*2;
+        elseif ie == 2
+            % move left
+            PU0(1+nds:ss) = PU0(1:ss-nds);
+            PU0(ss+1+nds:2*ss) = PU0(ss+1:2*ss-nds);
+            PU0(2*ss +1+nds:3*ss) = PU0(2*ss +1:3*ss-nds);
+            PU0(1:nds) = 0; PU0(ss+1:ss+nds) = 0; PU0(2*ss +1:2*ss+nds) = 0; 
+            
+            % dS is in half-sarcomere space, converting to sarcomere space by 2
+            params.LXBpivot = params.LXBpivot + nds*params.dS*2;            
+        end
+        ts = t(end);            
+    end
+
+[t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
+PU0 = PU(end,:);
+
+    % te contains the times when events occurred
+    % ye contains the solutions at the times when events occurred
+    % ie contains the indices of the triggered events
 %         save('ode15s', 'PU');
 %         disp(['Ode45: ' num2str(length(t))])
 %         toc
@@ -99,7 +153,7 @@ function [Force, out] = evaluateModel(fcn, T, params)
                     " Extend the Slim from " + num2str(params.Slim) );
             end
         end      
-
+    end
     end % end the velocity segment
     
     %% Check for the length crossing IN THE LAST SEGMENT ONLY

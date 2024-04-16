@@ -26,7 +26,7 @@ end
 subplot(211);
 yyaxis left;cla;hold on;
 % Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
-plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '--', 'MarkerSize', 4, 'Linewidth', 2)
+plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '-', 'MarkerSize', 4, 'Linewidth', 2)
 % plot(out.t, Pus, 'b-',out.t, out.p1_0, 'r-',out.t, out.p2_0, 'g-',out.t, out.p3_0, 'k-',out.t, out.NR, 'm-');
 % plot(out.t, Pus, 'b-', out.t, out.NR, 'm-');
 plot(out.t, out.NR, 'k-');
@@ -56,7 +56,8 @@ cla;hold on;
 ss = params.ss;
 % s = params.s + (out.SL(ti) - out.LSE(ti)) - params.LXBpivot;
 % s = params.s - (out.SL(ti) - out.LSE(ti)) + params.LXBpivot;
-s = params.s' + (-(out.SL(ti) - out.LSE(ti)) + params.LXBpivot)/2;
+% s = params.s' + (-(out.SL(ti) - out.LSE(ti)) + params.LXBpivot)/2;
+s = params.s' + (-(out.SL(ti) - out.LSE(ti)) + out.LXBPivot(ti))/2;
 s = flipud(-s);
 % s = params.s + (out.SL(ti) - out.LSE(ti));
 % zer = (out.SL(ti) - out.LSE(ti));
@@ -76,6 +77,9 @@ p2_1 = params.dS*sum(s'.*p2);
 
 if params.UseP31Shift
     p3_1 = params.dS*sum((s'+params.dr).*p3);
+    % p3_1_stroke = dS*sum((s+params.dr).*p3.*(s+params.dr >= 0));
+    % p3_1_overstroke = dS*sum((s+params.dr).*p3.*(s+params.dr < 0));
+    
 else
     p3_1 = params.dS*sum(s'.*p3);
 end

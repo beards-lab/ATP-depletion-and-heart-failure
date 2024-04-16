@@ -119,15 +119,15 @@ end
 if params0.RunKtr
     params = params0;
     params.SL0 = 2.0;
-    params.dS = 0.008;
-    params.Slim_l = 1.6;
-    params.Slim_r = 2.2;
+    % params.dS = 0.008;
+    % params.Slim_l = 1.8;
+    % params.Slim_r = 2.0;
     % params.UseSlack = true;
     % params.PlotFullscreen = true;
     % params.LXBpivot = 2.0;
     params = getParams(params, params.g, true);
 
-    params.UseTitinModel = true;
+    % params.UseTitinModel = false;
 
     % replicate the ktr protocol
     v = 500; % ML/s
@@ -271,6 +271,7 @@ if params0.RunSlack
     velocitytable = datastruct.velocitytable(4:end, :);
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
+    params.UseTitinModel = true;
 
     params.SL0 = 2.2;
     params.Slim_l = 1.85;

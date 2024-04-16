@@ -123,6 +123,12 @@ params.ghostSave = ghostSave;
 
 plotTransitions = true;
 params.PlotFullscreen = true;
+
+params.WindowsOverflowStepCount = 2;
+params.dS = 0.002;
+params.Slim_l = 1.75;
+params.Slim_r = 2.25;
+
 % init
 clf;
 
@@ -131,6 +137,8 @@ params.g = [1.3581*1    1.05788*0.9    0.0299    0.4113    1.1269    0.5243    3
 
 % save as default, applying the modifiers
 params0 = getParams(params, params.g, false, true);
+params0.ss
+%
 % % add some more modifiers, optimized for ATP
 % params0.mods = {"K_T1", "K_T3"}; g = [1.4054    0.7373];
 % params0 = getParams(params0, g, false, true);
@@ -157,7 +165,7 @@ tic
 params0.PlotEachSeparately = true;
 params0.PlotFullscreen = false;
 % params0.UseKstiff3 = false;
-params0.dS = 0.01;
+% params0.dS = 0.01;
 params0.ksr0 = params0.ksr0;
 params0.sigma0 = params0.sigma0;
 params0.EvalAtp = [1];
@@ -165,14 +173,18 @@ params0.EvalAtp = [1];
 % params0.kstiff3 = params0.kstiff2;
 params0.UseOverlap = true;
 params0.UseTitinModel = false;
+params0.UsePassive = false;
 
 params0.RunForceVelocity = false;
-params0.RunKtr = true;
-params0.RunSlack = false;
+params0.RunKtr = false;
+params0.RunSlack = true;
 params0.RunStairs = false;
+params0.UseOverlap = false;
+params0.UseSerialStiffness  = false;
+params0.UseKstiff3 = false;
 
 RunBakersExp;
-xlim([-0.05, 0.15])
+% xlim([-0.05, 0.15])
 toc
 E
 % xlim('auto')
