@@ -339,4 +339,4 @@ end
 if SL > 2.01 & t > 0.05
     a = 3;
 end
-outputs = [Force, F_active, F_passive, N_overlap, XB_TOR'];
+outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p3_0, p2_1, p3_1_stroke, p3_1_overstroke];

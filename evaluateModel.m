@@ -281,8 +281,20 @@ end
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
         out.OV(i) = outputs(4);
-        out.XB_TOR(i, :) = outputs(5:end);
+        out.XB_TOR(i, :) = outputs(5:params.ss+4);
         out.XB_TORs(i) = params.dS*sum(outputs(5:end));
+        out.LXBPivot(i) = params.LXBpivot;
+
+        % first moments invalid due to shifting in strain s        
+        % p1_0, p2_0, p3_0, p2_1, p3_1_stroke, p3_1_overstroke
+        out.p1_0(i) = outputs(params.ss+5);
+        out.p2_0(i) = outputs(params.ss+6); 
+        out.p3_0(i) = outputs(params.ss+7); 
+        out.p2_1(i) = outputs(params.ss+8);
+        out.p3_1(i) = outputs(params.ss+9);
+        out.p3_1_os(i) = outputs(params.ss+10);
+        
+
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);
         
         out.LXB = out.SL - out.LSE;
