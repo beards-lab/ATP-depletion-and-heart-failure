@@ -88,9 +88,9 @@ params.UseKstiff3 = true;
 % need a ksttiff1 and kstiff2 parameter retune
 params.F_act_UseP31 = true;
 params.UseP31Shift = true;
-params.kstiff1 = 1000;
-params.kstiff2 = 14000*0.5;
-params.kstiff3 = 1400;
+params.kstiff1 = 1000*0.7;
+params.kstiff2 = 10;
+params.kstiff3 = 140000;
 % params.kstiff2 = 7000;
 % params.kstiff1 = 700000;
 params.ka = 337.3;
@@ -101,7 +101,7 @@ params.k2 = 10000;
 % params.k_2 = 140*1e6; % NA
 params.k3 = 10;
 params.dr = 0.01;
-params.mu = 1e-7;
+params.mu = 1e-4;
 params.TK = 10000;
 params.TK0 = 0.01;
 
@@ -183,6 +183,7 @@ params0.UseSerialStiffness  = true;
 params0.UseSlack = true;
 params0.UseKstiff3 = false;
 params0.F_act_UseP31 = false;
+
 
 RunBakersExp;
 % xlim([-0.05, 0.15])

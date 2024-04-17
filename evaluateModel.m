@@ -6,10 +6,10 @@ function [Force, out] = evaluateModel(fcn, T, params)
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
 
-    params = getParams(params, params.g,false); % update the init vectors
-    PU0 = params.PU0;
-    out = [];
-    ss = params.ss;
+params = getParams(params, params.g,false); % update the init vectors
+PU0 = params.PU0;
+out = [];
+ss = params.ss;
 
     function  [value, isterminal, direction] = movingWindow(t, y, ~)
         SL = y(3*ss + 3);
@@ -26,115 +26,93 @@ function [Force, out] = evaluateModel(fcn, T, params)
             a = 3;
         end
     end
-    
-
-    if params.UseTitinModel
-        addpath(genpath('PassiveTitin'));
-    end
-
-    % vs for VelocitySegment
-    for vs = 1:length(T) - 1
-        ts = T(vs);
-%             et = 0; %elapsed time
-        tend = T(vs+1); % ending time of simulation in the current segment
-
-        params.v = params.Velocity(vs);
-        params.Vums = params.v*params.ML; % velocity in um/s
 
 
-        opts = odeset('Events', @movingWindow);%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
-        
-        % test odess
-%         tic
-%         [t,PU] = ode45(fcn,[ts tend],PU(end,:), opts, params);
-%         save('ode45', 'PU');
-%         disp(['Ode45: ' num2str(length(t))])
-%         toc
-%         tic
-%         [t,PU] = ode23(fcn,[ts tend],PU(end,:), opts, params);
-%         save('ode23', 'PU');
-%         disp(['Ode45: ' num2str(length(t))])
-%         toc
-%         tic        
-%         [t,PU] = ode23s(fcn,[ts tend],PU(end,:), opts, params);
-%         save('ode23s', 'PU');
-%         disp(['Ode45: ' num2str(length(t))])
-%         toc
-%         tic        
-%         [t,PU] = ode23t(fcn,[ts tend],PU(end,:), opts, params);
-%         save('ode23t', 'PU');
-%         disp(['Ode45: ' num2str(length(t))])
-%         toc
-%         tic        
-t = ts;
-% no event for initialization
-te = [];
-while t < tend
-    
-    if ~isempty(te)
-        % we have an event from previous run
-        fprintf('Hovna took %d steps\n', length(t))
-        nds = params.WindowsOverflowStepCount;
-        if ie == 1
-            % move right            
-            PU0(1:ss-nds) = PU0(1+nds:ss);
-            PU0(ss+1:2*ss-nds) = PU0(ss+1+nds:2*ss);
-            PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
-            % zero the new space
-            PU0(ss-nds:ss) = 0; PU0(2*ss-nds:2*ss) = 0;PU0(3*ss-nds:3*ss) = 0;
-            params.LXBpivot = params.LXBpivot - nds*params.dS*2;
-        elseif ie == 2
-            % move left
-            PU0(1+nds:ss) = PU0(1:ss-nds);
-            PU0(ss+1+nds:2*ss) = PU0(ss+1:2*ss-nds);
-            PU0(2*ss +1+nds:3*ss) = PU0(2*ss +1:3*ss-nds);
-            PU0(1:nds) = 0; PU0(ss+1:ss+nds) = 0; PU0(2*ss +1:2*ss+nds) = 0; 
-            
-            % dS is in half-sarcomere space, converting to sarcomere space by 2
-            params.LXBpivot = params.LXBpivot + nds*params.dS*2;            
+if params.UseTitinModel
+    addpath(genpath('PassiveTitin'));
+end
+
+% vs for VelocitySegment
+for vs = 1:length(T) - 1
+    ts = T(vs);
+    %             et = 0; %elapsed time
+    tend = T(vs+1); % ending time of simulation in the current segment
+
+    params.v = params.Velocity(vs);
+    params.Vums = params.v*params.ML; % velocity in um/s
+
+
+    opts = odeset('Events', @movingWindow);%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
+
+    % test odess
+    %         tic
+    %         [t,PU] = ode45(fcn,[ts tend],PU(end,:), opts, params);
+    %         save('ode45', 'PU');
+    %         disp(['Ode45: ' num2str(length(t))])
+    %         toc
+    %         tic
+    %         [t,PU] = ode23(fcn,[ts tend],PU(end,:), opts, params);
+    %         save('ode23', 'PU');
+    %         disp(['Ode45: ' num2str(length(t))])
+    %         toc
+    %         tic
+    %         [t,PU] = ode23s(fcn,[ts tend],PU(end,:), opts, params);
+    %         save('ode23s', 'PU');
+    %         disp(['Ode45: ' num2str(length(t))])
+    %         toc
+    %         tic
+    %         [t,PU] = ode23t(fcn,[ts tend],PU(end,:), opts, params);
+    %         save('ode23t', 'PU');
+    %         disp(['Ode45: ' num2str(length(t))])
+    %         toc
+    %         tic
+    t = ts;
+    % no event for initialization
+    te = [];
+    while t < tend
+
+        if ~isempty(te)
+            % we have an event from previous run
+            fprintf('Hovna took %d steps\n', length(t))
+            nds = params.WindowsOverflowStepCount;
+            if ie == 1
+                % move right
+                PU0(1:ss-nds) = PU0(1+nds:ss);
+                PU0(ss+1:2*ss-nds) = PU0(ss+1+nds:2*ss);
+                PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
+                % zero the new space
+                PU0(ss-nds:ss) = 0; PU0(2*ss-nds:2*ss) = 0;PU0(3*ss-nds:3*ss) = 0;
+                params.LXBpivot = params.LXBpivot - nds*params.dS*2;
+            elseif ie == 2
+                % move left
+                PU0(1+nds:ss) = PU0(1:ss-nds);
+                PU0(ss+1+nds:2*ss) = PU0(ss+1:2*ss-nds);
+                PU0(2*ss +1+nds:3*ss) = PU0(2*ss +1:3*ss-nds);
+                PU0(1:nds) = 0; PU0(ss+1:ss+nds) = 0; PU0(2*ss +1:2*ss+nds) = 0;
+
+                % dS is in half-sarcomere space, converting to sarcomere space by 2
+                params.LXBpivot = params.LXBpivot + nds*params.dS*2;
+            end
+            ts = t(end);
         end
-        ts = t(end);            
-    end
 
-[t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
-PU0 = PU(end,:);
+        [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
+        PU0 = PU(end,:);
 
-    % te contains the times when events occurred
-    % ye contains the solutions at the times when events occurred
-    % ie contains the indices of the triggered events
-%         save('ode15s', 'PU');
-%         disp(['Ode45: ' num2str(length(t))])
-%         toc
-%         tic        
-        
-        if params.RescaleOutputDt
-             %%
-%              params.RescaleOutputDt = 1e-5;
-             i = find(diff(t) > params.RescaleOutputDt);
-             if isempty(i)
-                 i = length(t);
-             end
-%              clf;hold on;plot(t);plot(i, t(i), '*');
-%              plot(diff(i), 'd-');
-%              clf;
-%              plot(out.t(i), out.SL(i), '|')
-%             t_n = t(1):params.RescaleOutputDt:t(end);
-%             if t_n(end) < t(end)
-%                 t_n = [t_n t(end)];
-%             end
-%             PU = interp1(t, PU, t_n);
-%             t = t_n;
-        t = t(i);PU = PU(i, :);
-        end        
+        % te contains the times when events occurred
+        % ye contains the solutions at the times when events occurred
+        % ie contains the indices of the triggered events
+
+
         out = storeOutputs(out, PU, params, t);
-%%
+        %%
         if params.UseTitinModel
             if ~exist('x0', 'var')
-            % for the first run, when it does not exist. Then it shuold be reused
+                % for the first run, when it does not exist. Then it shuold be reused
                 x0 = params.SL0/2 - 0.95;
                 titin.Time = [];titin.Length = [];titin.Force = [];
             end
-                
+
             % identified separately
             mod = [468, 3.83e+04, 2.3, 9, 2.33, 8.36e+06, 4.98, 84.9, 1.73e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 1, 0.175, NaN, NaN, 5.04e+04, 0, ];
             [Time, L_t, F_t, ~, x0] = evaluateTitinModel(mod, x0, [ts tend], {params.Velocity(vs)}, 4.4, []);
@@ -142,80 +120,70 @@ PU0 = PU(end,:);
             titin.Length = [titin.Length;L_t'];
             titin.Force = [titin.Force;F_t'];
         end
-%%
-        if params.ValuesInTime                
-            % reconstruct Force
-%                 out.F =  out.LSE*params.kSE;
-            is = find(out.t >= ts, 1);
-            if max(out.ps0_t(is:end)) > 1e-3
-                warning("Boundary broken at vel " + num2str(params.v) + ...
-                    "( " + num2str(max(out.ps0_t)) + ")" + ...
-                    " Extend the Slim from " + num2str(params.Slim) );
-            end
-        end      
+        %%
     end
-    end % end the velocity segment
-    
-    %% Check for the length crossing IN THE LAST SEGMENT ONLY
-    if params.OutputAtSL < Inf
-        SL = PU(:, 3*params.ss+3);
-        ma = max(SL);
-        mi = min(SL);
-        if ma > params.OutputAtSL && mi < params.OutputAtSL
-            % there is a crossing - check the directio frist
-            if params.OutputAtSL > SL0
-                % growing
-                i = find(SL > opts.OutputAtSL, 1);
-            else
-                % shrinking
-                i = find(SL < opts.OutputAtSL, 1);
-            end
+end % end the velocity segment
+
+%% Check for the length crossing IN THE LAST SEGMENT ONLY
+if params.OutputAtSL < Inf
+    SL = PU(:, 3*params.ss+3);
+    ma = max(SL);
+    mi = min(SL);
+    if ma > params.OutputAtSL && mi < params.OutputAtSL
+        % there is a crossing - check the directio frist
+        if params.OutputAtSL > SL0
+            % growing
+            i = find(SL > opts.OutputAtSL, 1);
         else
-            error(['Sarcomere did not cross required length of ' ...
-                num2str(opts.OutputAtSL) ...
-                ', ranged from ' num2str(mi) ' to ' num2str(ma)])
+            % shrinking
+            i = find(SL < opts.OutputAtSL, 1);
         end
-        % find the exact time
-        v = (SL(i) - SL(i-1))/(t(i)-t(i-1));                s = opts.OutputAtSL - SL(i-1); 
-        tc = s/v + t(i-1); % [t(i-1) tc t(i)]
-%         tc = (SL(i) - (opts.OutputAtSL))./((SL(i) - SL(i-1))/(t(i)-t(i-1))) + t(i-1);
-        PUi = interp1(t, PU, tc);        
-%         SLc = PUi(:, 3*params.ss+3) % control value 
-%         Force = PUi(3*params.ss+4)*params.kSE;
-        % importance of interp
-%         [PU(i - 1, 3*params.ss+4)*params.kSE Force PU(i, 3*params.ss+4)*params.kSE]
     else
-%         Force = PU(end, 3*params.ss+4)*params.kSE;
-        PUi = PU(end, :)';
+        error(['Sarcomere did not cross required length of ' ...
+            num2str(opts.OutputAtSL) ...
+            ', ranged from ' num2str(mi) ' to ' num2str(ma)])
     end
-    
-    % Use the dpudt func to get the actual force (depends on config)
-    [~, outputs] = fcn(0, PUi, params);
-    Force = outputs(1);
-    
-    if params.UseTitinModel && length(titin.Time) > 2
-        FL_i = interp1(titin.Time, [titin.Force,titin.Length], out.t, 'linear', 'extrap');
-        out.TitinPassive = FL_i(:, 1)';
-        out.TitinLength = FL_i(:, 2)';
-        out.Force = out.Force - out.FXBPassive + FL_i(:, 1)';
-    end
+    % find the exact time
+    v = (SL(i) - SL(i-1))/(t(i)-t(i-1));                s = opts.OutputAtSL - SL(i-1);
+    tc = s/v + t(i-1); % [t(i-1) tc t(i)]
+    %         tc = (SL(i) - (opts.OutputAtSL))./((SL(i) - SL(i-1))/(t(i)-t(i-1))) + t(i-1);
+    PUi = interp1(t, PU, tc);
+    %         SLc = PUi(:, 3*params.ss+3) % control value
+    %         Force = PUi(3*params.ss+4)*params.kSE;
+    % importance of interp
+    %         [PU(i - 1, 3*params.ss+4)*params.kSE Force PU(i, 3*params.ss+4)*params.kSE]
+else
+    %         Force = PU(end, 3*params.ss+4)*params.kSE;
+    PUi = PU(end, :)';
+end
 
-    
-    if ~params.PlotProbsOnFig
-        return
-    end
+% Use the dpudt func to get the actual force (depends on config)
+[~, outputs] = fcn(0, PUi, params);
+Force = outputs(1);
+
+if params.UseTitinModel && length(titin.Time) > 2
+    FL_i = interp1(titin.Time, [titin.Force,titin.Length], out.t, 'linear', 'extrap');
+    out.TitinPassive = FL_i(:, 1)';
+    out.TitinLength = FL_i(:, 2)';
+    out.Force = out.Force - out.FXBPassive + FL_i(:, 1)';
+end
+
+
+if ~params.PlotProbsOnFig
+    return
+end
 
 %%
-    figure(opts.PlotProbsOnFig);hold on;
+figure(opts.PlotProbsOnFig);hold on;
 
-    plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
-    ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
-    xlabel('strain, $s$ ($\mu$m)','interpreter','latex','fontsize',16);
-    set(gca,'fontsize',14);
-    set(gca,'xlim',[-Slim 0]);
-    legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
-        
-        
+plot(s,p1,s,p2,s,p3,'x-', 'linewidth',1.5);
+ylabel('Probability density ($\mu$m$^{-1}$)','interpreter','latex','fontsize',16);
+xlabel('strain, $s$ ($\mu$m)','interpreter','latex','fontsize',16);
+set(gca,'fontsize',14);
+set(gca,'xlim',[-Slim 0]);
+legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'location','northwest');
+
+
 end
 
 function out = storeOutputs(out, PU, params, T)
@@ -255,7 +223,7 @@ end
 %         dt = T(j);
         i = length(out.t) + 1;
         out.PU(i, :) = PU(j, :);
-        p1 = PU(j, 1:params.ss); p2 = PU(j, 1*params.ss+1:2*params.ss); p3 = PU(j, 2*params.ss+1:3*params.ss);
+        % p1 = PU(j, 1:params.ss); p2 = PU(j, 1*params.ss+1:2*params.ss); p3 = PU(j, 2*params.ss+1:3*params.ss);
 
         % first moments invalid due to shifting in strain s        
 %         out.p1_0(i) = params.dS*sum(p1); out.p1_1(i) = params.dS*sum(params.s.*p1);
@@ -286,7 +254,7 @@ end
         out.LXBPivot(i) = params.LXBpivot;
 
         % first moments invalid due to shifting in strain s        
-        % p1_0, p2_0, p3_0, p2_1, p3_1_stroke, p3_1_overstroke
+        % p1_0, p2_0, p3_0, p2_1, p3_1_stroke
         out.p1_0(i) = outputs(params.ss+5);
         out.p2_0(i) = outputs(params.ss+6); 
         out.p3_0(i) = outputs(params.ss+7); 

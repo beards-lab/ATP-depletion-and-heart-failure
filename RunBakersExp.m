@@ -271,7 +271,6 @@ if params0.RunSlack
     velocitytable = datastruct.velocitytable(4:end, :);
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
-    params.UseTitinModel = true;
 
     params.SL0 = 2.2;
     params.Slim_l = 1.85;
@@ -285,7 +284,8 @@ if params0.RunSlack
     % reset the PU0
     params = getParams(params, g, true);
 
-    [F out] = evaluateModel(@dPUdTCa, velocitytable(:, 1), params);
+    % [F out] = evaluateModel(@dPUdTCa, velocitytable(:, 1), params);
+    [F out] = evaluateModel(@dPUdTCaSimple, velocitytable(:, 1), params);
 
     i_0 = find(datatable(:, 1) > 2.77, 1);
     nonrepeating = diff(out.t) ~= 0;

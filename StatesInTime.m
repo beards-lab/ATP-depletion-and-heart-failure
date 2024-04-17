@@ -72,22 +72,22 @@ p3 = out.PU(ti, 2*ss+1:3*ss)*dS;
 
 % p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
 % p2_0 = dS*sum(p2); 
-p2_1 = params.dS*sum(s'.*p2);
+% p2_1 = params.dS*sum(s'.*p2);
 % p3_0 = dS*sum(p3); 
 
-if params.UseP31Shift
-    p3_1 = params.dS*sum((s'+params.dr).*p3);
-    % p3_1_stroke = dS*sum((s+params.dr).*p3.*(s+params.dr >= 0));
-    % p3_1_overstroke = dS*sum((s+params.dr).*p3.*(s+params.dr < 0));
-    
-else
-    p3_1 = params.dS*sum(s'.*p3);
-end
+% if params.UseP31Shift
+%     p3_1 = params.dS*sum((s'+params.dr).*p3);
+%     % p3_1_stroke = dS*sum((s+params.dr).*p3.*(s+params.dr >= 0));
+%     % p3_1_overstroke = dS*sum((s+params.dr).*p3.*(s+params.dr < 0));
+% 
+% else
+%     p3_1 = params.dS*sum(s'.*p3);
+% end
 
 m = max([p1, p2, p3]);
 plot(s, p1, '<-b', s, p2, '^-r', s, p3,'>-g', [zer zer], [0 m], '--k');
 text(0 + params.dS/2, m, ...
-    sprintf('p2\\_1: %1.2e\np3\\_1: %1.2e', p2_1, p3_1));
+    sprintf('p2\\_1: %1.2e\np3\\_0: %1.2e\np3\\_1: %1.2e', out.p2_1(ti), out.p3_0(ti), out.p3_1(ti)));
 xlim([s(1), s(end)]);
 if ~isequal(yl, [0, 1])
     ylim(yl);

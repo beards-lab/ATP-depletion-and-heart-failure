@@ -5,12 +5,6 @@ function [f, outputs] = dPUdTCa(t,PU,params)
 %  third 2N-1 entries represent p3(s,t)
 %  third-last entry is U_NR, the fraction of myosin heads in not-relaxed state
 % then second last NP and last SL 
-% persistent xxx;
-% if isempty(xxx)
-%     xxx = 0;
-% end
-% disp(xxx);
-% xxx = xxx + 1;
 
 vel = params.Vums;
 Ca_i = params.Ca;
