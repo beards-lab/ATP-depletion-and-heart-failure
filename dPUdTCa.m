@@ -166,7 +166,9 @@ if params.F_act_UseP31
     F_active = params.kstiff1*p2_1 + params.kstiff2*p3_1_stroke + params.kstiff3*p3_1_overstroke;
 else
     % the dr shift is used here instead of UseP31Shift
-    F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1_stroke); 
+    F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1_stroke);     
+    F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*(p3_1_stroke);     
+
 end
 
 if params.UsePassive
@@ -176,7 +178,9 @@ if params.UsePassive
 else
     F_passive = 0;
 end
-
+if t > 2.77
+    aa = 3;
+end
 F_total = F_active + F_passive;
 
 if params.UseSerialStiffness

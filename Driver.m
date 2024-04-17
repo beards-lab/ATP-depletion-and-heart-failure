@@ -11,8 +11,6 @@ params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "
 % optimized for force-velocity only
 params.g = [1.3581    1.0578    0.0299    0.4113    1.1269    0.5243    3.3260    1.0322    0.0274    1.7252    1.6593    0.0212];
 
-params.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0'};
-
 % g = x2;
 % g = p_OptimGA;
 % g = ones(30, 1);
@@ -81,7 +79,7 @@ params.UseSlack = true;
 params.UseOverlap = true;
 params.UsePassive = true;
 params.UseSerialStiffness = true;
-params.kSE = 5e3;
+params.kSE = 10e3;
 params.UseKstiff3 = true;
 
 % params.alpha1 = 0;
@@ -91,19 +89,19 @@ params.UseKstiff3 = true;
 params.F_act_UseP31 = true;
 params.UseP31Shift = true;
 params.kstiff1 = 1000;
-params.kstiff2 = 14000;
+params.kstiff2 = 14000*0.5;
 params.kstiff3 = 1400;
 % params.kstiff2 = 7000;
 % params.kstiff1 = 700000;
-params.ka = 137.3;
+params.ka = 337.3;
 params.kd = 10.2;
-params.k1 = 160;
+params.k1 = 5060;
 % params.k_1 = 170*1e6; % NA
 params.k2 = 10000;
 % params.k_2 = 140*1e6; % NA
-params.k3 = 100;
+params.k3 = 10;
 params.dr = 0.01;
-params.mu = 1e-6;
+params.mu = 1e-7;
 params.TK = 10000;
 params.TK0 = 0.01;
 
@@ -111,6 +109,7 @@ params.TK0 = 0.01;
 params.alpha1 = 0;
 params.alpha2 = 0;
 params.alpha3 = 300;
+params.alpha3 = 0;
 % zero reverse-flows
 % params.k_1 = 10000;
 % params.k_2 = 0;
@@ -125,9 +124,9 @@ plotTransitions = true;
 params.PlotFullscreen = true;
 
 params.WindowsOverflowStepCount = 2;
-params.dS = 0.002;
-params.Slim_l = 1.75;
-params.Slim_r = 2.25;
+params.dS = 0.004;
+params.Slim_l = 1.8;
+params.Slim_r = 2.2;
 
 % init
 clf;
@@ -171,7 +170,6 @@ params0.sigma0 = params0.sigma0;
 params0.EvalAtp = [1];
 % params0.UseAtpOnUNR = true;
 % params0.kstiff3 = params0.kstiff2;
-params0.UseOverlap = true;
 params0.UseTitinModel = false;
 params0.UsePassive = false;
 
@@ -180,15 +178,21 @@ params0.RunKtr = false;
 params0.RunSlack = true;
 params0.RunStairs = false;
 params0.UseOverlap = false;
-params0.UseSerialStiffness  = false;
+
+params0.UseSerialStiffness  = true;
+params0.UseSlack = true;
 params0.UseKstiff3 = false;
+params0.F_act_UseP31 = false;
 
 RunBakersExp;
 % xlim([-0.05, 0.15])
 toc
 E
 % xlim('auto')
-ylim('auto')
+% ylim('auto')
+%%
+plot(out.t, out.p1_0, out.t, out.p2_0, out.t, out.p3_0, out.t, out.p2_1, out.t, out.p3_1, out.t, 1-out.NR)
+legend('1_0' , '2_0', '3_0', '2_1', '3_1', 'SR')
 
 return
 %%
@@ -221,11 +225,16 @@ xticklabels(params0.mods)
 
 %% OPTIM
 % return
-params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'}; % tune everything
+% params0.mods = {"kstiff1", "kstiff2", "kstiff3", "k1", "k2", "k_2", "k3", "s3", "alpha3", 'ksr0', 'sigma0', 'kmsr'}; % tune everything
 % params0.mods = {"K_T1", "K_T3"};
 % g = ones(size(params0.mods))
 % optimized
-g = [1.4054    0.7373];
+% g = [1.4054    0.7373];
+
+modtbl = readtable("modifierstbl.csv");
+params0.mods = modtbl.Properties.VariableNames;
+params.g = modtbl(1, :).Variables;
+
 
 params0.PlotEachSeparately = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 500);
