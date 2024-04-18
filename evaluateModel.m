@@ -245,7 +245,7 @@ end
         out.NP(i) = PU(j, 3*params.ss+2);
         out.SL(i) = PU(j, 3*params.ss+3);
         out.LSE(i) = PU(j, 3*params.ss+4);
-            
+        out.PuR(i) = PU(j, 3*params.ss+5);
         
         
         % get the XB force from the dpudt directly        
@@ -265,7 +265,8 @@ end
         out.p3_0(i) = outputs(params.ss+7); 
         out.p2_1(i) = outputs(params.ss+8);
         out.p3_1(i) = outputs(params.ss+9);
-        out.Pu(i) = outputs(params.ss + 10);
+        out.PuATP(i) = outputs(params.ss + 10);
+        
         
 
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);

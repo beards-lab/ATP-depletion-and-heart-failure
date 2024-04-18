@@ -283,13 +283,13 @@ if params0.RunSlack
 
     % reset the PU0
     params = getParams(params, g, true);
-
+    velocitytable(1, 1) = 2;
     % [F out] = evaluateModel(@dPUdTCa, velocitytable(:, 1), params);
-    [F out] = evaluateModel(@dPUdTCaSimple, velocitytable(:, 1), params);
+    [F out] = evaluateModel(@dPUdTCaSimpleAlternative, velocitytable(:, 1), params);
 
     i_0 = find(datatable(:, 1) > 2.77, 1);
     i_e = length(datatable(:, 1));
-    i_0 = find(datatable(:, 1) > 2.5, 1); % start a bit earlier
+    i_0 = find(datatable(:, 1) > 2.6, 1); % start a bit earlier
     i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
     nonrepeating = diff(out.t) ~= 0;
     Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(i_0:i_e, 1));
@@ -326,7 +326,7 @@ if params0.RunSlack
         % plot(Tspan,F_active,'linewidth',1.5);
         xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
-        set(gca,'fontsize',14, 'xlim', [2.4 3.1]);  box on;
+        set(gca,'fontsize',14, 'xlim', [2.6 3.05]);  box on;
         title('Slack');
 
         if exist('gp', 'var') && isvalid(gp)

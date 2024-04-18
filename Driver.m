@@ -247,8 +247,45 @@ optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, params0.g, options)
 % g = exp(x);
 g = x;
+%% saving the params
+% writeParamsToFile('params.csv', params)
+figure(222);clf;
+params0 = UpdateValuesFromFile('params.csv', params);
+params0.kah = 100;
+params0.kadh = 10;
+params0.ka = 100;
+params0.kd = 20;
+params0.k1 = 200;
+params0.k_1 = 5;
+params0.k2 = 50;
+params0.k_2 = 0;
+params0.k3 = 1000;
+params0.ksr0 = 9.0853;
+params0.sigma0 = 33.125;
+params0.kmsr = 250;
+params0.kstiff1 = 1e1;
+params0.kstiff2 = 1e4;
+params0.alpha1 = 0;
+params0.alpha2 = 1000;
+params0.alpha3 = 3.2;
+params0.kSE = 10000;
+params0.k_pas = 200;
 
+RunBakersExp;
+plot(out.t, out.XB_TORs)
+nexttile;
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5)
+legend('P1','P2','P3','PuATP','PuR')
 
+xlim([2.6 3.05])
+title(sprintf('XB TOR %g', out.XB_TORs(end)))
+allProbs = sum([out.p1_0; out.p2_0; out.p3_0; out.PuATP; out.PuR]);
+% plot(out.t, allProbs)
+%%
+s = -0.1:0.01:0.1;clf;
+% plot(s, (exp(abs(1000*(s+params.dr).^2.2))))
+plot(s, min(params.alpha2, (exp(abs(params.alpha2*(s+params.dr).^params.alpha3))))); % P2 to P3)
+ylim([1, 10])
 %%
 params0.PlotEachSeparately = true;
 params0.Slim_l = 1.65;
@@ -320,8 +357,8 @@ v = 10; % ML/s = um/s in half-sarcomere
 % tor = ; 
 
 %% read all, write selected only
-function [params, row_names] = UpdateValuesFromFile(filename)
-    ti = readtable(filename, 'ReadRowNames',true, 'ReadVariableNames',true, NumHeaderLines=0);
+function [params, row_names] = UpdateValuesFromFile(filename, params)
+    ti = readtable(filename, 'ReadRowNames',true, 'ReadVariableNames',true, 'CommentStyle', '#',NumHeaderLines=0);
     
     % update from file
     row_names = ti.Properties.RowNames;
@@ -334,9 +371,9 @@ function [params, row_names] = UpdateValuesFromFile(filename)
     params.g = [];
 end
 %% write to file
-function writeParamsToFile(filename, modNames)
-    if isstruct(modNames)
-        modNames = fieldnames(modNames);
+function writeParamsToFile(filename, params, modNames)
+    if nargin < 3
+        modNames = fieldnames(params);
         modNames_exclude = ["PU0", "s"];
     end
     
@@ -354,7 +391,7 @@ function writeParamsToFile(filename, modNames)
     end
     
     to = cell2table(row_vals', 'VariableNames', {'Value'}, 'RowNames',string(row_names));
-    writetable(to, 'filename', 'WriteRowNames', true)
+    writetable(to, filename, 'WriteRowNames', true)
 end
 % to.Properties.VariableNames = {'ParamName', 'value'}
 

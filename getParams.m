@@ -72,7 +72,8 @@ end
         'RunKtr', true, ...
         'RunStairs', true, ...
         'RunSlack', true, ...
-        'WindowsOverflowStepCount', 1 ... % number of dS extensions of the array in case we hit the boundary with the moving window
+        'WindowsOverflowStepCount', 1, ... % number of dS extensions of the array in case we hit the boundary with the moving window
+        'UseSuperRelaxed', false ...
         );
  
     params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
@@ -92,6 +93,8 @@ end
     params0.vmax = 10;
     
     % rate constants
+    params0.kah = 80; % rate of ATP hydrolysis state change
+    params0.kadh = 20; % % rate of ATP de-hydrolysis state change
     params0.ka  = 373.23;
     params0.kd  = 102.94; 
     params0.k1  = 40.116;%
@@ -188,12 +191,13 @@ end
         p1 = zeros(1, params.ss);
         p2 = zeros(1, params.ss);
         p3 = zeros(1, params.ss);
-        U_NR = 0;
+        U_NSR = 1;
         NP = 0;
+        PuATP = 0;
         SL0 = params.SL0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
-        params.PU0 = [p1, p2, p3, U_NR,NP,SL0,LSE];
+        params.PU0 = [p1, p2, p3, U_NSR,NP,SL0,LSE, PuATP];
     end
     
 end
