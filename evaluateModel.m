@@ -95,8 +95,13 @@ for vs = 1:length(T) - 1
             end
             ts = t(end);
         end
-
+        
+        lastwarn('', ''); 
         [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
+        if ~isempty(lastwarn)
+            error('ODEslower is not stable')
+        end
+
         PU0 = PU(end,:);
 
         % te contains the times when events occurred
@@ -104,7 +109,7 @@ for vs = 1:length(T) - 1
         % ie contains the indices of the triggered events
 
 
-        out = storeOutputs(out, PU, params, t);
+        out = storeOutputs(fcn,out, PU, params, t);
         %%
         if params.UseTitinModel
             if ~exist('x0', 'var')
@@ -186,7 +191,7 @@ legend('$p_1(s)$','$p_2(s)$','$p_3(s)$','interpreter','latex','fontsize',16,'loc
 
 end
 
-function out = storeOutputs(out, PU, params, T)
+function out = storeOutputs(fcn, out, PU, params, T)
     if isempty(out)
         out = struct('F', [], ...
             't', [] , ...
@@ -244,7 +249,7 @@ end
         
         
         % get the XB force from the dpudt directly        
-        [~, outputs] = dPUdTCa(0, PU(j, :)', params); 
+        [~, outputs] = fcn(0, PU(j, :)', params); 
         out.Force(i) = outputs(1);
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
@@ -260,7 +265,7 @@ end
         out.p3_0(i) = outputs(params.ss+7); 
         out.p2_1(i) = outputs(params.ss+8);
         out.p3_1(i) = outputs(params.ss+9);
-        out.p3_1_os(i) = outputs(params.ss+10);
+        out.Pu(i) = outputs(params.ss + 10);
         
 
 %         params.kstiff2*out.p3_0(i) - max(-params.kstiff1*(out.p2_1(i) + out.p3_1(i)), 0);

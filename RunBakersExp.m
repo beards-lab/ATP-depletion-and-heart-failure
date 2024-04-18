@@ -276,7 +276,7 @@ if params0.RunSlack
     params.Slim_l = 1.85;
     % params.Slim_r = 2.2;
     % params.LXBpivot = 2.2;
-    params.dS = 0.0025;
+    % params.dS = 0.0025;
     if isfield(params, 'PU0')
         params = rmfield(params, 'PU0');
     end
@@ -288,9 +288,12 @@ if params0.RunSlack
     [F out] = evaluateModel(@dPUdTCaSimple, velocitytable(:, 1), params);
 
     i_0 = find(datatable(:, 1) > 2.77, 1);
+    i_e = length(datatable(:, 1));
+    i_0 = find(datatable(:, 1) > 2.5, 1); % start a bit earlier
+    i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
     nonrepeating = diff(out.t) ~= 0;
-    Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(i_0:end, 1));
-    e = (datatable(i_0:end, 3) - Fi).^2;
+    Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(i_0:i_e, 1));
+    e = (datatable(i_0:i_e, 3) - Fi).^2;
     % e(isnan(e)) = 10;
     E(4) = mean(e(~isnan(e)))*20;
 

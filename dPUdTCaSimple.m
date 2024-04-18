@@ -132,15 +132,16 @@ g2 = (MgATP/params.K_T1)/(MgADP/params.K_D + MgATP/params.K_T1);
 f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
 
 PU2p1 = params.ka*Pu*U_NSR; % to loosely attachemnt state
-PU2p1_r = params.kd*p1 + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
-p12p2 = params.k1*(exp(-params.alpha1*s).*p1); % P1 to P2
+PU2p1_r = params.kd*p1.*(exp(abs(-params.alpha1*s))) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+p12p2 = params.k1*p1; % P1 to P2
 p12p2_r = f1*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
 p22p3 = f2*params.k2*(exp(-params.alpha2*s).*p2); % P2 to P3
 p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 
 % if params.UseTORNegShift
     % creates instable oscillations without suppressing the force enough.
-    XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
+    % XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
+    XB_TOR = g2*params.k3*(exp(abs(params.alpha3*(s))).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
 
 % if ~params.UseAtpOnUNR
     dU_NR = params.ksr0*(exp(F_active/params.sigma0))*U_SR - params.kmsr*U_NSR*Pu;
@@ -159,4 +160,8 @@ dp3   = + p22p3 - p22p3_r - XB_TOR; % post-ratcheted: ADP bound, still attached
     dNP = 0;
 
 f = [dp1; dp2; dp3; dU_NR; dNP; dSL;dLSEdt];
-outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p3_0, p2_1, p3_1];
+outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p3_0, p2_1, p3_1, Pu];
+%% breakpints
+if t > 2.8
+    numberofthebeast = 666;
+end
