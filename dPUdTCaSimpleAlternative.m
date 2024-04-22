@@ -89,6 +89,8 @@ end
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum((s+params.dr).*p2);
 p3_0 = dS*sum(p3); p3_1 = dS*sum((s+params.dr).*p3);
+% p2_1_overstroke = dS*sum((s+params.dr).*p2.*(s>0));
+% p2_1_understroke = dS*sum((s+params.dr).*p2.*(s<0));
 
 % non-hydrolized ATP in non-super relaxed state
 PuATP = max(0, N_overlap*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PuR)); % unattached permissive fraction - 
@@ -100,6 +102,7 @@ PuATP_NSR = PuATP*U_NSR;
     % F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1_stroke);     
     % F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*(p3_1_stroke);     
     F_active = params.kstiff2*(p3_1 + p2_1) + params.kstiff1*(p1_1);     
+    % F_active = params.kstiff2*(p3_1 + p2_1_understroke) + params.kstiff3*(p2_1_overstroke) + params.kstiff1*(p1_1);
 
 
 if params.UsePassive
@@ -135,17 +138,21 @@ MgADP = params.MgADP;
 % % g4 = MgATP/(MgATP + params.K_T3);
 % f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
 
-g1 = 0; g2 = 1; f1 = 0; f2 = 1;
+g1 = 1; g2 = 1; f1 = 1; f2 = 1;
 
 % the cycle goes: PuATP (ATP bound) <-> PuR(ready) <-> P1 <-> P2 -> P3 -> PuATP
-
+strainDep = @(alpha, dr) min(max(1, alpha), exp(alpha*(s+dr)));
 PuATP2PuR = g2*params.kah*PuATP_NSR;
 PuATP2PuR_r = params.kadh*PuR;
 PU2p1 = params.ka*PuR; % to loosely attachemnt state
-PU2p1_r = params.kd*p1.*(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
-p12p2 = params.k1*p1; % P1 to P2
-p12p2_r = f1*params.k_1*(exp(+params.alpha1*s).*p2); % backward flow from p2 to p1
-p22p3 = f2*params.k2*p2.*min(params.alpha2, (exp(abs(params.alpha2*(s+params.dr).^params.alpha3)))); % P2 to P3
+PU2p1_r = params.kd*p1.*strainDep(params.alpha0, params.dr0); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+p12p2 = params.k1*p1.*strainDep(params.alpha1, params.dr1); % P1 to P2
+p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward flow from p2 to p1
+% not stable
+% p22p3 = (1 + abs(params.alpha3*dLSEdt))*f2*params.k2*p2;
+% not enough difference
+p22p3 = f2*params.k2*p2.*strainDep(params.alpha2, params.dr2); % P2 to P3
+% p22p3 = f2*params.k2*p2 + p2.*(s > params.dr | s < -params.dS).*params.alpha2; % P2 to P3
 p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
 
 % if params.UseTORNegShift
@@ -172,8 +179,8 @@ dp3   = + p22p3 - p22p3_r - XB_TOR; % post-ratcheted: ADP bound, still attached
     dNP = 0;
 
 f = [dp1; dp2; dp3; dU_NSR; dNP; dSL;dLSEdt;dPuR];
-outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p3_0, p2_1, p3_1, PuATP];
+outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PuATP];
 %% breakpints
-if t > 2.765
+if t > 2.76
     numberofthebeast = 666;
 end

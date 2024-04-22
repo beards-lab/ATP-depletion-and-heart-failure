@@ -1,9 +1,9 @@
 function [Et E] = evaluateBakersExp(g, params0)
 % Evaluate Bakers' problem
-if any(g<0) 
-    Et = NaN;
-    return;
-end
+% if any(g<0) 
+%     Et = NaN;
+%     return;
+% end
 
 % important to start with the g!!
 params0 = getParams(params0, g, true, true);
@@ -22,12 +22,12 @@ params0 = getParams(params0, g, true, true);
 % % params = getParams
 % params0.PlotEachSeparately = true;
 % 
-
 try
 %     Et = 1;
     LoadData;
     t_ss = [0 1];
     t_sl0 = [0 0.1];
+    lastwarn('', ''); 
     RunBakersExp;
     Et = sum(E);
 catch e

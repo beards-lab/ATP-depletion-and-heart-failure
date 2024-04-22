@@ -13,15 +13,15 @@ hb.Callback = @(hObject, event) rescalePlot(event);
 
 function makeplot(hObject, event,out, params)
 if isempty(hObject) 
-    ti = 1;
-    t = out.t(1);
+    % ti = 1;
+    ti = find(out.t>2.8, 1)
 else
     sval = get(hObject,'Value');
 %     t = sval*(out.t(end) - out.t(1)) + out.t(1);
 %     ti = find(out.t >= t, 1);
     ti = round(sval*(length(out.t)-1)) + 1;
-    t = out.t(ti);
 end
+t = out.t(ti);
 
 % disp(hObject)
 % disp(event)
@@ -87,14 +87,19 @@ p3 = out.PU(ti, 2*ss+1:3*ss)*dS;
 % end
 
 m = max([p1, p2, p3]);
-plot(s, p1, '<-b', s, p2, '^-r', s, p3,'>-g', [zer zer], [0 m], '--k', LineWidth=1.5);
+plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', [zer zer], [0 m], '--k', LineWidth=1.5);
+% plot(s, -1 + min(params.alpha2, (exp(abs(params.alpha2*(s-0.5*params.dr).^params.alpha3)))));
+
 text(0 + params.dS/2, m, ...
-    sprintf('p2\\_1: %1.2e\np3\\_0: %1.2e\np3\\_1: %1.2e', out.p2_1(ti), out.p3_0(ti), out.p3_1(ti)));
+    sprintf('p1\\_1: %1.2e\np2\\_1: %1.2e\np3\\_1: %1.2e', out.p1_1(ti), out.p2_1(ti), out.p3_1(ti)));
 xlim([s(1), s(end)]);
 if ~isequal(yl, [0, 1])
     ylim(yl);
 end
 
+if isempty(hObject)
+    ylim([0 max([p1(:); p2(:); p3(:)])])
+end
 
 end
 

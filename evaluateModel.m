@@ -11,6 +11,8 @@ PU0 = params.PU0;
 out = [];
 ss = params.ss;
 
+ticId = tic;
+
     function  [value, isterminal, direction] = movingWindow(t, y, ~)
         SL = y(3*ss + 3);
         LSE = y(3*ss + 4); % length of the serial stiffness
@@ -22,9 +24,14 @@ ss = params.ss;
         value(2) = ceil(s_p0) - params.ss;
         direction(2) = 1;
         isterminal = [true,true];
-        if any(abs(value)< 1e-3)
-            a = 3;
-        end
+        % if any(abs(value)< 1e-3)
+        %     a = 3;
+        % end
+
+        elapsed = toc(ticId); % counting current time
+        value(3) = elapsed - params.MaxRunTime; %
+        isterminal = 1; % stop
+        direction = 1; % find all direction 0
     end
 
 
@@ -69,11 +76,13 @@ for vs = 1:length(T) - 1
     t = ts;
     % no event for initialization
     te = [];
+    imax = 4;
     while t < tend
 
         if ~isempty(te)
             % we have an event from previous run
             fprintf('Hovna took %d steps\n', length(t))
+            imax = imax - 1;
             nds = params.WindowsOverflowStepCount;
             if ie == 1
                 % move right
@@ -98,7 +107,7 @@ for vs = 1:length(T) - 1
         
         lastwarn('', ''); 
         [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
-        if ~isempty(lastwarn)
+        if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
             error('ODEslower is not stable')
         end
 
@@ -262,10 +271,11 @@ end
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke
         out.p1_0(i) = outputs(params.ss+5);
         out.p2_0(i) = outputs(params.ss+6); 
-        out.p3_0(i) = outputs(params.ss+7); 
-        out.p2_1(i) = outputs(params.ss+8);
-        out.p3_1(i) = outputs(params.ss+9);
-        out.PuATP(i) = outputs(params.ss + 10);
+        out.p3_0(i) = outputs(params.ss+7);
+        out.p1_1(i) = outputs(params.ss+8);
+        out.p2_1(i) = outputs(params.ss+9);
+        out.p3_1(i) = outputs(params.ss+10);
+        out.PuATP(i) = outputs(params.ss + 11);
         
         
 

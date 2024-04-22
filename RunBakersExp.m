@@ -1,4 +1,5 @@
 E = [];
+modelFcn = @dPUdTCaSimpleAlternative;
 %% FORCE VELOCITY
 
 if params0.RunForceVelocity
@@ -17,7 +18,7 @@ if params0.RunForceVelocity
             if vel(j) == 0
                 params.SL0 = 2.0;
                 params.Velocity = 0;
-                [F_active(a, j) out] = evaluateModel(@dPUdTCa, t_ss, params);
+                [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
             else
                 params.SL0 = 2.2;
                 % true to start from 2.2um steady state isntead from scratch.
@@ -25,11 +26,11 @@ if params0.RunForceVelocity
                 if false & ~isfield(params, 'PU0')
                     % speed things up by storing the initialization
                     params.Velocity = 0;
-                    [~, out] = evaluateModel(@dPUdTCa, t_ss, params);
+                    [~, out] = evaluateModel(modelFcn, t_ss, params);
                     params.PU0 = out.PU(end, :);
                 end
                 params.Velocity = vel(j);
-                [F_active(a, j) out] = evaluateModel(@dPUdTCa, t_sl0/abs(vel(j)), params);
+                [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);
                 if abs(vel(j)) >= 3
                     breakpointIsHappening = 1; % only to place a bp
                 end
@@ -137,7 +138,7 @@ if params0.RunKtr
     % putting the numbers as a difference
     times = cumsum([0 , 1.0004,0.2/v,0.01005 - 0.2/v,0.25/v, 0.0045 - 0.25/v, 0.05/v, 1]);
     params.Velocity = diff(pos_ML)./diff(times);
-    [t, out] = evaluateModel(@dPUdTCa, times - times(end-1) + 1, params);
+    [t, out] = evaluateModel(modelFcn, times - times(end-1) + 1, params);
     out.t = out.t - 1;
 
     % calculate ktr
@@ -218,7 +219,7 @@ if params0.RunStairs
     % update params with new N and Slims
     params = getParams(params, g, true);
 
-    [F out] = evaluateModel(@dPUdTCa, velocitytable(:, 1), params);
+    [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
     Fi = interp1(out.t, out.Force, datatable(:, 1));
     e = (datatable(:, 3) - Fi).^2;
@@ -284,12 +285,12 @@ if params0.RunSlack
     % reset the PU0
     params = getParams(params, g, true);
     velocitytable(1, 1) = 2;
-    % [F out] = evaluateModel(@dPUdTCa, velocitytable(:, 1), params);
-    [F out] = evaluateModel(@dPUdTCaSimpleAlternative, velocitytable(:, 1), params);
+    % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+    [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
     i_0 = find(datatable(:, 1) > 2.77, 1);
     i_e = length(datatable(:, 1));
-    i_0 = find(datatable(:, 1) > 2.6, 1); % start a bit earlier
+    i_0 = find(datatable(:, 1) > 2.762, 1); % start a bit earlier
     i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
     nonrepeating = diff(out.t) ~= 0;
     Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(i_0:i_e, 1));

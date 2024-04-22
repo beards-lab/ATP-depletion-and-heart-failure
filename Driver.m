@@ -237,7 +237,7 @@ params0.g = g;
 % modtbl = readtable("modifierstbl.csv");
 % params0.mods = modtbl.Properties.VariableNames;
 % params.g = modtbl(1, :).Variables;
-
+%%
 
 params0.PlotEachSeparately = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
@@ -247,40 +247,72 @@ optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, params0.g, options)
 % g = exp(x);
 g = x;
+%% Fminsearch optim results - not able to hit the fast down and slow up
+clf
+params0.PlotEachSeparately = true;
+params0.mods = {'kah', 'kadh', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff2', 'alpha2', 'alpha3', 'kSE'};
+params0.g = g;
+RunBakersExp;
+plot(datatable(i_0:i_e, 1), e)
+%%
+params0.RunForceVelocity = false;
+params0.RunSlack = true;
 %% saving the params
 % writeParamsToFile('params.csv', params)
 figure(222);clf;
-params0 = UpdateValuesFromFile('params.csv', params);
+% params0 = UpdateValuesFromFile('params.csv', params);
+params0.g = [];
+params0.mods = [];
 params0.kah = 100;
 params0.kadh = 10;
-params0.ka = 100;
-params0.kd = 20;
-params0.k1 = 200;
-params0.k_1 = 5;
-params0.k2 = 50;
-params0.k_2 = 0;
-params0.k3 = 1000;
+params0.ka = 500;
+params0.kd = 100;
+params0.k1 = 1000;
+params0.k_1 = 10;
+params0.k2 = 200;
+params0.k_2 = 1;
+params0.k3 = 10000;
 params0.ksr0 = 9.0853;
 params0.sigma0 = 33.125;
 params0.kmsr = 250;
 params0.kstiff1 = 1e1;
 params0.kstiff2 = 1e4;
-params0.alpha1 = 0;
-params0.alpha2 = 1000;
-params0.alpha3 = 3.2;
+% params0.kstiff3 = 1e2;
+params0.alpha0 = 1;
+params0.dr0 = 0.001;
+params0.alpha1 = 1;
+params0.dr1 = 0.001;
+params0.alpha_1 = 1;
+params0.dr_1 = 0.001;
+params0.alpha2 = 1;
+params0.dr2 = 0.01;
+params0.alpha3 = 1;
+% params0.dr3 = 0.01;
 params0.kSE = 10000;
 params0.k_pas = 200;
+params0.dr = 0.01;
+params0.UsePassive = true;
+params0.UseOverlap = false;
 
+
+params0.PlotEachSeparately = true;
 RunBakersExp;
-plot(out.t, out.XB_TORs)
+hold on;plot(out.t, out.XB_TORs)
 nexttile;
-plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5)
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5, LineStyle='-')
 legend('P1','P2','P3','PuATP','PuR')
 
 xlim([2.6 3.05])
 title(sprintf('XB TOR %g', out.XB_TORs(end)))
-allProbs = sum([out.p1_0; out.p2_0; out.p3_0; out.PuATP; out.PuR]);
+% allProbs = sum([out.p1_0; out.p2_0; out.p3_0; out.PuATP; out.PuR]);
 % plot(out.t, allProbs)
+% StatesInTime;
+%%
+s = -0.05:params.dS:0.05;
+plot(s, -1 + min(params.alpha2, (exp(abs(params.alpha2*(s-0.5*params.dr).^params.alpha3)))));
+%%
+v = diff(out.LXB);
+plot(out.t(1:end-1), v)
 %%
 s = -0.1:0.01:0.1;clf;
 % plot(s, (exp(abs(1000*(s+params.dr).^2.2))))
@@ -296,16 +328,24 @@ optimfun = @(g)evaluateBakersExp(exp(g), params0);
 optimfun(g)
 toc
 %% GA optim result - pretty bad
-params0.g = [745.1430  808.6788  500.7677  513.4525  734.6267  244.5222   31.5362    1.4373  347.2581  859.2466];
+% params0.g = [745.1430  808.6788  500.7677  513.4525  734.6267  244.5222   31.5362    1.4373  347.2581  859.2466];
 params0.PlotEachSeparately = true;
-evaluateBakersExp(g, params0)
+tic
+% evaluateBakersExp(g, params0)
+RunBakersExp;
+toc
+%% new try
+params0.mods = {'kah', 'kadh', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff2', 'alpha2', 'alpha3', 'kSE'};
+params0.g = ones(1, length(params0.mods));
 %% Attempt on GA
 % parpool
+params0.mods = {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'alpha0', 'dr0', 'alpha1', 'dr1', 'alpha_1', 'dr_1', 'alpha2', 'dr2', 'alpha3'};
 ga_Opts = optimoptions('ga', ...
+    'PlotFcn','gaplotbestf', ...
     'PopulationSize',16*4, ...            % 250
-    'Display','iter', ...
-    'MaxStallGenerations',4, ...  % 10
-    'UseParallel',true);
+    'MaxStallGenerations',10, ...  % 10
+    'UseParallel',true, 'Display', 'iter' ...
+    );
 
 
 % params0.mods = {"kstiff1", "kstiff2", "k1", "k2", "k_2", "k3", "s3", "alpha3", "sigma0", "ksr0"};
@@ -322,14 +362,21 @@ params0.PlotEachSeparately = false;
 optimfun = @(g)evaluateBakersExp(g, params0);
 
 % default bounds struct - based on the mods
-upp = 1e3; lwr = 1e-3;
+upp = 1e4; lwr = 0;
 p_lb = params0; for i = 1:length(params0.mods), p_lb.(params0.mods{i}) = params0.(params0.mods{i})*lwr; end
 p_ub = params0; for i = 1:length(params0.mods), p_ub.(params0.mods{i}) = params0.(params0.mods{i})*upp; end
 
 % specific bounds - this is universal and non-blocking. 
 % Might not be used, if not within 'mods' - this is the whole reason to make all this mess
-p_lb.dr = 0.005; p_ub.dr = 0.015;
-p_lb.s3 = 0.005; p_ub.s3 = 0.015;
+p_lb.alpha0 = -1e3;
+p_lb.dr0 = -10;
+p_lb.alpha1 = -1e3;
+p_lb.dr1 = -10;
+p_lb.alpha_1 = -1e3;
+p_lb.dr_1 = -10;
+p_lb.alpha2 = -1e3;
+p_lb.dr2 = -10;
+p_lb.alpha3 = -1e3;
 
 % convert back to vector of ratios
 for i = 1:length(params0.mods)
@@ -341,13 +388,58 @@ end
     ga(optimfun,Ng, ...
     [],[],[],[],lb,ub,[],ga_Opts);
 
-save env;
+save env2;
 
 optimfun(p_OptimGA)
 
 x2 = fminsearch(optimfun, p_OptimGA, options)
-save x2
+save x3
 optimfun(x2)
+
+%%
+% params0.mods = {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'alpha0', 'dr0', 'alpha1', 'dr1', 'alpha_1', 'dr_1', 'alpha2', 'dr2', 'alpha3'};
+% params0.g = x2;
+% params0 = getParams(params0, params0.g, true, true);
+params0.PlotEachSeparately = true;
+figure(123); clf;
+RunBakersExp;
+nexttile;
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5, LineStyle='-')
+legend('P1','P2','P3','PuATP','PuR')
+
+%% ga params outcome
+% writeParamsToFile('gaOutparams.csv', params0, {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'alpha0', 'dr0', 'alpha1', 'dr1', 'alpha_1', 'dr_1', 'alpha2', 'dr2', 'alpha3'})
+params0.kah = 215.70;
+params0.ka = 138083.63;
+params0.kd = -36144.22;
+params0.k1 = 576357.92;
+params0.k_1 = 83864.91;
+params0.k2 = 5641.24;
+params0.kstiff1 = -1003339;
+params0.kstiff2 = 107586;
+params0.alpha0 = NaN
+params0.dr0 = -2.21;
+params0.alpha1 = 0;
+params0.dr1 = 0.04;
+params0.alpha_1 = 0;
+params0.dr_1 = -0.17;
+params0.alpha2 = -0;
+params0.dr2 = 13.43;
+params0.alpha3 = -24.44;
+figure(423); clf;
+RunBakersExp;
+hold on;plot(out.t, out.XB_TORs)
+nexttile;
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5, LineStyle='-')
+legend('P1','P2','P3','PuATP','PuR')
+
+xlim([2.6 3.05])
+title(sprintf('XB TOR %g', out.XB_TORs(end)))
+% allProbs = sum([out.p1_0; out.p2_0; out.p3_0; out.PuATP; out.PuR]);
+% plot(out.t, allProbs)
+StatesInTime;
+
+
 
 %% Calculation of max speed
 dr = params.dr; % um
@@ -372,9 +464,9 @@ function [params, row_names] = UpdateValuesFromFile(filename, params)
 end
 %% write to file
 function writeParamsToFile(filename, params, modNames)
+    modNames_exclude = [];
     if nargin < 3
         modNames = fieldnames(params);
-        modNames_exclude = ["PU0", "s"];
     end
     
     row_vals = {};
