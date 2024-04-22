@@ -162,7 +162,12 @@ p22p3_r = g1*params.k_2*p3; % reverse flow from p3 to p2
     XB_TOR = g2*params.k3*p3 + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
 
 % if ~params.UseAtpOnUNR
-    dU_NSR = params.ksr0*(exp(F_active/params.sigma0))*U_SR - params.kmsr*U_NSR*PuATP;
+    % dU_NSR = params.ksr0*(exp(F_total/params.sigma0))*U_SR - params.kmsr*U_NSR*PuATP;
+    % dU_NSR = params.ksr0*(F_total/params.sigma0)*U_SR - params.kmsr*U_NSR*PuATP;
+    % dU_NSR = 10*(F_total/(F_total + 5))*U_SR - 100*U_NSR*PuATP;
+    % dU_NSR = params.ksr0*(F_total/(F_total + params.sigma0))*U_SR - 100*U_NSR*PuATP*(exp(-F_total/params.sigma2));
+    % dU_NSR = params.ksr0*(exp(F_total/params.sigma1))*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
+    dU_NSR = params.ksr0*(F_total/params.sigma1)*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
 
 %% governing flows
 % state 0: unattached, ATP-cocked
@@ -181,6 +186,6 @@ dp3   = + p22p3 - p22p3_r - XB_TOR; % post-ratcheted: ADP bound, still attached
 f = [dp1; dp2; dp3; dU_NSR; dNP; dSL;dLSEdt;dPuR];
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PuATP];
 %% breakpints
-if t > 2.76
+if t > 2.78
     numberofthebeast = 666;
 end

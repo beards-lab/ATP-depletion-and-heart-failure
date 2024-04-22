@@ -319,13 +319,38 @@ s = -0.1:0.01:0.1;clf;
 plot(s, min(params.alpha2, (exp(abs(params.alpha2*(s+params.dr).^params.alpha3))))); % P2 to P3)
 ylim([1, 10])
 %%
+clf
 params0.PlotEachSeparately = true;
-params0.Slim_l = 1.65;
-params0.Slim_r = 2.205;
-params0.dS = 0.005;
+% params0.PlotEachSeparately = false;
+% params0.Slim_l = 1.65;
+% params0.Slim_r = 2.205;
+% params0.dS = 0.005;
 tic
-optimfun = @(g)evaluateBakersExp(exp(g), params0);
+params0.mods
+params0.g = g;
+params0.sigma1 = 1;params0.sigma2 = 5;
+params0 = getParams(params0, g, true, true);
+params0.kstiff2 = 2e4;
+params0.kmsr = 10;
+params0.ksr0 = .1;
+params0.sigma1 = .10;
+params0.sigma2 = .10;
+
+%%
+clf;
+params0.UsePassive = true;
+params0.UseOverlap = true;
+optimfun = @(g)evaluateBakersExp(g, params0);
 optimfun(g)
+%%
+params0.mods = {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'kmsr', 'ksr0', 'sigma1', 'sigma2'};
+g = [1.0738    1.1928    0.2583    5.6815    0.0204 4.8439    0.0053    2.2683   11.6171    0.0019 0.0015    0.1134];
+params0.PlotEachSeparately = false;
+optimfun = @(g)evaluateBakersExp(g, params0);
+i = ones(1, length(params0.mods));
+i = g;
+g = fminsearch(optimfun, i, options)
+% g = fminsearch(optimfun, ones(1, length(params0.mods)), options)
 toc
 %% GA optim result - pretty bad
 % params0.g = [745.1430  808.6788  500.7677  513.4525  734.6267  244.5222   31.5362    1.4373  347.2581  859.2466];
@@ -439,8 +464,52 @@ title(sprintf('XB TOR %g', out.XB_TORs(end)))
 % plot(out.t, allProbs)
 StatesInTime;
 
+%% Yet aqnother GA result
+params0.mods = {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'alpha0', 'dr0', 'alpha1', 'dr1', 'alpha_1', 'dr_1', 'alpha2', 'dr2', 'alpha3'};
+params0.g = x2
+% params0.kah = 215.70;
+% params0.ka = 138083.63;
+% params0.kd = -36144.22;
+% params0.k1 = 576357.92;
+% params0.k_1 = 83864.91;
+% params0.k2 = 564.24;
+% params0.kstiff1 = -1003339.70;
+% params0.kstiff2 = 107586.33;
+% params0.alpha0 = NaN
+% params0.dr0 = -2.21;
+% params0.alpha1 = 0
+% params0.dr1 = 0.04;
+% params0.alpha_1 = 0
+% params0.dr_1 = -0.17;
+% params0.alpha2 = -0
+% params0.dr2 = 13.43;
+% params0.alpha3 = -24.44;
 
 
+params0.alpha1 = 0;
+params0.alpha_1 = 0;
+params0.alpha2 = 0;
+params0.alpha0 = 0;
+
+params0.UseOverlap = false;
+params0.UseSuperRelaxed = true;
+params0.PlotEachSeparately = true;
+params0.UsePassive = true;
+params0.kmsr = 1000;
+params0.ksr0 = 1000; 
+params0.sigma0 = 10;
+figure(123); clf;
+RunBakersExp;
+hold on;plot(out.t, out.XB_TORs)
+nexttile;
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
+legend('P1','P2','P3','PuATP','PuR', 'SR')
+
+xlim([2.6 3.05]) 
+title(sprintf('XB TOR %g', out.XB_TORs(end)))
+% allProbs = sum([out.p1_0; out.p2_0; out.p3_0; out.PuATP; out.PuR]);
+% plot(out.t, allProbs)
+StatesInTime;
 %% Calculation of max speed
 dr = params.dr; % um
 v = 10; % ML/s = um/s in half-sarcomere

@@ -257,6 +257,7 @@ if params0.RunStairs
         set(gca,'fontsize',14, 'xlim', [-0.05 0.35]);  box on;
         title('Ramp-up');
 
+
         if exist('gp', 'var') && isvalid(gp)
             legend(['Ghost ' params.ghostLoad],'F data', 'F sim','SL data*', 'SL sim*', 'Location', 'Best');
         else
@@ -329,12 +330,18 @@ if params0.RunSlack
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
         set(gca,'fontsize',14, 'xlim', [2.6 3.05]);  box on;
         title('Slack');
+        plot(out.t, out.XB_TORs)
+
 
         if exist('gp', 'var') && isvalid(gp)
             legend(['Ghost ' params.ghostLoad],'F data', 'F sim','SL data*', 'SL sim*', 'Location', 'southwest');
         else
             legend('F data', 'F sim','SL data*', 'SL sim*', 'Location', 'southwest');
         end
+                nexttile;
+        plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
+        legend('P1','P2','P3','PuATP','PuR', 'SR')
+
     end
     %% SAVE FIG
     if params.PlotEachSeparately
