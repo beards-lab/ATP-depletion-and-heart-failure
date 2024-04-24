@@ -295,9 +295,14 @@ if params0.RunSlack
     % i_0 = find(datatable(:, 1) > 2.762, 1); % start a bit earlier
     % i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
     % i_e = length(datatable(:, 1));
-    validZone = datatable(:, 1) > 2.762 & datatable(:, 1) < 2.92 | datatable(:, 1) > 2.94;
+    validZone = datatable(:, 1) > velocitytable(2, 1) - 0.1 & datatable(:, 1) < velocitytable(2, 1) ... % pre-slack steady state
+        | datatable(:, 1) > velocitytable(3, 1) + 0.002 & datatable(:, 1) < velocitytable(4, 1) + 0.01 ... Redevelopment zone
+        | datatable(:, 1) > velocitytable(5, 1) + 0.01; % after the titin transient
     nonrepeating = diff(out.t) ~= 0;
     Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(validZone, 1));
+    % plot(datatable(validZone, 1), datatable(validZone, 3));hold on;
+    % plot(datatable(validZone, 1), Fi, '|');
+
     e = (datatable(validZone, 3) - Fi).^2;
     % e(isnan(e)) = 10;
     E(4) = mean(e(~isnan(e)))*20;
@@ -343,10 +348,10 @@ if params0.RunSlack
         end
         nexttile;
         if params.NumberOfStates == 2
-            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
+            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, LineWidth=1.5, LineStyle='-')
             legend('P1','P2','PuATP','PuR', 'SR')
         elseif params.NumberOfStates == 3
-            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
+            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
             legend('P1','P2','P3','PuATP','PuR', 'SR')
         end
 

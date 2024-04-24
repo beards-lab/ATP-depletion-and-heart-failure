@@ -557,27 +557,32 @@ StatesInTime;
 % clear;
 figure(12);clf; 
 params0 = getParams();
-ModelOptParamsWithOVRestretch   
+% ModelOptParamsIter;   
+ModelParams;
+params0.PlotEachSeparately = true;
+% params0.k2rip = 10;
+% params0.alphaRip = 350;
 % params0.alpha1 = 0;
 % params0.k1 = 1000;
 % params0.k2 = 400;
-params0.ka = 500;
-params0.kd = 170;
-params0.k2 = 600;
-params0.gamma = 3;
-params0.k_pas = 150; 
-% params0.k1 = 100;
-params0.kstiff2 = 2.5e4;
+% params0.ka = 500;
+% params0.kd = 170;
+% params0.k2 = 600;
+% params0.gamma = 3;
+% params0.k_pas = 150; 
+% % params0.k1 = 100;
+% params0.kstiff2 = 2.5e4;
 % params0.mu
 RunBakersExp;
-
+sum(E)
 %%
 % params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'kstiff1', 'alpha0', 'alpha1', 'alpha2'};
-params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'};
+% params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'};
+params0.mods = {'k_pas', 'gamma', 'k2rip', 'alphaRip'};
 % params0.mods = {'k_pas', 'gamma'}
 g = ones(size(params0.mods));
 % g = [g 1 ]
-% g = [1 1]
+% g = [1 1 ]
 params0.PlotEachSeparately = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
@@ -586,6 +591,11 @@ optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, g, options)
 % g = exp(x);
 g = x;
+params0.g = g;
+% params0
+modNames = getAllDifferent(params0);
+writeParamsToMFile('ModelOptParamsIter.m', params0, modNames);
+
 %%
 % saved - kstaiff 1 too high probabbly
 % g = [1.9596   10.7916    2.2194    0.0054   53.6739    4.3534 1.8505    0.9159    0.8805    1.3413 1]
@@ -594,10 +604,12 @@ g = x;
 % params0.alpha1 = 100;
 
 % saved second
-g = [2.3287    8.3546    1.1710    0.0044   42.2934    5.3700    4.6793    0.2255    0.5723    1.2634    1.3288    1.2316];
-mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'}
+% g = [2.3287    8.3546    1.1710    0.0044   42.2934    5.3700    4.6793    0.2255    0.5723    1.2634    1.3288    1.2316];
+% mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'}
 
 params0.UseOverlap = true;
+% params.k2rip = 0;
+% params.alphaRip = 0;
 % params0.kstiff1 = 1000.0;
 % params0.dr2 = 0.005;
 % g(7) = 5; 
@@ -606,10 +618,10 @@ clf;
 % params0.mods = {};
 % g = [];
 params0.mu  = 0.001;
-params0.k2 = 200;
-params0.kstiff1 = 100;
-params0.kstiff2 = 18000;
-params0.alpha1 = 50;
+% params0.k2 = 200;
+% params0.kstiff1 = 100;
+% params0.kstiff2 = 18000;
+% params0.alpha1 = 50;
 params0.PlotEachSeparately = true;
 tic
 optimfun = @(g)evaluateBakersExp(g, params0);
@@ -624,7 +636,7 @@ toc
 % tor = ; 
 params0.g = g;
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelOptParamsSRFixed.m', params0, modNames);
+writeParamsToMFile('ModelParams.m', params0, modNames);
 %% list params different from the base
 function [UpdatedModNames] = getAllDifferent(params)
     if isfield(params, 'g')
@@ -704,10 +716,10 @@ function writeParamsToMFile(filename, params, modNames)
     params = getParams(params, params.g, false, true);
     for i_row = 1:length(modNames)
         if length(params.(modNames{i_row})) > 1
-            fprintf("Skipping %s\n", modNames{i_row});
+            fprintf("Skipping %s\r\n", modNames{i_row});
             continue;
         end
-        fprintf(fid, 'params0.%s = %g;\n', modNames{i_row}, params.(modNames{i_row}));
+        fprintf(fid, 'params0.%s = %g;\r\n', modNames{i_row}, params.(modNames{i_row}));
     end
 
     fclose(fid);
