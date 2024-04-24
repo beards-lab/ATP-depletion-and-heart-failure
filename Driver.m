@@ -182,6 +182,13 @@ params0.UseSlack = true;
 params0.UseKstiff3 = false;
 params0.F_act_UseP31 = false;
 
+params0.alpha0 = 0;
+params0.alpha_1 = 0;
+params0.dr0 = 0;
+params0.dr1 = 0;
+params0.dr_1 = 0;
+params0.sigma1 = 0;
+params0.sigma2 = 0;
 
 RunBakersExp;
 % plot(out.t, out.XB_TORs, 'g--')
@@ -340,6 +347,8 @@ params0.sigma2 = .10;
 clf;
 params0.UsePassive = true;
 params0.UseOverlap = true;
+params0.PlotEachSeparately = true;
+g = [1.0738    1.1928    0.2583    5.6815    0.0204 4.8439    0.0053    2.2683   11.6171    10 Inf   Inf];
 optimfun = @(g)evaluateBakersExp(g, params0);
 optimfun(g)
 %%
@@ -510,15 +519,143 @@ title(sprintf('XB TOR %g', out.XB_TORs(end)))
 % allProbs = sum([out.p1_0; out.p2_0; out.p3_0; out.PuATP; out.PuR]);
 % plot(out.t, allProbs)
 StatesInTime;
+%% starting a new
+clear;
+figure(12);clf; 
+params0 = getParams();
+ModelParams;
+params0.kadh = 0;
+params0.kah = 80;
+
+params0.ka = 150;
+params0.kd = 450;
+params0.k1 = 100;
+params0.k2 = 300; 
+params0.kstiff2 = 1e5;
+params0.sigma1 = 100;
+params0.sigma2 = 10;
+params0.UseSuperRelaxed = true;
+params0.UseOverlap = false;
+params0.UsePassive = true;
+params0.alpha0 = -50;
+params0.dr1 = 0.0;
+params0.alpha2 = -50;
+params0.dr2 = -0.01;
+params0.mu = 1e-2;
+params0.kmsr = 100;
+params0.ksr0 = 10;
+
+params0.alpha0 = 30;
+params0.alpha2 = 20;
+ 
+% params0.ksr0
+% params0.kmsr
+RunBakersExp;
+
+StatesInTime;
+%% Starting a new 2
+% clear;
+figure(12);clf; 
+params0 = getParams();
+ModelOptParamsWithOVRestretch   
+% params0.alpha1 = 0;
+% params0.k1 = 1000;
+% params0.k2 = 400;
+params0.ka = 500;
+params0.kd = 170;
+params0.k2 = 600;
+params0.gamma = 3;
+params0.k_pas = 150; 
+% params0.k1 = 100;
+params0.kstiff2 = 2.5e4;
+% params0.mu
+RunBakersExp;
+
+%%
+% params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'kstiff1', 'alpha0', 'alpha1', 'alpha2'};
+params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'};
+% params0.mods = {'k_pas', 'gamma'}
+g = ones(size(params0.mods));
+% g = [g 1 ]
+% g = [1 1]
+params0.PlotEachSeparately = false;
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+% g = [1, 1, 1, 1, 1, 1, 1, 1];
+% g = [1.2539    0.4422];
+optimfun = @(g)evaluateBakersExp(g, params0);
+x = fminsearch(optimfun, g, options)
+% g = exp(x);
+g = x;
+%%
+% saved - kstaiff 1 too high probabbly
+% g = [1.9596   10.7916    2.2194    0.0054   53.6739    4.3534 1.8505    0.9159    0.8805    1.3413 1]
+% params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'kstiff1', 'alpha0', 'alpha1', 'alpha2'};
+% g =x
+% params0.alpha1 = 100;
+
+% saved second
+g = [2.3287    8.3546    1.1710    0.0044   42.2934    5.3700    4.6793    0.2255    0.5723    1.2634    1.3288    1.2316];
+mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'}
+
+params0.UseOverlap = true;
+% params0.kstiff1 = 1000.0;
+% params0.dr2 = 0.005;
+% g(7) = 5; 
+clf;
+% params0.g = [];
+% params0.mods = {};
+% g = [];
+params0.mu  = 0.001;
+params0.k2 = 200;
+params0.kstiff1 = 100;
+params0.kstiff2 = 18000;
+params0.alpha1 = 50;
+params0.PlotEachSeparately = true;
+tic
+optimfun = @(g)evaluateBakersExp(g, params0);
+optimfun(g)
+toc
+
 %% Calculation of max speed
-dr = params.dr; % um
-v = 10; % ML/s = um/s in half-sarcomere
+% dr = params.dr; % um
+% v = 10; % ML/s = um/s in half-sarcomere
 % to produce F we need to have sum < dr, so we need to unbind the rest
 % thus, zero force at sum = dr and all binded are unbinded
 % tor = ; 
+params0.g = g;
+modNames = getAllDifferent(params0);
+writeParamsToMFile('ModelOptParamsSRFixed.m', params0, modNames);
+%% list params different from the base
+function [UpdatedModNames] = getAllDifferent(params)
+    if isfield(params, 'g')
+        % update modNames and gs, if appropriate
+        params = getParams(params, params.g, false, true);
+        params = rmfield(params, 'g');
+    else
+        % we get all the fields that are in the params0
+        params = getParams(params, [], false, false);
+    end
+    modNames = fieldnames(params);
+    % compare to default
+    params0 = getParams();
+    UpdatedModNames = {};
+    for i_mod = 1:length(modNames)
+        if ~isfield(params0, modNames{i_mod}) && ...
+            ~isempty(params.(modNames{i_mod})) || ... Does not exist in the base set and is not empty in the second
+            length(params.(modNames{i_mod})) == 1 && ... OR is it a different single element
+            length(params0.(modNames{i_mod})) == 1 && ...            
+            params.(modNames{i_mod}) ~= params0.(modNames{i_mod})            
+                disp(['Got '  modNames{i_mod}])
+                UpdatedModNames{length(UpdatedModNames)+1} = modNames{i_mod};
+        else
+            % disp(['Drop '  modNames{i_mod}])
+        end
+    end
+end
+
 
 %% read all, write selected only
-function [params, row_names] = UpdateValuesFromFile(filename, params)
+function [params, row_names] = updateValuesFromFile(filename, params)
     ti = readtable(filename, 'ReadRowNames',true, 'ReadVariableNames',true, 'CommentStyle', '#',NumHeaderLines=0);
     
     % update from file
@@ -531,7 +668,7 @@ function [params, row_names] = UpdateValuesFromFile(filename, params)
     params.mods = [];
     params.g = [];
 end
-%% write to file
+%% write to CSV file
 function writeParamsToFile(filename, params, modNames)
     modNames_exclude = [];
     if nargin < 3
@@ -556,3 +693,22 @@ function writeParamsToFile(filename, params, modNames)
 end
 % to.Properties.VariableNames = {'ParamName', 'value'}
 
+%% Write to M file
+function writeParamsToMFile(filename, params, modNames)
+    if nargin < 3
+        modNames = fieldnames(params);
+    end
+    
+    fid = fopen(filename, 'w');
+    fprintf(fid, "%% Generated file to manipulate the simulation parameters directly\n"); 
+    params = getParams(params, params.g, false, true);
+    for i_row = 1:length(modNames)
+        if length(params.(modNames{i_row})) > 1
+            fprintf("Skipping %s\n", modNames{i_row});
+            continue;
+        end
+        fprintf(fid, 'params0.%s = %g;\n', modNames{i_row}, params.(modNames{i_row}));
+    end
+
+    fclose(fid);
+end

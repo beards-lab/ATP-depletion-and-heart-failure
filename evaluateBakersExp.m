@@ -6,7 +6,8 @@ if any(g<0)
 end
 
 % important to start with the g!!
-params0 = getParams(params0, g, true, true);
+% params0 = getParams(params0, g, true, true);
+params0.g = g;
 
 % params0.SL0 = 2.2;
 % % params.Slim = 0.18;

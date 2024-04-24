@@ -6,7 +6,7 @@ function [Force, out] = evaluateModel(fcn, T, params)
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
 
-params = getParams(params, params.g,false); % update the init vectors
+params = getParams(params, params.g,true, true); % update the init vectors
 PU0 = params.PU0;
 out = [];
 ss = params.ss;
@@ -14,8 +14,13 @@ ss = params.ss;
 ticId = tic;
 
     function  [value, isterminal, direction] = movingWindow(t, y, ~)
-        SL = y(3*ss + 3);
-        LSE = y(3*ss + 4); % length of the serial stiffness
+        if params.NumberOfStates == 2
+            SL = y(2*ss + 3);
+            LSE = y(2*ss + 4); % length of the serial stiffness
+        elseif params.NumberOfStates == 3
+            SL = y(3*ss + 3);
+            LSE = y(3*ss + 4); % length of the serial stiffness
+        end            
         s = params.s([1, end]) + (-(SL - LSE) + params.LXBpivot)/2;
         s_p0 = 1 + round(-s(1)/params.dS, 6);
         value(1) = floor(s_p0) - 1;
@@ -88,16 +93,24 @@ for vs = 1:length(T) - 1
                 % move right
                 PU0(1:ss-nds) = PU0(1+nds:ss);
                 PU0(ss+1:2*ss-nds) = PU0(ss+1+nds:2*ss);
-                PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
                 % zero the new space
-                PU0(ss-nds:ss) = 0; PU0(2*ss-nds:2*ss) = 0;PU0(3*ss-nds:3*ss) = 0;
+                PU0(ss-nds:ss) = 0; PU0(2*ss-nds:2*ss) = 0;
+                if params.NumberOfStates > 2
+                    PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
+                    PU0(3*ss-nds:3*ss) = 0;
+                end
+
                 params.LXBpivot = params.LXBpivot - nds*params.dS*2;
             elseif ie == 2
                 % move left
                 PU0(1+nds:ss) = PU0(1:ss-nds);
                 PU0(ss+1+nds:2*ss) = PU0(ss+1:2*ss-nds);
-                PU0(2*ss +1+nds:3*ss) = PU0(2*ss +1:3*ss-nds);
-                PU0(1:nds) = 0; PU0(ss+1:ss+nds) = 0; PU0(2*ss +1:2*ss+nds) = 0;
+                
+                PU0(1:nds) = 0; PU0(ss+1:ss+nds) = 0; 
+                if params.NumberOfStates > 2
+                    PU0(2*ss +1+nds:3*ss) = PU0(2*ss +1:3*ss-nds);
+                    PU0(2*ss +1:2*ss+nds) = 0;
+                end
 
                 % dS is in half-sarcomere space, converting to sarcomere space by 2
                 params.LXBpivot = params.LXBpivot + nds*params.dS*2;
@@ -140,7 +153,7 @@ end % end the velocity segment
 
 %% Check for the length crossing IN THE LAST SEGMENT ONLY
 if params.OutputAtSL < Inf
-    SL = PU(:, 3*params.ss+3);
+    SL = PU(:, params.NumberOfStates*params.ss+3);
     ma = max(SL);
     mi = min(SL);
     if ma > params.OutputAtSL && mi < params.OutputAtSL
@@ -232,7 +245,7 @@ if length(T) > 1
 else
     fp = 1; % do not skip, we have just one datapoint!
 end
-
+nS = params.NumberOfStates; % number of strain-dependent states
     for j = fp:length(T)
 %         dt = T(j);
         i = length(out.t) + 1;
@@ -250,11 +263,12 @@ end
         out.v(i) = params.v;
         out.t(i) = T(j);
 
-        out.NR(i) = PU(j, 3*params.ss+1);
-        out.NP(i) = PU(j, 3*params.ss+2);
-        out.SL(i) = PU(j, 3*params.ss+3);
-        out.LSE(i) = PU(j, 3*params.ss+4);
-        out.PuR(i) = PU(j, 3*params.ss+5);
+        out.SR(i) = PU(j, nS*params.ss+1);
+        out.NR(i) = 1- PU(j, nS*params.ss+1);
+        out.NP(i) = PU(j, nS*params.ss+2);
+        out.SL(i) = PU(j, nS*params.ss+3);
+        out.LSE(i) = PU(j, nS*params.ss+4);
+        out.PuR(i) = PU(j, nS*params.ss+5);
         
         
         % get the XB force from the dpudt directly        
@@ -269,13 +283,21 @@ end
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke
-        out.p1_0(i) = outputs(params.ss+5);
-        out.p2_0(i) = outputs(params.ss+6); 
-        out.p3_0(i) = outputs(params.ss+7);
-        out.p1_1(i) = outputs(params.ss+8);
-        out.p2_1(i) = outputs(params.ss+9);
-        out.p3_1(i) = outputs(params.ss+10);
-        out.PuATP(i) = outputs(params.ss + 11);
+        if nS == 2
+            out.p1_0(i) = outputs(params.ss+5);
+            out.p2_0(i) = outputs(params.ss+6);
+            out.p1_1(i) = outputs(params.ss+7);
+            out.p2_1(i) = outputs(params.ss+8);
+            out.PuATP(i) = outputs(params.ss+9);
+        elseif nS == 3
+            out.p1_0(i) = outputs(params.ss+5);
+            out.p2_0(i) = outputs(params.ss+6);
+            out.p3_0(i) = outputs(params.ss+7);
+            out.p1_1(i) = outputs(params.ss+8);
+            out.p2_1(i) = outputs(params.ss+9);
+            out.p3_1(i) = outputs(params.ss+10);
+            out.PuATP(i) = outputs(params.ss + 11);
+        end
         
         
 

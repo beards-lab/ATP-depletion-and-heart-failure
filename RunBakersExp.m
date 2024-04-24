@@ -1,5 +1,5 @@
 E = [];
-modelFcn = @dPUdTCaSimpleAlternative;
+modelFcn = @dPUdTCaSimpleAlternative2State;
 %% FORCE VELOCITY
 
 if params0.RunForceVelocity
@@ -284,18 +284,21 @@ if params0.RunSlack
     end
 
     % reset the PU0
-    params = getParams(params, g, true);
+    params = getParams(params, params.g, true);
     velocitytable(1, 1) = 2;
+    % velocitytable = velocitytable(1:4, 1);
     % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
-    i_0 = find(datatable(:, 1) > 2.77, 1);
-    i_e = length(datatable(:, 1));
-    i_0 = find(datatable(:, 1) > 2.762, 1); % start a bit earlier
-    i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
+    % i_0 = find(datatable(:, 1) > 2.77, 1);
+    % i_e = length(datatable(:, 1));
+    % i_0 = find(datatable(:, 1) > 2.762, 1); % start a bit earlier
+    % i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
+    % i_e = length(datatable(:, 1));
+    validZone = datatable(:, 1) > 2.762 & datatable(:, 1) < 2.92 | datatable(:, 1) > 2.94;
     nonrepeating = diff(out.t) ~= 0;
-    Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(i_0:i_e, 1));
-    e = (datatable(i_0:i_e, 3) - Fi).^2;
+    Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(validZone, 1));
+    e = (datatable(validZone, 3) - Fi).^2;
     % e(isnan(e)) = 10;
     E(4) = mean(e(~isnan(e)))*20;
 
@@ -330,7 +333,7 @@ if params0.RunSlack
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
         set(gca,'fontsize',14, 'xlim', [2.6 3.05]);  box on;
         title('Slack');
-        plot(out.t, out.XB_TORs)
+        % plot(out.t, out.XB_TORs)
 
 
         if exist('gp', 'var') && isvalid(gp)
@@ -338,9 +341,14 @@ if params0.RunSlack
         else
             legend('F data', 'F sim','SL data*', 'SL sim*', 'Location', 'southwest');
         end
-                nexttile;
-        plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
-        legend('P1','P2','P3','PuATP','PuR', 'SR')
+        nexttile;
+        if params.NumberOfStates == 2
+            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
+            legend('P1','P2','PuATP','PuR', 'SR')
+        elseif params.NumberOfStates == 3
+            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.NR, LineWidth=1.5, LineStyle='-')
+            legend('P1','P2','P3','PuATP','PuR', 'SR')
+        end
 
     end
     %% SAVE FIG

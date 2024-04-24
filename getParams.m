@@ -62,7 +62,7 @@ end
         'UseTORNegShift', false, ... XB TOR uses s - s3 instead of s + s3
         'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
         'UseSpaceDiscretization', false, ...
-        'UseSpaceInterpolation', false, ...
+        'UseSpaceInterpolation', true, ...
         'UseKstiff3', false, ... % uses additional parameter kstiff3 for overstroke stifness (=kstiff2 otherwise)
         'EvalAtp', [1],... % which ATPs should be evaluated from the range [8 4 2] mM - so [1 3] evals 8mM and 2mM and [1] evals 8mM only 
         'SaveBest', true, ... % save g on each iter, if better than previous
@@ -75,7 +75,8 @@ end
         'WindowsOverflowStepCount', 1, ... % number of dS extensions of the array in case we hit the boundary with the moving window
         'UseSuperRelaxed', false, ...
         'UseSpaceExtension', false,...
-        'MaxRunTime', 5 ... % maximal model runtime in seconds before is killed
+        'MaxRunTime', 5, ... % maximal model runtime in seconds before is killed
+        'NumberOfStates', 2 ... % number of strain-dependent states
         );
  
     params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
@@ -190,16 +191,18 @@ end
     
     % Build the initialization
     if ~isfield(params, 'PU0') || updateInit
-        p1 = zeros(1, params.ss);
-        p2 = zeros(1, params.ss);
-        p3 = zeros(1, params.ss);
+        p0 = zeros(1, params.ss);
         U_NSR = 1;
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
-        params.PU0 = [p1, p2, p3, U_NSR,NP,SL0,LSE, PuATP];
+        if params.NumberOfStates == 2
+            params.PU0 = [p0, p0, U_NSR,NP,SL0,LSE, PuATP];
+        elseif params.NumberOfStates == 3
+            params.PU0 = [p0, p0, p0,U_NSR,NP,SL0,LSE, PuATP];
+        end
     end
     
 end

@@ -1,20 +1,29 @@
 % draw interactive plot in time
+t_init = 2.77;
+
 figure(10);clf;
-plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5)
-legend('P1','P2','P3','PuATP','PuR')
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5)
+legend('P1','P2','PuATP','PuR')
 figure(11);
 clf;
-makeplot([], [], out, params);
+% makeplot([], [], out, params);
 h = uicontrol('style','slider','units','pixel','position',[20 20 500 20], 'SliderStep', [1e-3 0.1]);
 hb = uicontrol('style','pushbutton','units','pixel','position',[540 20 120 20], 'String', 'Rescale Y');
+
+% set init value
+ti = find(out.t>t_init, 1);
+h.Value  = (ti - 1)/(length(out.t)-1);
 h.Callback = @(hObject, event) makeplot(hObject, event,out, params);
 hb.Callback = @(hObject, event) rescalePlot(event);
 % addListener(h, 'ContinuousValueChange', @(hObject, event) makeplot(hObject, event,out));
 
+makeplot(h, [], out, params);
+
+
 function makeplot(hObject, event,out, params)
 if isempty(hObject) 
     % ti = 1;
-    ti = find(out.t>2.8, 1)
+    ti = find(out.t>2.8, 1);
 else
     sval = get(hObject,'Value');
 %     t = sval*(out.t(end) - out.t(1)) + out.t(1);
@@ -43,7 +52,7 @@ text(t,0.5, printtext);
 yyaxis right;
 plot(out.t, out.Force, 'b-', 'Linewidth', 2)
 % legend('SL','LXB', 'Pu', 'P1', 'P2', 'P3', 'NR', 'Force','AutoUpdate','off');
-legend('SL','LXB', 'Pu', 'NR', 'Force','AutoUpdate','off');
+legend('SL','LXB', 'Force','AutoUpdate','off');
 
 % plot([simulateTimes;simulateTimes]*1000, repmat([min([fd;out.F']);max([fd;out.F'])], [1 size(simulateTimes, 2)]))
 % yyaxis left;
@@ -69,7 +78,11 @@ zer = 0;
 dS = params.dS;
 p1 = out.PU(ti, 1:ss)*dS;
 p2 = out.PU(ti, ss+1:2*ss)*dS;
-p3 = out.PU(ti, 2*ss+1:3*ss)*dS;
+if params.NumberOfStates == 3
+    p3 = out.PU(ti, 2*ss+1:3*ss)*dS;
+else
+    p3 = nan(size(p2));
+end
 
 
 % p1_0 = dS*sum(p1);% p1_1 = dS*sum(s.*p1);
@@ -91,7 +104,7 @@ plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', 
 % plot(s, -1 + min(params.alpha2, (exp(abs(params.alpha2*(s-0.5*params.dr).^params.alpha3)))));
 
 text(0 + params.dS/2, m, ...
-    sprintf('p1\\_1: %1.2e\np2\\_1: %1.2e\np3\\_1: %1.2e', out.p1_1(ti), out.p2_1(ti), out.p3_1(ti)));
+    sprintf('p1\\_1: %1.2e\np2\\_1: %1.2e', out.p1_1(ti), out.p2_1(ti)));
 xlim([s(1), s(end)]);
 if ~isequal(yl, [0, 1])
     ylim(yl);
