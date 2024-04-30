@@ -112,7 +112,7 @@ if params.UsePassive
     Lsc0    = 1.51;
     gamma = 7.5;
     F_passive = params.k_pas*max(SL - Lsc0, 0)^gamma; 
-else
+else params.UseTitin
     F_passive = 0;
 end
 

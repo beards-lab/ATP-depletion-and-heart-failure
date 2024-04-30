@@ -5,11 +5,11 @@
 % pCa < 10 - load AvgpCa dataset, Ca effect in place
 
 % simtype = 'sin';
-simtype = 'ramp';
+% simtype = 'ramp';
 % simtype = 'rampbeat';
 % simtype = 'ktr';
 % simtype = 'stairs-up'
-% simtype = 'slackset'
+simtype = 'slackset'
 % simtype = 'atpprotocol'
 
 % rampSet = [1]; % 100s
@@ -32,7 +32,7 @@ exportRun = false;
 
 figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stealing the focus
 
-
+plotOptions = struct();
   
   if strcmp(simtype, 'ramp')
       %% normal
@@ -70,7 +70,7 @@ figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stea
           times = [-100, 0;0 Tend_ramp;Tend_ramp Tend_ramp + 10000];
           velocities = {0 V 0};
 
-          plotOptions = struct();
+          
           if drawAllStates
             plotOptions.time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), max(1000, rds(j)*10)];
           end
@@ -246,7 +246,29 @@ figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stea
         vels = {(depLevels(i) - level0)/dt1, 0, (topLevels(i) - depLevels(i))/dt3, 0};
         velocities = [velocities,vels];
       end
-      L0 = 0.05;
+
+    datastruct = load('../data/bakers_slack8mM.mat');
+    velocityTable = datastruct.velocitytable(6:end, :);     
+    velocityTable(1, 1) = 2; % adjusting start
+    velocityTable(end, 1) = 4; % adjusting end
+    velocities = num2cell(velocityTable(:, 2));
+    times = [velocityTable(1:end-1, 1), velocityTable(2:end, 1)];
+
+  ML_0 = 1; % muscle length
+  % The minimal length was 0.95 ML
+  L_ref = 0.95;
+  L0 =  ML_0 - L_ref;
+  L0 = velocityTable(1, 4)/2 - L_ref;
+  j = 4;
+  plotOptions.time_snaps = times(:, 2)';
+  [Time{j}, Length{j}, Force{j}, Force_par{j}] = evaluateTitinModel(mod, L0, times, velocities, pCa, plotOptions);
+  % save the result
+  tit.Time = Time{j};
+  tit.Length = Length{j};
+  tit.Force = Force{j};
+  tit.ForceV = Force{j} - Force_par{j}; % viscous force only
+  save('titin-slack.mat', "tit");
+
   elseif strcmp(simtype, 'atpprotocol')
       %% copypaste all three above
 

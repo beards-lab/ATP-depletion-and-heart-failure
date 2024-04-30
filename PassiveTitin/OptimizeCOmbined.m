@@ -443,7 +443,7 @@ params = params.*convertLref;
 
 tic
 mod(14) = 0.1;
-evalCombined(params(modSel), params, modSel, [11])
+evalCombined(params(modSel), params, modSel, [4.4])
 toc
 % modSel = [1:6 7 8 9 14 20 22]
 

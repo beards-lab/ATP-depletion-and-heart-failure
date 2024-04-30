@@ -110,12 +110,16 @@ PuATP = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PuR + P_SR)); % unattached permissi
 %     F_active = 0;
 % end
 
+F_passive = 0;
 if params.UsePassive
     Lsc0    = 1.51;
     % gamma = 7.5;
-    F_passive = params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
-else
-    F_passive = 0;
+    F_passive = F_passive + params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
+end
+
+if params.UseTitinInterpolation
+    F_passive = F_passive + interp1(params.TitinTable.Time, params.TitinTable.ForceV, ...
+        min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear");
 end
 
 F_total = F_active + F_passive;
@@ -127,9 +131,10 @@ F_total = F_active + F_passive;
     %     % Slack, no force
     %     Force = 0;
     % end
-    Force = max(-0.1, params.kSE*LSE);
+    Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
     velHS = (Force - F_total)/params.mu;
     dLSEdt = vel - velHS;
+    Force = max(0, Force);
 
 %% TRANSITIONS
 
@@ -162,7 +167,7 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
     % XB_TOR = g2*params.k3*(exp(abs(params.alpha3*(s))).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
     XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2))) + p2.*min((s>params.TK0).*s*[params.TK], params.TK);
 
-    XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*s)));
+    XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
 % if ~params.UseAtpOnUNR
     % dU_NSR = params.ksr0*(exp(F_total/params.sigma0))*U_SR - params.kmsr*U_NSR*PuATP;
@@ -174,7 +179,7 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
     % dU_NSR = params.ksr0*(F_total/params.sigma1)*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
     %model 11
     if params.UseSuperRelaxed
-        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PuATP*(exp(-F_total/params.sigma2));
+        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PuATP*min(1e9, (exp(-F_total/params.sigma2)));
     else 
         dU_SR = 0;
     end
@@ -195,7 +200,7 @@ dp2   = + p12p2 - p12p2_r  - XB_TOR - XB_Ripped; % strongly attached, post-ratch
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPuR];
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p1_1, p2_1, PuATP];
 %% breakpints
-if t > 2.92
+if t > 2.7685
     numberofthebeast = 666;
 end
 % disp('oj')

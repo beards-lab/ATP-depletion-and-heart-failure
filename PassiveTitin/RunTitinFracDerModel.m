@@ -8,7 +8,13 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 pars = fminsearch(@evalModel, pars, options)
 %%
 pars = [16.1471    8.0026    0.7662];
-% pars = [2.46, 10.02, 0.5];
+
+% Material Parameters for myocardium
+% pCa 11
+% pars    = [2.46, 10.02, 0.5];
+% pCa 4.4
+% pars    = [16.1471    8.0026    0.7662];
+
 figure(2);
 evalModel(pars)
 

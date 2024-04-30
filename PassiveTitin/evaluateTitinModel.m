@@ -328,7 +328,7 @@ maxPu = 0; maxPa = 0;
         nexttile([1 4]);
         semilogx(Time, Force, 'k-');hold on;
         scatter(Time(i_time_snaps), Force(i_time_snaps), 'ko', 'filled');
-        xlim([1e-3 max(1300, rds(j)*10) + 30]);
+        % xlim([1e-3 max(1300, rds(j)*10) + 30]);
         % nexttile([1 1]);
         % loglog(Time, Force);hold on;
         % scatter(Time(i_time_snaps), Force(i_time_snaps), 'o', 'filled');
@@ -337,5 +337,6 @@ maxPu = 0; maxPa = 0;
         legend('Tension', 'Insets', 'Location','northwest');
         ylabel('$\Theta$ (kPa)', Interpreter='latex')
         fontsize(12, 'points')
-        exportgraphics(f,sprintf('../Figures/States%g_%gs.png', pCa, rds(j)),'Resolution',150)
+        vmax = max([velocities{:}]);
+        % exportgraphics(f,sprintf('../Figures/States%g_%gs.png', pCa, vmax),'Resolution',150)
     end

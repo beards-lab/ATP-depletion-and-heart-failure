@@ -40,8 +40,9 @@ ticId = tic;
     end
 
 
-if params.UseTitinModel
-    addpath(genpath('PassiveTitin'));
+if params.UseTitinInterpolation
+    % addpath(genpath('PassiveTitin'));
+    params.TitinTable = load("PassiveTitin\titin-slack.mat").tit;
 end
 
 % vs for VelocitySegment
@@ -133,20 +134,20 @@ for vs = 1:length(T) - 1
 
         out = storeOutputs(fcn,out, PU, params, t);
         %%
-        if params.UseTitinModel
-            if ~exist('x0', 'var')
-                % for the first run, when it does not exist. Then it shuold be reused
-                x0 = params.SL0/2 - 0.95;
-                titin.Time = [];titin.Length = [];titin.Force = [];
-            end
-
-            % identified separately
-            mod = [468, 3.83e+04, 2.3, 9, 2.33, 8.36e+06, 4.98, 84.9, 1.73e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 1, 0.175, NaN, NaN, 5.04e+04, 0, ];
-            [Time, L_t, F_t, ~, x0] = evaluateTitinModel(mod, x0, [ts tend], {params.Velocity(vs)}, 4.4, []);
-            titin.Time = [titin.Time;Time];
-            titin.Length = [titin.Length;L_t'];
-            titin.Force = [titin.Force;F_t'];
-        end
+        % if params.UseTitinModel
+        %     if ~exist('x0', 'var')
+        %         % for the first run, when it does not exist. Then it shuold be reused
+        %         x0 = params.SL0/2 - 0.95;
+        %         titin.Time = [];titin.Length = [];titin.Force = [];
+        %     end
+        % 
+        %     % identified separately
+        %     mod = [468, 3.83e+04, 2.3, 9, 2.33, 8.36e+06, 4.98, 84.9, 1.73e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 1, 0.175, NaN, NaN, 5.04e+04, 0, ];
+        %     [Time, L_t, F_t, ~, x0] = evaluateTitinModel(mod, x0, [ts tend], {params.Velocity(vs)}, 4.4, []);
+        %     titin.Time = [titin.Time;Time];
+        %     titin.Length = [titin.Length;L_t'];
+        %     titin.Force = [titin.Force;F_t'];
+        % end
         %%
     end
 end % end the velocity segment

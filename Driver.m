@@ -373,7 +373,7 @@ params0.mods = {'kah', 'kadh', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff2', 'alpha2
 params0.g = ones(1, length(params0.mods));
 %% Attempt on GA
 % parpool
-params0.mods = {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'alpha0', 'dr0', 'alpha1', 'dr1', 'alpha_1', 'dr_1', 'alpha2', 'dr2', 'alpha3'};
+% params0.mods = {'kah', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff1', 'kstiff2', 'alpha0', 'dr0', 'alpha1', 'dr1', 'alpha_1', 'dr_1', 'alpha2', 'dr2', 'alpha3'};
 ga_Opts = optimoptions('ga', ...
     'PlotFcn','gaplotbestf', ...
     'PopulationSize',16*4, ...            % 250
@@ -389,7 +389,7 @@ Ng = length(params0.mods);
 % params0.ghostSave = false;
 
 
-params0.PlotEachSeparately = false;
+params0.PlotEachSeparately = true;
 
 % evaluateBakersExp(g, params0)
 
@@ -411,6 +411,7 @@ p_lb.dr_1 = -10;
 p_lb.alpha2 = -1e3;
 p_lb.dr2 = -10;
 p_lb.alpha3 = -1e3;
+p_lb.alphaRip = 0
 
 % convert back to vector of ratios
 for i = 1:length(params0.mods)
@@ -422,7 +423,7 @@ end
     ga(optimfun,Ng, ...
     [],[],[],[],lb,ub,[],ga_Opts);
 
-save env2;
+save env2; 
 
 optimfun(p_OptimGA)
 
@@ -557,29 +558,67 @@ StatesInTime;
 % clear;
 figure(12);clf; 
 params0 = getParams();
-% ModelOptParamsIter;   
-ModelParams;
+ModelOptParamsIter;   
+% ModelOptParamsIterDanLoves
+% ModelParams;
 params0.PlotEachSeparately = true;
-% params0.k2rip = 10;
-% params0.alphaRip = 350;
-% params0.alpha1 = 0;
-% params0.k1 = 1000;
+% params0.dr3 = 0;
+% params0.k2rip = 0;
+% params0.alphaRip = 0;
+% params0.alpha1 = 50;
+% params0.k1 = 550;
+% params0.k2 = 20;
+% params0.kd = 0;
+% params0.ksr0 = 2;
+% params0.k1 = 550;
+% params0.kstiff1 = 0.9e5;
+% params0.kstiff2 = 0.9e5;
+% params0.ksr0 = 5.6;
+% params0.kmsr = 
 % params0.k2 = 400;
 % params0.ka = 500;
 % params0.kd = 170;
 % params0.k2 = 600;
 % params0.gamma = 3;
-% params0.k_pas = 150; 
+% params0.k_pas = 40; 
 % % params0.k1 = 100;
+% params0.kmsr = 10;
+% params0.sigma2 = 10;
 % params0.kstiff2 = 2.5e4;
 % params0.mu
+% params0.k2rip = 0;
+% params0.sigma2 = 5;
+% params0.RunForceVelocity = true;
+% params0.RunForceVelocity = true;
+params0.RunStairs = false;
+params0.RunKtr = true;
+params0.MaxSlackNegativeForce = 0;
+
+% params0.RunSlack = false;
+params0.UseTitinModel = false;
+params0.UsePassive = true;
+params0.UseTitinInterpolation = false;
+params0.MaxRunTime = Inf;
+% params0.UseTitinModel = 
+tic
+LoadData;
 RunBakersExp;
+toc
+% plot(out.t, out.FXB, 'r-');hold on;
+% plot(out.t, out.FXBPassive, 'k-')
 sum(E)
+%%
+tic
+ds = load("PassiveTitin\titin-slack.mat");
+toc
 %%
 % params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'kstiff1', 'alpha0', 'alpha1', 'alpha2'};
 % params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'};
-params0.mods = {'k_pas', 'gamma', 'k2rip', 'alphaRip'};
+params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha2', 'k1', 'kah', 'k2rip', 'alphaRip', 'alpha1'};
+% params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha2', 'kah'};
+% params0.mods = {'k_pas', 'gamma', 'k2rip', 'alphaRip'};
 % params0.mods = {'k_pas', 'gamma'}
+% params0.mods = {'kmsr', 'ksr0', 'sigma2', 'alpha2', 'k2rip', 'alphaRip'};
 g = ones(size(params0.mods));
 % g = [g 1 ]
 % g = [1 1 ]
@@ -592,9 +631,9 @@ x = fminsearch(optimfun, g, options)
 % g = exp(x);
 g = x;
 params0.g = g;
-% params0
+%% params0
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelOptParamsIter.m', params0, modNames);
+writeParamsToMFile('ModelOptParamsWorkingHypothesis.m', params0, modNames);
 
 %%
 % saved - kstaiff 1 too high probabbly

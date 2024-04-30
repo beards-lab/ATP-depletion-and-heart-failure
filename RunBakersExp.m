@@ -296,7 +296,7 @@ if params0.RunSlack
     % i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
     % i_e = length(datatable(:, 1));
     validZone = datatable(:, 1) > velocitytable(2, 1) - 0.1 & datatable(:, 1) < velocitytable(2, 1) ... % pre-slack steady state
-        | datatable(:, 1) > velocitytable(3, 1) + 0.002 & datatable(:, 1) < velocitytable(4, 1) + 0.01 ... Redevelopment zone
+        | datatable(:, 1) > velocitytable(3, 1) + 0.002 ... & datatable(:, 1) < velocitytable(4, 1) + 0.01 ... Redevelopment zone
         | datatable(:, 1) > velocitytable(5, 1) + 0.01; % after the titin transient
     nonrepeating = diff(out.t) ~= 0;
     Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(validZone, 1));
