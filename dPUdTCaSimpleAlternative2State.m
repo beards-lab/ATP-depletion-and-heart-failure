@@ -201,7 +201,7 @@ dp2   = + p12p2 - p12p2_r  - XB_TOR - XB_Ripped; % strongly attached, post-ratch
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPuR];
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p1_1, p2_1, PuATP];
 %% breakpints
-if t > 2.7635
+if t > 2.92
     numberofthebeast = 666;
 end
 % disp('oj')

@@ -129,14 +129,14 @@ end
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
     
     % strain-associated parameters
-    params.alpha0 = 0;
+    params0.alpha0 = 0;
     params0.alpha1 = 15.14;
     params0.alpha_1 = 0;
     params0.alpha2 = 10.06;
     params0.alpha3 = 276.67;
     params0.s3     = 0.0099383;
-    params.alphaRip = 0;
-    params.k2rip = 0;
+    params0.alphaRip = 0;
+    params0.k2rip = 0;
 
     % offsets
     params0.dr0 = 0;

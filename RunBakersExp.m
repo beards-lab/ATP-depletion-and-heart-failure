@@ -345,6 +345,7 @@ if params0.RunSlack
         yl = ylim;
         plot(out.t, out.XB_TORs, '-')
         ylim(yl)
+        xl = xlim();
 
 
         if exist('gp', 'var') && isvalid(gp)
@@ -360,6 +361,7 @@ if params0.RunSlack
             plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
             legend('P1','P2','P3','PuATP','PuR', 'SR')
         end
+        xlim(xl);
 
     end
     %% SAVE FIG
