@@ -41,7 +41,7 @@ end
         'MgADP', 0, ...
         'Ca', 1000,...
         'Velocity', 0,...
-        'UseCalculatedN', 1, ... % Use dS and Slim_m / Slim_p
+        'UseCalculatedN', true, ... % Use dS and Slim_m / Slim_p
         'UseCa', false,...
         'UseOverlap', false, ...
         'UsePassive', false, ... % parallel passive stiffness
@@ -49,10 +49,10 @@ end
         'ValuesInTime', true, ... % export values in time. Outputs just last value otherwise.
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
         'ReduceSpace', false, ... % use only half- to no- of the discretized space
-        'UseSerialStiffness', false, ... % serial stiffness used with dashpot viscosity
-        'UseSlack', false, ... % Enable XB slacking
+        'UseSerialStiffness', true, ... % serial stiffness used with dashpot viscosity
+        'UseSlack', true, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
-        'PlotEachSeparately', false , ... % show each plot on separate figure
+        'PlotEachSeparately', true , ... % show each plot on separate figure
         'PlotFullscreen', false, ... % Each plot is in fullscreen instead on common figure
         'UseSLInput', false, ... % Use SL as a driving instead of velocities, provide input in datatable
         'RescaleOutputDt', 0,... % downsamples unnecessary complex output vector. False or value (e.g. 1e-5)
@@ -75,8 +75,10 @@ end
         'WindowsOverflowStepCount', 1, ... % number of dS extensions of the array in case we hit the boundary with the moving window
         'UseSuperRelaxed', false, ...
         'UseSpaceExtension', false,...
-        'MaxRunTime', 5, ... % maximal model runtime in seconds before is killed
-        'NumberOfStates', 2 ... % number of strain-dependent states
+        'MaxRunTime', Inf, ... % maximal model runtime in seconds before is killed. Used to unstuck the optimization
+        'NumberOfStates', 2, ... % number of strain-dependent states
+        'UseTitinInterpolation', true, ... % interpolating titin pre-simulated force at each model eval
+        'MaxSlackNegativeForce', 0 ... 
         );
  
     params0.mods = {}; % names of the modifiers in the cell array. First is modified by g(1), second g(2) etc    
@@ -127,11 +129,27 @@ end
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
     
     % strain-associated parameters
+    params.alpha0 = 0;
     params0.alpha1 = 15.14;
+    params0.alpha_1 = 0;
     params0.alpha2 = 10.06;
     params0.alpha3 = 276.67;
     params0.s3     = 0.0099383;
-    
+    params.alphaRip = 0;
+    params.k2rip = 0;
+
+    % offsets
+    params0.dr0 = 0;
+    params0.dr_1 = 0;
+    params0.dr2 = 0;
+    params0.dr3 = 0;
+
+    % % linear ripping stuff
+    % params0.TK0 = 0;
+    % params0.TK = 0;
+    % 
+    % 
+
     params0.Amax = 1;
     
     params0.mu = 1e-3; % viscosity

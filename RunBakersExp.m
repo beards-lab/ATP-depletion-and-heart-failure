@@ -4,9 +4,13 @@ modelFcn = @dPUdTCaSimpleAlternative2State;
 
 if params0.RunForceVelocity
     params = params0;
-    params.Slim_l = 1.6;
+    params.Slim_l = 1.9;
+    t_ss = [0 1];
+    t_sl0 = [0 0.1];
+
     params = getParams(params);
     F_active = [];
+
     params.UseTitinModel = false;
     % params.UseSerialStiffness = false;
     if isfield(params, 'PU0')
@@ -338,7 +342,9 @@ if params0.RunSlack
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
         set(gca,'fontsize',14, 'xlim', [2.6 3.05]);  box on;
         title('Slack');
-        % plot(out.t, out.XB_TORs)
+        yl = ylim;
+        plot(out.t, out.XB_TORs, '-')
+        ylim(yl)
 
 
         if exist('gp', 'var') && isvalid(gp)

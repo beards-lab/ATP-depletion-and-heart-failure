@@ -566,15 +566,16 @@ params0.PlotEachSeparately = true;
 % params0.k2rip = 0;
 % params0.alphaRip = 0;
 % params0.alpha1 = 50;
-% params0.k1 = 550;
-% params0.k2 = 20;
+params0.k1 = 500;
+% params0.k2 = 1000;
 % params0.kd = 0;
 % params0.ksr0 = 2;
 % params0.k1 = 550;
 % params0.kstiff1 = 0.9e5;
-% params0.kstiff2 = 0.9e5;
-% params0.ksr0 = 5.6;
-% params0.kmsr = 
+params0.kstiff1 = 46476;
+params0.kstiff2 = 86476;
+params0.ksr0 = 25.6;
+params0.kmsr = 10948;
 % params0.k2 = 400;
 % params0.ka = 500;
 % params0.kd = 170;
@@ -591,7 +592,7 @@ params0.PlotEachSeparately = true;
 % params0.RunForceVelocity = true;
 % params0.RunForceVelocity = true;
 params0.RunStairs = false;
-params0.RunKtr = true;
+params0.RunKtr = false;
 params0.MaxSlackNegativeForce = 0;
 
 % params0.RunSlack = false;
@@ -676,35 +677,6 @@ toc
 params0.g = g;
 modNames = getAllDifferent(params0);
 writeParamsToMFile('ModelParams.m', params0, modNames);
-%% list params different from the base
-function [UpdatedModNames] = getAllDifferent(params)
-    if isfield(params, 'g')
-        % update modNames and gs, if appropriate
-        params = getParams(params, params.g, false, true);
-        params = rmfield(params, 'g');
-    else
-        % we get all the fields that are in the params0
-        params = getParams(params, [], false, false);
-    end
-    modNames = fieldnames(params);
-    % compare to default
-    params0 = getParams();
-    UpdatedModNames = {};
-    for i_mod = 1:length(modNames)
-        if ~isfield(params0, modNames{i_mod}) && ...
-            ~isempty(params.(modNames{i_mod})) || ... Does not exist in the base set and is not empty in the second
-            length(params.(modNames{i_mod})) == 1 && ... OR is it a different single element
-            length(params0.(modNames{i_mod})) == 1 && ...            
-            params.(modNames{i_mod}) ~= params0.(modNames{i_mod})            
-                disp(['Got '  modNames{i_mod}])
-                UpdatedModNames{length(UpdatedModNames)+1} = modNames{i_mod};
-        else
-            % disp(['Drop '  modNames{i_mod}])
-        end
-    end
-end
-
-
 %% read all, write selected only
 function [params, row_names] = updateValuesFromFile(filename, params)
     ti = readtable(filename, 'ReadRowNames',true, 'ReadVariableNames',true, 'CommentStyle', '#',NumHeaderLines=0);
@@ -743,23 +715,3 @@ function writeParamsToFile(filename, params, modNames)
     writetable(to, filename, 'WriteRowNames', true)
 end
 % to.Properties.VariableNames = {'ParamName', 'value'}
-
-%% Write to M file
-function writeParamsToMFile(filename, params, modNames)
-    if nargin < 3
-        modNames = fieldnames(params);
-    end
-    
-    fid = fopen(filename, 'w');
-    fprintf(fid, "%% Generated file to manipulate the simulation parameters directly\n"); 
-    params = getParams(params, params.g, false, true);
-    for i_row = 1:length(modNames)
-        if length(params.(modNames{i_row})) > 1
-            fprintf("Skipping %s\r\n", modNames{i_row});
-            continue;
-        end
-        fprintf(fid, 'params0.%s = %g;\r\n', modNames{i_row}, params.(modNames{i_row}));
-    end
-
-    fclose(fid);
-end

@@ -28,7 +28,7 @@ ticId = tic;
 
         value(2) = ceil(s_p0) - params.ss;
         direction(2) = 1;
-        isterminal = [true,true];
+        isterminal = [true,true, true];
         % if any(abs(value)< 1e-3)
         %     a = 3;
         % end

@@ -26,8 +26,6 @@ params0.g = g;
 try
 %     Et = 1;
     LoadData;
-    t_ss = [0 1];
-    t_sl0 = [0 0.1];
     lastwarn('', ''); 
     RunBakersExp;
     Et = sum(E);

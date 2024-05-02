@@ -165,7 +165,8 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
     % creates instable oscillations without suppressing the force enough.
     % XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
     % XB_TOR = g2*params.k3*(exp(abs(params.alpha3*(s))).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
-    XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2))) + p2.*min((s>params.TK0).*s*[params.TK], params.TK);
+    % XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2))) + p2.*min((s>params.TK0).*s*[params.TK], params.TK);
+    XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
 
     XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
@@ -179,7 +180,7 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
     % dU_NSR = params.ksr0*(F_total/params.sigma1)*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
     %model 11
     if params.UseSuperRelaxed
-        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PuATP*min(1e9, (exp(-F_total/params.sigma2)));
+        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PuATP*exp(-max(F_total, 0)/params.sigma2);
     else 
         dU_SR = 0;
     end
@@ -200,7 +201,7 @@ dp2   = + p12p2 - p12p2_r  - XB_TOR - XB_Ripped; % strongly attached, post-ratch
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPuR];
 outputs = [Force, F_active, F_passive, N_overlap, XB_TOR', p1_0, p2_0, p1_1, p2_1, PuATP];
 %% breakpints
-if t > 2.7685
+if t > 2.7635
     numberofthebeast = 666;
 end
 % disp('oj')
