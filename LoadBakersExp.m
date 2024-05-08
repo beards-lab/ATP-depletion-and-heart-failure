@@ -6,8 +6,8 @@ ML = 2.0;
 % normalized force multiplier
 nf = 56;
 ts_s = []; ts_d = [];
-clear;
-close all;
+% clear;
+% close all;
 %% load length-force data for 8 mM
 datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
 dt8 = readtable(datafile, ...
@@ -58,7 +58,8 @@ ts_d = [10, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 22
 ts_s = [-500 ts_d(2:end)]
 % clf;
 % figure
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, 'bakers_rampup8');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, '');
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, 'bakers_rampup8');
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, '');
 % velocitytable
 

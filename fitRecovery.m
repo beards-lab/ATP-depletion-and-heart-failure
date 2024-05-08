@@ -1,10 +1,13 @@
-function [dSLpc, ktr, df, del] = fitRecovery(datatable, zones, zeroTreshold)
-    
-    clf; 
-    subplot(2, 1, [1]);hold on;
-    plot(datatable(:, 1), datatable(:, 2));
-    xlim([datatable(1, 1), datatable(end, 1)]);
-    subplot(2, 1, [2]);hold on;
+function [dSLpc, ktr, df, del, E, SL] = fitRecovery(datatable, zones, zeroTreshold, fixed_df)
+    if nargin < 4
+        fixed_df = [];
+    end
+
+    % subplot(2, 1, [1]);hold on;
+    % plot(datatable(:, 1), datatable(:, 2));
+    % xlim([datatable(1, 1), datatable(end, 1)]);
+    % subplot(2, 1, [2]);
+    hold on;
     plot(datatable(:, 1), datatable(:, 3))
 %     plot(datatable([1, end], 1), [zeroTreshold zeroTreshold], 'k-');
     
@@ -14,7 +17,7 @@ function [dSLpc, ktr, df, del] = fitRecovery(datatable, zones, zeroTreshold)
     for z = 1:size(zones, 1)
         
         %% exp fit
-        bt = 0; % buffer time (ms)
+        bt = 5; % buffer time (ms)
         z1 = zones(z, :);
         i1 = find(datatable(:, 1) > (z1(1) + bt)/1000, 1);
         i2 = find(datatable(:, 1) > z1(2)/1000, 1);
@@ -23,11 +26,18 @@ function [dSLpc, ktr, df, del] = fitRecovery(datatable, zones, zeroTreshold)
         to = datatable(z1(1), 1); % time offset
         timebase_exp = datatable(z1, 1)-to;
         
-        y_exp = @(df, ktr, s, x)df*(1-exp(-(x-s)*ktr));
-        [ae be] = fit(timebase_exp, datatable(z1, 3)- zeroTreshold, y_exp, 'StartPoint', [50, 20, bt/1000]);
+        if isempty(fixed_df)
+            y_exp = @(df, ktr, s, x)df*(1-exp(-(x-s)*ktr));
+        else
+            y_exp = @(df, ktr, s, x)fixed_df(z)*(1-exp(-(x-s)*ktr)) + 0*df;
+        end
+
+        [ae be] = fit(timebase_exp, datatable(z1, 3)- zeroTreshold, y_exp, 'StartPoint', [50, 2, bt/1000]);
         ktr(z) = ae.ktr; 
         df(z) = ae.df; % difference in force
         del(z) = ae.s; % delay time [s]
+        E(z) = be.rmse;
+        SL(z) = datatable(i1, 2);
         
         timebase_exp = (-(bt+15)/1000:0.01:0.3);
         plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '--', 'Linewidth', 2);

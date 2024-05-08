@@ -44,8 +44,13 @@ params0.kstiff1 = params0.kstiff2;
 params0.UseTitinInterpolation = false;
 
 LoadData;
+%%
+clf
+ModelParamsInit2;
+% params0.k1 = 200; 
 RunBakersExp;
-
+%%
+StatesInTime;
 %% Store the results
 if ~saveResults
     return
