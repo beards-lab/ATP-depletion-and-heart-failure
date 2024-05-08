@@ -35,18 +35,23 @@ params0.kah = 119.268*a;
 params0.kmsr = 800.649;
 % params0.kSE = 10000;
 params0.ksr0 = 20.1169;
-params0.kstiff2 = 27373.9;
+params0.kstiff2 = 42373.9;
 params0.kstiff1 = params0.kstiff2;
 % params0.kstiff2 = 27373.9;
 % params0.k_pas = 115.647;
 % params0.sigma1 = 100;
 % params0.sigma2 = 0.0413337;
 params0.UseTitinInterpolation = false;
+params0.alpha_r = 500;
+params0.dr_r = 0.003;
+params0.alpha_l = -300;
+params0.dr_l = -0.001;
+
 
 LoadData;
-%%
+%
 clf
-ModelParamsInit2;
+% ModelParamsInit2;
 % params0.k1 = 200; 
 RunBakersExp;
 %%
@@ -57,4 +62,4 @@ if ~saveResults
 end
 %% store the results
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParamsInit2.m', params0, modNames);
+writeParamsToMFile('ModelParamsInit3.m', params0, modNames);

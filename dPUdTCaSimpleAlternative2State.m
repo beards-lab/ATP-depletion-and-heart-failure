@@ -152,7 +152,11 @@ MgADP = params.MgADP;
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
 % the cycle goes: PuATP (ATP bound) <-> PuR(ready) <-> P1 <-> P2 -> P3 -> PuATP
-strainDep = @(alpha, dr) exp((alpha*(s+dr)).^2);
+strainDep = @(alpha, dr) exp((alpha*(s+dr)));
+strainDep1s = @(alpha, dr) min(1e9, max(1, exp((alpha*(s-dr)))) - 1);
+
+% exp( (s+dr)/lambdaR) + exp(-(s+dr2)/lamdaL)
+
 PuATP2PuD = g2*params.kah*PuATP;
 PuATP2PuD_r = 0*params.kadh*PuR;
 PU2p1 = params.ka*PuR*N_overlap; % to loosely attachemnt state
@@ -166,9 +170,12 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
     % XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
     % XB_TOR = g2*params.k3*(exp(abs(params.alpha3*(s))).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
     % XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2))) + p2.*min((s>params.TK0).*s*[params.TK], params.TK);
-    XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
+    % XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
+XB_TOR = params.k2*p2 + p2.*strainDep1s(params.alpha_l, params.dr_l);
 
-    XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+p2_rip = p2.*strainDep1s(params.alpha_r, params.dr_r);
+p1_rip = p1.*strainDep1s(params.alpha_r , params.dr_r + params.dr);
 
 % if ~params.UseAtpOnUNR
     % dU_NSR = params.ksr0*(exp(F_total/params.sigma0))*U_SR - params.kmsr*U_NSR*PuATP;
@@ -180,7 +187,7 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
     % dU_NSR = params.ksr0*(F_total/params.sigma1)*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
     %model 11
     if params.UseSuperRelaxed
-        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PuATP*exp(-max(F_total, 0)/params.sigma2);
+        dU_SR = sum(p1_rip)*dS + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PuATP*exp(-max(F_total, 0)/params.sigma2);
     else 
         dU_SR = 0;
     end
@@ -188,8 +195,8 @@ p12p2_r = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward f
 %% governing flows
 % state 0: unattached, ATP-cocked
 dPuR = PuATP2PuD - PuATP2PuD_r - PU2p1 + sum(PU2p1_r)*dS;
-dp1   = - PU2p1_r -  p12p2 + p12p2_r; % state 1: loosely attached, just sitting&waiting
-dp2   = + p12p2 - p12p2_r  - XB_TOR - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp1   = - PU2p1_r -  p12p2 + p12p2_r - p1_rip; % state 1: loosely attached, just sitting&waiting
+dp2   = + p12p2 - p12p2_r  - XB_TOR - XB_Ripped - p2_rip; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
     dp1(s_i0) = dp1(s_i0) + s_i0k*(PU2p1/dS); % attachment
