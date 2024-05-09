@@ -273,7 +273,7 @@ nS = params.NumberOfStates; % number of strain-dependent states
         
         
         % get the XB force from the dpudt directly        
-        [~, outputs] = fcn(0, PU(j, :)', params); 
+        [~, outputs] = fcn(T(j), PU(j, :)', params); 
         out.Force(i) = outputs(1);
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
