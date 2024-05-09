@@ -1,7 +1,8 @@
 % simplest 
 clear;
 saveResults = false;
-figure(2);clf; 
+figure(2);
+% clf; 
 % initialize parameters
 params0 = getParams();
 
@@ -47,11 +48,12 @@ params0.sigma1 = 50;
 params0.ksrm = 50; % transition in to SRX
 params0.sigma2 = 999999;
 % params0.UseTitinInterpolation = false;
+params0.UseTitinInterpolation = true;
 
 LoadData;
 RunBakersExp;
 saveas(figure(2), 'slack.png')
-figure(1); plot(out.t,out.FXBPassive)
+figure(1); hold on;plot(out.t,out.FXBPassive)
 figure(3); plot(out.t,out.p2_1./out.p2_0)
 out.XB_TORs(end)
 
