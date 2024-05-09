@@ -148,18 +148,19 @@ R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 % R2T = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
 
 % DAN's very complicated detachment rate
-lambdaR = 0.025;
-lambdaL = 0.040;
-R0 = 0.20;
-R1 = (s<=0).*(1 - exp(-s./lambdaL)).^2;
-R2 = (s>0).*(1 - exp(+s./lambdaR)).^2;
+lambdaR = 0.015;
+lambdaL = 0.017;
+R0 = 0.10;
+R1 = ((s+0)<=0).*(1 - exp(-(s+0)./lambdaL)).^2;
+R2 = ((s+0)>0).*(1 - exp(+(s+0)./lambdaR)).^2;
 R2T = g2*params.k2*p2.*(R0 + R1 + R2);
 
     XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
     if params.UseSuperRelaxed
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
-        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-F_total/params.sigma2);
+%         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
+        dU_SR =  - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.ksrm*exp(-F_total/params.sigma2)*PT;
     else 
         dU_SR = 0;
     end
