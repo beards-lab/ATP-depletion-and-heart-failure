@@ -15,7 +15,7 @@ b = a;
 ModelParamsInit2;
 params0.MaxSlackNegativeForce = 0;
 % already in ModelParamsInit, but free to overwrite any parameter here
-params0.alpha0 = 75;
+params0.alpha0 = 50;
 params0.alpha1 = 100;
 % params0.alpha2 = 31.5061;
 % params0.alpha3 = 0;
@@ -30,7 +30,7 @@ params0.k2 = 200; % detach rate
 params0.k2rip = 0; %
 
 params0.ka = 40; % attach rate
-params0.kd = 2;
+params0.kd = 10;
 params0.kah = 100;
 % params0.kadh = 0;
 params0.kSE = 5000;
