@@ -125,11 +125,6 @@ MgATP = params.MgATP;
 Pi = params.Pi;
 MgADP = params.MgADP;
 
-% g1 = (MgADP/params.K_D)/(MgADP/params.K_D + MgATP/params.K_T1);
-% g2 = (MgATP/params.K_T1)/(MgADP/params.K_D + MgATP/params.K_T1);
-% % g4 = MgATP/(MgATP + params.K_T3);
-% f1 = (Pi/params.K_Pi)/(1 + Pi/params.K_Pi); f2 = 1/(1 + Pi/params.K_Pi); 
-
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
@@ -149,7 +144,7 @@ R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 
 % DAN's very complicated detachment rate
 lambdaR = 0.015;
-lambdaL = 0.017;
+lambdaL = 0.038;
 % R0 = 0.10;
 % R1 = ((s+0)<=0).*(1 - exp(-(s+0)./lambdaL)).^2;
 % R2 = ((s+0)>0).*(1 - exp(+(s+0)./lambdaR)).^2;
@@ -163,6 +158,8 @@ kL = 200*((s+0)<=0).*(1 - exp(-(s+0)./lambdaL)).^2;
 % kR = 600*(s>0).*((s.^2)./((s.^2) + 0.01^2));
 r = 0.030;
 kR = (100e6)*( (1/6).*s.^3 + (-1*r/2).*s.^2 + 15*(r^3).*s).*(s>0.002);
+
+kR = 100*(s/0.01).*(s>0.002);
 R2T = p2.*(k0 + kL + kR);
 
 
