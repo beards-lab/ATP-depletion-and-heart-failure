@@ -16,44 +16,44 @@ b = a;
 ModelParamsInit2;
 params0.MaxSlackNegativeForce = 0;
 % already in ModelParamsInit, but free to overwrite any parameter here
-params0.alpha0 = 25;
+params0.alpha0 = 1.5*25;
 params0.alpha1 = 100;
 % params0.alpha2 = 31.5061;
 % params0.alpha3 = 0;
 % params0.alphaRip = 100; %
+% params0.dr0 = 0;
 % params0.dr1 = 0;
 % params0.dr2 = -0.005;
 % params0.dr3 = -0.01; %
 % params0.gamma = 3.61385;
-params0.k1 = 90; % ratchet rate
+params0.k1 = 1.7*90; % ratchet rate
 params0.k2 = 200; % detach rate
 % params0.k_2 = 2.79*b;
 params0.k2rip = 0; %
 
 params0.ka = 25; % attach rate
-params0.kd = 4;
-params0.kah = 100;
+params0.kd = 0.30*4;
+params0.kah = 80;
 % params0.kadh = 0;
-params0.kSE = 5000;
+params0.kSE = 10000;
 params0.mu  = 0.001;
 % params0.kstiff2 = 27373.9;
 params0.dr = 0.020;
-params0.kstiff1 = 0.55*1.5e4;
+params0.kstiff1 = 2*0.55*1.5e4;
 params0.kstiff2 = 0.55*1.5e4;
 params0.k_pas = 50;
 params0.gamma = 3;
 
-params0.ksr0 = 4; % transition out of to SRX
-params0.sigma1 = 50;
+params0.ksr0 = 1.7; % transition out of to SRX
+params0.sigma1 = 20;
 params0.ksrm = 50; % transition in to SRX
 params0.sigma2 = 999999;
 % params0.UseTitinInterpolation = false;
-params0.UseTitinInterpolation = true;
 
 LoadData;
 RunBakersExp;
 saveas(figure(2), 'slack.png')
-figure(1); hold on;plot(out.t,out.FXBPassive)
+figure(1); plot(out.t,out.FXBPassive)
 figure(3); plot(out.t,out.p2_1./out.p2_0)
 out.XB_TORs(end)
 
