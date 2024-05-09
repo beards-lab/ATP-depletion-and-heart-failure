@@ -53,6 +53,7 @@ else
     N_overlap = 1;
 end
 
+
 % strain - above the myosin heads is zero. 
 % Negative - shorter, Positive - longer
 % need to cut the change in two because half-sarcomere means half the speed
@@ -92,23 +93,10 @@ end
 % sum of all probabilities
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum((s+params.dr).*p2);
-% p2_1_overstroke = dS*sum((s+params.dr).*p2.*(s>0));
-% p2_1_understroke = dS*sum((s+params.dr).*p2.*(s<0));
 
 % non-hydrolized ATP in non-super relaxed state
 PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR)); % unattached permissive fraction - 
-% PuATP_NSR = PuATP*P_SR; 
-
-% if ~params.F_act_UseP31
-    % the dr shift is used here instead of UseP31Shift
-    % p3_1_stroke = dS*sum((s+params.dr).*p3);   
-    % F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*( p2_1 + p3_1_stroke);     
-    % F_active = params.kstiff2*p3_0*params.dr + params.kstiff1*(p3_1_stroke);     
     F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
-    % F_active = params.kstiff2*(p3_1 + p2_1_understroke) + params.kstiff3*(p2_1_overstroke) + params.kstiff1*(p1_1);
-% if t > 2.77
-%     F_active = 0;
-% end
 
 F_passive = 0;
 if params.UsePassive
@@ -124,17 +112,10 @@ end
 
 F_total = F_active + F_passive;
 
-% if params.UseSerialStiffness && ~params.UseSlack    
-    % if LSE >= 0
-    %     Force = params.kSE*LSE;
-    % else
-    %     % Slack, no force
-    %     Force = 0;
-    % end
-    Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
-    velHS = (Force - F_total)/params.mu;
-    dLSEdt = vel - velHS;
-    Force = max(0, Force);
+Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
+velHS = (Force - F_total)/params.mu;
+dLSEdt = vel - velHS;
+Force = max(0, Force);
 
 %% TRANSITIONS
 
@@ -151,46 +132,43 @@ MgADP = params.MgADP;
 
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
-% the cycle goes: PuATP (ATP bound) <-> PuR(ready) <-> P1 <-> P2 -> P3 -> PuATP
+% the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
 strainDep = @(alpha, dr) exp((alpha*(s+dr)).^2);
 RTD = g2*params.kah*PT;
-% RD1_NA = 0*params.kadh*PuR;
-RD1_NA = 0;
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
-R1D = params.kd*p1.*strainDep(params.alpha0, params.dr0); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
-% p12p2 = params.k1*p1.*strainDep(params.alpha1, params.dr1); % P1 to P2
-R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
-R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward flow from p2 to p1
 
-% if params.UseTORNegShift
-    % creates instable oscillations without suppressing the force enough.
-    % XB_TOR = g2*params.k3*(exp(params.alpha3*(s-params.s3).^2).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
-    % XB_TOR = g2*params.k3*(exp(abs(params.alpha3*(s))).*p3) + p3.*min((s>params.TK0).*s*[params.TK], params.TK);
-    % XB_TOR = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2))) + p2.*min((s>params.TK0).*s*[params.TK], params.TK);
-    R2T = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
+% R1D = params.kd*p1.*strainDep(params.alpha0, params.dr0); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+% R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
+% R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward flow from p2 to p1
+
+% DAN's XB rates
+R1D = params.kd*p1.*exp(+params.alpha0*s); %
+R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
+R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
+% R2T = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
+
+% DAN's very complicated detachment rate
+lambdaR = 0.025;
+lambdaL = 0.040;
+R0 = 0.20;
+R1 = (s<=0).*(1 - exp(-s./lambdaL)).^2;
+R2 = (s>0).*(1 - exp(+s./lambdaR)).^2;
+R2T = g2*params.k2*p2.*(R0 + R1 + R2);
 
     XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
-% if ~params.UseAtpOnUNR
-    % dU_NSR = params.ksr0*(exp(F_total/params.sigma0))*U_SR - params.kmsr*U_NSR*PuATP;
-    % dU_NSR = params.ksr0*(F_total/params.sigma0)*U_SR - params.kmsr*U_NSR*PuATP;
-    % dU_NSR = 10*(F_total/(F_total + 5))*U_SR - 100*U_NSR*PuATP;
-    % dU_NSR = params.ksr0*(F_total/(F_total + params.sigma0))*U_SR - 100*U_NSR*PuATP*(exp(-F_total/params.sigma2));
-    % dU_NSR = params.ksr0*(exp(F_total/params.sigma1))*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
-% model 01
-    % dU_NSR = params.ksr0*(F_total/params.sigma1)*U_SR - params.kmsr*U_NSR*PuATP*(exp(-F_total/params.sigma2));
-    %model 11
     if params.UseSuperRelaxed
-        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
+%         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
+        dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-F_total/params.sigma2);
     else 
         dU_SR = 0;
     end
 
 %% governing flows
 % state 0: unattached, ATP-cocked
-dPD = RTD - RD1_NA - RD1 + sum(R1D)*dS;
-dp1   = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
-dp2   = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dPD = + RTD - RD1 + sum(R1D)*dS;
+dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
+dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
     dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
