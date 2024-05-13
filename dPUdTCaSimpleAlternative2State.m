@@ -106,8 +106,8 @@ if params.UsePassive
 end
 
 if params.UseTitinInterpolation
-    F_passive = F_passive + interp1(params.TitinTable.Time, params.TitinTable.ForceV, ...
-        min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear");
+    F_passive = F_passive + max(0, interp1(params.TitinTable.Time, params.TitinTable.ForceV, ...
+        min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
 end
 
 F_total = F_active + F_passive;

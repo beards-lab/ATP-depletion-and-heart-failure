@@ -35,8 +35,8 @@ ticId = tic;
 
         elapsed = toc(ticId); % counting current time
         value(3) = elapsed - params.MaxRunTime; %
-        isterminal = 1; % stop
-        direction = 1; % find all direction 0
+        isterminal(3) = 1; % stop
+        direction(3) = 1; % find all direction 0
     end
 
 

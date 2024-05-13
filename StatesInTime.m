@@ -1,5 +1,6 @@
 % draw interactive plot in time
 t_init = 2.77;
+t_init = 0;
 
 figure(10);clf;
 plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5)

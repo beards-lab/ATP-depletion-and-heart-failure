@@ -217,11 +217,13 @@ if params0.RunStairs
 
     params.SL0 = 2.0;
     % params.LXBpivot = 2.0;
-    params.Slim_l = 1.95;
-    params.Slim_r = 2.2;
+    params.Slim_l = 1.9;
+    params.Slim_r = 2.3;
+    % params.dS
+    % params.WindowsOverflowStepCount
     % params.N = 30;
     % update params with new N and Slims
-    params = getParams(params, g, true);
+    params = getParams(params, params.g, true);
 
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
