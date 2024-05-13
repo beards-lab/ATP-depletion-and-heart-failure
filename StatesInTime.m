@@ -3,8 +3,8 @@ t_init = 2.77;
 t_init = 0;
 
 figure(10);clf;
-plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', LineWidth=1.5)
-legend('P1','P2','PuATP','PuR')
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, '-', LineWidth=1.5)
+legend('P1','P2','PuATP','PuR', 'SR')
 figure(11);
 clf;
 % makeplot([], [], out, params);

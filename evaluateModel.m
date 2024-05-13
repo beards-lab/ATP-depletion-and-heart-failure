@@ -6,7 +6,7 @@ function [Force, out] = evaluateModel(fcn, T, params)
 % T must be a vector [start end] TODO remove correction for velocity at this point
 % if Velocity in params needs to be vector too
 
-params = getParams(params, params.g,true, true); % update the init vectors
+params = getParams(params, params.g,false, true); % update the init vectors
 PU0 = params.PU0;
 out = [];
 ss = params.ss;

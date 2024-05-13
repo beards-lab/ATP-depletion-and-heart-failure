@@ -27,7 +27,7 @@ if params0.RunForceVelocity
                 params.SL0 = 2.2;
                 % true to start from 2.2um steady state isntead from scratch.
                 % Neither is perfect though
-                if false & ~isfield(params, 'PU0')
+                if ~isfield(params, 'PU0')
                     % speed things up by storing the initialization
                     params.Velocity = 0;
                     [~, out] = evaluateModel(modelFcn, t_ss, params);
