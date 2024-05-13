@@ -666,7 +666,7 @@ params0.g = g;
 RunBakersExp;
 %% params0
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelOptParamsWorkingHypothesis.m', params0, modNames);
+writeParamsToMFile('ModelParamsInitDanOptim3.m', params0, modNames);
 
 %%
 % saved - kstaiff 1 too high probabbly

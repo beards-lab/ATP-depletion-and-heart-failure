@@ -14,6 +14,7 @@ b = a;
 % ModelParamsInit;   
 % ModelOptParamsIterDanLoves
 ModelParamsInit2;
+ModelParamsInitDanOptim3;
 params0.MaxSlackNegativeForce = 0;
 % already in ModelParamsInit, but free to overwrite any parameter here
 params0.alpha0 = 1.5*25;
@@ -53,6 +54,11 @@ params0.alpha2_L = 1/0.038;
 params0.k2_R = 8e3;
 params0.k2_L = 200;
 params0.k2 = 1.25*20;
+params0.dr2_R = 0.002;
+params0.RunForceVelocity = 1;
+params0.RunSlack = 0;
+params0.RunStairs = 0;
+
 
 
 
