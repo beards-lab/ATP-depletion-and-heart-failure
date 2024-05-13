@@ -64,6 +64,7 @@ params0.RunStairs = 0;
 
 LoadData;
 RunBakersExp;
+%%
 saveas(figure(2), 'slack.png')
 figure(1); plot(out.t,out.FXBPassive)
 figure(3); plot(out.t,out.p2_1./out.p2_0)

@@ -20,6 +20,24 @@ dt8.Properties.VariableNames = {'Time', 'L', 'F'};
 dt8.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 datalabel = "8 mM";
 %%
+dt2 = readtable(datafile, ...
+    "filetype", 'spreadsheet', ...
+    'VariableNamingRule', 'modify', ...
+    'Sheet', '2 mM', ...
+    'Range', 'A5:C86004');
+
+dt2.Properties.VariableNames = {'Time', 'L', 'F'};
+dt2.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+% datalabel = "8 mM";
+%%
+clf;
+plot(dt8.Time, dt8.L, '--b');hold on;
+plot(dt2.Time, dt2.L, '--r');
+yyaxis right;
+plot(dt8.Time, dt8.F, '-b');hold on;
+plot(dt2.Time, dt2.F, '-r');
+
+%%
 ts_d = [450 500.25, 500.9, 509.25, 510, 519.5,539.8, 650];
 % ts_s = [400 ts_d(2:end)]
 % ts_d = [ts_d 950.0    1000.3    1001.0    1091.2   1092 1101.6    1121.8   1150];
