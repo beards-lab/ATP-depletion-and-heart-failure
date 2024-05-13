@@ -2,7 +2,7 @@
 clear;
 saveResults = false;
 figure(2);
-% clf; 
+clf; 
 % initialize parameters
 params0 = getParams();
 
@@ -49,6 +49,12 @@ params0.sigma1 = 20;
 params0.ksrm = 50; % transition in to SRX
 params0.sigma2 = 999999;
 % params0.UseTitinInterpolation = false;
+params0.alpha2_L = 1/0.038;
+params0.k2_R = 8e3;
+params0.k2_L = 200;
+params0.k2 = 1.25*20;
+
+
 
 LoadData;
 RunBakersExp;
@@ -63,4 +69,4 @@ if ~saveResults
 end
 %% store the results
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParamsInit2.m', params0, modNames);
+writeParamsToMFile('ModelParamsInitDanOptim.m', params0, modNames);

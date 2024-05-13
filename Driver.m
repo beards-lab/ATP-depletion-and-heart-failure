@@ -232,10 +232,15 @@ figure;bar([e_d; epd]');hold on;plot([1 length(paramsfn)], [e0 e0])
 xticklabels(params0.mods)
 
 %% OPTIM
+params0 = getParams();
+ModelParamsInitDanOptim;
+
 % return
 params0.mods = {"kstiff2", "kstiff3", "ka", "kd", "k1", "k2", "k3", "alpha3", 'sigma0', 'kmsr'}; % tune everything
-% params0.g = ones(1, length(params0.mods))
-params0.g = g;
+params0.mods = {"ksr0", "sigma1", "ksrm", "alpha2_L", "k2_R", "k2_L", "k2"};
+
+params0.g = ones(1, length(params0.mods))
+% params0.g = g;
 % params0.mods = {"K_T1", "K_T3"};
 % g = ones(size(params0.mods))
 % optimized
@@ -244,7 +249,6 @@ params0.g = g;
 % modtbl = readtable("modifierstbl.csv");
 % params0.mods = modtbl.Properties.VariableNames;
 % params.g = modtbl(1, :).Variables;
-%%
 
 params0.PlotEachSeparately = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
@@ -253,14 +257,20 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, params0.g, options)
 % g = exp(x);
-g = x;
+params0.g = x;
+RunBakersExp;
 %% Fminsearch optim results - not able to hit the fast down and slow up
 clf
 params0.PlotEachSeparately = true;
-params0.mods = {'kah', 'kadh', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff2', 'alpha2', 'alpha3', 'kSE'};
-params0.g = g;
-RunBakersExp;
-plot(datatable(i_0:i_e, 1), e)
+% params0.mods = {'kah', 'kadh', 'ka', 'kd', 'k1', 'k_1', 'k2', 'kstiff2', 'alpha2', 'alpha3', 'kSE'};
+params0.g = [.9472    1.0117    1.1676    0.9506    1.0644    1.1106    0.9277];
+params0.g = [1.0203    0.9653    1.0183    0.9936    0.9822    1.0315    1.0167];
+% params0.g = ones(size(params0.mods));
+g = x;
+% RunBakersExp;
+optimfun = @(g)evaluateBakersExp(g, params0);
+optimfun(g)
+% plot(datatable(i_0:i_e, 1), e)
 %%
 params0.RunForceVelocity = false;
 params0.RunSlack = true;
@@ -608,6 +618,25 @@ toc
 % plot(out.t, out.FXB, 'r-');hold on;
 % plot(out.t, out.FXBPassive, 'k-')
 sum(E)
+%% Clear run
+clear;clf;
+params0 = getParams();
+ModelParamsInitDanOptim2;
+params0.dr2_R = 0.002;zoom
+params0.k2_R = 8.36e3;
+%%
+clf;
+params0.alpha2_R = 1;
+params0.RunForceVelocity = 1;
+params0.RunStairs = 1;
+params0.RunSlack = 1;
+params0.UseSpaceExtension = 1;
+
+LoadData;
+RunBakersExp;
+sum(E)
+%%
+StatesInTime;
 %%
 tic
 ds = load("PassiveTitin\titin-slack.mat");
@@ -616,14 +645,16 @@ toc
 % params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'kstiff1', 'alpha0', 'alpha1', 'alpha2'};
 % params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha1', 'alpha2', 'k1', 'kah'};
 params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha2', 'k1', 'kah', 'k2rip', 'alphaRip', 'alpha1'};
+params0.mods = {'k2','k2_R','dr2_R', 'alpha2_R'}
+params0.g = [1.0151    1.0874    0.7407 1];
 % params0.mods = {'kstiff2', 'kmsr', 'ksr0', 'sigma2', 'ka', 'k2', 'kd', 'alpha0', 'alpha2', 'kah'};
 % params0.mods = {'k_pas', 'gamma', 'k2rip', 'alphaRip'};
 % params0.mods = {'k_pas', 'gamma'}
 % params0.mods = {'kmsr', 'ksr0', 'sigma2', 'alpha2', 'k2rip', 'alphaRip'};
-g = ones(size(params0.mods));
+% g = ones(size(params0.mods));
 % g = [g 1 ]
 % g = [1 1 ]
-params0.PlotEachSeparately = false;
+% g = [g 1]
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
@@ -632,6 +663,7 @@ x = fminsearch(optimfun, g, options)
 % g = exp(x);
 g = x;
 params0.g = g;
+RunBakersExp;
 %% params0
 modNames = getAllDifferent(params0);
 writeParamsToMFile('ModelOptParamsWorkingHypothesis.m', params0, modNames);
@@ -676,7 +708,7 @@ toc
 % tor = ; 
 params0.g = g;
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParams.m', params0, modNames);
+writeParamsToMFile('ModelParamsInitDanOptim2.m', params0, modNames);
 %% read all, write selected only
 function [params, row_names] = updateValuesFromFile(filename, params)
     ti = readtable(filename, 'ReadRowNames',true, 'ReadVariableNames',true, 'CommentStyle', '#',NumHeaderLines=0);

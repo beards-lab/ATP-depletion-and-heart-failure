@@ -4,7 +4,7 @@ if any(g<0)
     Et = NaN;
     return;
 end
-
+params0.PlotEachSeparately = false;
 % important to start with the g!!
 % params0 = getParams(params0, g, true, true);
 params0.g = g;

@@ -143,24 +143,31 @@ R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 % R2T = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
 
 % DAN's very complicated detachment rate
-lambdaR = 0.015;
-lambdaL = 0.038;
+% lambdaR = 0.015;
+% lambdaL = 0.038;
+% alpha2_R = 1/0.015;
+
+% params.alpha2_L = 1/0.038;
+% params.k2_R = 8e3;
+% params.k2_L = 200;
 % R0 = 0.10;
 % R1 = ((s+0)<=0).*(1 - exp(-(s+0)./lambdaL)).^2;
 % R2 = ((s+0)>0).*(1 - exp(+(s+0)./lambdaR)).^2;
 % R2T = g2*params.k2*p2.*(R0 + R1 + R2);
 
 % lambdaL = 0.015;
-k0 = 1.25*20;
-kL = 200*((s+0)<=0).*(1 - exp(-(s+0)./lambdaL)).^2;
+% params.k2 = 1.25*20;
+
+kL = params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2;
 % kR = 200*(s>0).*(1 - exp(+(s+0)./lambdaR)).^2;
 % kR = 0*(s>0).*(s./0.01);
 % kR = 600*(s>0).*((s.^2)./((s.^2) + 0.01^2));
 % r = 0.030;
 % kR = (100e6)*( (1/6).*s.^3 + (-1*r/2).*s.^2 + 15*(r^3).*s).*(s>0.002);
 
-kR = 80*(s/0.01).*(s>0.002);
-R2T = p2.*(k0 + kL + kR);
+% kR = max(0, params.k2_R*(s-params.dr2_R)); %.*(s>0.002);
+kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
+R2T = p2.*(params.k2 + kL + kR);
 
 
     XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
