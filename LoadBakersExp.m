@@ -61,8 +61,8 @@ ts_s = [-50 ts_d(2:end) 2200]
 % subplot(212);title('Force (kPa)');xlabel('Time (ms)');ylabel('kPa');
 velocitytable
 %% load step-up data for 8 mM
-% datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
-datafile = "data/06 21 21 Ramps 8mM ATP.xlsx";
+datafile = "data/06 21 21 Ramps 2 mM ATP.xlsx";
+% datafile = "data/06 21 21 Ramps 8mM ATP.xlsx";
 data_table = readtable(datafile, ...
     "filetype", 'spreadsheet', ...
     'VariableNamingRule', 'modify', ...
@@ -76,35 +76,36 @@ ts_d = [10, 20.6, 40.7, 62.1, 80.1, 101.3, 121.4, 141.7, 161.5, 181.7, 201.8, 22
 ts_s = [-500 ts_d(2:end)]
 % clf;
 % figure
-[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, '');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf/5, nf/55, '');
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_d, ts_s, ML, dsf*10, nf/55, 'bakers_rampup8');
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, 1, '');
 % velocitytable
 
 %% Load stretch step-up data
 % clf;
-data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
+data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf, nf/54, '');
 
 
 %% slack 8 mM
  % clf;hold on;
 
-data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
 % ts_s = [0 1070 1159 2259 2759.6 2760.4 2910 2930 3058]; % to prevent skipping events with large integrator step
 ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
 ts_s = [0 1070 1159]
-% ts_s = [2500, 2759.6, 2760.4, 2910.4, 2930, 3050]
+ts_s = [0 1070 1159.4 1160.3 1209.9 1229.8 1459.4 1460.4 1519.95 1540.1 1809.4 1810.4 1889.9 1909.9 2259.4 2260.4 2360 2380.0, 2759.6, 2760.4, 2910.4, 2930.35, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
 % subplot(211)
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')
-
+%%
 data_table = readtable('data/2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack2mM', o);
-
+%%
 data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack02mM', o);
 
@@ -222,11 +223,11 @@ data_table = readtable('data/8mM ATP 2ktr.txt', 'filetype', 'text', 'NumHeaderLi
 % fitRecovery(datatable, [100, 700;], 0); 
 %%
 data_table = readtable('data/2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -870-85 + 4.5);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -100);
 % fitRecovery(datatable, [100, 700;],0); 
 %%
 data_table = readtable('data/0.2 mM ATP ktr.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -870-85 + 4.5);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -100);
 % fitRecovery(datatable, [100, 700;],0); 
 %% load length-force data for 2 mM
 % figure(2);

@@ -276,7 +276,7 @@ if params0.RunSlack
     params = params0;
     datastruct = load('data/bakers_slack8mM.mat');
     datatable = datastruct.datatable;
-    velocitytable = datastruct.velocitytable(4:end, :);
+    velocitytable = datastruct.velocitytable(1:10, :);
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
 
@@ -285,13 +285,14 @@ if params0.RunSlack
     % params.Slim_r = 2.2;
     % params.LXBpivot = 2.2;
     % params.dS = 0.0025;
+    
     if isfield(params, 'PU0')
         params = rmfield(params, 'PU0');
     end
 
     % reset the PU0
     params = getParams(params, params.g, true);
-    velocitytable(1, 1) = 2;
+    % velocitytable(1, 1) = 2;
     % velocitytable = velocitytable(1:4, 1);
     % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
@@ -363,7 +364,7 @@ if params0.RunSlack
             plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
             legend('P1','P2','P3','PuATP','PuR', 'SR')
         end
-        xlim(xl);
+        % xlim(xl);
 
     end
     %% SAVE FIG
@@ -374,4 +375,44 @@ if params0.RunSlack
             saveas(fig, ['XBBakersDataFit_' params.ghostSave '.png']);
         end
     end
+end
+%% FORCE VELOCITY RESIMULATION
+if params0.RunForceVelocityTime
+    params = params0;
+
+    % datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
+    % datatable = readtable(datafile, ...
+    %     "filetype", 'spreadsheet', ...
+    %     'VariableNamingRule', 'modify', ...
+    %     'Sheet', '8 mM', ...
+    %     'Range', 'A5:C86004');
+    % 
+    % datatable.Properties.VariableNames = {'Time', 'L', 'F'};
+    % datatable.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
+    % 
+    % params.datatable = table2array(datatable);
+    % datatable = table2array(datatable);
+    % save('data/isovelocity.mat', 'datatable')
+    datatable = load('data/isovelocity.mat').datatable;
+    datatable(:, 2) = 2*datatable(:, 2);
+    datatable(:, 1) = datatable(:, 1)/1000;
+    params.datatable = datatable;
+
+    params.UseSLInput = true;
+
+    params.SL0 = 2.2;
+    params.Slim_l = 1.5;
+    params.Slim_r = 2.25;
+    % params.LXBpivot = 2.2;
+    % params.dS = 0.0025;
+    if isfield(params, 'PU0')
+        params = rmfield(params, 'PU0');
+    end
+
+    % reset the PU0
+    params = getParams(params, params.g, true);
+    % velocitytable(1, 1) = 2;
+    % velocitytable = velocitytable(1:4, 1);
+    % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+    [F out] = evaluateModel(modelFcn, [0 1], params);
 end

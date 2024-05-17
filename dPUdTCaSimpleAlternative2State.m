@@ -29,9 +29,34 @@ end
 % if ~params.UseCa
     NP = 0;
 
-% if ~params.UseSLInput
+if ~params.UseSLInput
     SL = PU(2*ss + 3);
     dSL = vel;
+else
+    if t >= params.datatable(end-1, 1)
+        % if the sim time is over the datatable length, hold the SL
+        SL = params.datatable(end, 2);
+        dSL = 0;
+    elseif t <= params.datatable(1, 1)
+        SL = params.datatable(1, 2);
+        dSL = 0;
+    else
+        % TODO make it faster in sorted list
+        % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
+        i = find(params.datatable(:, 1) >= t,1,'First');    
+    %     i = min(length(params.datatable(:, 1))-1, i);
+        SL = params.datatable(i, 2);
+        if i == 1
+            dSL = 0;
+        else
+            dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
+        end
+    end
+%     if t > 2.76
+%         a = 1;
+%     end
+    vel = dSL;
+end    
 
     
 % P_SRs = 1 - P_SR;
@@ -118,6 +143,7 @@ dLSEdt = vel - velHS;
 Force = max(0, Force);
 
 %% TRANSITIONS
+
 
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim

@@ -1,5 +1,5 @@
 % function force = evaluateFracModel()
-% addpath(genpath("1D_Trabeculae"))
+addpath(genpath("1D_Trabeculae"))
 
 % pars    = [10.46, 15.02, 0.9];
 
@@ -11,9 +11,9 @@ pars = [16.1471    8.0026    0.7662];
 
 % Material Parameters for myocardium
 % pCa 11
-% pars    = [2.46, 10.02, 0.5];
+pars    = [2.46, 10.02, 0.5];
 % pCa 4.4
-% pars    = [16.1471    8.0026    0.7662];
+pars    = [16.1471    8.0026    0.7662];
 
 figure(2);
 evalModel(pars)
@@ -23,6 +23,7 @@ import matlaws.*
 import frac.*
 
 pCa = 4.4;
+% pCa = 11;
 rampSet = [1 2 3 4]; % only 100ms
 
 % Material Parameters for myocardium
@@ -53,10 +54,10 @@ rds = fliplr([0.1, 1, 10, 100]);
 for i_rd = 1:length(rds)
     if isinf(pCa) || pCa >= 10
         % newest format of experiments
-        datatables{i_rd} = readtable(['..\..\Data\AvgRelaxed_' num2str(rds(i_rd)) 's.csv']);
+        datatables{i_rd} = readtable(['..\Data\AvgRelaxed_' num2str(rds(i_rd)) 's.csv']);
     else
-        if exist(['..\..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv'], "file")
-            datatables{i_rd} = readtable(['..\..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv']);
+        if exist(['..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv'], "file")
+            datatables{i_rd} = readtable(['..\Data\AvgpCa' num2str(pCa) '_' num2str(rds(i_rd)) 's.csv']);
         else
             datatables{i_rd} = [];
         end

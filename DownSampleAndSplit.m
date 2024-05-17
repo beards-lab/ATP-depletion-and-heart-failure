@@ -65,18 +65,21 @@ end
     end
 
 %     figure();clf;
-    subplot(211);hold on;title(saveAs, 'Interpreter', 'none');
+    subplot(211);
+    hold on;title(saveAs, 'Interpreter', 'none');
+    % yyaxis right; 
     plot(td + offset, ld, '-');
     
     
 %     plot(t + offset, l, tf + offset, lf, td + offset, ld, '|-');   
-%     plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
+    plot(velocitytable(:, 1)*1000, velocitytable(:, 4)/ML, 'x-', 'Linewidth', 1, 'MarkerSize', 10)
 %     plot([ts_d;ts_d], repmat([min(data_table.L);max(data_table.L)], 1, length(ts_d)))
     xlabel('time (ms)');
     ylabel('Length (ML)')
 
     
     subplot(212);hold on;
+    % yyaxis left;
     plot(td + offset, fd, '-', 'Linewidth', 2, 'MarkerSize', 10);
     
 %     plot(t + offset, f, tf + offset, ff, td + offset, fd, '|-', 'Linewidth', 2, 'MarkerSize', 10);
