@@ -1,4 +1,4 @@
-function [dSLpc, ktr, df, del, E, SL] = fitRecovery(datatable, zones, zeroTreshold, fixed_df)
+function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zeroTreshold, fixed_df)
     if nargin < 4
         fixed_df = [];
     end
@@ -42,18 +42,18 @@ function [dSLpc, ktr, df, del, E, SL] = fitRecovery(datatable, zones, zeroTresho
         timebase_exp = (-(bt+15)/1000:0.01:0.3);
         plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '--', 'Linewidth', 2);
         
-%         %% linear approx
-%         ilin1 = find(datatable(:, 1) > zones(z, 1)/1000, 1); % start at the zone
-%         zlin = ilin1:ilin1+20; % linear zone length
-%         timebase_lin = datatable(zlin, 1)-datatable(zlin(1), 1);
-%         y_line = @(k, x0, x)k.*(x-x0);
-%         [al bl] = fit(timebase_lin, datatable(zlin, 3)-zeroTreshold, y_line, 'StartPoint', [1000, -0.001]);
-%         x0lin(z) = al.x0 + datatable(ilin1);
-%         timebase_lin = (-10/1000:0.01:0.05); % extending the timebase
-%         
-%         ci = get(gca,'ColorOrderIndex');
-%         set(gca,'ColorOrderIndex', max(ci-2, 1));
-%         plot(datatable(zlin, 1), datatable(zlin, 3), 'o', timebase_lin + datatable(zlin(1), 1), y_line(al.k, al.x0, timebase_lin), ':', 'Linewidth', 2);
+        %% linear approx
+        ilin1 = find(datatable(:, 1) > zones(z, 1)/1000, 1); % start at the zone
+        zlin = ilin1:ilin1+30; % linear zone length
+        timebase_lin = datatable(zlin, 1)-datatable(zlin(1), 1);
+        y_line = @(k, x0, x)k.*(x-x0);
+        [al bl] = fit(timebase_lin, datatable(zlin, 3)-zeroTreshold, y_line, 'StartPoint', [1000, -0.001]);
+        x0lin(z) = al.x0 + datatable(ilin1);
+        timebase_lin = (-10/1000:0.01:0.05); % extending the timebase
+
+        ci = get(gca,'ColorOrderIndex');
+        set(gca,'ColorOrderIndex', max(ci-2, 1));
+        plot(datatable(zlin, 1), datatable(zlin, 3), 'o', timebase_lin + datatable(zlin(1), 1), y_line(al.k, al.x0, timebase_lin), ':', 'Linewidth', 2);
 %%
         % cursors - exp zone start and end
 
@@ -90,7 +90,7 @@ function [dSLpc, ktr, df, del, E, SL] = fitRecovery(datatable, zones, zeroTresho
 %         i_del_lin = find(datatable(iss:i2, 1) >= ix0lin(z), 1);
 %         dTlin(z) = x0lin(z) - datatable(iss, 1);
         vel_lin(z) = 0;%sdSL/dTlin(z);
-%         plot([x0lin(z) x0lin(z)], [0, 100], 'm--');
+        plot([x0lin(z) x0lin(z)], [0, 100], 'm--');
         
 %         fprintf('At ML %1.2f, and time %1.2f: ' , datatable(i1- sc, 2), datatable(i1- sc, 1));
 %         fprintf(' dSL = %1.3f (%1.1f pct), dT = %1.1f ms and vel is %1.1f (%1.1f) \n', dSL, dSLpc(z), dT(z)*1000, -vel(z), -vel_lin(z));

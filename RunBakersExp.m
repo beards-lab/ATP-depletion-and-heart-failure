@@ -276,7 +276,7 @@ if params0.RunSlack
     params = params0;
     datastruct = load('data/bakers_slack8mM.mat');
     datatable = datastruct.datatable;
-    velocitytable = datastruct.velocitytable(1:10, :);
+    velocitytable = datastruct.velocitytable(1:11, :);
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
 
@@ -343,8 +343,9 @@ if params0.RunSlack
         % plot(Tspan,F_active,'linewidth',1.5);
         xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
-        set(gca,'fontsize',14, 'xlim', [2.6 3.05]);  box on;
+        set(gca,'fontsize',14);  box on;
         title('Slack');
+        xlim([velocitytable(2, 1) velocitytable(end, 1)])
         yl = ylim;
         plot(out.t, out.XB_TORs, '-')
         ylim(yl)

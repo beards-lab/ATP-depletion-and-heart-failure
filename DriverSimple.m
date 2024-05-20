@@ -39,7 +39,7 @@ params0.kah = 80;
 params0.kSE = 10000;
 params0.mu  = 0.001;
 % params0.kstiff2 = 27373.9;
-params0.dr = 0.013;
+params0.dr = 0.02;
 params0.kstiff1 = 2*0.55*1.5e4;
 params0.kstiff2 = 0.55*1.5e4;
 params0.k_pas = 50;
@@ -58,7 +58,7 @@ params0.dr2_R = 0.002;
 params0.alpha2_R = 1;
 params0.RunForceVelocity = 0;
 params0.RunSlack = 1;
-params0.RunStairs = 0;
+params0.RunStairs = 1;
 params0.RunForceVelocityTime = 0;
 params0.dS = 0.004; % set the space resolution
 

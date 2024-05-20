@@ -30,7 +30,7 @@ dt2.Properties.VariableNames = {'Time', 'L', 'F'};
 dt2.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
 % datalabel = "8 mM";
 %%
-clf;
+% clf;
 plot(dt8.Time, dt8.L, '--b');hold on;
 plot(dt2.Time, dt2.L, '--r');
 yyaxis right;
@@ -82,7 +82,7 @@ ts_s = [-500 ts_d(2:end)]
 % velocitytable
 
 %% Load stretch step-up data
-% clf;
+clf;
 data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf*5, nf/54, 'bakers_rampup2_8');
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [ts_d(1:end-1) 339.95], [ts_s(1:end-1) 339.95], ML, dsf, nf/54, '');
@@ -96,7 +96,7 @@ o = 1150 - 100 + 9.4;
 % ts_s = [0 1070 1159 2259 2759.6 2760.4 2910 2930 3058]; % to prevent skipping events with large integrator step
 ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large integrator step
 ts_s = [0 1070 1159]
-ts_s = [0 1070 1159.4 1160.3 1209.9 1229.8 1459.4 1460.4 1519.95 1540.1 1809.4 1810.4 1889.9 1909.9 2259.4 2260.4 2360 2380.0, 2759.6, 2760.4, 2910.4, 2930.35, 3050]
+ts_s = [0 1070 1159.4 1160.3 1209.9 1229.8 1459.4 1460.4 1519.95 1540.1 1809.4 1810.4 1889.9 1909.9 2259.4 2260.4 2360 2380.0, 2759.4, 2760.3, 2910.4, 2930.35, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
 % subplot(211)
@@ -107,7 +107,7 @@ data_table = readtable('data/2 mM ATP slack.txt', 'filetype', 'text', 'NumHeader
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack2mM', o);
 %%
 data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack02mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack02mM', o);
 
 
 yyaxis right;
@@ -124,9 +124,29 @@ xticklabels(xt-xt(1));
 legend('8mM', '2mM', '0.2mM', 'Musc. L*');
 set(gca,'YColor',[0.49 0.18 0.56])
 %% get the ktr of the zones
+figure(4);
 zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 clf;    
-fitRecovery(datatable, zones, 0);
+[dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(datatable, zones, 0);
+plot([1 3], [0 0], 'k-')
+% times of start of the SL drop
+dropstart = velocitytable([3, 7, 11, 15, 19], 1);
+dt = x0lin' - dropstart; 
+dL = 2.2 - SL;
+
+v = dL'./dt;
+%
+figure(5);clf;
+nexttile;hold on;
+plot(datatable(:, 1)-dropstart', datatable(:, 2));
+plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
+xlim([-0.05, 0.25])
+nexttile;
+plot(datatable(:, 1)-dropstart', datatable(:, 3));
+xlim([-0.05, 0.25])
+
+slack_x = [3e-4 dt'] - 3e-4;
+slack_y = [2.2 SL];
 
 %%
 
@@ -253,9 +273,9 @@ ts_s = [500 ts_d(2:end)];
 velocitytable
 
 %% same preparation as 8mM, using the same scale
-% clf;
-data_table = readtable('data/2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_2');
+clf;
+data_table = readtable('data/8 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_2');
 %% same preparation as 8mM, using the same scale
 data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, 'bakers_rampup2_2_long', -(122070+710)-2700);
