@@ -89,7 +89,7 @@ data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeader
 
 
 %% slack 8 mM
- % clf;hold on;
+ clf;hold on;
 
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 o = 1150 - 100 + 9.4;
@@ -135,7 +135,7 @@ dt = x0lin' - dropstart;
 dL = 2.2 - SL;
 
 v = dL'./dt;
-%
+%%
 figure(5);clf;
 nexttile;hold on;
 plot(datatable(:, 1)-dropstart', datatable(:, 2));
@@ -147,6 +147,37 @@ xlim([-0.05, 0.25])
 
 slack_x = [3e-4 dt'] - 3e-4;
 slack_y = [2.2 SL];
+%% first peak and SL length dependence - is there a connection?
+x_peak1_8 = [53.95 64 83.45 103 155.45]/1000;
+x_peak1_2 = [58, 66.5, 85.7, 105, 164]/1000;
+x_peak1 = x_peak1_2; 
+hold on;
+plot([x_peak1;x_peak1], x_peak1*0 +  [0;100], '--');
+
+for i_sp = 1:5
+   i_dt = find(datatable(:, 1) > x_peak1(i_sp) + dropstart(i_sp), 1, 'first');
+   SL_peak1(i_sp) = datatable(i_dt, 2);
+end
+title('Time at first force peak')
+%% switch to panel 1
+plot([0;0.25] + SL_peak1*0, [SL_peak1;SL_peak1], '--');
+plot(x_peak1, SL_peak1, 'x',LineWidth=2);
+title('Sarcomere length at first peak')
+%%
+figure(3);clf;nexttile;
+plot(SL, SL_peak1 - SL, '*-',SL(end-1:end), SL_peak1(end-1:end) - SL(end-1:end), 'o-', LineWidth=2);
+legend('Velocities increasing from 4', 'Velocity 3')
+title('Base sarcomere length to force peak1')
+xlabel('base SL')
+ylabel('SL at 1st force peak');
+nexttile;
+velocities = velocitytable([5, 9, 13, 17, 21], 2);
+i_sorted = [5, 1 2 3 4];
+i_sorted = 1:4;
+plot(-velocities(i_sorted), SL_peak1(i_sorted) - SL(i_sorted), '*-', -velocities([1,5]), SL_peak1([1,5]) - SL([1,5]), 'o-', LineWidth=2)
+legend('SL increasing from 1.92', 'SL 1.88')
+xlabel('Negative velocity (SL extension) (\mum)', Interpreter='tex')
+title('Ramp-up velocity to force peak1')
 
 %%
 

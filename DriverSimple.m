@@ -58,10 +58,11 @@ params0.dr2_R = 0.002;
 params0.alpha2_R = 1;
 params0.RunForceVelocity = 0;
 params0.RunSlack = 1;
-params0.RunStairs = 1;
+params0.RunStairs = 0;
 params0.RunForceVelocityTime = 0;
 params0.dS = 0.004; % set the space resolution
-
+params0.gamma = 1;
+params0.k_pas = 10;
 
 
 LoadData;
