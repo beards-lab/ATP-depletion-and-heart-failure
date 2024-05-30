@@ -61,11 +61,18 @@ params0.RunSlack = 1;
 params0.RunStairs = 0;
 params0.RunForceVelocityTime = 0;
 params0.dS = 0.004; % set the space resolution
-params0.gamma = 1;
-params0.k_pas = 10;
+% params0.gamma = 1;
+% params0.k_pas = 10;
+ModelParamsInitDanOptim2;
+params0.ksrm = 0;
+params0.ksr0 = 1e3;
+params0.sigma1 = 1e6;
+params0.kstiff1 = 18e3;
+params0.kstiff2 = params0.kstiff1;
+params0.dr = 0.01;
+params0.alpha2_L = 100;
 
-
-LoadData;
+LoadData; 
 RunBakersExp;
 %%
 saveas(figure(2), 'slack.png')

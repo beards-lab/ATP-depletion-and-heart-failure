@@ -98,7 +98,7 @@ ts_s = [0 1070 1159 2259 2759 3058]; % to prevent skipping events with large int
 ts_s = [0 1070 1159]
 ts_s = [0 1070 1159.4 1160.3 1209.9 1229.8 1459.4 1460.4 1519.95 1540.1 1809.4 1810.4 1889.9 1909.9 2259.4 2260.4 2360 2380.0, 2759.4, 2760.3, 2910.4, 2930.35, 3050]
 % [datatable, velocitytable] = DownSampleAndSplit(data_table, ts_s([1, end])-o, ts_s -o, ML, dsf, nf/54, 'bakers_slack8mM', o);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM', o);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 1, nf/54, 'bakers_slack8mM_all', o);
 % subplot(211)
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')

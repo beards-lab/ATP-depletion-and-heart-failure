@@ -143,7 +143,10 @@ dLSEdt = vel - velHS;
 Force = max(0, Force);
 
 %% TRANSITIONS
-
+plotStateTransitionsFlag = false;
+if plotStateTransitionsFlag
+    s = -0.1:dS:0.1;
+end
 
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
@@ -184,7 +187,7 @@ R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 % lambdaL = 0.015;
 % params.k2 = 1.25*20;
 
-kL = params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2;
+kL = min(1e4, params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2);
 % kR = 200*(s>0).*(1 - exp(+(s+0)./lambdaR)).^2;
 % kR = 0*(s>0).*(s./0.01);
 % kR = 600*(s>0).*((s.^2)./((s.^2) + 0.01^2));
@@ -205,7 +208,9 @@ R2T = p2.*(params.k2 + kL + kR);
     else 
         dU_SR = 0;
     end
-
+if plotStateTransitionsFlag
+    plotStateTransitions;
+end
 %% governing flows
 % state 0: unattached, ATP-cocked
 dPD = + RTD - RD1 + sum(R1D)*dS;

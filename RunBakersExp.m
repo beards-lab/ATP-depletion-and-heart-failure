@@ -274,9 +274,11 @@ end
 %% SLACK
 if params0.RunSlack
     params = params0;
-    datastruct = load('data/bakers_slack8mM.mat');
+    datastruct = load('data/bakers_slack8mM_all.mat');
     datatable = datastruct.datatable;
     velocitytable = datastruct.velocitytable(1:11, :);
+    velocitytable = datastruct.velocitytable(18:end, :);
+    velocitytable(1, 1) = 2;
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
 
