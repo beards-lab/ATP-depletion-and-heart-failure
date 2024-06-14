@@ -276,9 +276,22 @@ if params0.RunSlack
     params = params0;
     datastruct = load('data/bakers_slack8mM_all.mat');
     datatable = datastruct.datatable;
-    velocitytable = datastruct.velocitytable(1:11, :);
-    velocitytable = datastruct.velocitytable(18:end, :);
-    velocitytable(1, 1) = 2;
+    
+    % first slack
+    % velocitytable = velocitytable(1:4, 1);
+
+    % two slacks
+    % velocitytable = datastruct.velocitytable(1:11, :);
+
+    % all but the last
+    velocitytable = datastruct.velocitytable(1:19, :);
+    velocitytable(1, 1) = -2;
+
+    % only the last slack
+    % velocitytable = datastruct.velocitytable(18:end, :);
+    % velocitytable(1, 1) = -2;
+    
+    
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
 
@@ -294,8 +307,7 @@ if params0.RunSlack
 
     % reset the PU0
     params = getParams(params, params.g, true);
-    % velocitytable(1, 1) = 2;
-    % velocitytable = velocitytable(1:4, 1);
+    
     % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
@@ -351,7 +363,7 @@ if params0.RunSlack
         yl = ylim;
         plot(out.t, out.XB_TORs, '-')
         ylim(yl)
-        xl = xlim();
+        % xl = xlim();
 
 
         if exist('gp', 'var') && isvalid(gp)

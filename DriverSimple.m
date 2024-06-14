@@ -17,9 +17,9 @@ ModelParamsInit2;
 ModelParamsInitDanOptim3;
 params0.MaxSlackNegativeForce = 0;
 % already in ModelParamsInit, but free to overwrite any parameter here
-params0.alpha0 = 1.5*25;
-params0.alpha1 = 100;
-% params0.alpha2 = 31.5061;
+params0.alpha0 = 1.5*25*1;
+params0.alpha1 = .100;
+% params0.alpha2 = 31.5061; 
 % params0.alpha3 = 0;
 % params0.alphaRip = 100; %
 % params0.dr0 = 0;
@@ -33,14 +33,14 @@ params0.k2 = 200; % detach rate
 params0.k2rip = 0; %
 
 params0.ka = 25; % attach rate
-params0.kd = 0.30*4;
+params0.kd = 0.30*4*1.00;
 params0.kah = 80;
 % params0.kadh = 0;
 params0.kSE = 10000;
 params0.mu  = 0.001;
 % params0.kstiff2 = 27373.9;
 params0.dr = 0.02;
-params0.kstiff1 = 2*0.55*1.5e4;
+params0.kstiff1 = 0.55*1.5e4;
 params0.kstiff2 = 0.55*1.5e4;
 params0.k_pas = 50;
 params0.gamma = 3;
@@ -63,7 +63,7 @@ params0.RunForceVelocityTime = 0;
 params0.dS = 0.004; % set the space resolution
 % params0.gamma = 1;
 % params0.k_pas = 10;
-ModelParamsInitDanOptim2;
+% ModelParamsInitDanOptim2;
 params0.ksrm = 0;
 params0.ksr0 = 1e3;
 params0.sigma1 = 1e6;
@@ -71,9 +71,15 @@ params0.kstiff1 = 18e3;
 params0.kstiff2 = params0.kstiff1;
 params0.dr = 0.01;
 params0.alpha2_L = 100;
+params0.kSE = 100;
+params0.ML = 1.2;
+% params0.MaxSlackNegativeForce = -5;
+params0.justPlotStateTransitionsFlag = false;
 
 LoadData; 
+tic
 RunBakersExp;
+toc
 %%
 saveas(figure(2), 'slack.png')
 figure(1); plot(out.t,out.FXBPassive)
@@ -87,3 +93,36 @@ end
 %% store the results
 modNames = getAllDifferent(params0);
 writeParamsToMFile('ModelParamsInitDanOptim.m', params0, modNames);
+
+%% fit the slack
+modeldatatable = [out.t; out.SL; out.Force]';
+zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
+zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
+[dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0);
+plot([1 3], [0 0], 'k-')
+% times of start of the SL drop
+dropstart = velocitytable([3, 7, 11, 15, 19], 1);
+dropstart = velocitytable([3, 7, 11, 15], 1);
+
+dt = x0lin' - dropstart; 
+dL = 2.2 - SL;
+
+v = dL'./dt;
+%
+figure(5);clf;
+nexttile;hold on;
+plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
+plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
+xlim([-0.05, 0.25])
+nexttile;
+plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 3));
+xlim([-0.05, 0.25])
+
+slack_x = [3e-4 dt'] - 3e-4;
+slack_y = [2.2 SL];
+
+
+%% Show the transition rates
+figure(3); clf;
+plot(out.t, out.RTD, out.t, out.RD1, out.t, out.R1D, out.t, out.R12, out.t, out.R21, out.t, out.XB_Ripped)
+legend('RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_Ripped')

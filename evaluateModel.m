@@ -273,7 +273,7 @@ nS = params.NumberOfStates; % number of strain-dependent states
         
         
         % get the XB force from the dpudt directly        
-        [~, outputs] = fcn(T(j), PU(j, :)', params); 
+        [~, outputs, rates] = fcn(T(j), PU(j, :)', params); 
         out.Force(i) = outputs(1);
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
@@ -281,6 +281,14 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.XB_TOR(i, :) = outputs(5:params.ss+4);
         out.XB_TORs(i) = params.dS*sum(outputs(5:end));
         out.LXBPivot(i) = params.LXBpivot;
+
+        % rates = [RTD, RD1, sum([R1D; R12;R21;XB_Ripped])*dS];
+        out.RTD(i) = rates(1);
+        out.RD1(i) = rates(2);
+        out.R1D(i) = rates(3);
+        out.R12(i) = rates(4);
+        out.R21(i) = rates(5);
+        out.XB_Ripped(i) = rates(6);
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke

@@ -1,4 +1,4 @@
-function [f, outputs] = dPUdTCaSimpleAlternative2State(t,PU,params)
+function [f, outputs, rates] = dPUdTCaSimpleAlternative2State(t,PU,params)
 % ODE function for the d/dt operator for the cross-bridge model of half-sarcomere.
 %  first 2N-1 entries of PU represent p1(s,t)
 %  second 2N-1 entries represent p2(s,t)
@@ -137,15 +137,19 @@ end
 
 F_total = F_active + F_passive;
 
-Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
+Force = max(params.MaxSlackNegativeForce, params.kSE*LSE)^2;
 velHS = (Force - F_total)/params.mu;
 dLSEdt = vel - velHS;
 Force = max(0, Force);
 
-%% TRANSITIONS
 plotStateTransitionsFlag = false;
-if plotStateTransitionsFlag
-    s = -0.1:dS:0.1;
+%% TRANSITIONS
+% plotStateTransitionsFlag = true;
+if params.justPlotStateTransitionsFlag
+    s = s - (s(end) - s(1))/2; 
+    p1 = ones(size(p1));
+    p2 = ones(size(p2));
+    PD = 1;PT = 1;SR = 1;
 end
 
 % quasi-equilibrium binding factor functions
@@ -154,10 +158,10 @@ MgATP = params.MgATP;
 Pi = params.Pi;
 MgADP = params.MgADP;
 
-g1 = 1; g2 = 1; f1 = 0; f2 = 1;
+g1 = 1; g2 = 1; f1 = 1; f2 = 1;
 
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
-strainDep = @(alpha, dr) exp((alpha*(s+dr)).^2);
+strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));
 RTD = g2*params.kah*PT;
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
 
@@ -208,8 +212,9 @@ R2T = p2.*(params.k2 + kL + kR);
     else 
         dU_SR = 0;
     end
-if plotStateTransitionsFlag
+if params.justPlotStateTransitionsFlag
     plotStateTransitions;
+    error('Quitting after plotting states');
 end
 %% governing flows
 % state 0: unattached, ATP-cocked
@@ -226,6 +231,8 @@ dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydro
 
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD];
 outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, PT];
+rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS];
+
 %% breakpints
 if t > 2.92
     numberofthebeast = 666;
