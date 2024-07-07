@@ -18,7 +18,7 @@ ModelParamsInitDanOptim3;
 params0.MaxSlackNegativeForce = 0;
 % already in ModelParamsInit, but free to overwrite any parameter here
 params0.alpha0 = 1.5*25*1;
-params0.alpha1 = .100;
+params0.alpha1 = 80;
 % params0.alpha2 = 31.5061; 
 % params0.alpha3 = 0;
 % params0.alphaRip = 100; %
@@ -63,18 +63,21 @@ params0.RunForceVelocityTime = 0;
 params0.dS = 0.004; % set the space resolution
 % params0.gamma = 1;
 % params0.k_pas = 10;
-% ModelParamsInitDanOptim2;
-params0.ksrm = 0;
+ModelParamsInitDanOptim2;
+% params0.ksrm = 0;
 params0.ksr0 = 1e3;
 params0.sigma1 = 1e6;
 params0.kstiff1 = 18e3;
 params0.kstiff2 = params0.kstiff1;
 params0.dr = 0.01;
 params0.alpha2_L = 100;
-params0.kSE = 100;
-params0.ML = 1.2;
+params0.kSE = 50;
+params0.ML = 2.0;
 % params0.MaxSlackNegativeForce = -5;
 params0.justPlotStateTransitionsFlag = false;
+rsl0 = 1.024
+params0.SL0 = 2.2*rsl0;
+% ModelParamsInitDanOptim3;
 
 LoadData; 
 tic
@@ -97,12 +100,12 @@ writeParamsToMFile('ModelParamsInitDanOptim.m', params0, modNames);
 %% fit the slack
 modeldatatable = [out.t; out.SL; out.Force]';
 zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
-zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
+% zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
 [dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0);
 plot([1 3], [0 0], 'k-')
 % times of start of the SL drop
 dropstart = velocitytable([3, 7, 11, 15, 19], 1);
-dropstart = velocitytable([3, 7, 11, 15], 1);
+% dropstart = velocitytable([3, 7, 11, 15], 1);
 
 dt = x0lin' - dropstart; 
 dL = 2.2 - SL;
@@ -126,3 +129,33 @@ slack_y = [2.2 SL];
 figure(3); clf;
 plot(out.t, out.RTD, out.t, out.RD1, out.t, out.R1D, out.t, out.R12, out.t, out.R21, out.t, out.XB_Ripped)
 legend('RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_Ripped')
+
+%% calculate ML at 2.0 um SL
+params = params0;
+params.ka = 0;
+params.ML = 2.0;
+% params.kSE = 100;
+
+    params.Velocity = 0;
+
+    params.SL0 = 2.048;
+    rsl0 = params.SL0 / 2.0;
+    params.Slim_l = 1.85;
+    params.Vums = 0;
+    % params.Slim_r = 2.2;
+    % params.LXBpivot = 2.2;
+    % params.dS = 0.0025;
+    
+if isfield(params, 'PU0')
+    params = rmfield(params, 'PU0');
+end
+
+% reset the PU0
+params = getParams(params, params.g, true);
+    
+% [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+[F out] = evaluateModel(@dPUdTCaSimpleAlternative2State, [0 1], params);
+
+figure(1);clf;
+nexttile; plot(out.t, out.SL, out.t, out.LXB)
+nexttile; plot(out.t, out.Force, out.t, out.FXB)

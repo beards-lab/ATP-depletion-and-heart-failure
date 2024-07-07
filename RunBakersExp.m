@@ -281,21 +281,24 @@ if params0.RunSlack
     % velocitytable = velocitytable(1:4, 1);
 
     % two slacks
-    % velocitytable = datastruct.velocitytable(1:11, :);
+    velocitytable = datastruct.velocitytable(1:11, :);
 
     % all but the last
-    velocitytable = datastruct.velocitytable(1:19, :);
-    velocitytable(1, 1) = -2;
-
+    % velocitytable = datastruct.velocitytable(1:19, :);
+    
     % only the last slack
     % velocitytable = datastruct.velocitytable(18:end, :);
-    % velocitytable(1, 1) = -2;
+    
+    % all
+    % velocitytable = datastruct.velocitytable(1:end, :);
+    
+    velocitytable(1, 1) = -2;
     
     
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
 
-    params.SL0 = 2.2;
+    % params.SL0 = 2.2;
     params.Slim_l = 1.85;
     % params.Slim_r = 2.2;
     % params.LXBpivot = 2.2;

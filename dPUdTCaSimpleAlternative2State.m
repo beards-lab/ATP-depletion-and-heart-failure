@@ -217,6 +217,7 @@ if params.justPlotStateTransitionsFlag
     error('Quitting after plotting states');
 end
 %% governing flows
+% PT - calculated as complement of sum of all probabilities
 % state 0: unattached, ATP-cocked
 dPD = + RTD - RD1 + sum(R1D)*dS;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
