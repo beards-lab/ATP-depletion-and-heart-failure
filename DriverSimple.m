@@ -98,13 +98,23 @@ modNames = getAllDifferent(params0);
 writeParamsToMFile('ModelParamsInitDanOptim.m', params0, modNames);
 
 %% fit the slack
+dropstart = velocitytable([3, 7, 11, 15, 19], 1);
+
 modeldatatable = [out.t; out.SL; out.Force]';
-zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
+zones = [1162, 1209;1464 1519;1816 1889;2268.5 2359.5;2766.5 2900];
+zones1 = zones(:, 1);
+for z1i = 1:length(zones1)
+    z1u(z1i) = find(out.t > dropstart(z1i) + 0.002 & out.t < zones(z1i, 2)/1000 & out.Force > 1e-3, 1, 'first');
+    
+end
+zones(:, 1) = out.t(z1u)*1000;
+%%
+    
+figure(2);clf;
 % zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
 [dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0);
 plot([1 3], [0 0], 'k-')
 % times of start of the SL drop
-dropstart = velocitytable([3, 7, 11, 15, 19], 1);
 % dropstart = velocitytable([3, 7, 11, 15], 1);
 
 dt = x0lin' - dropstart; 

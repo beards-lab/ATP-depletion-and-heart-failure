@@ -290,7 +290,7 @@ if params0.RunSlack
     % velocitytable = datastruct.velocitytable(18:end, :);
     
     % all
-    % velocitytable = datastruct.velocitytable(1:end, :);
+    velocitytable = datastruct.velocitytable(1:end, :);
     
     velocitytable(1, 1) = -2;
     
