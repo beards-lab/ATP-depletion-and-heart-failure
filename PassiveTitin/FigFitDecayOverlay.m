@@ -5,6 +5,27 @@
 % load pca4dataAdj.mat
 % load pca4dataAdj60s.mat
 load pca11data.mat
+%% load from raw data
+dsc = load('DataStruct20240705.mat').dsc;
+% Farr={};Tarr = {};
+% dataload.dsc{1, 1}
+% relaxed
+% ids = 1; arr = [2 3 4 5];
+ids = 1; arr = [9 8 7 6];
+% PNB and MAVA
+ids = 3; arr = [2 3 4 5];
+ids = 3; arr = [7 8 9 10];
+
+
+for iarr = 1:length(arr)
+    Farr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.F;
+    Tarr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.t - 10;
+end
+Farr{1} = [];
+Tarr{1} = [];
+%%
+plot(Tarr{1}, Farr{1})
+%%
 
 
 fitfun = @(init) evalPowerFit(init, Farr, Tarr, true);
@@ -51,9 +72,10 @@ f = figure(2);
 % matlab's pixel is 1/96 of an inch
 f.Position = [300 200 7.2*96 7.2*96/aspect];
 x = [4.4271    0.2121    4.8964];
+x = [4.89    0.2121    0.02108964];
 [c rampShift] = fitfun(x)
 f = gcf();
-exportgraphics(f,'../Figures/FigDecayOverlay.png','Resolution',150)
+% exportgraphics(f,'../Figures/FigDecayOverlay.png','Resolution',150)
 % saveas(f, 'Figures/FigDecayOverlaypCa4.png')
 % exportgraphics(f,'Figures/FigDecayOverlaypCa4.4_7.2.png','Resolution',300)
 % saveas(f, 'Figures/FigDecayOverlaypCa4Corr2.png')

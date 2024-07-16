@@ -121,6 +121,9 @@ for i_rds = [4 3 2 1]
         % loglog(Tarr{i_rds} + rampShift(i_rds), Favg -c, Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
     
         % resample log equally from the peak - till the end
+        if isempty(Tarr{i_rds})
+            continue;
+        end
         t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*10);
 
         if limitfitrange
@@ -259,7 +262,8 @@ for i_rds = [4 3 2 1]
     if ~limitfitrange
         leg_gr = [l_cm(valids) l_f];
         leg_txt = [legends(valids) sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
-        reorder = [1 3 5 2 4];
+        % reorder = [1 3 5 2 4];
+        reorder = 1:length(leg_gr);
         leg = legend(leg_gr(reorder), leg_txt(reorder), 'Interpreter','latex', 'FontSize',fs, Location='northwest', NumColumns=2);
     else
         leg_gr = [l_cm(valids) l_fitarr l_f];

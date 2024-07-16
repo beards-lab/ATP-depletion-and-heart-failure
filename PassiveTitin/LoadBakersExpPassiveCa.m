@@ -28,9 +28,10 @@ clear;clc;
 % S1 = dir('../data/PassiveCaSrc2/20230919');
 % S1 = dir('../data/PassiveCaSrc2/20230927');
 % S1 = dir('../data/PassiveCaSrc2/20230928');
-S1 = dir('../data/PassiveCaSrc2/20231027');
+% S1 = dir('../data/PassiveCaSrc2/20231027');
 % S1 = dir('../data/PassiveCaSrc2/20231102');
 % S1 = dir('../data/PassiveCaSrc2/20231107');
+S1 = dir('../data/PassiveCaSrc2/20240705');
 
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
@@ -149,7 +150,7 @@ end
 %% Filter out zero drift in a separate pass
 for i_logtrace = 1:size(dsc, 1)
     %% take the log. Log is number 1
-    % i_logtrace = 1
+    % i_logtrace = 3
     ds = dsc{i_logtrace, 1};
 
     % is slack? ML below 0.85 definitely is
@@ -257,9 +258,13 @@ for i_logtrace = 1:size(dsc, 1)
             ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
             ramp_shift_array{2} = [68, 139.100];
             ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200];
+        case '20240705'
+            ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
+            ramp_shift_array{2} = [68-11.9, 139.100 - 8.9];
+            ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600-6.38,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200] - 8;
     end
 
-    %% Identify position of individual ramps
+    % Identify position of individual ramps
     if ~isnan(ramp_shift_array{i_logtrace})
         % this is weird and has been identified semi-manually
         % ramp_order = [2,3,4,5,6,7,8,9];
@@ -289,6 +294,8 @@ for i_logtrace = 1:size(dsc, 1)
     % compare to the 100s, 10s, 1s and 0.1s ramp-up cutouts    
     figure(i_logtrace);subplot(221);cla;hold on;
     zeroDrift = cell(1, 5);
+    zdr = [];nozdr = [];
+
     for i_ramp = 1:size(dsc, 2)-1
         if isempty(dsc{i_logtrace, i_ramp +1})
             % no more ramps here
@@ -316,12 +323,12 @@ for i_logtrace = 1:size(dsc, 1)
 
         if rmp.ZDR
             % zero drift fitted
-            plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp)))
+            zdr = plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp)), '-', LineWidth=0.5);
             % save the force corrected for the zero drift
             rmpdt.F = rmpdt.F - f_zd(rmpdt.t + ramp_shift(i_ramp));        
         else
             % compare with simple zero shift - e.g. we get oinly single true zer inbetween the baths
-            plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - avg_Fslack(i_ramp), ':')        
+            nozdr = plot(rmpdt.t + ramp_shift(i_ramp), rmpdt.F - avg_Fslack(i_ramp), ':', LineWidth=1.5);
             % save the force corrected for the zero shift
             rmpdt.F = rmpdt.F - avg_Fslack(i_ramp);        
         end
@@ -333,7 +340,7 @@ for i_logtrace = 1:size(dsc, 1)
     % plot(ds.datatable.t(is_slack), ds.datatable.F(is_slack), '.', 'LineWidth',2)
     % plot(ds.datatable.t, f_Fdt(ae.a, ae.b, ae.c, ds.datatable.t))
     % plot(ds.datatable.t, ds.datatable.F, ':')
-    legend('Zero drift removal', 'zero-value removal')
+    legend([zdr, nozdr], [zeroDriftType ' removal'], 'Zero-value removal')
     axis tight;
 end
 
