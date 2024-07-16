@@ -89,6 +89,7 @@ data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeader
 
 
 %% slack 8 mM
+figure(1);
  clf;hold on;
 
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
@@ -103,6 +104,7 @@ ts_s = [0 1070 1159.4 1160.3 1209.9 1229.8 1459.4 1460.4 1519.95 1540.1 1809.4 1
 % title('Slack experiment for different ATP concentrations')
 % legend('8 mM', '2 mM', '0.2 mM')
 %%
+figure(1);
 data_table = readtable('data/2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
 [datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, 10, nf/54, 'bakers_slack2mM', o);
 %%
@@ -140,9 +142,15 @@ figure(5);clf;
 nexttile;hold on;
 plot(datatable(:, 1)-dropstart', datatable(:, 2));
 plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
+% plot([3e-4 dt'], [2.2 SL], '*--', LineWidth=1)
+title('Time of force rebound, plotted over muscle length');
+ylabel('ML (normalized to 2\mum)');xlabel('Time after slack');
+
 xlim([-0.05, 0.25])
-nexttile;
+nexttile;hold on;
 plot(datatable(:, 1)-dropstart', datatable(:, 3));
+hold on; set(gca,'ColorOrderIndex',1);
+plot(datatable(:, 1)-dropstart', datatable(:, 3), '--', linewidth=2);
 xlim([-0.05, 0.25])
 
 slack_x = [3e-4 dt'] - 3e-4;

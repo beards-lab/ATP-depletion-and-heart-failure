@@ -70,12 +70,12 @@ params0.sigma1 = 1e6;
 params0.kstiff1 = 18e3;
 params0.kstiff2 = params0.kstiff1;
 params0.dr = 0.01;
-params0.alpha2_L = 100;
-params0.kSE = 50;
+params0.alpha2_L = 50;
+params0.kSE = 1500;
 params0.ML = 2.0;
 % params0.MaxSlackNegativeForce = -5;
 params0.justPlotStateTransitionsFlag = false;
-rsl0 = 1.024
+rsl0 = 1.008
 params0.SL0 = 2.2*rsl0;
 % ModelParamsInitDanOptim3;
 
@@ -108,7 +108,7 @@ for z1i = 1:length(zones1)
     
 end
 zones(:, 1) = out.t(z1u)*1000;
-%%
+%
     
 figure(2);clf;
 % zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
@@ -122,7 +122,7 @@ dL = 2.2 - SL;
 
 v = dL'./dt;
 %
-figure(5);clf;
+figure(5);%clf;
 nexttile;hold on;
 plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
 plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
@@ -148,8 +148,8 @@ params.ML = 2.0;
 
     params.Velocity = 0;
 
-    params.SL0 = 2.048;
-    rsl0 = params.SL0 / 2.0;
+    params.SL0 = 2.0015;
+    rsl0 = params.SL0 / 2.0
     params.Slim_l = 1.85;
     params.Vums = 0;
     % params.Slim_r = 2.2;
