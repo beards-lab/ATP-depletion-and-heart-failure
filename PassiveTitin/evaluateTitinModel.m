@@ -1,4 +1,4 @@
-function [Time, Length, Force, Force_par, x0] = evaluateTitinModel(mod, L0X0, times, velocities, pCa, plotOptions)
+function [Time, Length, Force_INST, Force_par, x0, Force_UNF] = evaluateTitinModel(mod, L0X0, times, velocities, pCa, plotOptions)
 
 if isfield(plotOptions, 'time_snaps') && ~isempty(plotOptions.time_snaps)
     time_snaps = plotOptions.time_snaps;
@@ -93,6 +93,7 @@ if drawFig1
     pl2 = plot(sx, Fp(:, 2), 'k-.', 'linewidth', 2); hold on;
     pl3 = plot(sx, Fp(:, 3), 'k--', 'linewidth', 2); hold on;
     plN = plot(repmat(sx, [1, Ng-3]), Fp(:, 4:Ng), ':', 'linewidth', 2, 'Color', 'k'); 
+    plSS = plot(sx, kd*max(0,(max(sx)-sx)/L_0).^nd, 'r--');
     
     % arrow
     % t0 = 5;
@@ -108,7 +109,7 @@ if drawFig1
     set(gca, 'FontSize', 12)
     aspect = 1.5;
     
-    ylim([0 inf]);xlim([0 inf])
+    ylim([0 max(Fp(:))]);xlim([0 inf])
     xlabel('$s$ ($\mu$m)', Interpreter='latex');ylabel('$\sigma_p(n,s)$ (kPa)', Interpreter='latex');
     % visualizing the unfolding rate = fig 1C
     % clf;hold on;
@@ -178,18 +179,25 @@ end
 
   opts = odeset('RelTol',1e-3, 'AbsTol',1e-2);          
   t = []; x = [];
+  F_alt = [];
   for i_section = 1:size(times, 1)
       [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf,velocities{i_section});
       t = [t; t1(2:end)];
       x = [x; x1(2:end, :)];
       % prep the init vector again
       x0 = x1(end,:);
+      F_alt1 = zeros(size(t1));
+      for i_t = 1:size(t1)
+          [~, outpits] = dXdT(t1(i_t),x1(i_t, :)',Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf, velocities{i_section});
+          F_alt1(i_t) = outpits(1);
+      end
+      F_alt = [F_alt;F_alt1(2:end)];
   end
   validRng = t >= 0;
-  t = t(validRng);x = x(validRng, :);
+  t = t(validRng);x = x(validRng, :); F_alt  = F_alt(validRng)';
   if ~any(validRng)
       % important only for the init x0
-      Time = []; Length = []; Force = []; Force_par = [];
+      Time = []; Length = []; Force_INST = []; Force_par = [];
       return;
   end
 
@@ -242,7 +250,7 @@ maxPu = 0; maxPa = 0;
     end
     Fd = kd*max(0,(Length(i) - s)/L_0).^nd; 
     Force_pa = ds*sum(sum(Fd.*pa ));
-    Force(i) =  ds*sum(sum(Fd.*pu )) + Force_pa;
+    Force_INST(i) =  0*ds*sum(sum(Fd.*pu )) + Force_pa;
     states(i, 1:Ng+1) = sum(pu);
     states_a(i, 1:Ng+1) = sum(pa);
     strains(i, 1:Nx) = sum(pu, 2);
@@ -265,12 +273,12 @@ maxPu = 0; maxPa = 0;
             contour(s, 0:Ng, pu'*ds*100, [0.01 0.01], 'k-', LineWidth=2)
             colormap(SoHot);
             
-            clim([0 round(maxPu)]);
+            clim([0 max(1, round(maxPu))]);
             if i_snap == 1
                 ylabel('$n$', Interpreter='latex');
             elseif i_snap == length(i_time_snaps)
                 cb = colorbar;
-                cb.Ticks = [0 50 round(maxPu)];
+                cb.Ticks = sort(unique([0 50 round(maxPu)]));
                 title(cb, 'Unatt %')
                 set(tl, "YTick", [])
             else
@@ -319,15 +327,20 @@ maxPu = 0; maxPa = 0;
   d = mod(13);
   
   % calculate a, so that the max value is the same    
-  a = (Fss - d)/((Lmax -b)^c);
+    a = (Fss - d)/((Lmax -b)^c);
   Force_par = a*max(Length - b, 0).^c + d;
-  % calc force
-  Force = Force + Force_par; 
-    
+  
+  % calc instantenous force
+  Force_INST = Force_INST + Force_par; 
+
+  % unfolding force
+  Force_UNF = F_alt + Force_par;
+
   if drawAllStates
         nexttile([1 4]);
-        semilogx(Time, Force, 'k-');hold on;
-        scatter(Time(i_time_snaps), Force(i_time_snaps), 'ko', 'filled');
+        semilogx(Time, Force_INST, 'k-');hold on;
+        semilogx(Time, Force_UNF, 'r--');hold on;
+        scatter(Time(i_time_snaps), Force_INST(i_time_snaps), 'ko', 'filled');
         % xlim([1e-3 max(1300, rds(j)*10) + 30]);
         % nexttile([1 1]);
         % loglog(Time, Force);hold on;

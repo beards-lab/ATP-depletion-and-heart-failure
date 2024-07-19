@@ -5,17 +5,17 @@
 % pCa < 10 - load AvgpCa dataset, Ca effect in place
 
 % simtype = 'sin';
-% simtype = 'ramp';
+simtype = 'ramp';
 % simtype = 'rampbeat';
 % simtype = 'ktr';
 % simtype = 'stairs-up'
-simtype = 'slackset'
+% simtype = 'slackset'
 % simtype = 'atpprotocol'
 
 % rampSet = [1]; % 100s
 % rampSet = [2 4]; % 10s and 0.1s
 % rampSet = [3]; % nly 1s
-% rampSet = [1 2 3 4]; % all
+rampSet = [1 2 3 4]; % all
 rampSet = [4]; % only 100ms
 
 clear Force
@@ -26,13 +26,15 @@ if any(mod < 0)
     cost = inf;
     return;
 end
-drawAllStates = false;
-drawFig1 = false;
+plotOptions = struct();
+
+drawAllStates = true;
+plotOptions.drawFig1 = true;
 exportRun = false;
 
 figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stealing the focus
 
-plotOptions = struct();
+
   
   if strcmp(simtype, 'ramp')
       %% normal
@@ -52,10 +54,11 @@ plotOptions = struct();
       end
       % tic
       L0 = 0;
-
+      Ftot_int = cell(1,4);
       Lmax = 1.175 - 0.95; % Lmax = 0.225; % identified to ramp of this height      
       Vlist = Lmax./rds; %  half-sarcomere velocity (um/s)
       Force = cell(1, 5);
+      Force_UNF = cell(1, 5);
       Time = cell(1, 5);
       Length = cell(1, 5);
       LengthPar = cell(1, 5);
@@ -75,7 +78,7 @@ plotOptions = struct();
             plotOptions.time_snaps = [1e-3, rds(j), 0*1 + 2*rds(j), max(1000, rds(j)*10)];
           end
 
-          [Time{j}, Length{j}, Force{j}, Force_par{j}] = evaluateTitinModel(mod, L0, times, velocities, pCa, plotOptions);
+          [Time{j}, Length{j}, Force{j}, Force_par{j}, ~, Force_UNF{j}] = evaluateTitinModel(mod, L0, times, velocities, pCa, plotOptions);
       end
 
       % Get error for the whole ramp-up and decay
@@ -399,6 +402,9 @@ for j = max(rampSet):-1:1
     hd{j} = errorbar(datatables{j}.Time-2,datatables{j}.F,datatables{j}.SD, '-', LineWidth=2, Color=colors(3, :), CapSize=0);
     set([hd{j}.Bar, hd{j}.Line], 'ColorType', 'truecoloralpha', 'ColorData', [hd{j}.Line.ColorData(1:3); 255*0.4])
     hm{j} = semilogx(Time{j},Force{j},'-', 'linewidth',2, 'Color', 'k'); 
+    
+    semilogx(Time{j},Force_UNF{j},'--', 'linewidth',2, 'Color', 'r'); 
+
     hph{j} = plot(nan, nan, 'x',Color=[1 1 1]); % just a placeholder
     % set(h.Cap, 'EdgeColorType', 'truecoloralpha', 'EdgeColorData', [h.Cap.EdgeColorData(1:3); 255*alpha])
     ym = max([ym Force{j}, datatables{j}.F']);

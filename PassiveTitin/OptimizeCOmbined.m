@@ -370,7 +370,7 @@ mod(15) = 0;
 params = mod.*mod2params;
 params(10) = 4.89;
 tic
-evalCombined(params(modSel), params, modSel, [11])
+evalCombined(params(modSel), params, modSel, [4.4])
 toc
 %% reinint to match Dan's model
 % mod = ones(22, 1); modSel = [1:6 13 14];
@@ -440,9 +440,25 @@ convertLref = ones(size(params));
 kpcorr = 1/(params(18)^params(3)); kdcorr = 1/(params(18)^params(5)); alphaUCorr = 1/(params(18)^params(4));
 convertLref([1 2 6 9 18 20 22]) = [kpcorr kdcorr alphaUCorr kpcorr 1/params(18) alphaUCorr kdcorr];
 params = params.*convertLref;
+ 
+% messing around
+params(1) = 1000; % kp
+params(2) = params(1)*.100; % kp to kd
+
+% that is weird
+% params(2) = params(1)*100; % kp to kd
+
+params(7) = 1; % PEVK att
+params(8) = 0.1; % PEVK dett
+params(6) = 0; % alpha unfolding rate
+params(14) = .1; % mu
+
+% Kp nor kd are stiffening
+params(9) = params(1);
+params(22) = params(2);
 
 tic
-mod(14) = 0.1;
+% mod(14) = 0.1;
 evalCombined(params(modSel), params, modSel, [4.4])
 toc
 % modSel = [1:6 7 8 9 14 20 22]
