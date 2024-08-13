@@ -16,7 +16,7 @@ simtype = 'ramp';
 % rampSet = [2 4]; % 10s and 0.1s
 % rampSet = [3]; % nly 1s
 rampSet = [1 2 3 4]; % all
-rampSet = [4]; % only 100ms
+rampSet = [4 2]; % only 100ms
 
 clear Force
 clear Time
@@ -28,8 +28,8 @@ if any(mod < 0)
 end
 plotOptions = struct();
 
-drawAllStates = true;
-plotOptions.drawFig1 = true;
+drawAllStates = false;
+plotOptions.drawFig1 = false;
 exportRun = false;
 
 figInd = get(groot,'CurrentFigure'); % replace figure(indFig) later without stealing the focus

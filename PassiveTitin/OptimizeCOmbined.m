@@ -442,26 +442,37 @@ convertLref([1 2 6 9 18 20 22]) = [kpcorr kdcorr alphaUCorr kpcorr 1/params(18) 
 params = params.*convertLref;
  
 % messing around
-params(1) = 1000; % kp
-params(2) = params(1)*.100; % kp to kd
+params(1) = 1.1296e+03; % kp
+params(1) = 5.1296e+03; % kp
+% params(1) = 20.1296e+03; % kp
+params(2) = params(1)*10; % kp to kd
+% params(2) = 6.2103e+04;
+% params(2) = 1e5;
 
-% that is weird
+% that is weird 
 % params(2) = params(1)*100; % kp to kd
 
-params(7) = 1; % PEVK att
-params(8) = 0.1; % PEVK dett
-params(6) = 0; % alpha unfolding rate
+params(7) = 0.1; % PEVK att
+params(8) = .1; % PEVK dett
+% params(6) = 0.2; % alpha unfolding rate
+params(6) = 1.7522e+07;
+params(6) = 1000.7522e+07;
 params(14) = .1; % mu
 
 % Kp nor kd are stiffening
 params(9) = params(1);
 params(22) = params(2);
+% unfolding in attached 
+params(15) = 1.7522e+07;
 
+modSel = [1 2 6]
 tic
-% mod(14) = 0.1;
-evalCombined(params(modSel), params, modSel, [4.4])
+%% mod(14) = 0.1;
+
+evalCombined(params(modSel), params, modSel, [11 4.4])
 toc
 % modSel = [1:6 7 8 9 14 20 22]
+modSel = [7 8];
 
 %% 
 tic
@@ -543,21 +554,28 @@ mod(20) = NaN;
 % modSel = [1:6 10 15];
 % modSel = [1:6 12 14 15 16]
 % modSel = [1:6 7 8 9 22];
+modSel = [1 2 6 7 8 9 22];
 init = params(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 
-evalLin = @(optMods) evalCombined(optMods, params, modSel, [11])
-x = fminsearch(evalLin, init, options);
+evalLin = @(optMods) evalCombined(optMods, params, modSel, [4.4])
+evalLinFixStiff = @(optMods) evalCombined(optMods, [params(1:8) optMods(1) params(10:21) optMods(2) params(23:end)], modSel, [11 4.4])
+x = fminsearch(evalLinFixStiff, init, options);
 params(modSel) = x;
 %%
 % mod(modSel) = x;
 % mod
 % save("mod.mat", "mod")
-% modSel = [1     2     3     4     5     6     7     8     9    22 23];
+modSel = [1     2     3     4     5     6     7     8     9    22];
+modSel = [7     8     9    22];
+
 init = params(modSel);
 % evalFunc = @(optMods) evalCombined(optMods, mod, modSel);
 evalLin = @(optParams) evalCombined(optParams, params, modSel, [4.4])
 x = fminsearch(evalLin, init, options);
+save('x', 'x');
+params(modSel) = x;
+save('params', 'params')
 %% optim in log param space
 % mod = ones(1, 17);
 % mod = [mod ones(1, 21 - length(mod))];
@@ -596,14 +614,13 @@ x = fminsearch(evalLin, init, options);
 % optim for tail only: pCa11 0.1s ramp, 300s linear sampling
 % mod = [1.8533    0.0821    1.1321    0.9230    0.6111    0.0301    0.0849    1.1904    0.1302    1.5060         0    2.8146    0.0027    0.8606    2.4840       NaN       NaN    1.0000    0.9400       NaN       NaN    0.4930];
 init = max(-10, log10(params(modSel)));
-evalLogCombined = @(logMod) evalCombined(10.^logMod, params, modSel, [4.4]);
+evalLogCombined = @(logMod) evalCombined(10.^logMod, params, modSel, [11 4.4]);
 x = fminsearch(evalLogCombined, init, options);
 params(modSel) = 10.^x; 
 % list params
 a = [modSel; params(modSel)]; sprintf('%d: %1.3g\n', a(:))
 % list params for save
 disp(['params = [' sprintf('%1.3g, ', params(:)) '];'])
-
 
 % params = [367, 2.39e+04, 2.3, 9, 2.33, 3.24e+06, 1.4, 17.8, 4.44e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 6.96e+03, 0, ];
 % modSel = [7 8 9 22]; params([7 8 9 22]) = [10 50 params([1 2])];params = [367, 3e+04, 2.3, 9, 2.33, 3.24e+06, 7.77, 47.2, 1.4e+03, 4.89, 1.01e-08, 12.8, 0.00389, 0.678, 0, NaN, NaN, 0.9, 0.175, NaN, NaN, 1.42e+04, 0, ];

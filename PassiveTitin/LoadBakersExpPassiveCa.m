@@ -30,8 +30,8 @@ clear;clc;
 % S1 = dir('../data/PassiveCaSrc2/20230928');
 % S1 = dir('../data/PassiveCaSrc2/20231027');
 % S1 = dir('../data/PassiveCaSrc2/20231102');
-% S1 = dir('../data/PassiveCaSrc2/20231107');
-S1 = dir('../data/PassiveCaSrc2/20240705');
+S1 = dir('../data/PassiveCaSrc2/20231107');
+% S1 = dir('../data/PassiveCaSrc2/20240705');
 
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});

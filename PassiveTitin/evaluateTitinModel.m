@@ -15,10 +15,10 @@ end
 
 
 Lmax = 1.175 - 0.95; % Lmax = 0.225; % identified to ramp of this height
-Nx   = 25;          % number of space steps
-ds   = 1*(Lmax)/(Nx-1);      % space step size
+Nx   = 20;          % number of space steps
+ds   = 1*(2*Lmax)/(Nx-1);      % space step size
 s  = (0:1:Nx-1)'.*ds; % strain vector
-Ng = 15; 
+Ng = 10; 
 % so all unfolded make mod(19) = Ng*delU slack, i.e. ~0.15 um. individual delU is about 0.01
 delU = mod(19)/Ng;
 
@@ -65,7 +65,6 @@ nU = mod(4); % unfolding rate exponent
 nF = 1; % folding rate exponent (not implemented yet)
 mu = mod(14); % small enough not to affect the result
 L_0  = mod(18); % reference sarcomere length (um)
-alphaF = 0;
 alphaF_0 = mod(15);
 
 % Calculate proximal globular chain force Fp(s,n) for every strain and
@@ -162,7 +161,8 @@ if size(L0X0) == 1
     
     pu = zeros(Nx,1)*PU;
     pa = zeros(Nx,1)*PA;
-    pu(1,1) = 1/ds; 
+    pu(1,1) = 1/2/ds; 
+    pa(1,1) = 1/2/ds; 
     
     if pCa >= 11 
         % no Ca effect assumed
@@ -181,7 +181,15 @@ end
   t = []; x = [];
   F_alt = [];
   for i_section = 1:size(times, 1)
-      [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf,velocities{i_section});
+      % if i_section == 2
+      %     % opts.MaxStep = 0.0004;
+      %   [t1,x1] = ode45(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf,velocities{i_section});
+      % 
+      % else
+          % opts = odeset('RelTol',1e-4, 'AbsTol',1e-6);
+     [t1,x1] = ode15s(@dXdT,times(i_section, :),x0,opts,Nx,Ng,ds,kA,kD,kd,Fp,RU,RF,mu,L_0,nd,kDf,velocities{i_section});
+
+      % end
       t = [t; t1(2:end)];
       x = [x; x1(2:end, :)];
       % prep the init vector again
@@ -193,7 +201,7 @@ end
       end
       F_alt = [F_alt;F_alt1(2:end)];
   end
-  validRng = t >= 0;
+  validRng = t >= -Inf;
   t = t(validRng);x = x(validRng, :); F_alt  = F_alt(validRng)';
   if ~any(validRng)
       % important only for the init x0
@@ -214,13 +222,13 @@ maxPu = 0; maxPa = 0;
         % save current figure
         g = gcf;
         % open up a new one
-        layout_x = 2 + (pCa < 10);
+        layout_x = 2 + (pCa < 10) +1;
         f = figure(50+pCa*10+j); clf; tiledlayout(layout_x, 4, 'TileSpacing','compact', Padding='loose');
         fontsize(12, 'points')
         aspect = 2;
         % normal size of 2-col figure on page is 7.2 inches
         % matlab's pixel is 1/96 of an inch
-        f.Position = [300 200 7.2*96 7.2*96/aspect];
+        % f.Position = [300 200 7.2*96 7.2*96/aspect];
 
         % decide for timepoints
         % fixed time or fraction of ramp durations?
@@ -336,10 +344,12 @@ maxPu = 0; maxPa = 0;
   % unfolding force
   Force_UNF = F_alt + Force_par;
 
+  Force_INST = Force_UNF;
+
   if drawAllStates
         nexttile([1 4]);
         semilogx(Time, Force_INST, 'k-');hold on;
-        semilogx(Time, Force_UNF, 'r--');hold on;
+        % semilogx(Time, Force_UNF, 'r--');hold on;
         scatter(Time(i_time_snaps), Force_INST(i_time_snaps), 'ko', 'filled');
         % xlim([1e-3 max(1300, rds(j)*10) + 30]);
         % nexttile([1 1]);
@@ -352,4 +362,6 @@ maxPu = 0; maxPa = 0;
         fontsize(12, 'points')
         vmax = max([velocities{:}]);
         % exportgraphics(f,sprintf('../Figures/States%g_%gs.png', pCa, vmax),'Resolution',150)
+        % figure(942);clf;
+        % plot(Time, sum(states, 2), Time, sum(states_a, 2), Time, sum(states + states_a, 2));
     end
