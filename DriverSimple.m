@@ -71,11 +71,14 @@ params0.kstiff1 = 18e3;
 params0.kstiff2 = params0.kstiff1;
 params0.dr = 0.01;
 params0.alpha2_L = 50;
-params0.kSE = 1500;
+params0.kSE = 100;
 params0.ML = 2.0;
 % params0.MaxSlackNegativeForce = -5;
 params0.justPlotStateTransitionsFlag = false;
-rsl0 = 1.008
+
+% ModelParams; % awful, no way
+ModelParamsInit
+rsl0 = 1.04;
 params0.SL0 = 2.2*rsl0;
 % ModelParamsInitDanOptim3;
 
@@ -142,13 +145,13 @@ legend('RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_Ripped')
 
 %% calculate ML at 2.0 um SL
 params = params0;
-params.ka = 0;
+% params.ka = 0;
 params.ML = 2.0;
 % params.kSE = 100;
 
     params.Velocity = 0;
 
-    params.SL0 = 2.0015;
+    params.SL0 = 2.13;
     rsl0 = params.SL0 / 2.0
     params.Slim_l = 1.85;
     params.Vums = 0;
@@ -167,5 +170,5 @@ params = getParams(params, params.g, true);
 [F out] = evaluateModel(@dPUdTCaSimpleAlternative2State, [0 1], params);
 
 figure(1);clf;
-nexttile; plot(out.t, out.SL, out.t, out.LXB)
-nexttile; plot(out.t, out.Force, out.t, out.FXB)
+nexttile; plot(out.t, out.SL, out.t, out.LXB); legend('ML', 'SL');
+nexttile; plot(out.t, out.Force, out.t, out.FXB); legend('Total force', 'active only');

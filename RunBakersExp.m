@@ -287,7 +287,7 @@ if params0.RunSlack
     % velocitytable = datastruct.velocitytable(1:19, :);
     
     % only the last slack
-    % velocitytable = datastruct.velocitytable(18:end, :);
+    velocitytable = datastruct.velocitytable(18:end, :);
     
     % all
     velocitytable = datastruct.velocitytable(1:end, :);
@@ -382,7 +382,7 @@ if params0.RunSlack
             plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
             legend('P1','P2','P3','PuATP','PuR', 'SR')
         end
-        % xlim(xl);
+        xlim(xl);
 
     end
     %% SAVE FIG
