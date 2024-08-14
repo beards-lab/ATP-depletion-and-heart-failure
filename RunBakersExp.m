@@ -366,7 +366,7 @@ if params0.RunSlack
         yl = ylim;
         plot(out.t, out.XB_TORs, '-')
         ylim(yl)
-        % xl = xlim();
+        xl = xlim();
 
 
         if exist('gp', 'var') && isvalid(gp)

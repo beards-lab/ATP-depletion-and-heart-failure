@@ -137,7 +137,7 @@ end
 
 F_total = F_active + F_passive;
 
-Force = max(params.MaxSlackNegativeForce, params.kSE*LSE)^2;
+Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
 velHS = (Force - F_total)/params.mu;
 dLSEdt = vel - velHS;
 Force = max(0, Force);
@@ -158,7 +158,7 @@ MgATP = params.MgATP;
 Pi = params.Pi;
 MgADP = params.MgADP;
 
-g1 = 1; g2 = 1; f1 = 1; f2 = 1;
+g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
 strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));

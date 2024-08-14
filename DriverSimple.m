@@ -76,10 +76,15 @@ params0.ML = 2.0;
 % params0.MaxSlackNegativeForce = -5;
 params0.justPlotStateTransitionsFlag = false;
 
-% ModelParams; % awful, no way
-ModelParamsInit
-rsl0 = 1.04;
-params0.SL0 = 2.2*rsl0;
+
+
+%% initialize parameters from scratch
+clear;
+clf;
+params0 = getParams();
+ModelParamsInitNiceSlack;
+% rsl0 = 1.04;
+% params0.SL0 = 2.2*rsl0;
 % ModelParamsInitDanOptim3;
 
 LoadData; 
@@ -98,9 +103,10 @@ if ~saveResults
 end
 %% store the results
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParamsInitDanOptim.m', params0, modNames);
+writeParamsToMFile('ModelParamsInitNiceSlack.m', params0, modNames);
 
 %% fit the slack
+plotData = true;
 dropstart = velocitytable([3, 7, 11, 15, 19], 1);
 
 modeldatatable = [out.t; out.SL; out.Force]';
@@ -117,6 +123,16 @@ figure(2);clf;
 % zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
 [dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0);
 plot([1 3], [0 0], 'k-')
+if plotData
+    figure(8008);
+    zones_d = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
+    [~, ~, ~, ~, ~, SL_d, x0lin_d]  = fitRecovery(datatable, zones_d, 0);
+    dt_d = x0lin_d' - dropstart; 
+    dL_d = 2.2 - SL_d;
+    
+    v_d = dL_d'./dt_d;
+end
+
 % times of start of the SL drop
 % dropstart = velocitytable([3, 7, 11, 15], 1);
 
@@ -125,12 +141,23 @@ dL = 2.2 - SL;
 
 v = dL'./dt;
 %
-figure(5);%clf;
+figure(5);clf;
 nexttile;hold on;
 plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
-plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
+leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
 xlim([-0.05, 0.25])
+
+if plotData
+   leg_d =  plot([3e-4 dt_d'], [2.2 SL_d], '*-', LineWidth=2)
+   legend([leg_m, leg_d], 'model', 'Data')
+end
+
+
 nexttile;
+if plotData
+    plot(datatable(:, 1)-dropstart', datatable(:, 3));
+    hold on; set(gca,'ColorOrderIndex',1);
+end
 plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 3));
 xlim([-0.05, 0.25])
 
