@@ -111,19 +111,21 @@ end
 cost_c0 = 0;
 cg = gray(5);
 % clin = lines(5);
-rds = [100.0000   10.0000    1.0000    0.1000];
+rds = [100.0000   10.0000    1.0000    0.1000 0.01];
 % set(groot,'CurrentFigure',2); % replace figure(indFig) without stealing the focus
 % figure(2);
 param_a = string();
-for i_rds = [4 3 2 1]
+for i_rds = [5 4 3 2 1]
+    if length(Farr) < i_rds
+        continue;
+    elseif isempty(Farr{i_rds}) || isempty(Tarr{i_rds})
+        continue;
+    end
         %%
         Favg = movmean(Farr{i_rds}, [0 0]) - c;
         % loglog(Tarr{i_rds} + rampShift(i_rds), Favg -c, Color=[cg(5-i_rds, :)], LineWidth=5-i_rds);hold on;
     
         % resample log equally from the peak - till the end
-        if isempty(Tarr{i_rds})
-            continue;
-        end
         t_s = logspace(log10(rds(i_rds)), log10(Tarr{i_rds}(end)), (Tarr{i_rds}(end) - rds(i_rds))*10);
 
         if limitfitrange
@@ -157,8 +159,8 @@ for i_rds = [4 3 2 1]
             disp(e)
         end        
         cost_c0 = cost_c0 + goodness.rmse;%/length(t_s);
-        cc = [cg(5-i_rds, :)]; % current color 
-        clw = 4.5-i_rds; % current line width
+        cc = [cg(6-i_rds, :)]; % current color 
+        clw = 5.5-i_rds; % current line width
 
         if plotResults == true
             axes(a_lm);
@@ -226,7 +228,7 @@ for i_rds = [4 3 2 1]
 
     % title('A: Linear axis plot of a_i(x-r_d - \tau_{0, i})^{\tau_i} + Fss')
     valids = isgraphics(l_lm);
-    legends = {'$t_r = 100$ s','$t_r = 10$ s','$t_r = 1$ s','$t_r = 0.1$ s','$\Theta_\infty$'};
+    legends = {'$t_r = 100$ s','$t_r = 10$ s','$t_r = 1$ s','$t_r = 0.1$ s','$t_r = 0.01$ s','$\Theta_\infty$'};
     leg = legend([l_lm(valids) l_tss], legends([valids true]), 'Interpreter','latex', 'FontSize',fs);
     %adjust position
     if w2 > 0
@@ -257,18 +259,20 @@ for i_rds = [4 3 2 1]
     legends = { sprintf('$t_r = 100$ s,$\\tau_i=%0.2f$ s', rampShift(1)),...
                 sprintf('$t_r = 10$ s, $\\tau_i=%0.2f$ s', rampShift(2)),...
                 sprintf('$t_r = 1$ s,  $\\tau_i=%0.2f$ s', rampShift(3)),...
-                sprintf('$t_r = 0.1$ s,$\\tau_i=%0.2f$ s', rampShift(4))};
+                sprintf('$t_r = 0.1$ s,$\\tau_i=%0.2f$ s', rampShift(3)),...
+                sprintf('$t_r = 0.01$s,$\\tau_i=%0.2f$ s', rampShift(4))};
     
     if ~limitfitrange
         leg_gr = [l_cm(valids) l_f];
         leg_txt = [legends(valids) sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
         % reorder = [1 3 5 2 4];
-        reorder = 1:length(leg_gr);
+        reorder = [1 2 3];
         leg = legend(leg_gr(reorder), leg_txt(reorder), 'Interpreter','latex', 'FontSize',fs, Location='northwest', NumColumns=2);
     else
         leg_gr = [l_cm(valids) l_fitarr l_f];
         leg_txt = [legends(valids) "Power-law decay area" sprintf('$%0.2f(t - t_r + \\tau_i)^{-%0.2f}$',a,b)];
-        reorder = [1 3 5 2 4 6];
+        % reorder = [1 3 5 2 4 6];
+        reorder = [1 3]
         leg = legend(leg_gr(reorder), leg_txt(reorder), 'Interpreter','latex', 'FontSize',fs, Location='northwest', NumColumns=2);
     end
     leg.ItemTokenSize=[15; 18];
