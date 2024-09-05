@@ -278,10 +278,10 @@ if params0.RunSlack
     datatable = datastruct.datatable;
     
     % first slack
-    % velocitytable = velocitytable(1:4, 1);
+    % velocitytable = datastruct.velocitytable(1:4, 1);
 
     % two slacks
-    velocitytable = datastruct.velocitytable(1:11, :);
+    % velocitytable = datastruct.velocitytable(1:11, :);
 
     % all but the last
     % velocitytable = datastruct.velocitytable(1:19, :);
@@ -290,7 +290,7 @@ if params0.RunSlack
     velocitytable = datastruct.velocitytable(18:end, :);
     
     % all
-    velocitytable = datastruct.velocitytable(1:end, :);
+    % velocitytable = datastruct.velocitytable(1:end, :);
     
     velocitytable(1, 1) = -2;
     
@@ -343,6 +343,8 @@ if params0.RunSlack
         nexttile;
         yyaxis right;
         plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+        plot(out.t, out.SL, '-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+        
         yyaxis left;hold on;
 
         % manage GHOST
@@ -364,7 +366,7 @@ if params0.RunSlack
         title('Slack');
         xlim([velocitytable(2, 1) velocitytable(end, 1)])
         yl = ylim;
-        plot(out.t, out.XB_TORs, '-')
+        % plot(out.t, out.XB_TORs, '-')
         ylim(yl)
         xl = xlim();
 
@@ -374,15 +376,18 @@ if params0.RunSlack
         else
             legend('F data', 'F sim','SL data*', 'SL sim*', 'Location', 'southwest');
         end
-        nexttile;
-        if params.NumberOfStates == 2
-            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, LineWidth=1.5, LineStyle='-')
-            legend('P1','P2','PuATP','PuR', 'SR')
-        elseif params.NumberOfStates == 3
-            plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
-            legend('P1','P2','P3','PuATP','PuR', 'SR')
+
+        if params.ShowStatePlots
+            nexttile;
+            if params.NumberOfStates == 2
+                plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, LineWidth=1.5, LineStyle='-')
+                legend('A1','A2','UT','UD', 'SR')
+            elseif params.NumberOfStates == 3
+                plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
+                legend('A1','A2','A3', 'UT','UD', 'SR');
+            end
+            xlim(xl);
         end
-        xlim(xl);
 
     end
     %% SAVE FIG

@@ -83,6 +83,7 @@ clear;
 clf;
 params0 = getParams();
 ModelParamsInitNiceSlack;
+params0.ShowStatePlots = true;
 % rsl0 = 1.04;
 % params0.SL0 = 2.2*rsl0;
 % ModelParamsInitDanOptim3;

@@ -6,3 +6,7 @@ Dan2/
 *.docx
 /PAT.github
 dymparams.txt
+buildlog.txt
+ds*.txt
+dsmodel.c
+*.exe
