@@ -11,6 +11,10 @@ PU0 = params.PU0;
 out = [];
 ss = params.ss;
 
+if isfield(params, 'ksrm')
+    error('Change ksrm to kmsr!!')
+end
+
 ticId = tic;
 
     function  [value, isterminal, direction] = movingWindow(t, y, ~)
@@ -279,7 +283,7 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.FXBPassive(i) = outputs(3);
         out.OV(i) = outputs(4);
         out.XB_TOR(i, :) = outputs(5:params.ss+4);
-        out.XB_TORs(i) = params.dS*sum(outputs(5:end));
+        out.XB_TORs(i) = params.dS*sum(out.XB_TOR(i, :));
         out.LXBPivot(i) = params.LXBpivot;
 
         % rates = [RTD, RD1, sum([R1D; R12;R21;XB_Ripped])*dS];
@@ -289,6 +293,8 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.R12(i) = rates(4);
         out.R21(i) = rates(5);
         out.XB_Ripped(i) = rates(6);
+        out.RSR2PT(i) = rates(7);
+        out.RPT2SR(i) = rates(8);
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke

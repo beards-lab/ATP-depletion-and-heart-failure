@@ -47,7 +47,7 @@ params0.gamma = 3;
 
 params0.ksr0 = 1.7; % transition out of to SRX
 params0.sigma1 = 20;
-params0.ksrm = 50; % transition in to SRX
+params0.kmsr = 50; % transition in to SRX
 params0.sigma2 = 999999;
 % params0.UseTitinInterpolation = false;
 params0.alpha2_L = 1/0.038;
@@ -80,6 +80,7 @@ params0.justPlotStateTransitionsFlag = false;
 
 %% initialize parameters from scratch
 clear;
+figure(80085);
 clf;
 params0 = getParams();
 ModelParamsInitNiceSlack;
@@ -93,6 +94,17 @@ tic
 RunBakersExp;
 toc
 %%
+xl = xlim();
+figure(3); clf;
+rates = [out.RTD; out.RD1; out.R1D; out.R12; out.R21; out.XB_Ripped; out.RSR2PT; out.RPT2SR; out.XB_TORs];
+lgs = {'RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_{Ripped}', 'SR2PT', 'PT2SR', 'A2 dett'}
+ints = [1 2 7 8 9]
+
+plot(out.t, rates(ints, :), 'LineWidth',2);
+xlim(xl)
+legend(lgs(ints))
+
+%% save pic
 saveas(figure(2), 'slack.png')
 figure(1); plot(out.t,out.FXBPassive)
 figure(3); plot(out.t,out.p2_1./out.p2_0)
@@ -170,6 +182,12 @@ slack_y = [2.2 SL];
 figure(3); clf;
 plot(out.t, out.RTD, out.t, out.RD1, out.t, out.R1D, out.t, out.R12, out.t, out.R21, out.t, out.XB_Ripped)
 legend('RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_Ripped')
+rates = [out.RTD; out.RD1; out.R1D; out.R12; out.R21; out.XB_Ripped; out.RSR2PT; out.RPT2SR; out.XB_TORs];
+lgs = {'RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_{Ripped}', 'SR2PT', 'PT2SR', 'A2 dett'}
+ints = [1 2 7 8 9]
+
+plot(out.t, rates(ints, :), 'LineWidth',2);
+legend(lgs(ints))
 
 %% calculate ML at 2.0 um SL
 params = params0;
@@ -179,7 +197,7 @@ params.ML = 2.0;
 
     params.Velocity = 0;
 
-    params.SL0 = 2.13;
+    params.SL0 = 2.05;
     rsl0 = params.SL0 / 2.0
     params.Slim_l = 1.85;
     params.Vums = 0;
