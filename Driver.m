@@ -275,7 +275,9 @@ optimfun(g)
 params0.RunForceVelocity = false;
 params0.RunSlack = true;
 %% saving the params
-% writeParamsToFile('params.csv', params)
+% 
+writeParamsToFile('ModelParamsInit2.m', params0)
+%%
 figure(222);clf;
 % params0 = UpdateValuesFromFile('params.csv', params);
 params0.g = [];
@@ -666,7 +668,7 @@ params0.g = g;
 RunBakersExp;
 %% params0
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParamsInitDanOptim3.m', params0, modNames);
+writeParamsToMFile('ModelParamsInitOptim_slack4.m', params0, modNames);
 
 %%
 % saved - kstaiff 1 too high probabbly

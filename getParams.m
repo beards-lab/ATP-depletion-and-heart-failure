@@ -81,6 +81,7 @@ end
         'MaxSlackNegativeForce', 0, ... 
         'justPlotStateTransitionsFlag', false, ...
         'ShowStatePlots', false, ...
+        'ShowResidualPlots', false, ...
         'UseDirectSRXTransition', false ...
         );
  
@@ -160,6 +161,9 @@ end
 
     % passive force coeff
     params0.k_pas = 200; % From Kim Salla et al.
+
+    % other
+    params0.k2_L = 0;
             
     %% Fill in the missing input params
     

@@ -93,7 +93,6 @@ LoadData;
 tic
 RunBakersExp;
 toc
-%%
 xl = xlim();
 figure(3); clf;
 rates = [out.RTD; out.RD1; out.R1D; out.R12; out.R21; out.XB_Ripped; out.RSR2PT; out.RPT2SR; out.XB_TORs];
@@ -180,8 +179,6 @@ slack_y = [2.2 SL];
 
 %% Show the transition rates
 figure(3); clf;
-plot(out.t, out.RTD, out.t, out.RD1, out.t, out.R1D, out.t, out.R12, out.t, out.R21, out.t, out.XB_Ripped)
-legend('RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_Ripped')
 rates = [out.RTD; out.RD1; out.R1D; out.R12; out.R21; out.XB_Ripped; out.RSR2PT; out.RPT2SR; out.XB_TORs];
 lgs = {'RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_{Ripped}', 'SR2PT', 'PT2SR', 'A2 dett'}
 ints = [1 2 7 8 9]

@@ -118,7 +118,7 @@ plot(datatable(:, 1)*1000, datatable(:, 2));
 title('Slack experiment')
 xlabel('Time (s)')
 ylabel('Muscle length (L/L_0)')
-% xlim([2250, 2500]);
+xlim([2250, 2500]);
 set(gca, 'fontsize', 22);
 xt = xticks;
 % xticks(xt);

@@ -192,6 +192,9 @@ R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 % params.k2 = 1.25*20;
 
 kL = min(1e4, params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2);
+
+% experiMENTAL
+% kL = min(1e4, params.k2_L*((s-params.dr2_L)<=0).*(exp(-(s-params.dr2_L)*params.alpha2_L)));
 % kR = 200*(s>0).*(1 - exp(+(s+0)./lambdaR)).^2;
 % kR = 0*(s>0).*(s./0.01);
 % kR = 600*(s>0).*((s.^2)./((s.^2) + 0.01^2));
@@ -202,16 +205,27 @@ kL = min(1e4, params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2);
 kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
 R2T = p2.*(params.k2 + kL + kR);
 
+% to PT state directly
+XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
-    XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
-
-    if params.UseSuperRelaxed
+if params.UseSuperRelaxed && params.UseDirectSRXTransition
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
 %         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
-        dU_SR =  - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.ksrm*exp(-F_total/params.sigma2)*PT;
-    else 
-        dU_SR = 0;
-    end
+    RSR2PT = params.ksr0*exp(F_total/params.sigma1)*P_SR;
+    % TODO - check it is **kmsr** and NOT **ksmr**
+    RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
+    
+elseif params.UseSuperRelaxed
+    RSR2PT = params.ksr0*exp(F_total/params.sigma1)*P_SR;
+    RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
+    dU_SR = -RSR2PT  + RPT2SR;
+else 
+    dU_SR = 0;
+    RSR2PT = 0;
+    RPT2SR = 0;
+    
+end
 if params.justPlotStateTransitionsFlag
     plotStateTransitions;
     error('Quitting after plotting states');
@@ -223,6 +237,7 @@ dPD = + RTD - RD1 + sum(R1D)*dS;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 
+
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
     dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
     dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS); % attachment
@@ -232,10 +247,10 @@ dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydro
 
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD];
 outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, PT];
-rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS];
+rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS, RSR2PT, RPT2SR];
 
 %% breakpints
-if t > 2.92
+if t > 2.76
     numberofthebeast = 666;
 end
 % disp('oj')

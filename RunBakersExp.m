@@ -290,7 +290,7 @@ if params0.RunSlack
     velocitytable = datastruct.velocitytable(18:end, :);
     
     % all
-    % velocitytable = datastruct.velocitytable(1:end, :);
+    velocitytable = datastruct.velocitytable(1:end, :);
     
     velocitytable(1, 1) = -2;
     
@@ -388,8 +388,15 @@ if params0.RunSlack
             end
             xlim(xl);
         end
-
     end
+    
+    if params.ShowResidualPlots
+        % nexttile;
+        figure(1001);
+        plot(datatable(validZone, 1), (Fi - datatable(validZone, 3)))
+    end
+
+
     %% SAVE FIG
     if params.PlotEachSeparately
         fig = gcf;

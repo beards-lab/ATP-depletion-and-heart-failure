@@ -9,7 +9,7 @@ function writeParamsToMFile(filename, params, modNames)
     fprintf(fid, "%% Generated file to manipulate the simulation parameters directly\n"); 
     params = getParams(params, params.g, false, true);
     for i_row = 1:length(modNames)
-        if length(params.(modNames{i_row})) > 1
+        if length(params.(modNames{i_row})) > 1 || isempty(params.(modNames{i_row}))
             fprintf("Skipping %s\r\n", modNames{i_row});
             continue;
         end
