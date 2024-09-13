@@ -83,17 +83,28 @@ clear;
 figure(80085);
 clf;
 params0 = getParams();
-ModelParamsInitNiceSlack;
+% ModelParamsInitNiceSlack;
+ModelParamsInitOptim_slack4;
+% ModelParamsInit_slack1;
+
+params0.PlotEachSeparately = true;
 params0.ShowStatePlots = true;
-% rsl0 = 1.04;
-% params0.SL0 = 2.2*rsl0;
-% ModelParamsInitDanOptim3;
+
+params0.UseOverlap = true;
+params0.justPlotStateTransitionsFlag = false;
+params0.ShowStatePlots = false;
+params0.UseDirectSRXTransition = false;
+% params0.ghostLoad = 'NiceFit_Compliant';
+% params0.ghostSave = 'NiceFit_slack4';
+
+params0.RunSlackSegments = 'First';
 
 LoadData; 
 tic
 RunBakersExp;
 toc
 xl = xlim();
+%% 
 figure(3); clf;
 rates = [out.RTD; out.RD1; out.R1D; out.R12; out.R21; out.XB_Ripped; out.RSR2PT; out.RPT2SR; out.XB_TORs];
 lgs = {'RTD', 'RD1', 'R1D', 'R12', 'R21', 'XB_{Ripped}', 'SR2PT', 'PT2SR', 'A2 dett'}
@@ -115,7 +126,7 @@ if ~saveResults
 end
 %% store the results
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParamsInitNiceSlack.m', params0, modNames);
+writeParamsToMFile('ModelParamsInit_slack1.m', params0, modNames);
 
 %% fit the slack
 plotData = true;

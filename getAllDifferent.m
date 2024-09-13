@@ -16,10 +16,13 @@ function [UpdatedModNames] = getAllDifferent(params)
     for i_mod = 1:length(modNames)
         if ~isfield(params0, modNames{i_mod}) && ...
             ~isempty(params.(modNames{i_mod})) || ... Does not exist in the base set and is not empty in the second
-            length(params.(modNames{i_mod})) == 1 && ... OR is it a different single element
+            length(params.(modNames{i_mod})) == 1 && ... OR is it a different single element or character
             length(params0.(modNames{i_mod})) == 1 && ...            
             params.(modNames{i_mod}) ~= params0.(modNames{i_mod})            
-                disp(['Got '  modNames{i_mod}])
+                % disp(['Got '  modNames{i_mod}])
+                UpdatedModNames{length(UpdatedModNames)+1} = modNames{i_mod};
+        elseif ischar(params.(modNames{i_mod})) && ~strcmp(params.(modNames{i_mod}), params0.(modNames{i_mod}))
+            disp(['Got str '  modNames{i_mod}])
                 UpdatedModNames{length(UpdatedModNames)+1} = modNames{i_mod};
         else
             % disp(['Drop '  modNames{i_mod}])

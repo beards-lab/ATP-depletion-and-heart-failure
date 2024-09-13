@@ -8,13 +8,17 @@ cost_sap = []; % SA plus
 cost_sam = []; % SA minus
 
 ModelParamsInitOptim_slack4
+% ModelParamsInitOptim_slackAll
 params0.drawPlots = true;
 params0.PlotEachSeparately = true;
+params0.ShowResidualPlots = true;
+
+params0.ghostLoad = 'NiceFit_slack4';
 
 RunBakersExp;
 %%
 figure(1001); clf; hold on;
-params0.PlotEachSeparately = true;
+params0.PlotEachSeparately = false;
 params0.ShowStatePlots = false;
 params0.ShowResidualPlots = true;
 c0 = isolateRunBakersExp(params0);
@@ -38,7 +42,7 @@ params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
 
 %%
-
+params0.ghostLoad = '';
 p0 = params0;
 SAFact = 1.05;
 for i_m = saSet
@@ -50,13 +54,14 @@ for i_m = saSet
     cost = isolateRunBakersExp(params0);
     cost_sap(i_m) = cost;
     % 
-    % params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
-    % fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
-    % cost = isolateRunBakersExp(params0);
-    % cost_sam(i_m) = cost;
+    params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
+    fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
+    cost = isolateRunBakersExp(params0);
+    cost_sam(i_m) = cost;
 
     fprintf('costing %1.4e€. \n', cost);
 end
+params0 = p0;
 %% visualize one way
 figure(404)
 err_1 = min(cost_sap)
@@ -85,7 +90,7 @@ x = fminsearch(optimfun, params0.g, options)
 params0.g = x;
 
 %%
-writeParamsToMFile('ModelParamsInitOptim_slack4.m', params0);
+writeParamsToMFile('ModelParamsInitOptim_slackAll.m', params0);
 %% show
 params0.PlotEachSeparately = true;
 RunBakersExp;

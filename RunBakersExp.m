@@ -277,23 +277,26 @@ if params0.RunSlack
     datastruct = load('data/bakers_slack8mM_all.mat');
     datatable = datastruct.datatable;
     
-    % first slack
-    % velocitytable = datastruct.velocitytable(1:4, 1);
-
-    % two slacks
-    % velocitytable = datastruct.velocitytable(1:11, :);
-
-    % all but the last
-    % velocitytable = datastruct.velocitytable(1:19, :);
     
+    switch params.RunSlackSegments
+        % first slack
+        case 'First'
+    velocitytable = datastruct.velocitytable(1:7, :);
+        case 'FirstTwo'
+    % two slacks
+    velocitytable = datastruct.velocitytable(1:11, :);
+        case 'AllButLast'
+    % all but the last
+    velocitytable = datastruct.velocitytable(1:19, :);
+        case 'Last'
     % only the last slack
     velocitytable = datastruct.velocitytable(18:end, :);
-    
+        case 'All'
     % all
     velocitytable = datastruct.velocitytable(1:end, :);
+    end
     
-    velocitytable(1, 1) = -2;
-    
+    velocitytable(1, 1) = -2;   
     
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
@@ -319,9 +322,13 @@ if params0.RunSlack
     % i_0 = find(datatable(:, 1) > 2.762, 1); % start a bit earlier
     % i_e = find(datatable(:, 1) > 2.9, 1); % not all the way in
     % i_e = length(datatable(:, 1));
-    validZone = datatable(:, 1) > velocitytable(2, 1) - 0.1 & datatable(:, 1) < velocitytable(2, 1) ... % pre-slack steady state
-        | datatable(:, 1) > velocitytable(3, 1) + 0.002 ... & datatable(:, 1) < velocitytable(4, 1) + 0.01 ... Redevelopment zone
-        | datatable(:, 1) > velocitytable(5, 1) + 0.01; % after the titin transient
+    
+    % limiting the first slack only
+    % validZone = datatable(:, 1) > velocitytable(2, 1) - 0.1 & datatable(:, 1) < velocitytable(2, 1) ... % pre-slack steady state
+    %     | datatable(:, 1) > velocitytable(3, 1) + 0.002 ... & datatable(:, 1) < velocitytable(4, 1) + 0.01 ... Redevelopment zone
+    %     | datatable(:, 1) > velocitytable(5, 1) + 0.01; % after the titin transient
+    validZone = ones([1 length(datatable(:, 1))]);
+
     nonrepeating = diff(out.t) ~= 0;
     Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(validZone, 1));
     % plot(datatable(validZone, 1), datatable(validZone, 3));hold on;
@@ -356,6 +363,7 @@ if params0.RunSlack
             clear gp;
         end
 
+        % params0.ghostSave = 'NiceFit_Compliant';
 
         plot(datatable(:, 1),datatable(:, 3),'k-','linewidth',0.5);
         plot(out.t,out.Force,'b-','linewidth',1.5);
@@ -393,7 +401,19 @@ if params0.RunSlack
     if params.ShowResidualPlots
         % nexttile;
         figure(1001);
-        plot(datatable(validZone, 1), (Fi - datatable(validZone, 3)))
+        
+        % if there is a ghost, then subtrack that
+        if ~isempty(params.ghostLoad) && exist(['Ghost_' params.ghostLoad '_slack.mat'],'file')
+            ghost = load(['Ghost_' params.ghostLoad '_slack']);
+            ghost = ghost.ghost;
+            Gi = interp1(ghost(:, 1), ghost(:, 2), datatable(validZone, 1));
+            % Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(validZone, 1));
+            % gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);        
+            plot(datatable(validZone, 1), (Fi - Gi), 'linewidth', 2); hold on;
+            gp = plot(datatable(validZone, 1), (Gi - datatable(validZone, 3)), 'k');
+        else        
+            plot(datatable(validZone, 1), (Fi - datatable(validZone, 1)));
+        end
     end
 
 
