@@ -97,7 +97,20 @@ params0.UseDirectSRXTransition = false;
 % params0.ghostLoad = 'NiceFit_Compliant';
 % params0.ghostSave = 'NiceFit_slack4';
 
-params0.RunSlackSegments = 'First';
+params0.RunSlackSegments = 'Last';
+
+
+%
+params0.alpha0 = 1.3054e+03; % params0.alpha0^2;
+
+params0.k1 = 2.0012; %params.k1/100, 
+params0.alpha1 = 491.3420; % params.alpha1*5
+params0.dr1 = 0.095;
+
+params0.alpha2_L = 1.2517e3; % params.alpha2_L*50
+params0.alpha2_R = 50*756.688; % params.alpha2_R*1e3
+params0.dr2 = 0.0107;
+
 
 LoadData; 
 tic

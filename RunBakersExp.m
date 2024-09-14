@@ -285,6 +285,8 @@ if params0.RunSlack
         case 'FirstTwo'
     % two slacks
     velocitytable = datastruct.velocitytable(1:11, :);
+        case 'FirstAndLast'
+            velocitytable = datastruct.velocitytable([1:6 19:23], :);
         case 'AllButLast'
     % all but the last
     velocitytable = datastruct.velocitytable(1:19, :);
