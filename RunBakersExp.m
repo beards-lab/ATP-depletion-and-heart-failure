@@ -282,20 +282,26 @@ if params0.RunSlack
         % first slack
         case 'First'
     velocitytable = datastruct.velocitytable(1:7, :);
+    validZone = datatable(:, 1) > 1;
         case 'FirstTwo'
     % two slacks
     velocitytable = datastruct.velocitytable(1:11, :);
+    validZone = datatable(:, 1) > 1;
         case 'FirstAndLast'
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
+            validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
         case 'AllButLast'
     % all but the last
     velocitytable = datastruct.velocitytable(1:19, :);
+    validZone = datatable(:, 1) > 1;
         case 'Last'
     % only the last slack
     velocitytable = datastruct.velocitytable(18:end, :);
+    validZone = datatable(:, 1) > 2;
         case 'All'
     % all
     velocitytable = datastruct.velocitytable(1:end, :);
+    validZone = datatable(:, 1) > 1;
     end
     
     velocitytable(1, 1) = -2;   
@@ -329,7 +335,8 @@ if params0.RunSlack
     % validZone = datatable(:, 1) > velocitytable(2, 1) - 0.1 & datatable(:, 1) < velocitytable(2, 1) ... % pre-slack steady state
     %     | datatable(:, 1) > velocitytable(3, 1) + 0.002 ... & datatable(:, 1) < velocitytable(4, 1) + 0.01 ... Redevelopment zone
     %     | datatable(:, 1) > velocitytable(5, 1) + 0.01; % after the titin transient
-    validZone = ones([1 length(datatable(:, 1))]);
+    % validZone = true([1 length(datatable(:, 1))]);
+    
 
     nonrepeating = diff(out.t) ~= 0;
     Fi = interp1(out.t(nonrepeating), out.Force(nonrepeating), datatable(validZone, 1));

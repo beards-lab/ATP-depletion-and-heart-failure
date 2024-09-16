@@ -84,8 +84,9 @@ figure(80085);
 clf;
 params0 = getParams();
 % ModelParamsInitNiceSlack;
-ModelParamsInitOptim_slack4;
+% ModelParamsInitOptim_slack4;
 % ModelParamsInit_slack1;
+ModelParamsOptim_tmp;
 
 params0.PlotEachSeparately = true;
 params0.ShowStatePlots = true;
@@ -99,17 +100,17 @@ params0.UseDirectSRXTransition = false;
 
 params0.RunSlackSegments = 'Last';
 
+% params0.dr1 = 0.1;
+% params0.alpha1 = 23;
+% params0.k1 = 1;
+% 
+% params0.alpha2_L = 45;
+% params0.k2 = 10;
+% params0.dr2 = 0.005;
+% params0.alpha2_R = 3000;
+% params0.e2R = .25;
 
-%
-params0.alpha0 = 1.3054e+03; % params0.alpha0^2;
 
-params0.k1 = 2.0012; %params.k1/100, 
-params0.alpha1 = 491.3420; % params.alpha1*5
-params0.dr1 = 0.095;
-
-params0.alpha2_L = 1.2517e3; % params.alpha2_L*50
-params0.alpha2_R = 50*756.688; % params.alpha2_R*1e3
-params0.dr2 = 0.0107;
 
 
 LoadData; 
@@ -139,7 +140,7 @@ if ~saveResults
 end
 %% store the results
 modNames = getAllDifferent(params0);
-writeParamsToMFile('ModelParamsInit_slack1.m', params0, modNames);
+writeParamsToMFile('ModelParamsInit_TF2_slack4.m', params0, modNames);
 
 %% fit the slack
 plotData = true;

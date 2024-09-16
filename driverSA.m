@@ -17,13 +17,16 @@ params0.ghostLoad = 'NiceFit_slack4';
 
 RunBakersExp;
 %%
+ModelParamsInit_TF2_slack4;
+ModelParamsOptim_tf2_slackLast;
+%%
 figure(1001); clf; hold on;
-params0.PlotEachSeparately = false;
+params0.RunSlackSegments = 'FirstAndLast';
+params0.PlotEachSeparately = true;
 params0.ShowStatePlots = false;
 params0.ShowResidualPlots = true;
 c0 = isolateRunBakersExp(params0);
 %%
-
 params0.mods = {'kstiff1', 'kstiff2', 'kmsr', 'ksr0', 'sigma1', 'sigma2', 'ka', 'kd', 'alpha2', 'k1', 'sigma1', 'kah', 'k2rip', 'alphaRip', 'alpha1', 'k2','k2_R','dr2_R', 'alpha2_R'};
 params0.mods = {'kstiff1', 'kstiff2'};
 
@@ -34,11 +37,21 @@ params0.mods = {'kstiff1', 'kstiff2'};
 % params0.mods = {'kadh', 'ka', 'kd', 'k1', 'k2', 'ksr0', 'kmsr', 'dr', 'kstiff1', 'kstiff2', 'alpha0', 'alpha1', 'kSE', 'k_pas', 'sigma1', 'gamma', 'alpha2_L', 'k2_R', 'k2_L', 'dr2_R', 'alpha2_R'};
 
 %reduced 2nd round
-params0.mods = {'kd', 'k1', 'ksr0', 'kmsr', 'kstiff1', 'alpha1', 'sigma1', 'k2_R', 'dr2_R', 'alpha2_R'};
+params0.mods = {'dr1', 'dr2','kd', 'k1', 'ksr0', 'kmsr', 'kstiff1', 'alpha1', 'alpha0', 'sigma1', 'k2_R', 'dr2_R', 'alpha2_R', 'alpha2_L'};
 params0.g = ones(size(params0.mods));
 
+% reduced
+params0.mods = {'dr1', 'dr2','kd', 'k1', 'ksr0', 'kmsr', 'kstiff1', 'alpha1', 'alpha0', 'sigma1', 'alpha2_R', 'alpha2_L'};
 
+% prep for the trans changes
+params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'alpha2_R', 'e2R'};
 
+% extended
+params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'alpha2_R', 'e2R', 'kd', 'ksr0', 'kmsr', 'kstiff1', 'kstiff2', 'k_pas', 'gamma', 'Lsc0'};
+
+% params0.mods = {'k_pas', 'gamma', 'Lsc0'};
+
+params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
 
 %%
@@ -54,10 +67,10 @@ for i_m = saSet
     cost = isolateRunBakersExp(params0);
     cost_sap(i_m) = cost;
     % 
-    params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
-    fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
-    cost = isolateRunBakersExp(params0);
-    cost_sam(i_m) = cost;
+    % params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
+    % fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
+    % cost = isolateRunBakersExp(params0);
+    % cost_sam(i_m) = cost;
 
     fprintf('costing %1.4e€. \n', cost);
 end
@@ -90,10 +103,18 @@ x = fminsearch(optimfun, params0.g, options)
 params0.g = x;
 
 %%
-writeParamsToMFile('ModelParamsInitOptim_slackAll.m', params0);
+writeParamsToMFile('ModelParamsOptim_tf2_slackLast.m', params0);
+writeParamsToMFile('ModelParamsOptim_tf2_slackFirst.m', params0);
+writeParamsToMFile('ModelParamsOptim_tf2_slackFirstLast.m', params0);
+writeParamsToMFile('ModelParamsOptim_tmp.m', params0);
 %% show
+clf;
+% params0.Lsc0    = 1.51;
 params0.PlotEachSeparately = true;
+% params0.RunSlackSegments = 'FirstAndLast'
+params0.ShowStatePlots = true;
 RunBakersExp;
+sum(E)
 
 
 
