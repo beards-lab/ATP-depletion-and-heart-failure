@@ -143,64 +143,13 @@ modNames = getAllDifferent(params0);
 writeParamsToMFile('ModelParamsInit_TF2_slack4.m', params0, modNames);
 
 %% fit the slack
+
 plotData = true;
-dropstart = velocitytable([3, 7, 11, 15, 19], 1);
 
-modeldatatable = [out.t; out.SL; out.Force]';
-zones = [1162, 1209;1464 1519;1816 1889;2268.5 2359.5;2766.5 2900];
-zones1 = zones(:, 1);
-for z1i = 1:length(zones1)
-    z1u(z1i) = find(out.t > dropstart(z1i) + 0.002 & out.t < zones(z1i, 2)/1000 & out.Force > 1e-3, 1, 'first');
-    
-end
-zones(:, 1) = out.t(z1u)*1000;
-%
-    
-figure(2);clf;
-% zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
-[dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0);
-plot([1 3], [0 0], 'k-')
-if plotData
-    figure(8008);
-    zones_d = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
-    [~, ~, ~, ~, ~, SL_d, x0lin_d]  = fitRecovery(datatable, zones_d, 0);
-    dt_d = x0lin_d' - dropstart; 
-    dL_d = 2.2 - SL_d;
-    
-    v_d = dL_d'./dt_d;
-end
-
-% times of start of the SL drop
-% dropstart = velocitytable([3, 7, 11, 15], 1);
-
-dt = x0lin' - dropstart; 
-dL = 2.2 - SL;
-
-v = dL'./dt;
-%
-figure(5);clf;
-nexttile;hold on;
-plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
-leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
-xlim([-0.05, 0.25])
-
-if plotData
-   leg_d =  plot([3e-4 dt_d'], [2.2 SL_d], '*-', LineWidth=2)
-   legend([leg_m, leg_d], 'model', 'Data')
-end
-
-
-nexttile;
-if plotData
-    plot(datatable(:, 1)-dropstart', datatable(:, 3));
-    hold on; set(gca,'ColorOrderIndex',1);
-end
-plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 3));
-xlim([-0.05, 0.25])
-
-slack_x = [3e-4 dt'] - 3e-4;
-slack_y = [2.2 SL];
-
+t = out.t; SL = out.SL; Force = out.Force;
+tic
+costSlackOnset = fitSlackForceOnset(datatable, velocitytable, t, SL, Force, plotData);
+toc
 
 %% Show the transition rates
 figure(3); clf;

@@ -1,14 +1,22 @@
-function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zeroTreshold, fixed_df)
+function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zeroTreshold, fixed_df, plotData)
+
+
     if nargin < 4
         fixed_df = [];
+    end
+
+    if nargin < 5
+        plotData = true;
     end
 
     % subplot(2, 1, [1]);hold on;
     % plot(datatable(:, 1), datatable(:, 2));
     % xlim([datatable(1, 1), datatable(end, 1)]);
     % subplot(2, 1, [2]);
-    hold on;
-    plot(datatable(:, 1), datatable(:, 3))
+    if plotData
+        hold on;
+        plot(datatable(:, 1), datatable(:, 3))
+    end
 %     plot(datatable([1, end], 1), [zeroTreshold zeroTreshold], 'k-');
     
     ML0 = 2.0; % sarcomere length at nominal muscle length(um)
@@ -40,7 +48,7 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         SL(z) = datatable(i1, 2);
         
         timebase_exp = (-(bt+15)/1000:0.01:0.3);
-        plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '--', 'Linewidth', 2);
+
         
         %% linear approx
         ilin1 = find(datatable(:, 1) > zones(z, 1)/1000, 1); % start at the zone
@@ -51,9 +59,12 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         x0lin(z) = al.x0 + datatable(ilin1);
         timebase_lin = (-10/1000:0.01:0.05); % extending the timebase
 
-        ci = get(gca,'ColorOrderIndex');
-        set(gca,'ColorOrderIndex', max(ci-2, 1));
-        plot(datatable(zlin, 1), datatable(zlin, 3), 'o', timebase_lin + datatable(zlin(1), 1), y_line(al.k, al.x0, timebase_lin), ':', 'Linewidth', 2);
+        if plotData
+            plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '--', 'Linewidth', 2);
+            ci = get(gca,'ColorOrderIndex');
+            set(gca,'ColorOrderIndex', max(ci-2, 1));
+            plot(datatable(zlin, 1), datatable(zlin, 3), 'o', timebase_lin + datatable(zlin(1), 1), y_line(al.k, al.x0, timebase_lin), ':', 'Linewidth', 2);
+        end
 %%
         % cursors - exp zone start and end
 
@@ -75,7 +86,6 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         
         % cursors - start slack (g) and end slack (r)
 %         plot([datatable(iss, 1) datatable(iss, 1)], [0, 100], 'g')
-        plot([datatable(ise, 1) datatable(ise, 1)], [0, 100], 'r')
 %         plot([datatable(i1- si + i_del2, 1) datatable(i1-si + i_del2, 1)], [0, 100], ':r', 'Linewidth', 3)
         dSL =  datatable(i1, 2) - datatable(iss, 2);
         
@@ -90,16 +100,20 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
 %         i_del_lin = find(datatable(iss:i2, 1) >= ix0lin(z), 1);
 %         dTlin(z) = x0lin(z) - datatable(iss, 1);
         vel_lin(z) = 0;%sdSL/dTlin(z);
-        plot([x0lin(z) x0lin(z)], [0, 100], 'm--');
+        if plotData
+            plot([datatable(ise, 1) datatable(ise, 1)], [0, 100], 'r')
+            
+            plot([x0lin(z) x0lin(z)], [0, 100], 'm--');
+            xlabel('Time (s)');
+            ylabel('Force (kPa)')
+            xlim([datatable(1, 1), datatable(end, 1)]);
+        end
         
 %         fprintf('At ML %1.2f, and time %1.2f: ' , datatable(i1- sc, 2), datatable(i1- sc, 1));
 %         fprintf(' dSL = %1.3f (%1.1f pct), dT = %1.1f ms and vel is %1.1f (%1.1f) \n', dSL, dSLpc(z), dT(z)*1000, -vel(z), -vel_lin(z));
         
 %         text(to + 0.001, datatable(z1(1), 3), sprintf('ktr = %1.1f, fm=%0.1f,\n with rmse %0.3f \n, vel = %0.1f', ae.ktr, ae.df, be.rmse, -vel(z)), 'Color', [1 0 0])
-        xlabel('Time (s)');
-        ylabel('Force (kPa)')
     end
-    xlim([datatable(1, 1), datatable(end, 1)]);
 % %% Summary graph    
 % % 8mM	
 % % X dT (ms),	Y dML (% ML)

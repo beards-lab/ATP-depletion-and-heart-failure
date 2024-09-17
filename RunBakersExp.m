@@ -445,6 +445,14 @@ if params0.RunSlack
             saveas(fig, ['XBBakersDataFit_' params.ghostSave '.png']);
         end
     end
+
+    try
+        E(5) = 5e5*fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
+    catch e
+        E(5) = 1e3;
+        disp(e);
+    end
+
 end
 %% FORCE VELOCITY RESIMULATION
 if params0.RunForceVelocityTime
