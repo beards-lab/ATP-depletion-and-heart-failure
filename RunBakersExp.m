@@ -282,14 +282,16 @@ if params0.RunSlack
         % first slack
         case 'First'
     velocitytable = datastruct.velocitytable(1:7, :);
-    validZone = datatable(:, 1) > 1;
+    % validZone = datatable(:, 1) > 1;
+    validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1);
         case 'FirstTwo'
     % two slacks
     velocitytable = datastruct.velocitytable(1:11, :);
     validZone = datatable(:, 1) > 1;
         case 'FirstAndLast'
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
-            validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
+            % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
         case 'AllButLast'
     % all but the last
     velocitytable = datastruct.velocitytable(1:19, :);
@@ -297,17 +299,26 @@ if params0.RunSlack
         case 'Last'
     % only the last slack
     velocitytable = datastruct.velocitytable(18:end, :);
-    validZone = datatable(:, 1) > 2;
+    validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
+    % validZone = datatable(:, 1) > 2;
         case 'All'
     % all
     velocitytable = datastruct.velocitytable(1:end, :);
     validZone = datatable(:, 1) > 1;
+    validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) |...
+        datatable(:, 1) > datastruct.velocitytable(7, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(9, 1) |...
+        datatable(:, 1) > datastruct.velocitytable(11, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(13, 1) |...
+        datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(17, 1) |...
+        datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
     end
     
     velocitytable(1, 1) = -2;   
     
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
+
+    % plot(datatable(:, 1), datatable(:, 3), 'k', datatable(validZone, 1), datatable(validZone, 3), 'r|');
+    % error('hovna')
 
     % params.SL0 = 2.2;
     params.Slim_l = 1.85;

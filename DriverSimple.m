@@ -99,16 +99,16 @@ params0.UseDirectSRXTransition = false;
 % params0.ghostSave = 'NiceFit_slack4';
 
 params0.RunSlackSegments = 'Last';
+params0.e2L = 1;
+params0.dr1 = 0.1;
+params0.alpha1 = 23;
+params0.k1 = 1;
 
-% params0.dr1 = 0.1;
-% params0.alpha1 = 23;
-% params0.k1 = 1;
-% 
-% params0.alpha2_L = 45;
-% params0.k2 = 10;
-% params0.dr2 = 0.005;
-% params0.alpha2_R = 3000;
-% params0.e2R = .25;
+params0.alpha2_L = -200;
+params0.k2 = 20;
+params0.dr2 = 0.002;
+params0.alpha2_R = 3000;
+params0.e2R = .25;
 
 
 

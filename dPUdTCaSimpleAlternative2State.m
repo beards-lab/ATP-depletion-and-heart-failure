@@ -160,19 +160,19 @@ MgADP = params.MgADP;
 
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
-sd = @(kx, alphaL, alphaR, dr,eR) min(1e4, kx*(exp((alphaL*(s-dr)).^2).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>dr)));
+sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>dr)));
 
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
 % dPUdT_TransitionRates;
 
 RTD = g2*params.kah*PT;
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
-R1D = p1.*sd(params.kd, params.alpha0, params.alpha0, params.dr0, 2);
+R1D = p1.*sd(params.kd, params.alpha0, params.alpha0, params.dr0, 2, 2);
 
-R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2); % P1 to P2
-R21 = f1*p2.*sd(params.k_1, params.alpha_1, params.alpha_1, params.dr_1, 2); % p2 to p1
+R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2, 2); % P1 to P2
+R21 = f1*p2.*sd(params.k_1, params.alpha_1, params.alpha_1, params.dr_1, 2, 2); % p2 to p1
 
-R2T = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2R);
+R2T = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));

@@ -9,16 +9,26 @@ cost_sam = []; % SA minus
 
 ModelParamsInitOptim_slack4
 % ModelParamsInitOptim_slackAll
+% ModelParamsOptim_tf2_slackLast
+params0.Lsc0 = 1.51;
+params0.e2R = 1;
+ModelParamsOptim_tf2_slackFirst
+% ModelParamsOptim_tf2_slackFirstLast
+% ModelParamsOptim_tmp.m
+
 params0.drawPlots = true;
 params0.PlotEachSeparately = true;
-params0.ShowResidualPlots = true;
+params0.ShowResidualPlots = false;
+params0.justPlotStateTransitionsFlag = false;
 
-params0.ghostLoad = 'NiceFit_slack4';
+
+% params0.ghostLoad = 'NiceFit_slack4';
 
 RunBakersExp;
 %%
 ModelParamsInit_TF2_slack4;
 ModelParamsOptim_tf2_slackLast;
+ModelParamsOptim_tmp;
 %%
 figure(1001); clf; hold on;
 params0.RunSlackSegments = 'FirstAndLast';
@@ -44,10 +54,13 @@ params0.g = ones(size(params0.mods));
 params0.mods = {'dr1', 'dr2','kd', 'k1', 'ksr0', 'kmsr', 'kstiff1', 'alpha1', 'alpha0', 'sigma1', 'alpha2_R', 'alpha2_L'};
 
 % prep for the trans changes
-params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'alpha2_R', 'e2R'};
+params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'alpha2_R', 'e2R', 'e2L'};
 
 % extended
-params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'alpha2_R', 'e2R', 'kd', 'ksr0', 'kmsr', 'kstiff1', 'kstiff2', 'k_pas', 'gamma', 'Lsc0'};
+params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'alpha2_R', 'e2R', 'e2L', 'kd', 'ksr0', 'kmsr', 'kstiff1', 'kstiff2', 'k_pas', 'gamma', 'Lsc0'};
+
+% only left 
+params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ksr0', 'kmsr', 'sigma1', 'kstiff1', 'kstiff2', 'k_pas', 'gamma', 'Lsc0'}
 
 % params0.mods = {'k_pas', 'gamma', 'Lsc0'};
 
@@ -106,12 +119,20 @@ params0.g = x;
 writeParamsToMFile('ModelParamsOptim_tf2_slackLast.m', params0);
 writeParamsToMFile('ModelParamsOptim_tf2_slackFirst.m', params0);
 writeParamsToMFile('ModelParamsOptim_tf2_slackFirstLast.m', params0);
+writeParamsToMFile('ModelParamsOptim_tf2_slackFirstLast_LeftOnly.m', params0);
 writeParamsToMFile('ModelParamsOptim_tmp.m', params0);
 %% show
 clf;
+% params0.mods = {};
 % params0.Lsc0    = 1.51;
+% params0.RunForceVelocity = false;
+params0.RunSlack = true;
+params0.RunForceVelocity = false;
+params0.RunForceVelocityTime = false;
 params0.PlotEachSeparately = true;
-% params0.RunSlackSegments = 'FirstAndLast'
+params0.justPlotStateTransitionsFlag = false;
+params0.RunSlackSegments = 'FirstAndLast';
+params0.RunSlackSegments = 'All';
 params0.ShowStatePlots = true;
 RunBakersExp;
 sum(E)
