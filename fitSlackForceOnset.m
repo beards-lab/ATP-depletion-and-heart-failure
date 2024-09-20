@@ -50,11 +50,11 @@ if plotData
     figure(5);clf;
     nexttile;hold on;
     plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
-    leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2)
+    leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2);
     xlim([-0.05, 0.25])
 
    leg_d =  plot([3e-4 dt_d'], [2.2 SL_d], '*-', LineWidth=2);
-   legend([leg_m, leg_d], 'model', 'Data')
+   legend([leg_m, leg_d], 'model', 'Data');
 
 
 

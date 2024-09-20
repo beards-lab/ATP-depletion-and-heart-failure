@@ -387,6 +387,7 @@ if params0.RunSlack
 
         plot(datatable(:, 1),datatable(:, 3),'k-','linewidth',0.5);
         plot(out.t,out.Force,'b-','linewidth',1.5);
+        plot(out.t,out.FXBPassive,'b--','linewidth',1.5);
         % plot(Tspan,F_active,'linewidth',1.5);
         xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
@@ -447,7 +448,8 @@ if params0.RunSlack
     end
 
     try
-        E(5) = 5e5*fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
+        figure(8989);clf;
+        E(5) = 5e6*fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
     catch e
         E(5) = 1e3;
         disp(e);

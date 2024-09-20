@@ -8,9 +8,11 @@ cost_sap = []; % SA plus
 cost_sam = []; % SA minus
 
 % ModelParamsInitOptim_slack4
-ModelParamsOptim_tmp
+% ModelParamsOptim_tmp
 % ModelParamsInitOptim_slackAll
 % ModelParamsOptim_tf2_slackLast
+ModelParamsOptim_tf2_slackOnsetAll_LeftOnly
+ModelParamsOptim_tmp
 params0.RunSlackSegments = 'All';
 % params0.Lsc0 = 1.51;
 % params0.e2R = 1;
@@ -22,7 +24,7 @@ params0.drawPlots = true;
 params0.drawForceOnset = true;
 params0.PlotEachSeparately = true;
 params0.ShowResidualPlots = false;
-params0.justPlotStateTransitionsFlag = false;
+params0.justPlotStateTransitionsFlag = true;
 
 
 % params0.ghostLoad = 'NiceFit_slack4';
@@ -69,8 +71,9 @@ params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ks
 % reduced
 params0.mods = {'dr1', 'alpha1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ksr0', 'kmsr', 'kstiff1', 'kstiff2', 'k_pas', 'gamma', 'Lsc0', 'kSE'};
 
-params0.mods = {'k_pas', 'gamma', 'Lsc0', 'kSE'};
+% params0.mods = {'k_pas', 'gamma', 'Lsc0', 'kSE', 'ksr0', 'kmsr', 'xrate'};
 
+% params0.mods = {'xrate'};
 % params0.mods = {'k_pas', 'gamma', 'Lsc0'};
 
 params0.g = ones(size(params0.mods));
@@ -134,9 +137,17 @@ writeParamsToMFile('ModelParamsOptim_tmp.m', params0);
 %% show
 clf;
 figure;
+LoadData;
 % params0.mods = {};
 % params0.Lsc0    = 1.51;
 % params0.RunForceVelocity = false;
+% params0.xrate = 3;
+
+% params0.kmsr = params0.kmsr*10;
+% params0.ksr0 = params0.ksr0*2;
+% params0.gamma = 4;
+% params0.Lsc0 = 1.51;
+% params0.k_pas = 50;
 params0.RunSlack = true;
 params0.RunForceVelocity = false;
 params0.RunForceVelocityTime = false;
@@ -145,6 +156,8 @@ params0.justPlotStateTransitionsFlag = false;
 params0.RunSlackSegments = 'FirstAndLast';
 params0.RunSlackSegments = 'All';
 params0.ShowStatePlots = true;
+params0.drawForceOnset = true;
+params0.UseDirectSRXTransition = false;
 RunBakersExp;
 sum(E)
 

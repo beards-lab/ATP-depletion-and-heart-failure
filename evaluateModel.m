@@ -11,6 +11,8 @@ PU0 = params.PU0;
 out = [];
 ss = params.ss;
 
+params = updateRates(params);
+
 if isfield(params, 'ksrm')
     error('Change ksrm to kmsr!!')
 end
