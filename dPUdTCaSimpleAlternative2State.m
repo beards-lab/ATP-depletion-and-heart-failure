@@ -66,9 +66,10 @@ PD = PU(2*ss + 5);
 
 % Sarcomere geometry
 if params.UseOverlap
-    L_thick = 1.67; % Length of thick filament, um
-    L_hbare = 0.10; % Length of bare region of thick filament, um
-    L_thin  = 1.20; % Length of thin filament, um
+    L_thick = params.L_thick;% = 1.67; % Length of thick filament, um
+    L_hbare = params.L_hbare;% = 0.10; % Length of bare region of thick filament, um
+    L_thin = params.L_thin;  %= 1.20; % Length of thin filament, um
+
     % deltaR  = 0.010; % um    
     L_T_HS1 = min(L_thick*0.5, SL*0.5);
     L_T_HS2 = max((SL-LSE)*0.5 - ((SL-LSE)-L_thin),L_hbare*0.5);
@@ -127,7 +128,11 @@ F_passive = 0;
 if params.UsePassive
     Lsc0    = 1.51;
     % gamma = 7.5;
-    F_passive = F_passive + params.k_pas*max(SL-LSE - params.Lsc0, 0)^params.gamma; 
+    % F_passive = F_passive + params.k_pas*max(SL-LSE - params.Lsc0, 0)^params.gamma; 
+    
+    % identified from FitPassiveRampUp.m
+    y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+    F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
 end
 
 if params.UseTitinInterpolation

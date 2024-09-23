@@ -448,8 +448,9 @@ if params0.RunSlack
     end
 
     try
-        figure(8989);clf;
-        E(5) = 5e6*fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
+        % figure(8989);clf;
+        [e_dt e_ktr] = fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
+        E(5) = 5e6*e_dt; E(6) = e_ktr;
     catch e
         E(5) = 1e3;
         disp(e);
