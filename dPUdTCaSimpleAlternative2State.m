@@ -142,10 +142,24 @@ end
 
 F_total = F_active + F_passive;
 
-Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
-velHS = (Force - F_total)/params.mu;
-dLSEdt = vel - velHS;
-Force = max(0, Force);
+
+if params.FudgeVmax && t > -1
+    if params.kSE*LSE >= 0
+        Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
+        velHS = (Force - F_total)/params.mu;
+    else
+        Force = params.MaxSlackNegativeForce;
+        % velHS = -(818*exp(-17*(SL - LSE)) + 22);
+        velHS = -(params.FudgeA*SL^2 +params.FudgeB*SL + params.FudgeC);
+        % velHS = -params.vmax;
+    end
+    dLSEdt = vel - velHS;
+else
+    Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
+    % Force = params.kSE*LSE*(LSE >= 0) + params.kSEn*LSE*(LSE < 0);
+    velHS = (Force - F_total)/params.mu;
+    dLSEdt = vel - velHS;
+end
 
 %% TRANSITIONS
 % plotStateTransitionsFlag = true;

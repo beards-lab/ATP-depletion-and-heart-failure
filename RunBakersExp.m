@@ -393,7 +393,7 @@ if params0.RunSlack
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
         set(gca,'fontsize',14);  box on;
         title('Slack');
-        xlim([velocitytable(2, 1) velocitytable(end, 1)])
+        xlim([velocitytable(2, 1)-0.02 velocitytable(end, 1)])
         yl = ylim;
         % plot(out.t, out.XB_TORs, '-')
         ylim(yl)
@@ -401,9 +401,9 @@ if params0.RunSlack
 
 
         if exist('gp', 'var') && isvalid(gp)
-            legend(['Ghost ' params.ghostLoad],'F data', 'F sim','SL data*', 'SL sim*', 'Location', 'southwest');
+            legend(['Ghost ' params.ghostLoad],'F data', 'F sim','SL data*', 'SL sim*', 'Location', 'best');
         else
-            legend('F data', 'F sim','SL data*', 'SL sim*', 'Location', 'southwest');
+            legend('F data', 'F sim','SL data*', 'SL sim*', 'Location', 'best');
         end
 
         if params.ShowStatePlots
@@ -450,7 +450,8 @@ if params0.RunSlack
     try
         % figure(8989);clf;
         [e_dt e_ktr] = fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
-        E(5) = 5e6*e_dt; E(6) = e_ktr;
+        E(4) = 0*E(4)/100;
+        E(5) = 5e6*e_dt; E(6) = 0*e_ktr;
     catch e
         E(5) = 1e3;
         disp(e);
