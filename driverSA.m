@@ -14,8 +14,9 @@ cost_sam = []; % SA minus
 % ModelParamsOptim_tf2_slackLast
 % ModelParamsOptim_tf2_slackOnsetAll_LeftOnly
 % ModelParamsOptim_DtKtr;
-ModelParamsOptim_DtKtr_OV
+% ModelParamsOptim_DtKtr_OV
 % ModelParamsOptim_DtKtr_OV2
+ModelParamsOptim_fudgeSlackVelocities
 
 params0.RunSlackSegments = 'All';
 % params0.Lsc0 = 1.51;
@@ -31,6 +32,7 @@ params0.RunSlackSegments = 'All';
 params0.drawPlots = true;
 params0.drawForceOnset = true;
 params0.PlotEachSeparately = true;
+params0.drawForceOnset = false;
 params0.ShowResidualPlots = false;
 params0.justPlotStateTransitionsFlag = false;
 
@@ -108,13 +110,13 @@ params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ks
 
 % params0.mods = {'xrate'};
 % params0.mods = {'k_pas', 'gamma', 'Lsc0'};
-params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ksr0', 'kmsr', 'sigma1', 'kstiff1', 'kstiff2', 'kSE', 'L_thick', 'L_hbare', 'L_thin'};
+params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ksr0', 'kmsr', 'sigma1', 'kstiff1', 'kstiff2', 'kSE'};
 
-params0.mods = {'L_thick', 'L_hbare', 'L_thin'};
-
-params0.mods = {'vmax', 'kSE'}
-
-params0.mods = {'FudgeB','FudgeC'};
+% params0.mods = {'L_thick', 'L_hbare', 'L_thin'};
+% 
+% params0.mods = {'vmax', 'kSE'}
+% 
+% params0.mods = {'FudgeB','FudgeC'};
 
 params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
@@ -176,6 +178,7 @@ xticklabels(params0.mods(param_ord))
 params0.mods = params0.mods(param_ord);
 params0.mods = params0.mods(1:8);
 params0.g = ones(size(params0.mods));
+params0.mods
 % saSet = 1:length(params0.mods);
 %% Optim
 
@@ -202,6 +205,7 @@ writeParamsToMFile('ModelParamsOptim_DtKtr_OV.m', params0);
 writeParamsToMFile('ModelParamsOptim_DtKtr_OV2.m', params0);
 writeParamsToMFile('ModelParamsOptim_fudgeSlack.m', params0);
 writeParamsToMFile('ModelParamsOptim_fudgeSlackVelocities.m', params0);
+writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset.m', params0);
 %% show
 
 figure(8340);clf;
@@ -228,15 +232,16 @@ params0.RunSlack = true;
 % params0.justPlotStateTransitionsFlag = false;
 % params0.RunSlackSegments = 'FirstAndLast';
 params0.RunSlackSegments = 'All';
+params0.
 % params0.ShowStatePlots = true;
 % params0.drawForceOnset = true;
 % params0.UseDirectSRXTransition = false;
 
-params0.kSE = 5.245151e3;
+% params0.kSE = 5.245151e3;
 % params0.SL0 = 2.2*rsl0;
-params0.vmax = 10;
-params0.vmax1 = 20;
-params0.mu = 1e-1;
+
+% params0.mu = 1e-2;
+% 
 % params0.sigma1 = 1e6;
 % params0.sigma2 = 3e1;
 % params0.ksr0 = 50;
@@ -244,21 +249,24 @@ params0.mu = 1e-1;
 % params0.mu = 1e-1;
 % params0.kstiff1 =7.2e3; 
 % params0.kstiff2  = 1.5e4;
-% 
-params0.FudgeVmax = true;
-params0.FudgeA = 0;% 2.1750e+03;
-%
-params0.FudgeB = 120;
-params0.FudgeC = -210;
 
-SL = 1.7:0.1:2.2;
-velHS = -(params0.FudgeB*SL + params0.FudgeC);
-plot(SL, velHS);
+% params0.FudgeVmax = true;
+% params0.FudgeA = 0;% 2.1750e+03;
+% %
+% params0.FudgeB = 120;
+% params0.FudgeC = -210;
+
+% SL = 1.7:0.1:2.2;
+% velHS = -(params0.FudgeB*SL + params0.FudgeC);
+% plot(SL, velHS);
+
 %
 % params0.g = [1 1];
 % for fudgeB and C x =    0.8414    1.0641
 %
 % params0.g = [1.4747    0.9379]
+params0.FudgeVmax = true;
+params0.justPlotStateTransitionsFlag = false;
 tic
 RunBakersExp;
 toc

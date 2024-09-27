@@ -168,7 +168,7 @@ params.ML = 2.0;
 
     params.Velocity = 0;
 
-    params.SL0 = 2.05;
+    params.SL0 = 2.1;
     rsl0 = params.SL0 / 2.0
     params.Slim_l = 1.85;
     params.Vums = 0;

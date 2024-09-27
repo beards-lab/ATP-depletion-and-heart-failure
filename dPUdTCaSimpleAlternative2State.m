@@ -165,9 +165,11 @@ end
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
     s = s - (s(end) - s(1))/2; 
+    F_total = -5:0.1:80;
     p1 = ones(size(p1));
     p2 = ones(size(p2));
-    PD = 1;PT = 1;SR = 1;
+    
+    PD = 1;PT = 1;P_SR = 1;
 end
 
 %%
