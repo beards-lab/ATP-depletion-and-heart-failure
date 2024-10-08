@@ -157,6 +157,16 @@ xlim([-0.05, 0.25])
 
 slack_x = [3e-4 dt'] - 3e-4;
 slack_y = [2.2 SL];
+%% normalize
+nexttile;hold on;
+plot(datatable(:, 1)-dropstart' - dt', datatable(:, 3)./df);
+hold on; set(gca,'ColorOrderIndex',1);
+% plot(datatable(:, 1)-dropstart', datatable(:, 3), '--', linewidth=2);
+xlim([-0.05, 0.25])
+
+slack_x = [3e-4 dt'] - 3e-4;
+slack_y = [2.2 SL];
+title('Normalized to max force at SL drop and time-shifted the offset');
 %% first peak and SL length dependence - is there a connection?
 x_peak1_8 = [53.95 64 83.45 103 155.45]/1000;
 x_peak1_2 = [58, 66.5, 85.7, 105, 164]/1000;

@@ -14,18 +14,22 @@ for z1i = 1:length(zones1)
     z1u(z1i) = find(t > dropstart(z1i) + 0.002 & t < zones(z1i, 2)/1000 & Force > 1e-3, 1, 'first');    
 end
 zones(:, 1) = t(z1u)*1000;
+% zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
+
 %
 if plotData_fit
     nexttile;hold on;
 end
-% zones = [1162, 1209;1464 1519;1816 1889;2269 2359.5];
 [dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0, [], plotData_fit);
+
+% [dSLpc, ktr, df, del, E, SL, x0lin]  = fitRecovery(modeldatatable, zones, 0, [], false);
     
     % zones_d = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 
 if plotData_fit
     plot([1 3], [0 0], 'k-')    
 end
+
 % zones_d = [1162, 1209;1464 1519;1816 1889;2269 2359.5;2774 2900];
 % [dSLpc_d, ktr_d, df_d, del_d, E_d, SL_d, x0lin_d]  = fitRecovery(datatable, zones_d, 0, [], plotData);
 ktr_d = [39.7759   34.0831   31.0308   27.6087   26.2495];
@@ -48,13 +52,16 @@ v = dL'./dt;
 %
 
 if plotData    
-    nexttile;hold on;
-    plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
-    leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2);
-    xlim([-0.05, 0.25])
-
-   leg_d =  plot([3e-4 dt_d'], [2.2 SL_d], '*-', LineWidth=2);
-   legend([leg_m, leg_d], 'model', 'Data');
+    
+    if plotData_fit
+        nexttile;hold on;
+        plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
+        leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2);
+        xlim([-0.05, 0.25])
+    
+        leg_d =  plot([3e-4 dt_d'], [2.2 SL_d], '*-', LineWidth=2);
+        legend([leg_m, leg_d], 'model', 'Data');
+    end
 
     nexttile;
     plot(datatable(:, 1)-dropstart', datatable(:, 3), '-', LineWidth=1);

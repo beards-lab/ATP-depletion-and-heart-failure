@@ -9,7 +9,7 @@ xr = params.xrate;
 params = rmfield(params, 'xrate');
 
 
-% params.kah
+params.kah = params.kah*xr;
 params.ka = params.ka*xr;
 % params.kd
 

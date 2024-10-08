@@ -126,6 +126,10 @@ for vs = 1:length(T) - 1
         end
         
         lastwarn('', ''); 
+        if isfield(params, 'ResetSRat') && ~isempty(params.ResetSRat) && ~isempty(find(params.ResetSRat(:, 1) == ts, 1))
+            SR = params.ResetSRat(find(params.ResetSRat(:, 1) == ts, 1), 2);
+            PU0(2*ss+1) = SR;
+        end
         [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
         if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
             error('ODEslower is not stable')

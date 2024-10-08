@@ -292,6 +292,11 @@ if params0.RunSlack
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
+        case 'FirstAndLastExtended'
+            velocitytable = datastruct.velocitytable([1:6 19:23], :);
+            velocitytable([5:6 9:10], 1) = velocitytable([5:6, 9:10], 1) + 1;
+            % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);            
         case 'AllButLast'
     % all but the last
     velocitytable = datastruct.velocitytable(1:19, :);
@@ -363,7 +368,7 @@ if params0.RunSlack
 
     if ~isempty(params.ghostSave)
         ghost = [out.t; out.Force]';
-        save(['Ghost_' params.ghostSave '_slack'], 'ghost');
+        save(['Ghost_' params.ghostSave '_slack'], 'ghost', "params0");
     end
     if params.PlotEachSeparately
         % axes('position',[0.55 0.1 0.4 0.35]); hold on;

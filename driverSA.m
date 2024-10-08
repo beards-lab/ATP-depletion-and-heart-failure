@@ -19,6 +19,30 @@ cost_sam = []; % SA minus
 ModelParamsOptim_fudgeSlackVelocities
 
 params0.RunSlackSegments = 'All';
+% params0.RunSlackSegments = 'FirstAndLastExtended';
+
+% need to run the sim first to get the velocity table in the workspace. 
+params0.ResetSRat = [velocitytable(4, 1), 0.0;...
+    velocitytable(8, 1), 0.2;...
+    velocitytable(12, 1), 0.3;...
+    velocitytable(16, 1), 0.4;...
+    velocitytable(20, 1), 0.7 ];
+
+params0.ResetSRat = [];
+
+% params0.ka = 1e-3;
+% params0.kd = 1e-2;
+% params0.kadh = 0;
+
+% params0.xrate = 1.6;
+% params0.ksr0 = 5;
+% params0.sigma1 = 1e6;
+% % to SR
+% params0.kmsr = 1.5;
+% params0.sigma2 = 1e6;
+
+params0.UseDirectSRXTransition = false;
+
 % params0.Lsc0 = 1.51;
 % params0.e2R = 1;
 % ModelParamsOptim_tf2_slackFirst
@@ -32,11 +56,11 @@ params0.RunSlackSegments = 'All';
 params0.drawPlots = true;
 params0.drawForceOnset = true;
 params0.PlotEachSeparately = true;
-params0.drawForceOnset = false;
+params0.drawForceOnset = true;
 params0.ShowResidualPlots = false;
 params0.justPlotStateTransitionsFlag = false;
 
-
+params0.UsePassiveForSR = false;
 % RSR2PT = params.ksr0*exp(F_total/)*P_SR;
 % RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
 
@@ -52,6 +76,7 @@ params0.justPlotStateTransitionsFlag = false;
 params0.MaxSlackNegativeForce = 0;
 params0.FudgeVmax = true;
 params0.vmax = 18;
+
 params0.kSE = 1.3e4;
 params0.kSEn = 1.3e1;
 params0.mu = 1e-1;
@@ -59,6 +84,7 @@ params0.mu = 1e-1;
 
 params0.ghostLoad = 'DtKtr_OV';
 tic
+
 RunBakersExp;
 toc
 sum(E)
@@ -206,6 +232,7 @@ writeParamsToMFile('ModelParamsOptim_DtKtr_OV2.m', params0);
 writeParamsToMFile('ModelParamsOptim_fudgeSlack.m', params0);
 writeParamsToMFile('ModelParamsOptim_fudgeSlackVelocities.m', params0);
 writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset.m', params0);
+writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset_tmp.m', params0);
 %% show
 
 figure(8340);clf;
@@ -231,21 +258,79 @@ params0.RunSlack = true;
 % params0.PlotEachSeparately = true;
 % params0.justPlotStateTransitionsFlag = false;
 % params0.RunSlackSegments = 'FirstAndLast';
+params0.RunSlackSegments = 'FirstAndLastExtended';
 params0.RunSlackSegments = 'All';
-params0.
+params0.UsePassiveForSR = false;
+
 % params0.ShowStatePlots = true;
-% params0.drawForceOnset = true;
-% params0.UseDirectSRXTransition = false;
+params0.drawForceOnset = true;
+
+% params0.UseDirectSRXTransition = false;true
 
 % params0.kSE = 5.245151e3;
 % params0.SL0 = 2.2*rsl0;
 
 % params0.mu = 1e-2;
+params0.UseDirectSRXTransition = false;
+ 
+% rather extreme parametrization - max rate in, max dependence out
+% a bit weird shape - the force depends on force
+% from SR
+params0.ksr0 = 100/20;
+params0.sigma1 = 10e0;
+% to SR
+params0.kmsr = 6000/20*2;
+params0.sigma2 = 1e6;
+
+% Other way around
+% from SR
+params0.ksr0 = 100;
+params0.sigma1 = 1e6;
+% to SR
+params0.kmsr = 5000;
+params0.sigma2 = 20e0;
 % 
+% Other way around - less steep
+% from SR
+% params0.ksr0 = 100;
 % params0.sigma1 = 1e6;
-% params0.sigma2 = 3e1;
-% params0.ksr0 = 50;
-% params0.kmsr = 50.78;
+% to SR
+% params0.kmsr = 600;
+% params0.sigma2 = 40e0;
+% 
+% serial setup
+% from SR
+% params0.ksr0 = 100;
+% params0.sigma1 = 40e0;
+% to SR - backflow
+% params0.kmsr = 500;
+% params0.sigma2 = 1e6;
+% params0.UseDirectSRXTransition = true;
+
+% Dans tests
+% out of SR
+params0.ksr0 = 10;
+params0.sigma1 = 50e6;
+% to SR
+params0.kmsr = 30;
+params0.sigma2 = 1e6;
+params0.UseDirectSRXTransition = false;
+
+params0.ka = 25;
+params0.kd = 1;
+
+%
+F_SR = 80;PT = 0.15;
+RSR2PT = params0.ksr0*exp(F_SR/params0.sigma1);
+RPT2SR = params0.kmsr*exp(-F_SR/params0.sigma2);
+r_SR = RPT2SR/RSR2PT*PT
+%
+params0.justPlotStateTransitionsFlag = false;
+% params0.UseTitinInterpolation = false;
+params0.ghostSave = '';
+% params0.ghostSave = 'tmp';
+params0.ghostLoad = 'tmp';
+% params0.alpha2_L = -100;
 % params0.mu = 1e-1;
 % params0.kstiff1 =7.2e3; 
 % params0.kstiff2  = 1.5e4;
@@ -266,11 +351,36 @@ params0.
 %
 % params0.g = [1.4747    0.9379]
 params0.FudgeVmax = true;
-params0.justPlotStateTransitionsFlag = false;
+% params0.justPlotStateTransitionsFlag = false;
 tic
 RunBakersExp;
 toc
 sum(E)
+%% plot overlay
+figure(222);clf;
+dropstart = velocitytable([3, 7, 11, 15, 19], 1);
+
+% sr
+% plot(out.t-dropstart, out.SR, '-', LineWidth=1);    hold on; set(gca,'ColorOrderIndex',1);
+
+% p1
+plot(out.t-dropstart, out.p2_0, '-', LineWidth=1);     hold on; set(gca,'ColorOrderIndex',1);
+
+xlim([0 0.3])
+%%
+LXB = 1.6:0.1:3.8;
+    L_thick = params.L_thick;% = 1.67; % Length of thick filament, um
+    L_hbare = params.L_hbare;% = 0.10; % Length of bare region of thick filament, um
+    L_thin = params.L_thin;  %= 1.20; % Length of thin filament, um
+
+    % deltaR  = 0.010; % um    
+    L_T_HS1 = min(L_thick*0.5, LXB*0.5);
+    L_T_HS2 = max(LXB*0.5 - (LXB-L_thin),L_hbare*0.5);
+    L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
+    N_overlap = L_ov*2/(L_thick - L_hbare);
+
+hold on;plot(LXB, N_overlap.^2, '-', LineWidth=2)
+xlabel('SL');ylabel('OV');legend('OV', 'OV^2')
 
 
 
