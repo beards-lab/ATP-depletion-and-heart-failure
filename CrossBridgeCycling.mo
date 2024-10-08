@@ -43,7 +43,7 @@ package CrossBridgeCycling
 
   record Params
       Real kah = 80;
-      Real kadh;
+      Real kadh = 0;
       Real ka, kd;
 
       Real k1, k_1, k2;
@@ -66,7 +66,7 @@ package CrossBridgeCycling
   Real dS = 1, s = 1;
   Params params;
 
-  Real N_overlap = 1;
+  Real N_overlap = overLap.O_overlap;
 
   // the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
   function strainDep
@@ -100,7 +100,9 @@ package CrossBridgeCycling
   Real dPD = + RTD - RD1 + R1D;
   Real dp1 = RD1 - R1D -  R12 + R21; // state 1: loosely attached, just sitting&waiting
   Real dp2 = + R12 - R21  - R2T; // strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
-
+  Real SL = 2.2;
+    XB.XBMoments.Tests.OverLap overLap(SL=SL)
+      annotation (Placement(transformation(extent={{-80,60},{-60,80}})));
   equation
     // SET the KNOWLEDGE - states at maximally contracted
     PD = 0.2;
@@ -122,9 +124,106 @@ package CrossBridgeCycling
     params.kmsr / params.ksr0 = 1/5;
     R21/R12 = 1/5;
 
-    R2T = 10;
+  //   R2T = 10;
 
     annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
           coordinateSystem(preserveAspectRatio=false)));
   end XBRates_SS;
+
+  model elasticSegment
+    Modelica.Mechanics.Translational.Components.Spring spring(c=c)
+      annotation (Placement(transformation(extent={{20,-10},{40,10}})));
+    Modelica.Mechanics.Translational.Interfaces.Flange_a flange_a
+      annotation (Placement(transformation(extent={{-110,-10},{-90,10}})));
+    Modelica.Mechanics.Translational.Interfaces.Flange_b flange_b
+      annotation (Placement(transformation(extent={{90,-10},{110,10}})));
+    Modelica.Mechanics.Translational.Components.Spring spring1(c=cStiff1*att)
+      annotation (Placement(transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=90,
+          origin={0,56})));
+    Modelica.Mechanics.Translational.Interfaces.Support support
+      annotation (Placement(transformation(extent={{-10,90},{10,110}})));
+    parameter Modelica.Units.SI.TranslationalSpringConstant c=1
+      "Spring constant";
+    parameter Modelica.Units.SI.TranslationalSpringConstant cStiff1=1
+      "Spring constant";
+    parameter Real att=1;
+  equation
+    connect(spring.flange_a, flange_a)
+      annotation (Line(points={{20,0},{-100,0}}, color={0,127,0}));
+    connect(spring.flange_b, flange_b)
+      annotation (Line(points={{40,0},{100,0}}, color={0,127,0}));
+    connect(support, spring1.flange_b)
+      annotation (Line(points={{0,100},{0,66}}, color={0,127,0}));
+    connect(spring1.flange_a, flange_a)
+      annotation (Line(points={{0,46},{0,0},{-100,0}}, color={0,127,0}));
+    annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
+          coordinateSystem(preserveAspectRatio=false)));
+  end elasticSegment;
+
+  model HlasSercomere
+    elasticSegment elasticSegment1(
+      c=ThickStiffness,
+      cStiff1=HeadStiffness,
+      att=4)
+      annotation (Placement(transformation(extent={{-30,-10},{-10,10}})));
+    Modelica.Mechanics.Translational.Components.Fixed fixed
+      annotation (Placement(transformation(extent={{-90,-10},{-70,10}})));
+    Modelica.Mechanics.Translational.Components.Spring spring(c=1)
+      annotation (Placement(transformation(extent={{-60,-10},{-40,10}})));
+    elasticSegment elasticSegment2(
+      c=ThickStiffness,
+      cStiff1=HeadStiffness,
+      att=0)
+      annotation (Placement(transformation(extent={{0,-10},{20,10}})));
+    elasticSegment elasticSegment3(
+      c=ThickStiffness,
+      cStiff1=HeadStiffness,
+      att=0)
+      annotation (Placement(transformation(extent={{32,-10},{52,10}})));
+    Modelica.Mechanics.Translational.Sources.Position position
+      annotation (Placement(transformation(extent={{104,-10},{84,10}})));
+    Modelica.Blocks.Sources.Sine sine(f= 1)
+      annotation (Placement(transformation(extent={{40,38},{60,58}})));
+    parameter Modelica.Units.SI.TranslationalSpringConstant ThickStiffness=100
+      "Spring constant";
+    parameter Modelica.Units.SI.TranslationalSpringConstant HeadStiffness=10
+      "Spring constant";
+    elasticSegment elasticSegment4(
+      c=ThickStiffness,
+      cStiff1=HeadStiffness,
+      att=0)
+      annotation (Placement(transformation(extent={{58,-10},{78,10}})));
+  equation
+    connect(fixed.flange, elasticSegment1.support) annotation (Line(points={{-80,0},
+            {-80,20},{-20,20},{-20,10}},
+                                     color={0,127,0}));
+    connect(fixed.flange, spring.flange_a) annotation (Line(points={{-80,0},{-80,20},
+            {-66,20},{-66,0},{-60,0}}, color={0,127,0}));
+    connect(spring.flange_b, elasticSegment1.flange_a)
+      annotation (Line(points={{-40,0},{-30,0}}, color={0,127,0}));
+    connect(elasticSegment2.support, elasticSegment1.support)
+      annotation (Line(points={{10,10},{10,20},{-20,20},{-20,10}},
+                                                               color={0,127,0}));
+    connect(elasticSegment3.support, elasticSegment1.support)
+      annotation (Line(points={{42,10},{42,20},{-20,20},{-20,10}},
+                                                               color={0,127,0}));
+    connect(elasticSegment1.flange_b, elasticSegment2.flange_a)
+      annotation (Line(points={{-10,0},{0,0}}, color={0,127,0}));
+    connect(elasticSegment3.flange_a, elasticSegment2.flange_b)
+      annotation (Line(points={{32,0},{20,0}}, color={0,127,0}));
+    connect(sine.y, position.s_ref) annotation (Line(points={{61,48},{116,48},{
+            116,0},{106,0}},
+                         color={0,0,127}));
+    connect(position.flange, elasticSegment4.flange_b)
+      annotation (Line(points={{84,0},{78,0}}, color={0,127,0}));
+    connect(elasticSegment4.flange_a, elasticSegment3.flange_b)
+      annotation (Line(points={{58,0},{52,0}}, color={0,127,0}));
+    connect(elasticSegment4.support, elasticSegment1.support) annotation (Line(
+          points={{68,10},{68,20},{-20,20},{-20,10}}, color={0,127,0}));
+    annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
+          coordinateSystem(preserveAspectRatio=false)));
+  end HlasSercomere;
+  annotation (uses(Modelica(version="4.0.0")));
 end CrossBridgeCycling;
