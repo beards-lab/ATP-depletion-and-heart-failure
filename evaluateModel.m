@@ -280,7 +280,7 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.SL(i) = PU(j, nS*params.ss+3);
         out.LSE(i) = PU(j, nS*params.ss+4);
         out.PuR(i) = PU(j, nS*params.ss+5);
-        
+        out.SRD(i) = PU(j, nS*params.ss+6);
         
         % get the XB force from the dpudt directly        
         [~, outputs, rates] = fcn(T(j), PU(j, :)', params); 

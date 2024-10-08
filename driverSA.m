@@ -88,6 +88,20 @@ tic
 RunBakersExp;
 toc
 sum(E)
+%% experiment with SRD
+figure(1);clf;
+params0.UseSuperRelaxedADP = true;
+
+params0.kmsr = 10;
+params0.ksr0 = 1;
+
+params0.ksrd0 = params0.ksr0;
+params0.kmsrd = params0.kmsr;
+params0.ksr2srd = 1;
+
+RunBakersExp;
+
+
 %%
 ModelParamsInit_TF2_slack4;
 ModelParamsOptim_tf2_slackLast;

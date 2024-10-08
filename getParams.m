@@ -218,16 +218,17 @@ end
     % Build the initialization
     if ~isfield(params, 'PU0') || updateInit
         p0 = zeros(1, params.ss);
-        U_NSR = 1;
+        U_SR = 0;
+        U_SRD = 0;
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_NSR,NP,SL0,LSE, PuATP];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_NSR,NP,SL0,LSE, PuATP];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD];
         end
     end
     
