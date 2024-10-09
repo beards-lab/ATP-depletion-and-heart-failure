@@ -1,16 +1,20 @@
 # ATP-depletion-and-heart-failure
 
 
-## Source code structure
+## Naming conventions:
 
+**FirstCapital.m** a script, that leaves all the variables in workspace
+
+**firstLowercase.m** is a function with a return value
+
+## Source code structure
 Core functionality (Top down):
 
-- [RunOptim](RunOptim.m) an entry point for optimizations. Calls optim on [EvaluateProblem](EvaluateProblem.m) in various ways, and calculates sensitivities using [calcSensitivities](calcSensitivities.m)(calcSensitivities.m) under various options
-- [EvaluateProblem](EvaluateProblem.m) - calculates all the model evaluations against data and calculates total error E. Could be parametrized to run only certain challenges.
-- [LoadData](LoadData.m) - sets all data used for comparison at [EvaluateProblem](EvaluateProblem.m)
+- [Driver...](RunOptim.m) an entry point for runs. Loads the parameters *params0* and runs the  [RunBakersExp](RunBakersExp.m) 
+- [RunBakersExp](RunBakersExp.m) evaluates model challenges, e.g. force velocity, slack etc, based on switches in *params0* and  calculates all the model evaluations against data and calculates total error E. Could be parametrized to run only certain challenges.
 - [EvaluateModel](EvaluateModel.m) - evaluates the model for single or multiple velocity segments, optionally stores the result, takes care of interpolating at the exact sarcomere length etc. 
 - [getParams](getParams.m) - sets all the parametrization at single place. When provided with an input params struct, updates it with all other required fields.
-- [dPUdTCa](dPUdTCa.m) - The main dpudt extended with Ca sensitivity and other features.
+- dPUdT...(eg. [dPUdTCaSimpleAlternative2State](dPUdTCaSimpleAlternative2State.m)) - The core function containing the differential equations.
 
 
 Other functions and tests:
