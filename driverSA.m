@@ -8,7 +8,7 @@ clf
 cost_sap = []; % SA plus
 cost_sam = []; % SA minus
 
-% ModelParamsInitOptim_slack4
+ModelParamsInitOptim_slack4
 % ModelParamsOptim_tmp
 % ModelParamsInitOptim_slackAll
 % ModelParamsOptim_tf2_slackLast
@@ -17,11 +17,15 @@ cost_sam = []; % SA minus
 % ModelParamsOptim_DtKtr_OV
 % ModelParamsOptim_DtKtr_OV2
 ModelParamsOptim_fudgeSlackVelocities
+ModelParamsInitOptim_slack4
+
 
 params0.RunSlackSegments = 'All';
 % params0.RunSlackSegments = 'FirstAndLastExtended';
 
 % need to run the sim first to get the velocity table in the workspace. 
+velocitytable = load('data/bakers_slack8mM_all.mat').velocitytable;
+
 params0.ResetSRat = [velocitytable(4, 1), 0.0;...
     velocitytable(8, 1), 0.2;...
     velocitytable(12, 1), 0.3;...
@@ -29,6 +33,8 @@ params0.ResetSRat = [velocitytable(4, 1), 0.0;...
     velocitytable(20, 1), 0.7 ];
 
 params0.ResetSRat = [];
+
+params0.RunSlackSegments = 'stairs-up';
 
 % params0.ka = 1e-3;
 % params0.kd = 1e-2;

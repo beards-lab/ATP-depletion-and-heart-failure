@@ -276,7 +276,7 @@ if params0.RunSlack
     params = params0;
     datastruct = load('data/bakers_slack8mM_all.mat');
     datatable = datastruct.datatable;
-    
+    validZone = datatable(:, 1) > 1;
     
     switch params.RunSlackSegments
         % first slack
@@ -315,6 +315,30 @@ if params0.RunSlack
         datatable(:, 1) > datastruct.velocitytable(11, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(13, 1) |...
         datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(17, 1) |...
         datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
+        case 'ramp-up'
+            velocitytable = [-2, 0;0, .01;15,0;20,0];
+            params.SL0 = 1.9;
+            validZone = datatable(:, 1) > 1;
+        case 'ramp-down'
+            params.SL0 = 2.2
+            velocitytable = [-2, 0;0, -.01;15,0;20,0];
+        case 'stairs-down'
+            %%
+            params.SL0 = 2.2
+            velocitytable = [-2, 0;0,0];
+            for iv = 2:5
+                velocitytable = [velocitytable;velocitytable(end, 1) + 1, -0.1; velocitytable(end, 1) + .5+1, 0]
+            end
+            velocitytable = [velocitytable;velocitytable(end, 1) + 1, 0]
+        case 'stairs-up'
+            %%
+            params.SL0 = 1.9;
+            velocitytable = [-2, 0;0,0];
+            for iv = 2:5
+                velocitytable = [velocitytable;velocitytable(end, 1) + 1, 0.1; velocitytable(end, 1) + .5+1, 0]
+            end
+            velocitytable = [velocitytable;velocitytable(end, 1) + 1, 0]
+
     end
     
     velocitytable(1, 1) = -2;   
