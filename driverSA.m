@@ -94,6 +94,67 @@ tic
 RunBakersExp;
 toc
 sum(E)
+%% test SR
+figure(2);clf;
+params0 = getParams();
+ModelParamsInitNiceSlack
+% params0.UseTitinInterpolation = false;
+params0.RunForceVelocity = false;
+params0.RunKtr = false;
+params0.RunSlack = true;
+params0.RunSlackSegments = 'stairs-up';
+params0.RunSlackSegments = 'FirstAndLast';
+params0.RunStairs = true;
+% params0.FudgeVmax = true;
+
+params0.WindowsOverflowStepCount = 5;
+params0.UseSuperRelaxed = 1;
+params0.UseSpaceExtension = true;
+
+params0.justPlotStateTransitionsFlag = false;
+
+% params0.Slim = 0.3;
+% params0.LXBpivot = 1.7;
+% params0.dS = 0.004;
+% params0.Slim_l = 1.7;
+% params0.Slim_r = 2.21;
+
+params0.ksr = 2000;
+params0.sigma1 = 1e6;
+
+params0.kmsr = 10;
+params0.sigma2 = 15;
+
+params0.alpha0 = 0;
+params0.alpha1 = 0;
+params0.alpha2_L = 0;
+params0.alpha2_R = 0;
+params0.alpha3 = 0;
+
+params0.ka = 100;
+params0.kd = 0;
+
+params0.k1 = 25;
+params0.k_1 = 0;
+
+params0.k2 = 10;
+params0.k_2 = 0;
+
+params0.kah = 100;
+params0.kadh = 0;
+
+params0.dr = 0.01;
+
+params0.kstiff1 = .01e4;
+params0.kstiff2 = 1e4;
+
+params0.ShowStatePlots = true;
+params0.UseTitinInterpolation = false;
+params0.UsePassive = true;
+ 
+clf;
+RunBakersExp
+
 %%
 ModelParamsInit_TF2_slack4;
 ModelParamsOptim_tf2_slackLast;
