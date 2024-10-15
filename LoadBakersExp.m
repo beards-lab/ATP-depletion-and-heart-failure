@@ -334,7 +334,11 @@ datatable2s = datatable;
 %%
 % clf;
 data_table = readtable('data/0.2 mM stretch.txt', 'filetype', 'text', 'NumHeaderLines',4);
-[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf*10, nf/54, 'bakers_rampup2_02');
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, dsf/1, nf/54, 'bakers_rampup2_02');
+%%
+data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -(122070+710)-2700);
+
 %%
 legend('ATP 8mM', 'ATP 2mM', 'ATP 0.2mM')
 set(gca,'fontsize',16);

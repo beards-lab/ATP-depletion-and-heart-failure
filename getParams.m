@@ -69,6 +69,7 @@ end
         'ghostSave', '', 'ghostLoad', '', ...
         'UseTitinModel', false, ...
         'RunForceVelocity', true, ...
+        'RunForceVelocityTime', false, ...
         'RunKtr', true, ...
         'RunStairs', true, ...
         'RunSlack', true, ...
@@ -84,6 +85,13 @@ end
         'ShowResidualPlots', false, ...
         'UseDirectSRXTransition', false, ...
         'UsePassiveForSR', false, ...   
+        'L_thick', 1.67, ... % Length of thick filament, um
+        'L_hbare', 0.10,... % Length of bare region of thick filament, um
+        'L_thin', 1.20, ... % Length of thin filament, um        
+        'FudgeVmax', false, ...
+        'e2L', 2, ...
+        'e2R', 2,...
+        'drawForceOnset', false, ...
         'RunSlackSegments', 'All' ...
         );
  
@@ -139,6 +147,8 @@ end
     params0.alpha1 = 15.14;
     params0.alpha_1 = 0;
     params0.alpha2 = 10.06;
+    params0.alpha2_L = 0;
+    params0.alpha2_R = 0;
     params0.alpha3 = 276.67;
     params0.s3     = 0.0099383;
     params0.alphaRip = 0;
@@ -146,6 +156,7 @@ end
 
     % offsets
     params0.dr0 = 0;
+    params0.dr1 = 0;
     params0.dr_1 = 0;
     params0.dr2 = 0;
     params0.dr3 = 0;
@@ -219,16 +230,16 @@ end
     % Build the initialization
     if ~isfield(params, 'PU0') || updateInit
         p0 = zeros(1, params.ss);
-        U_NSR = 1;
+        U_SR = 0;
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_NSR,NP,SL0,LSE, PuATP];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_NSR,NP,SL0,LSE, PuATP];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP];
         end
     end
     

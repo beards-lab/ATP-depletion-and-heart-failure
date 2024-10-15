@@ -324,20 +324,26 @@ if params0.RunSlack
             velocitytable = [-2, 0;0, -.01;15,0;20,0];
         case 'stairs-down'
             %%
+            rampvel = -0.05;
+            rampup = 0.5;
+            ramphold = 1;
             params.SL0 = 2.2
             velocitytable = [-2, 0;0,0];
             for iv = 2:5
-                velocitytable = [velocitytable;velocitytable(end, 1) + 1, -0.1; velocitytable(end, 1) + .5+1, 0]
+                velocitytable = [velocitytable;velocitytable(end, 1) + ramphold, rampvel/rampup; velocitytable(end, 1) + rampup+ramphold, 0];
             end
-            velocitytable = [velocitytable;velocitytable(end, 1) + 1, 0]
+            velocitytable = [velocitytable;velocitytable(end, 1) + ramphold*2, 0];
         case 'stairs-up'
             %%
+            rampvel = 0.05;
+            rampup = 0.5;
+            ramphold = 10;
             params.SL0 = 1.9;
             velocitytable = [-2, 0;0,0];
             for iv = 2:5
-                velocitytable = [velocitytable;velocitytable(end, 1) + 1, 0.1; velocitytable(end, 1) + .5+1, 0]
+                velocitytable = [velocitytable;velocitytable(end, 1) + ramphold, rampvel/rampup; velocitytable(end, 1) + rampup+ramphold, 0];
             end
-            velocitytable = [velocitytable;velocitytable(end, 1) + 1, 0]
+            velocitytable = [velocitytable;velocitytable(end, 1) + ramphold*2, 0];
 
     end
     

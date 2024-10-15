@@ -20,12 +20,9 @@ if params.UseSuperRelaxed
     % elseif t > 3.9303 
     %     dU_NSR = (0.001 - U_NSR)*1e3;
     %     % U_NSR = 0.001;    
-    % end
-
-    
-    
+    % end    
 else
-    P_SR = 1;
+    P_SR = 0;
 end
 
 
@@ -78,6 +75,7 @@ if params.UseOverlap
     L_T_HS2 = max((SL-LSE)*0.5 - ((SL-LSE)-L_thin),L_hbare*0.5);
     L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
     N_overlap = (L_ov*2/(L_thick - L_hbare))^1;
+    % N_overlap = min(1, 0.6 + (SL-1.8)); % this is just a function that Dan made up
 else
     N_overlap = 1;
 end
@@ -167,7 +165,8 @@ end
 %% TRANSITIONS
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
-    s = s - (s(end) - s(1))/2; 
+    % s = s - (s(end) - s(1))/2; 
+    s = -0.01:0.001:0.1;
     F_total = -5:0.1:80;
     F_passive = -5:0.1:10;
     p1 = ones(size(p1));
@@ -185,7 +184,7 @@ MgADP = params.MgADP;
 
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
-sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>dr)));
+sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
 
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
 % dPUdT_TransitionRates;
@@ -213,14 +212,14 @@ end
 if params.UseSuperRelaxed && params.UseDirectSRXTransition
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
 %         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
-    RSR2PT = params.ksr0*exp(F_SR/params.sigma1)*P_SR;
+    RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
     % TODO - check it is **kmsr** and NOT **ksmr**
-    RPT2SR = params.kmsr*exp(-F_SR/params.sigma2)*PT;
+    RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
     dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
     
 elseif params.UseSuperRelaxed
-    RSR2PT = params.ksr0*exp(F_SR/params.sigma1)*P_SR;
-    RPT2SR = params.kmsr*exp(-F_SR/params.sigma2)*PT;
+    RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
+    RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
     dU_SR = -RSR2PT  + RPT2SR;
 else 
     dU_SR = 0;
@@ -232,26 +231,26 @@ if params.justPlotStateTransitionsFlag
     
     plotStateTransitions;
     
-    % the old ones
-    params.alpha0 = 36.1309;
-    params.k1 = 200.121;
-    params.alpha1 = 98.2684;
-    params.alpha2_R = 0.756688;
-    params.alpha2_L = 25.0348;
-    params.dr2_R = 0.00074017;
-
-    dPUdT_TransitionRates;
+    % % the old ones
+    % params.alpha0 = 36.1309;
+    % params.k1 = 200.121;
+    % params.alpha1 = 98.2684;
+    % params.alpha2_R = 0.756688;
+    % params.alpha2_L = 25.0348;
+    % params.dr2_R = 0.00074017;
+    % 
+    % dPUdT_TransitionRates;
     
-    %% R1D
-    nexttile(1);hold on;    
-    plot(s, R1D, 'o-');
-
-
-    nexttile(2);hold on;
-    plot(s, R12, 'o-');
-
-    nexttile(3); hold on;
-    plot(s, R2T, 'o-');  
+    % %% R1D
+    % nexttile(1);hold on;    
+    % plot(s, R1D, 'o-');
+    % 
+    % 
+    % nexttile(2);hold on;
+    % plot(s, R12, 'o-');
+    % 
+    % nexttile(3); hold on;
+    % plot(s, R2T, 'o-');  
 
     
     error('Quitting after plotting states');
@@ -276,8 +275,8 @@ outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, 
 rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS, RSR2PT, RPT2SR];
 
 %% breakpints
-if t > 2.268363 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
-    numberofthebeast = 666;
+if t > 0.991006527727 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+    numberofthebeast = 667;
 end
 
 % disp('oj')
