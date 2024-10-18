@@ -5,6 +5,77 @@ dsf = 1;
 ML = 2.0; 
 % normalized force multiplier
 nf = 56;
+%% Stitch the experiments together
+
+figure(101);clf;
+% tss_d = [118555, 126800]
+% tss_s = [118555, 121890, 121900, 121910,121920, ts_d(1) + (122070+710)-10, ts_d(end-1) + (122070+710), 123910, 123930, 123960, 124000, ...
+%     124210, 124230, 124270, 124310, 124560, 124580, 124640, 124680, 125010, 125030, 125110, 125150, 125510, 125530, 125660, 125700, 126800]
+data_table = readtable('data/8 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, 1, '', -(122070+710)+20);
+% [datatable, velocitytable] = DownSampleAndSplit(data_table, tss_d, tss_s, ML, 1, nf/54, 'bakers_rampup2_8_long', 0);
+[datatable8s, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -(122070+710)+20);
+
+data_table = readtable('data/02 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable2s, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -(122070+710)-2700);
+
+data_table = readtable('data/0.2 mM ATP scope.txt', 'filetype', 'text', 'NumHeaderLines',4);
+[datatable02s, velocitytable] = DownSampleAndSplit(data_table, [], [], ML, 1, nf/54, '', -(122070+710)-2700 + 1280 + 20-6);
+
+% Atp 0.2 is shifted. Extend before 0 and after 1000ms by x
+% datatable8s = datatable;
+i0 = find(datatable8s(:, 1) > 0, 1);
+datatable8s(1:i0, 1) = datatable8s(1:i0, 1) - 0.14;
+datatable2s(1:i0, 1) = datatable2s(1:i0, 1) - 0.14;
+% datatable02s; stays
+% Extend after 800ms
+% datatable02s = datatable;
+i0 = find(datatable8s(:, 1) > 1, 1);
+% 8 and 2 stays
+% datatable02s(i0:end, 1) = datatable02s(i0:end, 1) + 0.13;
+datatable8s(i0:end, 1) = datatable8s(i0:end, 1) - 0.13;
+
+clf;
+% subplot(211);
+% plot(datatable8s(:, 1), datatable8s(:, 2)/ML,datatable2s(:, 1), datatable2s(:, 2)/ML,datatable02s(:, 1), datatable02s(:, 2)/ML, 'Linewidth', 2);
+% xlim([-1.2, 4]);
+% xlabel('Time'); ylabel('Muscle length (-)')
+% set(gca,'fontsize',16);
+% subplot(212);
+
+yyaxis right; 
+c = lines;
+p1 = plot(datatable8s(:, 1), datatable8s(:, 2)/ML, '-', 'Linewidth', 2, Color=c(4, :));
+ylim([0.8 1.5])
+ax = gca;
+ax.YAxis(2).Color = c(4, :);
+ylabel('Muscle length (ML*, L/L_0)')
+yyaxis left;
+hold on;
+
+p2 = plot(datatable8s(:, 1), datatable8s(:, 3),'-',  'Linewidth', 2, Color=c(1,  :));
+p3 = plot(datatable2s(:, 1), datatable2s(:, 3),'-', 'Linewidth', 2, Color=c(2,  :));
+p4 = plot(datatable02s(:, 1), datatable02s(:, 3),'-', 'Linewidth', 2, Color=c(3, :));
+xlim([-1.2, 3]);
+xlabel('Time (s)'); ylabel('Tension (kPa)');
+set(gca,'fontsize',16);
+leg = legend([p1 p2 p3 p4], 'ML*', '8 mM', '2 mM','0.2 mM', 'Location','northwest');
+leg.ItemTokenSize = [20, 10]
+ylim([-10 95])
+fontsize(14, 'points')
+c = [0.1 0.1 0.6] ;
+rectangle(Position=[-1.1 -5 0.8 65], EdgeColor=c, FaceColor="none", LineStyle=":", LineWidth=4);
+text(-1.1 + 0.3, 20, 'k_{tr}', 'FontSize',18, FontWeight='bold', FontName='Arial', Color=c, HorizontalAlignment='left', VerticalAlignment='top')
+
+
+rectangle(Position=[-0.05 48 0.55 45], EdgeColor=c, FaceColor="none", LineStyle=":", LineWidth=4);
+text( -0.2, 48, 'Ramp-up', 'FontSize',18, FontWeight='bold', FontName='Arial', Color=c, HorizontalAlignment='left', VerticalAlignment='top')
+
+rectangle(Position=[0.95 0 1.95 85], EdgeColor=c, FaceColor="none", LineStyle=":", LineWidth=4);
+text(0.95, 85, 'Slack', 'FontSize',18, FontWeight='bold', FontName='Arial', Color=c, HorizontalAlignment='left', VerticalAlignment='bottom')
+
+set(gcf, "Position", [488.2000  195.4000  612.0000  466.4000]);
+
 %% fitting figure
 clf
 data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
@@ -69,6 +140,42 @@ figure(fign);
 [dSLpc_02, ktr_sla02, df_02, del_02, e_02] = fitRecovery(datatable, zones, 0, df_8);
 
 plot([1 3], [0 0], 'k', LineWidth=0.5)
+%% cutting out unnecessary lines manually, then jsut setting the legend
+% figure(4); clf;
+zones = [2269 2359.5];
+fign = 1010;
+% 8 mM
+data_table = readtable('data/8 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+figure(fign);clf; 
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, '', o);
+figure(fign);clf;
+[dSLpc_8, ktr_sla8, df_8, del_8, e_8, SL] = fitRecovery(datatable, zones, 0);
+% df_8 = [];
+% 2 mM
+data_table = readtable('data/2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+figure(fign+100);clf; 
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, '', o);
+figure(fign);
+[dSLpc_2, ktr_sla2, df_2, del_2, e_2] = fitRecovery(datatable, zones, 0, df_8);
+
+% 0.2 mM
+data_table = readtable('data/0.2 mM ATP slack.txt', 'filetype', 'text', 'NumHeaderLines',4);
+figure(fign+100);clf; 
+[datatable, velocitytable] = DownSampleAndSplit(data_table, [], ts_s -o, ML, dsf, nf/54, '', o);
+figure(fign);
+[dSLpc_02, ktr_sla02, df_02, del_02, e_02] = fitRecovery(datatable, zones, 0, df_8);
+%%
+legend('ATP 8 mM','Fitted 8 mM','ATP 0.2 mM','Fitted 0.2 mM')
+fontsize(16, 'points');
+% xticklabels = {'a', 'b'}
+currentTicks = xticks;
+
+% Calculate the new tick labels (starting from 0)
+newTickLabels = currentTicks - currentTicks(1);
+
+% Apply new tick labels
+xticklabels(newTickLabels);
+ylim([-10 100])
 %% results:
 % Free df:
 % e_2: 0.3241    0.1784    0.2072    0.1893    0.1835
@@ -112,7 +219,7 @@ subplot(121);hold on;
 % plot(-[0 dSLpc_8], [Fm_8 df_8], '*-',-dSLpc_2, df_2, 's-',-dSLpc_02, df_02, 'o-', LineWidth=2);
 plot(SLs, [Fm_8 df_8], 'x-', LineWidth=2);
 set(gca,'ColorOrderIndex',1)
-plot(SLs(1), Fs(1), 'o', LineWidth=2); 
+plot(SLs(1), Fs(1), 's', LineWidth=2); 
 set(gca,'ColorOrderIndex',1)
 plot(2.0, df, 'o', LineWidth=2); 
 title({'Predicted maximal force', 'at step-down'});
