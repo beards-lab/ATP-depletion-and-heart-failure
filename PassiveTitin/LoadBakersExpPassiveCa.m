@@ -30,8 +30,9 @@ clear;clc;
 % S1 = dir('../data/PassiveCaSrc2/20230928');
 % S1 = dir('../data/PassiveCaSrc2/20231027');
 % S1 = dir('../data/PassiveCaSrc2/20231102');
-S1 = dir('../data/PassiveCaSrc2/20231107');
+% S1 = dir('../data/PassiveCaSrc2/20231107');
 % S1 = dir('../data/PassiveCaSrc2/20240705');
+S1 = dir('../data/PassiveCaSrc2/20241010');
 
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
@@ -41,7 +42,7 @@ S1 = S1(idx);
 % S = table2struct(mergedTables);
 S = S1;
 %%
-
+% figure(101);clf;hold on;
 skipPlots = false;
 
 dsc = cell(0); % dataset structure cell array
@@ -133,8 +134,10 @@ for i = 1:length(S)
     set(gcf, 'Position',  [769.8000   41.8000  766.4000 740.8000]);
 
     subplot(211);hold on;plot(datatable.t, datatable.L);
+    xlabel('Time (s)');ylabel('Muscle length (L/L0)')
     subplot(212);hold on;
     plot(datatable.t, datatable.F);
+    xlabel('Time (s)');ylabel('Tension (kPa)')
     % plot(datatable.t, F);
     % plot(datatable.t(i_ss), repmat(ss_cur, [sum(i_ss), 1])+2, 'LineWidth',2);
     title(ds.datasetLegend, 'Interpreter','None');
@@ -258,7 +261,7 @@ for i_logtrace = 1:size(dsc, 1)
             ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
             ramp_shift_array{2} = [68, 139.100];
             ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200];
-        case '20240705'
+        case {'20240705', '20241010'}
             ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
             ramp_shift_array{2} = [68-11.9, 139.100 - 8.9];
             ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600-6.38,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200] - 8;

@@ -7,24 +7,47 @@
 load pca11data.mat
 %% load from raw data
 dsc = load('DataStruct20240705.mat').dsc;
+dsc = load('DataStruct20241010.mat').dsc;
+% dsc = load('DataStruct20231010.mat').dsc;
+
 % Farr={};Tarr = {};
 % dataload.dsc{1, 1}
 % relaxed
-% ids = 1; arr = [2 3 4 5];
-ids = 1; arr = [9 8 7 6];
-% PNB and MAVA
-ids = 3; arr = [2 3 4 5];
-ids = 3; arr = [7 8 9 10];
+ids = 1; arr = [2 3 4 5];
+% ids = 1; arr = [9 8 7 6];
+% PNB and MAVA, no Ca
+% ids = 3; arr = [2 3 4 5];
+% max Ca, PNB and Mava
+% ids = 3; arr = [7 8 9 11];
 
+% 10C - no Ca, just PNB mava
+% ids = 4; arr = [2 3 4 5];
+
+% 10C - max Ca, PNB and Mava
+% ids = 4; arr = [7 8 9 11];
+
+% extracted relaxed
+% ids = 5; arr = [2 3 4 5];
+
+% extracted activated
+% ids = 6; arr = [2 3 4 5];
 
 for iarr = 1:length(arr)
     Farr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.F;
     Tarr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.t - 10;
+
+    i_cutoff = find(Farr{iarr} > 4 & Tarr{iarr} > 50, 1, 'last');
+    Farr{iarr} = Farr{iarr}(1:i_cutoff);
+    Tarr{iarr} = Tarr{iarr}(1:i_cutoff);
 end
-Farr{1} = [];
-Tarr{1} = [];
+% Farr{1} = [];
+% Tarr{1} = [];
 %%
-plot(Tarr{1}, Farr{1})
+figure(1);hold on;
+clf;
+l = 4;
+loglog(Tarr{4}-0.1, Farr{4}-l, Tarr{3}-1, Farr{3}-l, Tarr{2}-10, Farr{2}-l,Tarr{1}-100, Farr{1}-l)
+
 %%
 
 
@@ -71,8 +94,8 @@ f = figure(2);
 % normal size of 2-col figure on page is 7.2 inches
 % matlab's pixel is 1/96 of an inch
 f.Position = [300 200 7.2*96 7.2*96/aspect];
-x = [4.4271    0.2121    4.8964];
-x = [4.89    0.2121    0.02108964];
+% x = [4.4271    0.2121    4.8964];
+% x = [4.89    0.2121    0.02108964];
 [c rampShift] = fitfun(x)
 f = gcf();
 % exportgraphics(f,'../Figures/FigDecayOverlay.png','Resolution',150)
@@ -161,13 +184,19 @@ x = fminsearch(fitfunOpt, init, options)
 
 % fixed power exponent b
 % init = [x(1) x(3)]
-% pcaFitFunFixB = @(x)evalPowerFit([x(1), init(2), x(2)], Farr, Tarr, false, [], true);
-% x = fminsearch(pcaFitFunFixB, [init(1) init(3)], options);
-% init([1 3]) = x;
-
+pcaFitFunFixB = @(x)evalPowerFit([x(1), init(2), max(init(3), x(2))], Farr, Tarr, false, [], true);
+x = fminsearch(pcaFitFunFixB, [init(1) init(3)], options);
+%% init([1 3]) = x;
+figure(101);
+% init = [x(1), init(2), x(2)];
+x = [5.2540    0.1328    3.1201];
+x = [5.502540    0.18328    3.1201]
+[c rs] = evalPowerFit(x, Farr, Tarr, true, [], false)
+rs
+%%
 % free power exponent
-init = x;
-pcaFitFun = @(x)evalPowerFit(x, Farr, Tarr, false, [], true);
+% init = x;
+pcaFitFun = @(x)evalPowerFit(x, Farr, Tarr, true, [], true);
 x = fminsearch(pcaFitFun, init, options);
 init = x;
 
