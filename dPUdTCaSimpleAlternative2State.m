@@ -125,15 +125,20 @@ p2_0 = dS*sum(p2); p2_1 = dS*sum((s+params.dr).*p2);
 PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR)); % unattached permissive fraction - 
     F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
 
+if params.UseOverlapFactor
+    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + PT + PD); % overlap factor
+end    
+
 F_passive = 0;
 if params.UsePassive
-    Lsc0    = 1.51;
+    % Lsc0    = 1.51;
     % gamma = 7.5;
     % F_passive = F_passive + params.k_pas*max(SL-LSE - params.Lsc0, 0)^params.gamma; 
     
     % identified from FitPassiveRampUp.m
     y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
     F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
+    % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
 end
 
 if params.UseTitinInterpolation
@@ -275,7 +280,7 @@ outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, 
 rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS, RSR2PT, RPT2SR];
 
 %% breakpints
-if t > 0.991006527727 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if t > 90.991006527727 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

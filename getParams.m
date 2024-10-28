@@ -230,7 +230,7 @@ end
     % Build the initialization
     if ~isfield(params, 'PU0') || updateInit
         p0 = zeros(1, params.ss);
-        U_SR = 0;
+        U_SR = 1;
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0;

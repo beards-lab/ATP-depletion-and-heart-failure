@@ -87,7 +87,7 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         % cursors - start slack (g) and end slack (r)
 %         plot([datatable(iss, 1) datatable(iss, 1)], [0, 100], 'g')
 %         plot([datatable(i1- si + i_del2, 1) datatable(i1-si + i_del2, 1)], [0, 100], ':r', 'Linewidth', 3)
-        dSL =  datatable(i1, 2) - datatable(iss, 2);
+        dSL =  datatable(1, 2) - datatable(iss, 2);
         
         % surprisingly, it is percent of nominal ML, not actual elongated
         % one

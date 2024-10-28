@@ -131,18 +131,18 @@ for vs = 1:length(T) - 1
             PU0(2*ss+1) = SR;
         end
         [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
-        if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
-            error('ODEslower is not stable')
-        end
-
-        PU0 = PU(end,:);
 
         % te contains the times when events occurred
         % ye contains the solutions at the times when events occurred
         % ie contains the indices of the triggered events
-
-
         out = storeOutputs(fcn,out, PU, params, t);
+
+        if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
+            % error('ODEslower is not stable')
+            break;
+        end        
+
+        PU0 = PU(end,:);
         %%
         % if params.UseTitinModel
         %     if ~exist('x0', 'var')

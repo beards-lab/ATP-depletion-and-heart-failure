@@ -8,7 +8,7 @@ clf
 cost_sap = []; % SA plus
 cost_sam = []; % SA minus
 
-ModelParamsInitOptim_slack4
+% ModelParamsInitOptim_slack4
 % ModelParamsOptim_tmp
 % ModelParamsInitOptim_slackAll
 % ModelParamsOptim_tf2_slackLast
@@ -16,25 +16,26 @@ ModelParamsInitOptim_slack4
 % ModelParamsOptim_DtKtr;
 % ModelParamsOptim_DtKtr_OV
 % ModelParamsOptim_DtKtr_OV2
-ModelParamsOptim_fudgeSlackVelocities
-ModelParamsInitOptim_slack4
+% ModelParamsOptim_fudgeSlackVelocities
+% ModelParamsInitOptim_slack4
+ModelParams_SR
 
+params0.UseOverlapFactor = false;
+% params0.ksr = params0.ksr0;
 
 params0.RunSlackSegments = 'All';
 % params0.RunSlackSegments = 'FirstAndLastExtended';
 
 % need to run the sim first to get the velocity table in the workspace. 
-velocitytable = load('data/bakers_slack8mM_all.mat').velocitytable;
-
-params0.ResetSRat = [velocitytable(4, 1), 0.0;...
-    velocitytable(8, 1), 0.2;...
-    velocitytable(12, 1), 0.3;...
-    velocitytable(16, 1), 0.4;...
-    velocitytable(20, 1), 0.7 ];
-
+% velocitytable = load('data/bakers_slack8mM_all.mat').velocitytable;
+% params0.ResetSRat = [velocitytable(4, 1), 0.0;...
+%     velocitytable(8, 1), 0.2;...
+%     velocitytable(12, 1), 0.3;...
+%     velocitytable(16, 1), 0.4;...
+%     velocitytable(20, 1), 0.7 ];
 params0.ResetSRat = [];
 
-params0.RunSlackSegments = 'stairs-up';
+% params0.RunSlackSegments = 'stairs-up';
 
 % params0.ka = 1e-3;
 % params0.kd = 1e-2;
@@ -81,11 +82,17 @@ params0.UsePassiveForSR = false;
 
 params0.MaxSlackNegativeForce = 0;
 params0.FudgeVmax = true;
-params0.vmax = 18;
+params0.FudgeVmax = 1;
+params0.vmax1 = 20;
+params0.FudgeA = 0;
+params0.FudgeB = 121.922;
+params0.FudgeC = -209.18;
 
-params0.kSE = 1.3e4;
-params0.kSEn = 1.3e1;
-params0.mu = 1e-1;
+% params0.vmax = 18;
+
+% params0.kSE = 1.3e4;
+% params0.kSEn = 1.3e1;
+% params0.mu = 1e-1;
 
 
 params0.ghostLoad = 'DtKtr_OV';
@@ -94,67 +101,6 @@ tic
 RunBakersExp;
 toc
 sum(E)
-%% test SR
-figure(2);clf;
-params0 = getParams();
-ModelParamsInitNiceSlack
-% params0.UseTitinInterpolation = false;
-params0.RunForceVelocity = false;
-params0.RunKtr = false;
-params0.RunSlack = true;
-params0.RunSlackSegments = 'stairs-up';
-params0.RunSlackSegments = 'FirstAndLast';
-params0.RunStairs = true;
-% params0.FudgeVmax = true;
-
-params0.WindowsOverflowStepCount = 5;
-params0.UseSuperRelaxed = 1;
-params0.UseSpaceExtension = true;
-
-params0.justPlotStateTransitionsFlag = false;
-
-% params0.Slim = 0.3;
-% params0.LXBpivot = 1.7;
-% params0.dS = 0.004;
-% params0.Slim_l = 1.7;
-% params0.Slim_r = 2.21;
-
-params0.ksr = 2000;
-params0.sigma1 = 1e6;
-
-params0.kmsr = 10;
-params0.sigma2 = 15;
-
-params0.alpha0 = 0;
-params0.alpha1 = 0;
-params0.alpha2_L = 0;
-params0.alpha2_R = 0;
-params0.alpha3 = 0;
-
-params0.ka = 100;
-params0.kd = 0;
-
-params0.k1 = 25;
-params0.k_1 = 0;
-
-params0.k2 = 10;
-params0.k_2 = 0;
-
-params0.kah = 100;
-params0.kadh = 0;
-
-params0.dr = 0.01;
-
-params0.kstiff1 = .01e4;
-params0.kstiff2 = 1e4;
-
-params0.ShowStatePlots = true;
-params0.UseTitinInterpolation = false;
-params0.UsePassive = true;
- 
-clf;
-RunBakersExp
-
 %%
 ModelParamsInit_TF2_slack4;
 ModelParamsOptim_tf2_slackLast;
@@ -300,11 +246,13 @@ writeParamsToMFile('ModelParamsOptim_fudgeSlack.m', params0);
 writeParamsToMFile('ModelParamsOptim_fudgeSlackVelocities.m', params0);
 writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset.m', params0);
 writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset_tmp.m', params0);
+clf;RunBakersExp;
 %% show
 
 figure(8340);clf;
 LoadData;
-
+params0.ksr = params0.ksr0;
+params0.kmsr
 % params0.L_thick = 1.67; % Length of thick filament, um
 % params0.L_hbare = 0.10; % Length of bare region of thick filament, um
 % params0.L_thin  = 1.20; % Length of thin filament, um
