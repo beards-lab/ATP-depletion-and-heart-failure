@@ -278,6 +278,12 @@ if params0.RunSlack
     datatable = datastruct.datatable;
     validZone = datatable(:, 1) > 1;
     
+    
+    datastruct.velocitytable(1, 1) = -2;
+
+    % show the indexes
+    % [(1:length(datastruct.velocitytable))' datastruct.velocitytable]
+
     switch params.RunSlackSegments
         % first slack
         case 'First'
@@ -288,6 +294,14 @@ if params0.RunSlack
     % two slacks
     velocitytable = datastruct.velocitytable(1:11, :);
     validZone = datatable(:, 1) > 1;
+        case 'Fourth-rampuponly'
+            params.SL0 = 1.9194;
+            % only the last slack
+            velocitytable = [datastruct.velocitytable(1, :); datastruct.velocitytable(16:19, :)];
+            % ramp0up and peak
+            validZone = datatable(:, 1) > datastruct.velocitytable(17, 1) & datatable(:, 1) < datastruct.velocitytable(19, 1) - 0.1;
+            % % only ramp-up at first - 
+            % validZone = datatable(:, 1) > datastruct.velocitytable(16, 1) & datatable(:, 1) < datastruct.velocitytable(17, 1);            
         case 'FirstAndLast'
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
@@ -316,7 +330,7 @@ if params0.RunSlack
         datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(17, 1) |...
         datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
         case 'ramp-up'
-            velocitytable = [-2, 0;0, .01;15,0;20,0];
+            velocitytable = [-5, 0;0, 1;.15,0;1,0];
             params.SL0 = 1.9;
             validZone = datatable(:, 1) > 1;
         case 'ramp-down'
@@ -345,9 +359,7 @@ if params0.RunSlack
             end
             velocitytable = [velocitytable;velocitytable(end, 1) + ramphold*2, 0];
 
-    end
-    
-    velocitytable(1, 1) = -2;   
+    end     
     
     params.Velocity = velocitytable(:, 2);
     params.datatable = datatable;
@@ -482,15 +494,17 @@ if params0.RunSlack
         end
     end
 
+if params.EvalFitSlackOnset    
     try
         % figure(8989);clf;
         [e_dt e_ktr] = fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
         E(4) = E(4);
-        E(5) = 5e6*e_dt; E(6) = e_ktr;
+        E(5) = 0*5e6*e_dt; E(6) = 0*e_ktr;
     catch e
         E(5) = 1e3;
         disp(e);
     end
+end
 
 end
 %% FORCE VELOCITY RESIMULATION
@@ -532,4 +546,12 @@ if params0.RunForceVelocityTime
     % velocitytable = velocitytable(1:4, 1);
     % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
     [F out] = evaluateModel(modelFcn, [0 1], params);
+end
+
+%% FORCE LENGTH ESTIMATED relation
+if params0.RunForceLengthEstim
+    params = params0;
+    gp = ones(5, 1);
+    Es = simulateForceLengthEstim(ones(5, 1), params, params.PlotEachSeparately);
+    E(end+1) = Es*1e1;
 end

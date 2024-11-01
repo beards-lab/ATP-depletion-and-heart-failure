@@ -1,8 +1,8 @@
 %% test SR within the framework
-figure(2);clf;
+figure(3);clf;
 
 % from TestSR
-g = [2.5670    1.1465    2.2885    1.2476];
+% g = [2.5670    1.1465    2.2885    1.2476];
 
 params0 = getParams();
 ModelParamsInitNiceSlack
@@ -59,13 +59,64 @@ params0.UsePassive = true;
  
 params0.justPlotStateTransitionsFlag = false;
 params0.dS = 0.005;
+%%
 clf;
-simulateThat([], params0, true);
+simulateForceLengthEstim([], params0, true);
 
 % writeParamsToMFile('ModelParams_SR.m', params0);
 
-%%
+%% try slack
+figure(1);clf;
+ModelParams_SR;
+params0.justPlotStateTransitionsFlag = false;
+params0.FudgeVmax = true;
+params0.FudgeA = 0;
+params0.FudgeB = 121.922;
+params0.FudgeC = -209.18;
 
+sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
+
+
+% alpha2_L, params.alpha2_R, params.dr2, params.e2L
+
+params0.e2l = 1.8;
+params0.k2_L = 190.15;
+params0.alpha2_L = -192.115;
+
+params0.e2R = 2;
+params0.k2_R = 8000;
+params0.alpha2_R = 25;
+
+
+params0.alpha0 = 0*36.1309;
+params0.kd = 4;
+
+params0.ka = 20;
+
+params0.xrate = 6;
+
+params0.kstiff1 = 1.4e4*1.3;
+params0.kstiff2 = 1.4e4*1.3;
+% params0.dr = 
+
+% params 
+% params0.sigma2 = 
+% params: ksr, kmsr, sigma2, kstiff1 = kstiff2, 4 fwd rate consts, 1 rwd rate const, alpha2, dr, 1to2?
+params0.mods = {'ksr', 'kmsr', 'sigma2', 'kstiff2', 'ka', 'kd', 'k1', 'k2', 'kah', 'alpha2_R', 'alpha2_L', 'e2R', 'e2L'};
+
+% params0.k2 = params0.k2/exp((params0.alpha2_L*(0-params0.dr2)).^params0.e2L)
+
+% have the detachment in the ballpark, otherwise unstable
+params0.RunSlackSegments = 'Fourth-rampuponly';
+% simulateThat([], params0, true);
+params0.RunForceLengthEstim = true;
+
+tic
+RunBakersExp;
+toc
+
+
+%%
 params0.vmax1 = 20;
 params0.FudgeA = 0;
 params0.FudgeB = 121.922;
@@ -76,50 +127,3 @@ velHS = -(params0.FudgeA*SL.^2 +params0.FudgeB*SL + params0.FudgeC);
 clf;plot(SL, -velHS, 'x-', LineWidth=2);
     title('Fudged velocity');xlabel('SL');ylabel('Velocity (um/s)');
     
-
-
-
-function Es = simulateThat(g, params, plotThat)
-
-if nargin < 2
-    plotThat = false;
-end
-
-SL = [2.2 2.0400    2.0000    1.9600    1.9200  1.8800];
-df = [76.5 68.3878   65.5438   59.2362   52.5507   43.9655];
-
-% SL = 1.8:0.05:2.1; 
-% df = ones(size(SL));
-
-for i = 1:length(SL)
-    params.SL0 = SL(i);
-    params.Velocity = 0;
-    if isfield(params, 'PU0')
-        params = rmfield(params, 'PU0');
-    end
-
-    % reset the PU0
-    params = getParams(params, params.g, true);
-    
-    % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
-    [F out] = evaluateModel(@dPUdTCaSimpleAlternative2State, [0 100], params);
-F_total(i) = F;
-F_passive(i) = out.FXBPassive(end);
-end
- 
-
-if plotThat
-    %%
-    % figure(2); clf;
-    hold on;
-    plot(SL, df, 'o-', LineWidth=2)
-    plot(SL,F_total,'x-', SL,F_passive,'x--', LineWidth=2);
-    title('Steady-state tension');xlabel('SL');ylabel('Tension (kPa)');
-    legend('Data (estimated)', 'Simulation', 'Passive tension component (model)')
-
-end
-
-E = (F_total - df).^2;
-Es = sum(E);
-
-end

@@ -2,7 +2,7 @@ function [cost_dt cost_ktr] = fitSlackForceOnset(datatable, velocitytable,t, SL,
 
 % modeldatatable = [out.t; out.SL; out.Force]';
 plotData_fit = plotData;
-% plotData_fit = false;
+plotData_fit = false;
 
 modeldatatable = [t; SL; Force]';
 

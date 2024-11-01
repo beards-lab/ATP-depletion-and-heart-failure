@@ -147,6 +147,7 @@ if params.UseTitinInterpolation
 end
 
 F_total = F_active + F_passive;
+% F_total = max(0, F_total);
 
 
 if params.FudgeVmax && t > -1
@@ -171,7 +172,7 @@ end
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
     % s = s - (s(end) - s(1))/2; 
-    s = -0.01:0.001:0.1;
+    s = -0.05:0.001:0.05;
     F_total = -5:0.1:80;
     F_passive = -5:0.1:10;
     p1 = ones(size(p1));
@@ -280,7 +281,7 @@ outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, 
 rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS, RSR2PT, RPT2SR];
 
 %% breakpints
-if t > 90.991006527727 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if t >= 1.20162642e+00 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

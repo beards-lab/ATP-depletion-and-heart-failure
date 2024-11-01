@@ -79,14 +79,16 @@ g = [ 0.7591    1.0094    0.5783    1.3588];
 % g = [0.8770    0.9150    0.8324    1.2412];
 % g = [2.2429    0.9147    2.1301    1.2390];
 % g = [1.0313    1.1514    0.9152    1.2502];
-g = [2.5670    1.1465    2.2885    1.2476];
+g = [2.5670    1.1465    2.2885    1.2476]; % I am buying this
+g = [2.6044    1.1357    2.2929    1.2181]; % similar, but with orig overlap
+g = [ 2.8214    1.1816    2.2279    1.1856]; % same, but OF = OV. Somewhat worse.
+g = [2.5832    1.5169    1.7629    1.4585]; % better with actual estimated data
 clf;resimulateSsSl(g, true)
 % g = ones(4, 1);
 % g = [x;1]
 %%
-clf;
+figure(2);clf;
 % g = [20 1/15 1 1]
-
 resimulateSsSl(g, true)
 
 
@@ -102,13 +104,13 @@ plot(f, ones(size(f))*kTS, '-', f, exp((f/sigma0).^1), ...
 
 
 %%
-g = [1 1 1 1]
+% g = [1 1 1 1 1]
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
 
 x = fminsearch(@resimulateSsSl, g, options)
-g = x';
+g = x;
 
 %%
 function Es = resimulateSsSl(g, plotThat)
@@ -120,14 +122,17 @@ if nargin < 2
     plotThat = false;
 end
 
-SLd = [2.2 2.0400    2.0000    1.9600    1.9200  1.8800];
-% SL = 1.88
-df = [76.5 68.3878   65.5438   59.2362   52.5507   43.9655];
+% SLd = [2.3 2.2 2.0400    2.0000    1.9600    1.9200  1.8800  1.85 1.6];
+% df = [76.5 76.5 68.3878   65.5438   59.2362   52.5507   43.9655 25 0];
+
+SLd = [2.2 2.0400    2.0000    1.9600    1.9200  1.8800  ];
+df = [76.5 68.3878   65.5438   59.2362   52.5507   43.9655 ];
+
 
 SL = SLd;
 
-% SL = 1.6:0.01:2.2; 
-% df = interp1(SLd, df, SL,'pchip', 'extrap');
+% SL = 1.6:0.05:2.2; 
+df = interp1(SLd, df, SL,'linear', 'extrap');
 
 
 N = 10; % space (strain) discretization--number of grid points in half domain
@@ -171,7 +176,7 @@ if plotThat
     %%
   % figure(1); clf;
 hold on;
-plot(SL, df, 'o-', LineWidth=2)
+plot(SL(1:length(df)), df, 'o-', LineWidth=2)
 plot(SL,F_total,'o-', SL,F_passive,'x--', LineWidth=2);
 title('Steady-state tension');xlabel('SL');ylabel('Tension (kPa)');
 legend('Data (estimated)', 'Simulation', 'Passive tension component (model)')
@@ -180,8 +185,8 @@ legend('Data (estimated)', 'Simulation', 'Passive tension component (model)')
 % plot(SL, p1_0, SL, p2_0, SL, pD, SL, pT, SL, pS)
 end
 
-E = (F_total - df).^2;
-Es = sum(E);
+E = (F_total(1:length(df)) - df).^2;
+Es = sum(E);% - (E(1) + E(end))/2;
 
 end
 
@@ -256,7 +261,16 @@ function f = dPUdT(t,PU,N,dS,SL, g)
 %  SL = sarcomere length
  
 % Overlap function
-OV = min(1, 0.6 + (SL-1.8)); % this is just a function that I made up
+% OV = min(1, 0.6 + (SL-1.8)); % this is just a function that I made up
+    L_thick = 1.67; % Length of thick filament, um
+    L_hbare = 0.10; % Length of bare region of thick filament, um
+    L_thin = 1.20; % Length of thin filament, um
+
+    % deltaR  = 0.010; % um    
+    L_T_HS1 = min(L_thick*0.5, SL*0.5);
+    L_T_HS2 = max((SL)*0.5 - ((SL)-L_thin),L_hbare*0.5);
+    L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
+    OV = (L_ov*2/(L_thick - L_hbare))^1;
  
 % State Variables
 p1 = PU(1:1*N+1);  % probabilities of attatched state 1 on grid
@@ -298,16 +312,18 @@ sigma0 = 15*g(2);
 kTS    = 1000*g(3); % transition from T to SRX
  
 OF     = (OV - (p1_0 + p2_0))/(pS + pT + pD); % overlap factor
-% OF = 1;
+% OF = OV;
 
 dp1      = - k12*p1 ; % transition from 1 to 2
 dp1(N+1) = dp1(N+1) + kD1*OF*pD/dS; % attachment
 dp2      = + k12*p1 - k2T*p2; %
 dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*exp((F_total/sigma0)^1)*pS;
+% dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*exp((F_total/sigma0)^g(5))*pS;
 % dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*F_total*sigma0*pS;
 % dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*log10(max(0,F_total*sigma0))*pS;
 % dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*F_total^sigma0*pS;
 % dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*(F_total/sigma0)*pS;
+% dpT      = dS*sum(k2T*p2) - kTD*pT - kTS*pT + kST*(1 - exp(F_total/sigma0))*pS;
 % dpS = + kTS*pT - kST*exp((F_total/sigma0)^1)*pS;
 dpD      = + kTD*pT - kD1*OF*pD;
  

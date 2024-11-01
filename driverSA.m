@@ -23,7 +23,7 @@ ModelParams_SR
 params0.UseOverlapFactor = false;
 % params0.ksr = params0.ksr0;
 
-params0.RunSlackSegments = 'All';
+params0.RunSlackSegments = 'First';
 % params0.RunSlackSegments = 'FirstAndLastExtended';
 
 % need to run the sim first to get the velocity table in the workspace. 
@@ -157,6 +157,16 @@ params0.mods = {'dr1', 'alpha1', 'k1', 'alpha2_L', 'k2', 'dr2', 'e2L', 'kd', 'ks
 % 
 % params0.mods = {'FudgeB','FudgeC'};
 
+% new attempt
+params0.mods = {'ksr', 'kmsr', 'sigma2', 'kstiff2', 'ka', 'kd', 'k1', 'k2', 'kah', 'alpha2_R', 'alpha2_L', 'e2R', 'e2L'};
+params0.g = [0.7231    1.5436    0.7716    0.9494    0.8632    0.5957    1.2720    0.8273    0.2280    2.8035    0.2681    3.6707    0.5337];
+
+% second round
+params0.mods = {'ksr', 'kmsr', 'sigma2', 'kstiff1', 'kstiff2', 'ka', 'kd', 'k1', 'k2', 'kah', 'alpha2_R', 'e2R'};
+params0.g = [0.7231    1.5436    0.7716    1    0.9494    0.8632    0.5957    1.2720    0.8273    0.2280    2.8035   3.6707];
+params0.g = [0.7206    1.5516    0.7663    0.9437    0.9286    0.8858    0.5387    1.2715    0.8249    0.2298    2.4325    5.4854];
+
+
 params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
 
@@ -185,7 +195,7 @@ for i_m = saSet
     fprintf('costing %1.4e€. \n', cost);
 end
 params0 = p0;
-%% visualize one way
+% visualize one way
 figure(404)
 err_1 = min(cost_sap)
 figure;bar([cost_sap]');hold on;plot([0 length(saSet)+1], [c0 c0])    
@@ -200,8 +210,10 @@ xticklabels(params0.mods)
 
 %%
 % c0 - min(cost_sam, cost_sap)
-cost_cmb = min(cost_sam, cost_sap);
 % cost_cmb = cost_sap;
+cost_cmb = min(cost_sam, cost_sap);
+
+
 cost_diff = c0 - cost_cmb
 % better value
 [val_bett cost_diff_better_i] = sort(cost_diff.*(cost_diff > 0), 'descend');
@@ -215,7 +227,7 @@ xticklabels(params0.mods(param_ord))
 
 %% select where it can be reduced OR most influential
 params0.mods = params0.mods(param_ord);
-params0.mods = params0.mods(1:8);
+params0.mods = params0.mods(1:11);
 params0.g = ones(size(params0.mods));
 params0.mods
 % saSet = 1:length(params0.mods);
@@ -228,9 +240,36 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 params0.ShowResidualPlots = false;
 
 g = params0.g;
+g = ones(length(params0.mods), 1);
 optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, params0.g, options)
 params0.g = x;
+%%
+% params0.g = p_OptimGA;
+% params0.RunSlackSegments = 'Fourth-rampuponly';
+params0.RunSlackSegments = 'FirstTwo';
+params0.EvalFitSlackOnset = false;
+params0.PlotEachSeparately = true;
+params0.justPlotStateTransitionsFlag = false;
+params0.FudgeVmax = true;
+tic
+clf;
+RunBakersExp
+toc
+sum(E)
+%%
+%% Running GA
+
+% parpool
+ga_Opts = optimoptions('ga', ...
+    'PopulationSize',25, ...            % 250
+    'Display','iter', ...
+    'MaxStallGenerations',6, ...  % 10
+    'UseParallel',false, 'PlotFcn','gaplotbestf');
+
+[p_OptimGA,Res_OptimGA,~,~,FinPopGA,FinScoreGA] = ...
+    ga(optimfun,size(g, 2), ...
+    [],[],[],[],ones(size(g))*0.01,ones(size(g))*20,[],ga_Opts);
 
 %%
 writeParamsToMFile('ModelParamsOptim_tf2_slackLast.m', params0);
@@ -246,6 +285,7 @@ writeParamsToMFile('ModelParamsOptim_fudgeSlack.m', params0);
 writeParamsToMFile('ModelParamsOptim_fudgeSlackVelocities.m', params0);
 writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset.m', params0);
 writeParamsToMFile('ModelParamsOptim_FSV_ForceOnset_tmp.m', params0);
+writeParamsToMFile('ModelParamsOptim_DoublePeakOptim.m', params0);
 clf;RunBakersExp;
 %% show
 

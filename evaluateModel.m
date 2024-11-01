@@ -61,7 +61,7 @@ for vs = 1:length(T) - 1
     params.Vums = params.v*params.ML; % velocity in um/s
 
 
-    opts = odeset('Events', @movingWindow);%odeset('AbsTol',1e-4, 'RelTol', 1e-2);
+    opts = odeset('Events', @movingWindow, 'AbsTol',1e-4, 'RelTol', 1e-2);
 
     % test odess
     %         tic
@@ -138,7 +138,7 @@ for vs = 1:length(T) - 1
         out = storeOutputs(fcn,out, PU, params, t);
 
         if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
-            % error('ODEslower is not stable')
+            error('ODEslower is not stable')
             break;
         end        
 
