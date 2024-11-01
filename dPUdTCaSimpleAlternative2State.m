@@ -190,43 +190,65 @@ MgADP = params.MgADP;
 
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
-sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
-
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
-% dPUdT_TransitionRates;
-
+strainDep = @(alpha, dr) exp((alpha*(s+dr)).^2);
 RTD = g2*params.kah*PT;
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
-R1D = p1.*sd(params.kd, params.alpha0, params.alpha0, params.dr0, 2, 2);
 
-R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2, 2); % P1 to P2
-R21 = f1*p2.*sd(params.k_1, params.alpha_1, params.alpha_1, params.dr_1, 2, 2); % p2 to p1
+R1D = params.kd*p1.*strainDep(params.alpha0, params.dr0); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+% R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
+% R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % backward flow from p2 to p1
 
-R2T = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
+% DAN's XB rates
+% R1D = params.kd*p1.*exp(+(params.alpha0*s).^2); %
+R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
+R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
+% R2T = g2*params.k2*p2.*min(1e9, max(1, strainDep(params.alpha2, params.dr2)));
 
-% to PT state directly
-XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+% DAN's very complicated detachment rate
+% lambdaR = 0.015;
+% lambdaL = 0.038;
+% alpha2_R = 1/0.015;
 
-if params.UsePassiveForSR
-    F_SR = F_passive;
-else
-    F_SR = F_total;
-end
+% params.alpha2_L = 1/0.038;
+% params.k2_R = 8e3;
+% params.k2_L = 200;
+% R0 = 0.10;
+% R1 = ((s+0)<=0).*(1 - exp(-(s+0)./lambdaL)).^2;
+% R2 = ((s+0)>0).*(1 - exp(+(s+0)./lambdaR)).^2;
+% R2T = g2*params.k2*p2.*(R0 + R1 + R2);
 
-% F_SR = (SL-LSE);
+% lambdaL = 0.015;
+% params.k2 = 1.25*20;
 
-if params.UseSuperRelaxed && params.UseDirectSRXTransition
+kL = params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2;
+% kR = 200*(s>0).*(1 - exp(+(s+0)./lambdaR)).^2;
+% kR = 0*(s>0).*(s./0.01);
+% kR = 600*(s>0).*((s.^2)./((s.^2) + 0.01^2));
+% r = 0.030;
+% kR = (100e6)*( (1/6).*s.^3 + (-1*r/2).*s.^2 + 15*(r^3).*s).*(s>0.002);
+
+% kR = max(0, params.k2_R*(s-params.dr2_R)); %.*(s>0.002);
+kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
+R2T = p2.*(params.k2 + kL + kR);
+
+
+    XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+
+    if params.UseSuperRelaxed
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
 %         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
-    RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
-    % TODO - check it is **kmsr** and NOT **ksmr**
-    RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
     
-elseif params.UseSuperRelaxed
-    RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
-    RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
+    % RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
+    RSR2PT = params.ksr0*exp(F_total/params.sigma1)*P_SR;
+    
+    % TODO - check it is **kmsr** and NOT **ksmr**
+    % RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
+    RPT2SR = params.ksrm*exp(-F_total/params.sigma2)*PT;
+    
+    % dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
     dU_SR = -RSR2PT  + RPT2SR;
+        
 else 
     dU_SR = 0;
     RSR2PT = 0;

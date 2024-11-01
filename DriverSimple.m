@@ -5,6 +5,11 @@ figure(2);
 clf; 
 % initialize parameters
 params0 = getParams();
+ModelParamsInitDanOptim_All;
+
+params0.UseOverlapFactor = false;
+RunBakersExp;
+%%
 
 % rates
 a = 1/3;
