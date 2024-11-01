@@ -6,9 +6,25 @@ clf;
 % initialize parameters
 params0 = getParams();
 ModelParamsInitDanOptim_All;
-
+params0.justPlotStateTransitionsFlag = false;
+params0.RunSlackSegments = 'Last';
 params0.UseOverlapFactor = false;
+params0.UseTitinInterpolation = false;
+params0.EvalFitSlackOnset = false;
+params0.RunForceLengthEstim = false;
+params0.UseTitinIdentifiedPassive = false;
+params0.UseOverlap = false;
+params0.ShowStatePlots  = true;
+params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+
+% writeParamsToMFile('ModelParamsInit_.m', params0, modNames);
+
+%%
+ModelParamsInit_FudgedSlack
+params0.RunForceLengthEstim = false;
 RunBakersExp;
+
+
 %%
 
 % rates

@@ -138,8 +138,9 @@ for vs = 1:length(T) - 1
         out = storeOutputs(fcn,out, PU, params, t);
 
         if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
-            error('ODEslower is not stable')
-            break;
+            warning('ODEslower is not stable')
+            % error('ODEslower is not stable')
+            % break;
         end        
 
         PU0 = PU(end,:);

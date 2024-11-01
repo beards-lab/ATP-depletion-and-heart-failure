@@ -1,5 +1,10 @@
 E = [];
 modelFcn = @dPUdTCaSimpleAlternative2State;
+
+if isfield(params0, 'modelFcn')
+    modelFcn = str2func(params0.modelFcn);
+end
+
 %% FORCE VELOCITY
 
 if params0.RunForceVelocity
@@ -318,7 +323,8 @@ if params0.RunSlack
         case 'Last'
     % only the last slack
     velocitytable = datastruct.velocitytable(18:end, :);
-    validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
+    validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(23, 1);
+    velocitytable(1, 1) = -2;
     % validZone = datatable(:, 1) > 2;
         case 'All'
     % all
@@ -433,8 +439,11 @@ if params0.RunSlack
         % params0.ghostSave = 'NiceFit_Compliant';
 
         plot(datatable(:, 1),datatable(:, 3),'k-','linewidth',0.5);
+        
+
         plot(out.t,out.Force,'b-','linewidth',1.5);
         plot(out.t,out.FXBPassive,'b--','linewidth',1.5);
+        plot(datatable(validZone, 1),datatable(validZone, 3),'k-','linewidth',1.5);
         % plot(Tspan,F_active,'linewidth',1.5);
         xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);

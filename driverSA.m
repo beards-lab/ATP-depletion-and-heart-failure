@@ -166,11 +166,19 @@ params0.mods = {'ksr', 'kmsr', 'sigma2', 'kstiff1', 'kstiff2', 'ka', 'kd', 'k1',
 params0.g = [0.7231    1.5436    0.7716    1    0.9494    0.8632    0.5957    1.2720    0.8273    0.2280    2.8035   3.6707];
 params0.g = [0.7206    1.5516    0.7663    0.9437    0.9286    0.8858    0.5387    1.2715    0.8249    0.2298    2.4325    5.4854];
 
+% last slack and params0.RunForceLengthEstim - cost 350
+params0.mods = {'alpha0', 'alpha2_R','kmsr','gamma','kd','k1','ka','dr2_R','sigma1', 'k2_R','k2','alpha1', 'alpha2_L','kah','kstiff2','k_pas', 'kstiff1','xrate'};
+params0.g = [0.9765    1.1966    1.6759    0.2419    1.1190    0.8689    1.3629    1.4356    0.9853    0.3401    0.9596    0.4014    1.0851    0.5159    1.0188    0.5793    2.0921    1.2786];
+% only last slack
+params0.g = [0.9578    1.4289    1.6017    0.2347    1.1474    0.8426    1.3470    1.3556    0.9765    0.3708    0.9696    0.4100    1.0063    0.5208    1.0063    0.5792    1.9811    1.3405];
 
 params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
 
 %%
+params0.Lsc0 = 1.51;
+params0.xrate = 1;
+
 params0.ghostLoad = '';
 p0 = params0;
 SAFact = 1.01;
@@ -187,15 +195,15 @@ for i_m = saSet
     cost = isolateRunBakersExp(params0);
     cost_sap(i_m) = cost;
     % 
-    params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
-    fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
-    cost = isolateRunBakersExp(params0);
-    cost_sam(i_m) = cost;
+    % params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
+    % fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
+    % cost = isolateRunBakersExp(params0);
+    % cost_sam(i_m) = cost;
 
     fprintf('costing %1.4e€. \n', cost);
 end
 params0 = p0;
-% visualize one way
+%% visualize one way
 figure(404)
 err_1 = min(cost_sap)
 figure;bar([cost_sap]');hold on;plot([0 length(saSet)+1], [c0 c0])    
@@ -210,8 +218,8 @@ xticklabels(params0.mods)
 
 %%
 % c0 - min(cost_sam, cost_sap)
-% cost_cmb = cost_sap;
-cost_cmb = min(cost_sam, cost_sap);
+cost_cmb = cost_sap;
+% cost_cmb = min(cost_sam, cost_sap);
 
 
 cost_diff = c0 - cost_cmb
@@ -223,13 +231,14 @@ cost_diff = c0 - cost_cmb
 param_ord = [cost_diff_better_i(val_bett > 0) cost_diff_infl_i(val_infl < 0)]
 clf;
 bar(cost_cmb(param_ord));xticks(1:length(params0.mods))
+% hold on;plot([0 length(saSet)+1], [c0 c0]) 
 xticklabels(params0.mods(param_ord))
 
 %% select where it can be reduced OR most influential
-params0.mods = params0.mods(param_ord);
-params0.mods = params0.mods(1:11);
-params0.g = ones(size(params0.mods));
-params0.mods
+mods = params0.mods(param_ord(1:20))
+% mods = params0.mods(1:20)
+g = ones(size(params0.mods));
+% params0.mods = mods;
 % saSet = 1:length(params0.mods);
 %% Optim
 
@@ -247,16 +256,32 @@ params0.g = x;
 %%
 % params0.g = p_OptimGA;
 % params0.RunSlackSegments = 'Fourth-rampuponly';
-params0.RunSlackSegments = 'FirstTwo';
+params0.RunSlackSegments = 'All';
 params0.EvalFitSlackOnset = false;
 params0.PlotEachSeparately = true;
 params0.justPlotStateTransitionsFlag = false;
+
+params0.Lsc0 = 1.51;
+params0.xrate = 1;
+
+params0.EvalFitSlackOnset = true;
+params0.drawForceOnset = true;
+
+params0.RunForceLengthEstim = false;
+% experimenting
 params0.FudgeVmax = true;
+params0.FudgeA = 0;
+params0.FudgeB = 121.922;
+params0.FudgeC = -209.18;
+
 tic
 clf;
 RunBakersExp
 toc
 sum(E)
+
+writeParamsToMFile('ModelParamsInit_FudgedSlack.m', params0);
+
 %%
 %% Running GA
 
