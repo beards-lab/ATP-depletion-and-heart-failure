@@ -131,14 +131,16 @@ end
 
 F_passive = 0;
 if params.UsePassive
-    % Lsc0    = 1.51;
+    Lsc0    = 1.51;
     % gamma = 7.5;
     % F_passive = F_passive + params.k_pas*max(SL-LSE - params.Lsc0, 0)^params.gamma; 
     
     % identified from FitPassiveRampUp.m
-    y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
-    F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
+    % y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+    % F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
+    
     % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
+    F_passive = F_passive + params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
 end
 
 if params.UseTitinInterpolation
@@ -191,7 +193,7 @@ MgADP = params.MgADP;
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
 % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
-strainDep = @(alpha, dr) exp((alpha*(s+dr)).^2);
+strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));
 RTD = g2*params.kah*PT;
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
 
@@ -221,7 +223,7 @@ R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 % lambdaL = 0.015;
 % params.k2 = 1.25*20;
 
-kL = params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2;
+kL = min(1e4, params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2);
 % kR = 200*(s>0).*(1 - exp(+(s+0)./lambdaR)).^2;
 % kR = 0*(s>0).*(s./0.01);
 % kR = 600*(s>0).*((s.^2)./((s.^2) + 0.01^2));
@@ -232,10 +234,11 @@ kL = params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2;
 kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
 R2T = p2.*(params.k2 + kL + kR);
 
+% to PT state directly
+XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
-    XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
-    if params.UseSuperRelaxed
+    if params.UseSuperRelaxed && params.UseDirectSRXTransition
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
 %         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
     
@@ -244,9 +247,13 @@ R2T = p2.*(params.k2 + kL + kR);
     
     % TODO - check it is **kmsr** and NOT **ksmr**
     % RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
-    RPT2SR = params.ksrm*exp(-F_total/params.sigma2)*PT;
+    RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
     
     % dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
+elseif params.UseSuperRelaxed
+    RSR2PT = params.ksr0*exp(F_total/params.sigma1)*P_SR;
+    RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
     dU_SR = -RSR2PT  + RPT2SR;
         
 else 
@@ -256,31 +263,7 @@ else
     
 end
 if params.justPlotStateTransitionsFlag
-    
     plotStateTransitions;
-    
-    % % the old ones
-    % params.alpha0 = 36.1309;
-    % params.k1 = 200.121;
-    % params.alpha1 = 98.2684;
-    % params.alpha2_R = 0.756688;
-    % params.alpha2_L = 25.0348;
-    % params.dr2_R = 0.00074017;
-    % 
-    % dPUdT_TransitionRates;
-    
-    % %% R1D
-    % nexttile(1);hold on;    
-    % plot(s, R1D, 'o-');
-    % 
-    % 
-    % nexttile(2);hold on;
-    % plot(s, R12, 'o-');
-    % 
-    % nexttile(3); hold on;
-    % plot(s, R2T, 'o-');  
-
-    
     error('Quitting after plotting states');
 end
 %% governing flows

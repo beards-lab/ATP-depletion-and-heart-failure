@@ -5,8 +5,8 @@ figure(2);
 clf; 
 % initialize parameters
 params0 = getParams();
-ModelParamsInitDanOptim_All;
-params0.justPlotStateTransitionsFlag = false;
+% ModelParamsInitDanOptim_All;
+params0.justPlotStateTransitionsFlag = true;
 params0.RunSlackSegments = 'Last';
 params0.UseOverlapFactor = false;
 params0.UseTitinInterpolation = false;
@@ -19,12 +19,36 @@ params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
 
 % writeParamsToMFile('ModelParamsInit_.m', params0, modNames);
 
-%%
-ModelParamsInit_FudgedSlack
+%
+% ModelParamsInit_FudgedSlack
+ModelParamsInitOptim_slack4
+params0.Lsc0 = 1.51;
+params0.RunSlackSegments = 'Last';
 params0.RunForceLengthEstim = false;
 RunBakersExp;
 
+%% fancy plot
+fig = figure(80085);clf;hold on;
+t0 = 2.7594;
 
+plot(datatable(:, 1) - t0, datatable(:, 3), 'Color',[1 1 1]*0.6, LineWidth=6)
+plot(out.t - t0, out.Force, 'k-', LineWidth=1);
+ylabel('Stress (kPa)');
+ylim([-1 80]);
+
+yyaxis("right");
+plot(datatable(:, 1) - t0, datatable(:, 2), 'k--', LineWidth=1.5);
+xlim([-0.05, inf]);
+ylim([1.85 2.25]);
+legend('data', 'model', 'ML*', 'Location','best');
+fontsize(14, 'points');
+yticks([1.9 2 2.1 2.2])
+ax = gca;
+% This sets background color to black
+ax.YColor = 'k';
+xlabel('Time (s)');
+ylabel('*Muscle length (L/L_0)');
+saveas(fig, 'Figures\proposal\')
 %%
 
 % rates
