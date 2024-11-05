@@ -12,25 +12,27 @@ dsc = load('DataStruct20241010.mat').dsc;
 
 % Farr={};Tarr = {};
 % dataload.dsc{1, 1}
+
 % relaxed
 ids = 1; arr = [2 3 4 5];
 % ids = 1; arr = [9 8 7 6];
+
 % PNB and MAVA, no Ca
-% ids = 3; arr = [2 3 4 5];
+ids = 3; arr = [2 3 4 5];
 % max Ca, PNB and Mava
-% ids = 3; arr = [7 8 9 11];
+ids = 3; arr = [7 8 9 11];
 
 % 10C - no Ca, just PNB mava
-% ids = 4; arr = [2 3 4 5];
+ids = 4; arr = [2 3 4 5];
 
 % 10C - max Ca, PNB and Mava
-% ids = 4; arr = [7 8 9 11];
+ids = 4; arr = [7 8 9 11];
 
 % extracted relaxed
-% ids = 5; arr = [2 3 4 5];
+ids = 5; arr = [2 3 4 5];
 
 % extracted activated
-% ids = 6; arr = [2 3 4 5];
+ids = 6; arr = [2 3 4 5];
 
 for iarr = 1:length(arr)
     Farr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.F;
@@ -208,4 +210,114 @@ c = evalPowerFit(x, Farr, Tarr, true, [], true)
 % x = fminsearch(pcaFitFun, init, options)
 % x = init;
 
+%% For all iters
 
+% Define the parameters for each setting, including ids and arr
+settings = {
+    1, [2 3 4 5];  % relaxed
+    1, [9 8 7 6];  % relaxed reversed
+    3, [2 3 4 5];  % PNB and MAVA, no Ca    
+    3, [7 8 9 11]; % max Ca, PNB and MAVA
+    4, [2 3 4 5];  % 10C - no Ca, just PNB Mava
+    4, [7 8 9 11]; % 10C - max Ca, PNB and MAVA
+    5, [2 3 4 5];  % extracted relaxed
+    6, [2 3 4 5]   % extracted activated
+};
+
+
+
+% Parameters
+siginfs = 2:.2:5;  % A vector with 7 elements
+num_iterations = size(settings, 1);  % Number of different sets of ids and arr
+
+% Initialize cell arrays to store results for each iteration
+all_c = cell(num_iterations, 1);
+all_res = cell(num_iterations, 1);
+
+% Loop over the number of iterations
+for iter = 1:num_iterations
+    ids = settings{iter, 1};
+    arr = settings{iter, 2};
+    
+    % Assume Farr and Tarr are generated based on ids and arr
+    % Sample data for demonstration; replace with actual logic for generating Farr and Tarr
+clear Farr Tarr;
+    for iarr = 1:length(arr)
+        Farr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.F;
+        Tarr{iarr} = dsc{ids, arr(iarr)}.datatableZDCorr.t - 10;
+    
+        i_cutoff = find(Farr{iarr} > 4 & Tarr{iarr} > 50, 1, 'last');
+        Farr{iarr} = Farr{iarr}(1:i_cutoff);
+        Tarr{iarr} = Tarr{iarr}(1:i_cutoff);
+
+        % add noise - about 10% 
+        % Generate noise
+        noise_percentage = 0.1;
+        noise = noise_percentage * randn(size(Farr{iarr})) .* Farr{iarr};
+
+        % Add the noise to the signal
+        Farr{iarr} = Farr{iarr} + noise;
+    end
+
+    % Initialize variables for storing results
+    c = zeros(1, length(siginfs));
+    res = zeros(length(siginfs), 2);
+    init = [1, 1];  % Initial guess, adjust as needed
+
+    % Optimization loop
+    for isig = 1:length(siginfs)
+        options = optimset('Display', 'iter', 'TolFun', 1e-4, 'TolX', 0.0001, 'MaxIter', 100);
+        
+        fitfunOpt = @(sigInit) evalPowerFit([sigInit, siginfs(isig)], Farr, Tarr, false);
+        x = fminsearch(fitfunOpt, init, options);
+        c(isig) = fitfunOpt(x);  % This stores the objective value
+        res(isig, :) = x;  % This stores the optimized parameters
+    end
+    
+    % Store the results for the current iteration
+    all_c{iter} = c;
+    all_res{iter} = res;
+end
+
+save('sigmaLandscape', 'all_c', 'all_res', 'siginfs')
+save('sigmaLandscapeNoise', 'all_c', 'all_res', 'siginfs')
+%% Plot results for each iteration
+    % load sigmaLandscape.mat;
+    load sigmaLandscapeNoise.mat
+    
+    % figure(2);clf;hold on;
+    num_iterations = [1 2 3 5]; % NO Ca
+    % title(['No Ca']);
+
+    % figure(2);clf;hold on;
+    % num_iterations = [4 6]; % Ca
+    % title(['Max Ca']);
+
+    % figure(3);clf;hold on;
+    % num_iterations = [7 8]; % Extracted
+    % title(['Extracted']);
+
+    % num_iterations = [1 2]; % NO Ca
+clear leg
+for i = 1:length(num_iterations)
+    iter = num_iterations(i);
+    leg(i) = plot(siginfs, all_res{iter}(:, 2), LineWidth=2);
+    
+    % relative
+    % scatter(siginfs, all_res{iter}(:, 2), 40, all_c{iter}/min(all_c{iter}), 'filled');
+    
+    % absolute
+    scatter(siginfs(1:2:end), all_res{iter}(1:2:end, 2), 40, all_c{iter}(1:2:end), 'filled');
+
+    xlabel('siginfs');
+    ylabel('res(:, 2)');
+    
+    colorbar; % Add colorbar to indicate the value of c
+    grid on;
+    % settings(iter)
+end
+
+% Convert numeric array to cell array of strings
+legend_labels = arrayfun(@(x) num2str(x), num_iterations, 'UniformOutput', false);
+
+legend(leg, legend_labels, Location="northwest")
