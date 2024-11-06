@@ -5,26 +5,33 @@ figure(2);
 clf; 
 % initialize parameters
 params0 = getParams();
+ModelParamsInit_FudgedSlack
 % ModelParamsInitDanOptim_All;
-params0.justPlotStateTransitionsFlag = true;
+ModelParamsInitOptim_slack4
+
 params0.RunSlackSegments = 'Last';
-params0.UseOverlapFactor = false;
+params0.UseOverlapFactor = true;
+
 params0.UseTitinInterpolation = false;
 params0.EvalFitSlackOnset = false;
-params0.RunForceLengthEstim = false;
-params0.UseTitinIdentifiedPassive = false;
-params0.UseOverlap = false;
+
+params0.RunForceLengthEstim = true;
+params0.UseTitinIdentifiedPassive = true;
+
+params0.UseOverlap = true;
 params0.ShowStatePlots  = true;
 params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+
+params0.RunForceVelocity = true;
+LoadData;
 
 % writeParamsToMFile('ModelParamsInit_.m', params0, modNames);
 
 %
-% ModelParamsInit_FudgedSlack
-ModelParamsInitOptim_slack4
+params0.UseOverlapFactor = true;
+
+params0.FudgeVmax = false;
 params0.Lsc0 = 1.51;
-params0.RunSlackSegments = 'Last';
-params0.RunForceLengthEstim = false;
 RunBakersExp;
 
 %% fancy plot

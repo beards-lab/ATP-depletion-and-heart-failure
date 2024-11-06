@@ -97,18 +97,21 @@ s_p0 = 1 + round(-s(1)/params.dS, 6); % strain position in space at 0
 if isnan(s_p0) || floor(s_p0) < 0
     % this can happen during numerical rottfinding iteration step, should be avoided in the result
     s_i0 = 1; % just hold on..
-    s_i1 = 1;
-    s_i0k = 0;
+    s_i1 = 2;
+    s_i0k = 1;
     % warning(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
 elseif floor(s_p0) == 0
     s_i0 = 1;
-    s_i1 = 1;
-    s_i0k = 0;
+    s_i1 = 2;
+    s_i0k = 1;
 elseif ceil(s_p0) == params.ss
-    s_i0 = params.ss;
-    s_i1 = 1;
+    s_i0 = params.ss - 1;
+    s_i1 = params.ss;
     s_i0k = 0;
 elseif ceil(s_p0) > params.ss
+    s_i0 = params.ss - 1;
+    s_i1 = params.ss;
+    s_i0k = 0;
     error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
 else
     % if params.UseSpaceInterpolation
@@ -130,17 +133,15 @@ if params.UseOverlapFactor
 end    
 
 F_passive = 0;
-if params.UsePassive
+if params.UsePassive && ~params.UseTitinIdentifiedPassive
     Lsc0    = 1.51;
     % gamma = 7.5;
-    % F_passive = F_passive + params.k_pas*max(SL-LSE - params.Lsc0, 0)^params.gamma; 
-    
-    % identified from FitPassiveRampUp.m
-    % y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
-    % F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
-    
-    % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
     F_passive = F_passive + params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
+elseif params.UsePassive && params.UseTitinIdentifiedPassive
+    % identified from FitPassiveRampUp.m
+    y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+    F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
+    % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
 end
 
 if params.UseTitinInterpolation
@@ -238,30 +239,27 @@ R2T = p2.*(params.k2 + kL + kR);
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
 
-    if params.UseSuperRelaxed && params.UseDirectSRXTransition
+if params.UseSuperRelaxed && params.UseDirectSRXTransition
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
 %         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
     
     % RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
-    RSR2PT = params.ksr0*exp(F_total/params.sigma1)*P_SR;
-    
+    RSR2PT = params.kmsr*exp(F_total/params.sigma1)*P_SR;    
     % TODO - check it is **kmsr** and NOT **ksmr**
     % RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
-    RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
-    
+    RPT2SR = params.ksr0*exp(-F_total/params.sigma2)*PT;
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;    
     % dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
 elseif params.UseSuperRelaxed
-    RSR2PT = params.ksr0*exp(F_total/params.sigma1)*P_SR;
-    RPT2SR = params.kmsr*exp(-F_total/params.sigma2)*PT;
+    RSR2PT = params.kmsr*exp(F_total/params.sigma1)*P_SR;
+    RPT2SR = params.ksr0*exp(-F_total/params.sigma2)*PT;
     dU_SR = -RSR2PT  + RPT2SR;
-        
 else 
     dU_SR = 0;
     RSR2PT = 0;
     RPT2SR = 0;
-    
 end
+
 if params.justPlotStateTransitionsFlag
     plotStateTransitions;
     error('Quitting after plotting states');
