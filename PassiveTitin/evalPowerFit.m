@@ -167,7 +167,18 @@ for i_rds = [4 3 2 1]
         catch e
             disp(e)
         end        
-        cost_c0 = cost_c0 + goodness.rmse;%/length(t_s);
+        % calc cost in a log way
+        % modelVals = pf(ae.tau, t_s);
+        % dataVals = Fint;
+        
+        % c0 = goodness.rmse;
+        % c0 = sum((pf(ae.tau, t_s) - Fint).^2);
+        c0 = sum(abs(log10(pf(ae.tau, t_s)) - log10(Fint)).^2);
+        if c0 < 0
+            stop = true;
+        end
+
+        cost_c0 = cost_c0 + c0;%/length(t_s);
         cc = [cg(5-i_rds, :)]; % current color 
         clw = 4.5-i_rds; % current line width
 

@@ -177,6 +177,9 @@ options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UsePara
     'TolX', 0.0001, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
 % init(1:3) = [0 0 0]
 %% fit the no Ca
+x = [4.0516    0.1059    1.6441];
+x = [5.7301    0.0740    0.0000];
+
 init = x;
 fitfunOpt = @(init) evalPowerFit(init, Farr, Tarr, false);
 x = fminsearch(fitfunOpt, init, options)
@@ -194,7 +197,7 @@ figure(101);
 x = [5.2540    0.1328    3.1201];
 x = [5.502540    0.18328    3.1201]
 [c rs] = evalPowerFit(x, Farr, Tarr, true, [], false)
-rs
+
 %%
 % free power exponent
 % init = x;
@@ -211,7 +214,7 @@ c = evalPowerFit(x, Farr, Tarr, true, [], true)
 % x = init;
 
 %% For all iters
-
+figure(1);clf;
 % Define the parameters for each setting, including ids and arr
 settings = {
     1, [2 3 4 5];  % relaxed
@@ -224,10 +227,11 @@ settings = {
     6, [2 3 4 5]   % extracted activated
 };
 
-
+% Generate noise
+noise_percentage = 0.05;
 
 % Parameters
-siginfs = 2:.2:5;  % A vector with 7 elements
+siginfs = 0:.25:6;  % A vector with 7 elements
 num_iterations = size(settings, 1);  % Number of different sets of ids and arr
 
 % Initialize cell arrays to store results for each iteration
@@ -249,28 +253,30 @@ clear Farr Tarr;
         i_cutoff = find(Farr{iarr} > 4 & Tarr{iarr} > 50, 1, 'last');
         Farr{iarr} = Farr{iarr}(1:i_cutoff);
         Tarr{iarr} = Tarr{iarr}(1:i_cutoff);
-
-        % add noise - about 10% 
-        % Generate noise
-        noise_percentage = 0.1;
-        noise = noise_percentage * randn(size(Farr{iarr})) .* Farr{iarr};
-
-        % Add the noise to the signal
-        Farr{iarr} = Farr{iarr} + noise;
     end
 
     % Initialize variables for storing results
     c = zeros(1, length(siginfs));
     res = zeros(length(siginfs), 2);
-    init = [1, 1];  % Initial guess, adjust as needed
+    init = [5, 0.1];  % Initial guess, adjust as needed
 
     % Optimization loop
     for isig = 1:length(siginfs)
         options = optimset('Display', 'iter', 'TolFun', 1e-4, 'TolX', 0.0001, 'MaxIter', 100);
         
-        fitfunOpt = @(sigInit) evalPowerFit([sigInit, siginfs(isig)], Farr, Tarr, false);
+        % add noise - about 10%
+        for iarr = 1:length(arr)
+            noise = noise_percentage * randn(size(Farr{iarr})) .* Farr{iarr};
+            % Add the noise to the signal
+            Farr_noi{iarr} = Farr{iarr} + noise;
+        end
+        
+        fitfunOpt = @(sigInit) evalPowerFit([sigInit, siginfs(isig)], Farr_noi, Tarr, false);
         x = fminsearch(fitfunOpt, init, options);
-        c(isig) = fitfunOpt(x);  % This stores the objective value
+        % c(isig) = fitfunOpt(x);  % This stores the objective value
+        figure(2)
+        c(isig) = evalPowerFit([x, siginfs(isig)], Farr_noi, Tarr, true);
+        figure(1)
         res(isig, :) = x;  % This stores the optimized parameters
     end
     
@@ -279,13 +285,13 @@ clear Farr Tarr;
     all_res{iter} = res;
 end
 
-save('sigmaLandscape', 'all_c', 'all_res', 'siginfs')
-save('sigmaLandscapeNoise', 'all_c', 'all_res', 'siginfs')
+% save('sigmaLandscapeLog', 'all_c', 'all_res', 'siginfs')
+save('sigmaLandscapeNoiseLog', 'all_c', 'all_res', 'siginfs')
 %% Plot results for each iteration
-    % load sigmaLandscape.mat;
-    load sigmaLandscapeNoise.mat
+    % load sigmaLandscapeLog.mat;
+    % load sigmaLandscapeNoise.mat
     
-    % figure(2);clf;hold on;
+    figure(2);clf;hold on;
     num_iterations = [1 2 3 5]; % NO Ca
     % title(['No Ca']);
 
@@ -307,7 +313,7 @@ for i = 1:length(num_iterations)
     % scatter(siginfs, all_res{iter}(:, 2), 40, all_c{iter}/min(all_c{iter}), 'filled');
     
     % absolute
-    scatter(siginfs(1:2:end), all_res{iter}(1:2:end, 2), 40, all_c{iter}(1:2:end), 'filled');
+    scatter(siginfs(1:end), all_res{iter}(1:end, 2), 40, min(100, all_c{iter}(1:end)), 'filled');
 
     xlabel('siginfs');
     ylabel('res(:, 2)');
