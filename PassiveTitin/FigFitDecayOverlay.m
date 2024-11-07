@@ -290,6 +290,7 @@ save('sigmaLandscapeNoiseLog', 'all_c', 'all_res', 'siginfs')
 %% Plot results for each iteration
     % load sigmaLandscapeLog.mat;
     % load sigmaLandscapeNoise.mat
+    load sigmaLandscapeNoiseLog.mat
     
     figure(2);clf;hold on;
     num_iterations = [1 2 3 5]; % NO Ca
@@ -304,6 +305,9 @@ save('sigmaLandscapeNoiseLog', 'all_c', 'all_res', 'siginfs')
     % title(['Extracted']);
 
     % num_iterations = [1 2]; % NO Ca
+    
+    sig_cut_off = 20;
+
 clear leg
 for i = 1:length(num_iterations)
     iter = num_iterations(i);
@@ -313,7 +317,7 @@ for i = 1:length(num_iterations)
     % scatter(siginfs, all_res{iter}(:, 2), 40, all_c{iter}/min(all_c{iter}), 'filled');
     
     % absolute
-    scatter(siginfs(1:end), all_res{iter}(1:end, 2), 40, min(100, all_c{iter}(1:end)), 'filled');
+    scatter(siginfs(1:end), all_res{iter}(1:end, 2), 40, min(sig_cut_off, all_c{iter}(1:end)), 'filled');
 
     xlabel('siginfs');
     ylabel('res(:, 2)');

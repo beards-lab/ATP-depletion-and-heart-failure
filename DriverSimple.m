@@ -9,11 +9,12 @@ ModelParamsInit_FudgedSlack
 % ModelParamsInitDanOptim_All;
 ModelParamsInitOptim_slack4
 
-params0.RunSlackSegments = 'Last';
-params0.UseOverlapFactor = true;
+params0.RunSlackSegments = 'All';
+
 
 params0.UseTitinInterpolation = false;
-params0.EvalFitSlackOnset = false;
+params0.EvalFitSlackOnset = true;
+
 
 params0.RunForceLengthEstim = true;
 params0.UseTitinIdentifiedPassive = true;
@@ -32,7 +33,36 @@ params0.UseOverlapFactor = true;
 
 params0.FudgeVmax = false;
 params0.Lsc0 = 1.51;
+
+params0.UseOverlapFactor = true;
+
+% testing
+params0.modelFcn = 'dPUdT_CombinedTransitions';
+params0.UseUniformTransitionFunc = false;
+% params0.kstiff1 = 5.078e3;
+% % 
+% params0.kstiff2 = 7.2e3;
+% % 
+% % params0.justPlotStateTransitionsFlag = false;
+% % params0.UseOverlapFactor = true;
+% % params0.UseTitinIdentifiedPassive = true;
+% % 
+% params0.dr2_R = .74e-3;
+% params0.alpha2_L = 45;
+% params0.k2_L = 190;
+% params0.k2 = 25;
+% params0.ka = 100;
+% % params0.k1
+% params0.kd
+
+% params0.xrate = 2;
+
+params0.justPlotStateTransitionsFlag = false;
+
+
+% params0.sigma1 = 30;
 RunBakersExp;
+
 
 %% fancy plot
 fig = figure(80085);clf;hold on;

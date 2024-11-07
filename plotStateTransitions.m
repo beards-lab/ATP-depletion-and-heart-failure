@@ -1,7 +1,7 @@
 % plot state transitions
 myl = 500;
 
-figure(22); clf;
+% figure(22); clf;
 nexttile; title('R1D'); hold on;
 plot(s, R1D, 'x-');
 ylim([0, myl])
