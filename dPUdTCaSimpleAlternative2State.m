@@ -248,8 +248,8 @@ end
 
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
-    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma1)*P_SRD;
-    RPD2SRD = params.ksrd*exp(-F_SR/params.sigma2)*PD;
+    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*P_SRD;
+    RPD2SRD = params.ksrd*exp(-F_SR/params.sigma_srd2)*PD;
     RSRD2SR = params.ksr2srd*P_SRD;
     dU_SRD = -RSRD2PD  + RPD2SRD - RSRD2SR;
 else
@@ -259,22 +259,18 @@ else
     dU_SRD = 0;
 end
 
-if params.UseSuperRelaxed && params.UseDirectSRXTransition
-%         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
-%         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
-    RSR2PT = params.ksr0*exp(F_SR/params.sigma1)*P_SR;
-    % TODO - check it is **kmsr** and NOT **ksmr**
-    RPT2SR = params.kmsr*exp(-F_SR/params.sigma2)*PT;
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS + RSRD2SR;
-    % dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
-elseif params.UseSuperRelaxed
+if params.UseSuperRelaxed 
     RSR2PT = params.kmsr*exp(F_total/params.sigma1)*P_SR;
     RPT2SR = params.ksr0*exp(-F_total/params.sigma2)*PT;
-    dU_SR = -RSR2PT  + RPT2SR + RSRD2SR;
 else 
-    dU_SR = 0;
     RSR2PT = 0;
     RPT2SR = 0;
+end
+
+if params.UseDirectSRXTransition
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS + RSRD2SR;
+else    
+    dU_SR = -RSR2PT  + RPT2SR + RSRD2SR;
 end
 
 if params.justPlotStateTransitionsFlag

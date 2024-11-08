@@ -125,8 +125,16 @@ end
 
     % transitions between super relaxed state and non relaxed state
     params0.ksr0   = 9.0853; % 
-    params0.sigma0 = 33.125;
+    params0.sigma1 = 33.125;
+	params0.sigma2 = 1e6;
     params0.kmsr   = 250; % 
+	
+	% SRD state
+	params0.kmsrd = 0;
+    params0.ksrd = 0;
+    params0.ksr2srd = 0;
+    params0.sigma_srd1 = 33.125;
+	params0.sigma_srd2 = 1e6;
 
     % dissociation constants
     params0.K_Pi = 4.007;

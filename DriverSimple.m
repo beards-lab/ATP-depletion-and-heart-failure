@@ -9,11 +9,11 @@ ModelParamsInit_FudgedSlack
 % ModelParamsInitDanOptim_All;
 ModelParamsInitOptim_slack4
 
-params0.RunSlackSegments = 'All';
+params0.RunSlackSegments = 'Last';
 
 
 params0.UseTitinInterpolation = false;
-params0.EvalFitSlackOnset = true;
+params0.EvalFitSlackOnset = false;
 
 
 params0.RunForceLengthEstim = true;
@@ -21,7 +21,7 @@ params0.UseTitinIdentifiedPassive = true;
 
 params0.UseOverlap = true;
 params0.ShowStatePlots  = true;
-params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+% params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
 
 params0.RunForceVelocity = true;
 LoadData;
@@ -39,6 +39,15 @@ params0.UseOverlapFactor = true;
 % testing
 params0.modelFcn = 'dPUdT_CombinedTransitions';
 params0.UseUniformTransitionFunc = false;
+
+params0.UseSuperRelaxedADP = true;
+params0.ksr0 = 40;
+params0.kmsr = 6;
+
+params0.ksrd = 40;
+params0.kmsrd = 3;
+params0.sigma_srd1 = params0.sigma1;
+params0.ksr2srd = 3;
 % params0.kstiff1 = 5.078e3;
 % % 
 % params0.kstiff2 = 7.2e3;
