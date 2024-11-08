@@ -101,6 +101,30 @@ tic
 RunBakersExp;
 toc
 sum(E)
+%% experiment with SRD
+figure(1);clf;
+params0.UseSuperRelaxedADP = false;
+params0.UseSuperRelaxed = true;
+params0.UsePassiveForSR = false;
+
+params0.kmsr = 20;
+params0.ksr0 = 1;
+params0.sigma1 = 1e6;
+params0.sigma2 = 1e6;
+
+params0.ksrd0 = params0.ksr0;
+params0.kmsrd = params0.kmsr;
+params0.ksr2srd = .1;
+% params0.RunForceVelocity = 0;
+params0.RunStairs = false;
+params0.RunSlack = true;
+params0.RunForceVelocity = false;
+
+params0.RunSlackSegments = 'ramp-down';
+% params0.RunSlackSegments = 'ramp-up';
+params0.RunSlackSegments = 'stairs-down';
+
+RunBakersExp;
 %%
 ModelParamsInit_TF2_slack4;
 ModelParamsOptim_tf2_slackLast;

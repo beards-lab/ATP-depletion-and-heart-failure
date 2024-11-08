@@ -465,8 +465,8 @@ if params0.RunSlack
         if params.ShowStatePlots
             nexttile;
             if params.NumberOfStates == 2
-                plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, LineWidth=1.5, LineStyle='-')
-                legend('A1','A2','UT','UD', 'SR')
+                plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, out.t, out.SRD, LineWidth=1.5, LineStyle='-')
+                legend('A1','A2','UT','UD', 'SR', 'SRD')
             elseif params.NumberOfStates == 3
                 plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.p3_0, '-',out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, 1 - out.SR, LineWidth=1.5, LineStyle='-')
                 legend('A1','A2','A3', 'UT','UD', 'SR');

@@ -20,11 +20,9 @@ if params.UseSuperRelaxed
     % elseif t > 3.9303 
     %     dU_NSR = (0.001 - U_NSR)*1e3;
     %     % U_NSR = 0.001;    
-    % end    
 else
     P_SR = 0;
 end
-
 
 % if ~params.UseCa
     NP = 0;
@@ -57,12 +55,16 @@ else
 %     end
     vel = dSL;
 end    
-
     
 % P_SRs = 1 - P_SR;
 LSE = PU(2*ss + 4); % length of the serial stiffness
 PD = PU(2*ss + 5);
 
+if params.UseSuperRelaxedADP
+    P_SRD = PU(2*ss+6);
+else
+    P_SRD = 0;
+end
 
 % Sarcomere geometry
 if params.UseOverlap
@@ -125,7 +127,7 @@ p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
 p2_0 = dS*sum(p2); p2_1 = dS*sum((s+params.dr).*p2);
 
 % non-hydrolized ATP in non-super relaxed state
-PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR)); % unattached permissive fraction - 
+PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 
     F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
 
 if params.UseOverlapFactor
@@ -238,22 +240,37 @@ R2T = p2.*(params.k2 + kL + kR);
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
+if params.UsePassiveForSR
+    F_SR = F_passive;
+else
+    F_SR = F_total;
+end
+
+% F_SR = (SL-LSE);
+if params.UseSuperRelaxedADP
+    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma1)*P_SRD;
+    RPD2SRD = params.ksrd*exp(-F_SR/params.sigma2)*PD;
+    RSRD2SR = params.ksr2srd*P_SRD;
+    dU_SRD = -RSRD2PD  + RPD2SRD - RSRD2SR;
+else
+    RSRD2PD = 0;
+    RPD2SRD = 0;
+    RSRD2SR = 0;
+    dU_SRD = 0;
+end
 
 if params.UseSuperRelaxed && params.UseDirectSRXTransition
 %         dU_SR = + sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*PT*exp(-max(F_total, 0)/params.sigma2);
 %         dU_SR = + 0*sum(XB_Ripped)*dS - params.ksr0*exp(F_total/params.sigma1)*P_SR + params.kmsr*exp(-F_total/params.sigma2)*PT;
-    
-    % RSR2PT = params.kmsr*exp(F_SR/params.sigma2)*P_SR;
-    RSR2PT = params.kmsr*exp(F_total/params.sigma1)*P_SR;    
+    RSR2PT = params.ksr0*exp(F_SR/params.sigma1)*P_SR;
     % TODO - check it is **kmsr** and NOT **ksmr**
-    % RPT2SR = params.ksr*exp(F_SR/params.sigma1)*PT;
-    RPT2SR = params.ksr0*exp(-F_total/params.sigma2)*PT;
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;    
+    RPT2SR = params.kmsr*exp(-F_SR/params.sigma2)*PT;
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS + RSRD2SR;
     % dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS;
 elseif params.UseSuperRelaxed
     RSR2PT = params.kmsr*exp(F_total/params.sigma1)*P_SR;
     RPT2SR = params.ksr0*exp(-F_total/params.sigma2)*PT;
-    dU_SR = -RSR2PT  + RPT2SR;
+    dU_SR = -RSR2PT  + RPT2SR + RSRD2SR;
 else 
     dU_SR = 0;
     RSR2PT = 0;
@@ -267,7 +284,7 @@ end
 %% governing flows
 % PT - calculated as complement of sum of all probabilities
 % state 0: unattached, ATP-cocked
-dPD = + RTD - RD1 + sum(R1D)*dS;
+dPD = RSRD2PD - RPD2SRD + RTD - RD1 + sum(R1D)*dS;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 
@@ -279,7 +296,7 @@ dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydro
 % if ~params.UseCa
     dNP = 0;
 
-f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD];
+f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
 outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, PT];
 rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS, RSR2PT, RPT2SR];
 
