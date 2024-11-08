@@ -13,6 +13,21 @@ ss = params.ss;
 
 params = updateRates(params);
 
+% inactive switches
+params = rmfield(params, 'UseSlack');
+params = rmfield(params, 'UseP31Shift');
+params = rmfield(params, 'F_act_UseP31');
+params = rmfield(params, 'UseMutualPairingAttachment');
+params = rmfield(params, 'UseSpaceDiscretization');
+params = rmfield(params, 'UseSpaceInterpolation');
+params = rmfield(params, 'UseKstiff3');
+params = rmfield(params, 'EvalAtp');
+params = rmfield(params, 'vmax');
+params = rmfield(params, 'UseSerialStiffness');
+
+% params = rmfield(params, 'UseTitinModel');
+
+
 if isfield(params, 'ksrm')
     error('Change ksrm to kmsr!!')
 end
