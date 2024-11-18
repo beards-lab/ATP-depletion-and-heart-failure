@@ -30,5 +30,17 @@ try
     RunBakersExp;
     Et = sum(E);
 catch e
-    Et = NaN;
+    try
+        if ~isempty(e.cause)
+            % Extract the cause message if present
+            causeMessage = e.cause{end}.message;
+            
+            % Parse the error value from the cause message
+            Et = str2double(causeMessage)*1e6;
+        else
+            Et = 1e9;
+        end
+    catch ee
+        Et = 1e12;
+    end
 end

@@ -1,4 +1,4 @@
-function Es = simulateForceLengthEstim(g, params, plotThat)
+function Es = simulateForceLengthEstim(g, params, modelFcn, plotThat)
 
 if nargin < 2
     plotThat = false;
@@ -21,7 +21,11 @@ for i = 1:length(SL)
     params = getParams(params, params.g, true);
     
     % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
-    [F out] = evaluateModel(@dPUdTCaSimpleAlternative2State, [0 100], params);
+    try
+        [F out] = evaluateModel(modelFcn, [0 100], params);
+    catch e
+        handleAndRethrowCostException(e, 10*(length(SL) - i));
+    end
     F_total(i) = F;
     F_passive(i) = out.FXBPassive(end);
 p1_0(i) = out.p1_0(end);

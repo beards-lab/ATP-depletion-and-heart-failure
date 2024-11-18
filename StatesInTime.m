@@ -35,7 +35,7 @@ t = out.t(ti);
 
 % disp(hObject)
 % disp(event)
-subplot(211);
+subplot(2,3,1:2);
 yyaxis left;cla;hold on;
 % Pus = 1 - out.p1_0 - out.p2_0 - out.p3_0;% PU substitute
 plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '-', 'MarkerSize', 4, 'Linewidth', 2)
@@ -47,7 +47,7 @@ plot(out.t, out.SL/params.ML,'ro-', out.t, out.LXB/params.ML , '-', 'MarkerSize'
 % xlim([0 inf])
 % ylim([-50, Inf])
 plot([t t], [0 1]);
-printtext = sprintf('%0.6fs \n%0.2f um\n%0.2f kPa\n%0.2f s^{-1}', t, out.SL(ti), out.Force(ti), out.XB_TORs(ti));
+printtext = sprintf('%0.6fs \n%0.2f um\n%0.2f kPa\n%0.2f s^{-1}', t, out.SL(ti), out.Force(ti), out.RTD(ti));
 text(t,0.5, printtext);
 % hold on;
 yyaxis right;
@@ -59,7 +59,7 @@ legend('SL','LXB', 'Force','AutoUpdate','off');
 % yyaxis left;
 
 
-subplot(212);
+subplot(2,3,4:5);
 yl = ylim;
 cla;hold on;
 % hold on;
@@ -114,6 +114,9 @@ end
 if isempty(hObject)
     ylim([0 max([p1(:); p2(:); p3(:)])])
 end
+
+subplot(2, 3, [3 6]);cla;
+plotStateFluxes(out, t);
 
 end
 

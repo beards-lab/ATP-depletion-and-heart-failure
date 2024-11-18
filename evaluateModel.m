@@ -154,7 +154,13 @@ for vs = 1:length(T) - 1
 
         if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
             warning('ODEslower is not stable')
-            % error('ODEslower is not stable')
+            if params.BreakOnODEUnstable
+                try
+                    error('ODEslower is not stable');
+                catch e
+                    handleAndRethrowCostException(e, T(end) - t(end))
+                end
+            end
             % break;
         end        
 
@@ -304,8 +310,8 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.FXB(i) = outputs(2);
         out.FXBPassive(i) = outputs(3);
         out.OV(i) = outputs(4);
-        out.XB_TOR(i, :) = outputs(5:params.ss+4);
-        out.XB_TORs(i) = params.dS*sum(out.XB_TOR(i, :));
+        % out.XB_TOR(i, :) = outputs(5:params.ss+4);
+        % out.XB_TORs(i) = params.dS*sum(out.XB_TOR(i, :));
         out.LXBPivot(i) = params.LXBpivot;
 
         % rates = [RTD, RD1, sum([R1D; R12;R21;XB_Ripped])*dS];
@@ -314,26 +320,30 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.R1D(i) = rates(3);
         out.R12(i) = rates(4);
         out.R21(i) = rates(5);
-        out.XB_Ripped(i) = rates(6);
-        out.RSR2PT(i) = rates(7);
-        out.RPT2SR(i) = rates(8);
+        out.R2T(i) = rates(6);
+        out.XB_Ripped(i) = rates(7);
+        out.RSR2PT(i) = rates(8);
+        out.RPT2SR(i) = rates(9);
+        out.RSRD2PD(i) = rates(10);
+        out.RPD2SRD(i) = rates(11);
+        out.RSRD2SR(i) = rates(12);
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke
         if nS == 2
-            out.p1_0(i) = outputs(params.ss+5);
-            out.p2_0(i) = outputs(params.ss+6);
-            out.p1_1(i) = outputs(params.ss+7);
-            out.p2_1(i) = outputs(params.ss+8);
-            out.PuATP(i) = outputs(params.ss+9);
+            out.p1_0(i) = outputs(5);
+            out.p2_0(i) = outputs(6);
+            out.p1_1(i) = outputs(7);
+            out.p2_1(i) = outputs(8);
+            out.PuATP(i) = outputs(9);
         elseif nS == 3
-            out.p1_0(i) = outputs(params.ss+5);
-            out.p2_0(i) = outputs(params.ss+6);
-            out.p3_0(i) = outputs(params.ss+7);
-            out.p1_1(i) = outputs(params.ss+8);
-            out.p2_1(i) = outputs(params.ss+9);
-            out.p3_1(i) = outputs(params.ss+10);
-            out.PuATP(i) = outputs(params.ss + 11);
+            out.p1_0(i) = outputs(5);
+            out.p2_0(i) = outputs(6);
+            out.p3_0(i) = outputs(7);
+            out.p1_1(i) = outputs(8);
+            out.p2_1(i) = outputs(9);
+            out.p3_1(i) = outputs(10);
+            out.PuATP(i) = outputs(11);
         end
         
         

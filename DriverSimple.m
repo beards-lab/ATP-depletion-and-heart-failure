@@ -68,7 +68,6 @@ params0.ksr2srd = 3;
 
 params0.justPlotStateTransitionsFlag = false;
 
-
 % params0.sigma1 = 30;
 RunBakersExp;
 

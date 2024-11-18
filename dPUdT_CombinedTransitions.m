@@ -104,7 +104,7 @@ elseif ceil(s_p0) > params.ss
     s_i0 = params.ss - 1;
     s_i1 = params.ss;
     s_i0k = 0;
-    error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
+    % error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
 else
     % if params.UseSpaceInterpolation
         s_i0 = floor(s_p0);
@@ -141,7 +141,12 @@ if params.UseTitinInterpolation
         min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
 end
 
-F_total = F_active + F_passive;
+if params.useHalfActiveForSR
+    F_total = F_active/2 + F_passive;
+else
+    % default
+    F_total = F_active + F_passive;
+end
 % F_total = max(0, F_total);
 
 
@@ -192,7 +197,7 @@ if params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
     % dPUdT_TransitionRates;
     sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
-    R1D = p1.*sd(params.kd, params.alpha0, params.alpha0, params.dr0, 2, 2);
+    R1D = p1.*sd(params.kd, params.alpha0_L, params.alpha0_R, params.dr0, 2, 2);
     
     R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2, 2); % P1 to P2
     R21 = f1*p2.*sd(params.k_1, params.alpha_1, params.alpha_1, params.dr_1, 2, 2); % p2 to p1
@@ -200,7 +205,8 @@ if params.UseUniformTransitionFunc
     R2T = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 else 
 	strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));																		
-    R1D = params.kd*p1.*strainDep(params.alpha0, params.dr0); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+    R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+        + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
 
     R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
     R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
@@ -266,8 +272,8 @@ dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydro
     dNP = 0;
 
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
-outputs = [Force, F_active, F_passive, N_overlap, R2T', p1_0, p2_0, p1_1, p2_1, PT];
-rates = [RTD, RD1, sum([R1D, R12,R21,XB_Ripped], 1)*dS, RSR2PT, RPT2SR];
+outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];
+rates = [RTD, RD1, sum([R1D, R12,R21,R2T, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR];
 
 %% breakpints
 if t >= 1.20162642e+00 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1

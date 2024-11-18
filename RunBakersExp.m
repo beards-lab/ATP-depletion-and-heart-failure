@@ -24,25 +24,30 @@ if params0.RunForceVelocity
     for a = params.EvalAtp
         params.MgATP = ATP_c(a);
         for j = 1:length(vel)
-            if vel(j) == 0
-                params.SL0 = 2.0;
-                params.Velocity = 0;
-                [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
-            else
-                params.SL0 = 2.2;
-                % true to start from 2.2um steady state isntead from scratch.
-                % Neither is perfect though
-                if ~isfield(params, 'PU0')
-                    % speed things up by storing the initialization
+            try
+                if vel(j) == 0
+                    params.SL0 = 2.0;
                     params.Velocity = 0;
-                    [~, out] = evaluateModel(modelFcn, t_ss, params);
-                    params.PU0 = out.PU(end, :);
+                    [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
+                else
+                    params.SL0 = 2.2;
+                    % true to start from 2.2um steady state isntead from scratch.
+                    % Neither is perfect though
+                    if ~isfield(params, 'PU0')
+                        % speed things up by storing the initialization
+                        params.Velocity = 0;
+                        [~, out] = evaluateModel(modelFcn, t_ss, params);
+                        params.PU0 = out.PU(end, :);
+                    end
+                    params.Velocity = vel(j);
+                    [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);
+                    if abs(vel(j)) >= 3
+                        breakpointIsHappening = 1; % only to place a bp
+                    end
                 end
-                params.Velocity = vel(j);
-                [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);
-                if abs(vel(j)) >= 3
-                    breakpointIsHappening = 1; % only to place a bp
-                end
+            catch e
+                % wraps additional error for the optimizer
+                handleAndRethrowCostException(e, t_ss*(length(vel) - j));
             end
         end
     end
@@ -327,7 +332,12 @@ if params0.RunSlack
     velocitytable(1, 1) = -2;
     % validZone = datatable(:, 1) > 2;
         case 'All'
-    % all
+        % all
+        velocitytable = datastruct.velocitytable(1:end, :);
+        validZone = datatable(:, 1) > 1;
+        validZone = datatable(:, 1) > datastruct.velocitytable(2, 1);
+        case 'AllNoBump'
+    % all, but evaluate only force onset, not the restretch
     velocitytable = datastruct.velocitytable(1:end, :);
     validZone = datatable(:, 1) > 1;
     validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) |...
@@ -407,7 +417,7 @@ if params0.RunSlack
     % plot(datatable(validZone, 1), datatable(validZone, 3));hold on;
     % plot(datatable(validZone, 1), Fi, '|');
 
-    e = (datatable(validZone, 3) - Fi).^2;
+    e = (datatable(validZone, 3) - max(0, Fi)).^2;
     % e(isnan(e)) = 10;
     E(4) = mean(e(~isnan(e)))*20;
 
@@ -561,6 +571,6 @@ end
 if params0.RunForceLengthEstim
     params = params0;
     gp = ones(5, 1);
-    Es = simulateForceLengthEstim(ones(5, 1), params, params.PlotEachSeparately);
-    E(end+1) = Es*1e1;
+    Es = simulateForceLengthEstim(ones(5, 1), params, modelFcn, params.PlotEachSeparately);
+    E(end+1) = Es*1e0;
 end
