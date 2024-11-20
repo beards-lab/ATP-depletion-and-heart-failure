@@ -52,7 +52,8 @@ if params0.RunForceVelocity
         end
     end
     % cost function
-    E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
+    % E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
+    E(1) = sum((F_active(params.EvalAtp,:)./Data_ATP(:,params.EvalAtp+1)' - 1).^2, 'all');
     % normalize by number of data points
     E(1) = E(1)/size(Data_ATP, 1)/length(params.EvalAtp);
 
@@ -100,7 +101,7 @@ if params0.RunForceVelocity
             set(gca,'ColorOrderIndex',a);
             ls = [ls plot(F_active(a, :), -vel,'-','linewidth',1)];
         end
-        legend('8mM', '4mM', '2mM');
+        % legend('8mM', '4mM', '2mM');
         ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
         xlabel('Force (kPa)','interpreter','latex','fontsize',16);
         set(gca,'fontsize',14);
@@ -120,7 +121,7 @@ if params0.RunForceVelocity
             legend(['Ghost ' params.ghostLoad], ['Sim'  params.SimTitle] , 'Data', 'interpreter','none');
         else
             %         legend(['Sim'  params.SimTitle] , 'Data');
-            legend([ld ls(1)], '8mM ATP', '4mM ATP', '2mM ATP', 'model');
+            % legend([ld ls(1)], '8mM ATP', '4mM ATP', '2mM ATP', 'model');
         end
     end
 

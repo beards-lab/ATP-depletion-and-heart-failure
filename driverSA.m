@@ -261,9 +261,12 @@ params0.mods = {'alpha0', 'alpha2_R','kmsr','gamma','kd','k1','ka','dr2_R','sigm
 params0.g = [0.9765    1.1966    1.6759    0.2419    1.1190    0.8689    1.3629    1.4356    0.9853    0.3401    0.9596    0.4014    1.0851    0.5159    1.0188    0.5793    2.0921    1.2786];
 % only last slack
 params0.g = [0.9578    1.4289    1.6017    0.2347    1.1474    0.8426    1.3470    1.3556    0.9765    0.3708    0.9696    0.4100    1.0063    0.5208    1.0063    0.5792    1.9811    1.3405];
+% force velocity optim
+params0.mods = {'ka', 'kd', 'alpha0_L','kstiff1', 'kstiff2', 'alpha0_R'};
 %%
-params0.g = ones(size(params0.mods));
+% params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
+RunMDelta = true; % run minus delta as well?
 
 params0.ghostLoad = '';
 SAFact = 1.01;
@@ -289,10 +292,12 @@ for i_m = saSet
     cost = isolateRunBakersExp(params0);
     cost_sap(i_m) = cost;
     % 
-    params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
-    fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
-    cost = isolateRunBakersExp(params0);
-    cost_sam(i_m) = cost;
+    if RunMDelta
+        params0.g(i_m) = params0.g(i_m)/SAFact*(1+ 1-SAFact);
+        fprintf('costing %1.4e€ and down to %g...', cost, params0.g(i_m)*100);
+        cost = isolateRunBakersExp(params0);
+        cost_sam(i_m) = cost;
+    end
 
     fprintf('costing %1.4e€. \n', cost);
 end
@@ -347,16 +352,19 @@ hold on;plot([0 length(sorted_infl)+1], [c0 c0])
 % params0.mods = params0.mods(sorted_infl)
 %% Optim fminsearch
 
+
+params0.RunSlack = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
 
 params0.ShowResidualPlots = false;
 
-g = params0.g;
+% g = params0.g;
 % g = ones(length(params0.mods), 1);
+% g = params0.g(1:length(g))
 optimfun = @(g)evaluateBakersExp(g, params0);
-x = fminsearch(optimfun, params0.g, options)
+x = fminsearch(optimfun, g, options)
 params0.g = x;
 
 params0.PlotEachSeparately = true;
@@ -366,26 +374,32 @@ RunBakersExp;
 % writeParamsToMFile('ModelParams_surroFmin.m', params0);
 %% optim surrogateopt
 
-options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60*6, 'UseParallel',true);
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',true, MaxFunctionEvaluations=5000);
 
 optparams = params0;
 % optparams.mods = optparams.mods(sorted_infl(1:20))
-optparams.BreakOnODEUnstable = true;
-optparams.RunForceVelocity = false;
+optparams.BreakOnODEUnstable = false;
+optparams.RunForceVelocity = true;
 optparams.RunForceLengthEstim = false;
+optparams.RunSlack = false;
 optparams.RunSlackSegments = 'All';
 
-g = ones(length(optparams.mods), 1);
+% g = ones(length(optparams.mods), 1);
 % retrieve from table
 % T = load("optTable.mat").T;
 
-lb = T.lb./T.val; ub = T.ub./T.val;
-optparams.mods = cellstr(T.mods');
+% lb = T.lb./T.val; ub = T.ub./T.val;
+lb = 0.1*g, ub = 10*g 
+% optparams.mods = cellstr(T.mods');
 
 optimfun = @(g)evaluateBakersExp(g, optparams);
 
 [x,fval,exitflag,output,trials] = surrogateopt(optimfun, lb,ub, options);
-save tmpOpt3
+
+params0.g = x;
+RunBakersExp;
+% save tmpOpt3
+save tmpOpt5
 %% pattern search
 % Run the pattern search optimization
 % Create optimization options with suitable settings for high-dimensional optimization
@@ -423,17 +437,22 @@ clf;
 params0.BreakOnODEUnstable = false;
 params0.useHalfActiveForSR = false;
 params0.RunForceVelocity = true;
+params0.RunSlack = true;
 params0.RunForceLengthEstim = false;
 params0.PlotEachSeparately = true;
 params0.EvalFitSlackOnset = true;
 params0.ShowStatePlots = true;
 params0.justPlotStateTransitionsFlag = false;
 
- 
-params0.kd = 10;
-params0.alpha0 =100;
-params0.alpha0_L = 100;
-params0.alpha0_R = 10;
+% params0.mods = {'ka', 'kd', 'alpha0_L','kstiff1', 'kstiff2', 'alpha0_R'};
+% params0.g    =  [1.01,   1.2 ,    1.5       ,  0.95     ,   1     ,   1      ];
+params0.g =      [0.8839    0.8620    1.1055    0.9218    1.0863    1.0291];
+
+% params0.ka = 284.8;
+% params0.kd = 30.3;
+% % params0.alpha0 =100;
+% params0.alpha0_L = 60;
+% params0.alpha0_R = 10;
 % params0.FudgeVmax = true;
 tic
 RunBakersExp;
@@ -442,6 +461,7 @@ E
 sum(E)
 
 % writeParamsToMFile('ModelParams_surro.m', params0);
+% writeParamsToMFile('ModelParams_FVfit.m', params0);
 %%
 % T = table('VariableNames',["mod", "lb", "val", "ub"])
 % T = table()
@@ -472,6 +492,7 @@ params0.justPlotStateTransitionsFlag = false;
 % params0.EvalFitSlackOnset = true;
 % params0.drawForceOnset = true;
 
+params0.RunSlack = true;
 params0.RunForceLengthEstim = false;
 params0.RunForceVelocity = true;
 params0.RunForceLengthEstim = false;
