@@ -1,74 +1,104 @@
-% simplest 
+%% simplest 
 clear;
-saveResults = false;
 figure(2);
 clf; 
 % initialize parameters
 params0 = getParams();
-ModelParamsInit_FudgedSlack
-% ModelParamsInitDanOptim_All;
+
+% this file contains generated parameters for a once good fit of the last slack
 ModelParamsInitOptim_slack4
 
-params0.RunSlackSegments = 'Last';
+% left and right side of the A1 detachment strain sensitivity
+params0.alpha0_L = params0.alpha0;
+params0.alpha0_R = params0.alpha0;
 
+% Use the overlap function and the overlap function factor (Dan's NEW updated overlap)
+params0.UseOverlap = true;
+params0.UseOverlapFactor = true;
 
-params0.UseTitinInterpolation = false;
-params0.EvalFitSlackOnset = false;
+% correct force affecting the SR transition should be half, as they are
+% distributed triangle-shaped
+params0.useHalfActiveForSR = false;
 
-
-params0.RunForceLengthEstim = true;
+% Use steady-state passive, that has been identified from Bakers
+% experiments. No viscoelasticity
 params0.UseTitinIdentifiedPassive = true;
 
-params0.UseOverlap = true;
+% titin viscoelasticity minimally affect the restretch force overshoot
+params0.UseTitinInterpolation = false;
+%% Parameter fine tuning
+% optional, already in params0
+
+% New S_D state with the transitions
+params0.UseSuperRelaxedADP = true;
+params0.ksrd = 0*40;
+params0.kmsrd = 0*3;
+params0.ksr2srd = 0*3;
+params0.sigma_srd1 = params0.sigma1;
+
+% Already set in ModelParamsInit
+% params0.kah = 80;
+% params0.kadh = 0;
+% params0.ka = 25.2761;
+% params0.kd = 1.33821;
+% params0.k1 = 200.121;
+% params0.k_1 = 17.103;
+% params0.k2 = 23.9605;
+% params0.k_2 = 2.7901; % not used, depends on Pi
+% 
+% params0.ksr0 = 71.3756;
+% params0.kmsr = 2.95303;
+% params0.sigma1 = 22.1073;
+% params0.sigma2 = 999999;
+% 
+% params0.dr = 0.0201168;
+% params0.kstiff1 = 17830.3;
+% params0.kstiff2 = 8286.87;
+% params0.alpha0 = 36.1309;
+% params0.alpha1 = 98.2684;
+% params0.alpha_1 = 0;
+% params0.alpha2 = 31.5061;
+% params0.dr0 = 0;
+% params0.dr1 = 0;
+% params0.dr_1 = 0;
+% params0.dr2 = -0.005;
+% params0.dr3 = -0.01;
+% params0.mu = 0.001;
+% params0.kSE = 10879.7;
+% params0.gamma = 3.00138;
+% 
+% params0.alpha2_L = 25.0348;
+% params0.alpha2_R = 0.756688;
+% params0.k2_R = 41291.3;
+% params0.dr2_R = 0.00074017;
+
+%% WHAT TO RUN
+% Run the force-velocity profile
+params0.RunForceVelocity = true;
+
+% Which slack segment to run - try 'Last', 'All', 'First', 'Fourth' -
+% defined in RunBakersExp around lines 300
+params0.RunSlack = true;
+params0.RunSlackSegments = 'Last';
+
+% run the force-SL length profile at steady state
+params0.RunForceLengthEstim = false;
+
+% Show all the ramps overlapped. Only for 'All' slacks
+params0.EvalFitSlackOnset = false;
+
 params0.ShowStatePlots  = true;
 % params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
 
-params0.RunForceVelocity = true;
 LoadData;
-
-% writeParamsToMFile('ModelParamsInit_.m', params0, modNames);
-
-%
-params0.UseOverlapFactor = true;
-
-params0.FudgeVmax = false;
-params0.Lsc0 = 1.51;
-
-params0.UseOverlapFactor = true;
-
-% testing
+% Using the new Combined DxDt
 params0.modelFcn = 'dPUdT_CombinedTransitions';
+% use the older one
 params0.UseUniformTransitionFunc = false;
 
-params0.UseSuperRelaxedADP = true;
-params0.ksr0 = 40;
-params0.kmsr = 6;
-
-params0.ksrd = 40;
-params0.kmsrd = 3;
-params0.sigma_srd1 = params0.sigma1;
-params0.ksr2srd = 3;
-% params0.kstiff1 = 5.078e3;
-% % 
-% params0.kstiff2 = 7.2e3;
-% % 
-% % params0.justPlotStateTransitionsFlag = false;
-% % params0.UseOverlapFactor = true;
-% % params0.UseTitinIdentifiedPassive = true;
-% % 
-% params0.dr2_R = .74e-3;
-% params0.alpha2_L = 45;
-% params0.k2_L = 190;
-% params0.k2 = 25;
-% params0.ka = 100;
-% % params0.k1
-% params0.kd
-
-% params0.xrate = 2;
-
+% only plot the strain-rate profile
 params0.justPlotStateTransitionsFlag = false;
 
-% params0.sigma1 = 30;
 RunBakersExp;
 
 
@@ -93,7 +123,14 @@ ax = gca;
 ax.YColor = 'k';
 xlabel('Time (s)');
 ylabel('*Muscle length (L/L_0)');
-saveas(fig, 'Figures\proposal\')
+% saveas(fig, 'Figures\proposal\')
+%% Show states in time
+
+StatesInTime;
+
+% further on its just some retarded experiments
+return;
+
 %%
 
 % rates
@@ -166,7 +203,7 @@ params0.ML = 2.0;
 % params0.MaxSlackNegativeForce = -5;
 params0.justPlotStateTransitionsFlag = false;
 
-
+RunBakersExp
 
 %% initialize parameters from scratch
 clear;

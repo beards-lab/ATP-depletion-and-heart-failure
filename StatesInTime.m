@@ -57,7 +57,8 @@ legend('SL','LXB', 'Force','AutoUpdate','off');
 
 % plot([simulateTimes;simulateTimes]*1000, repmat([min([fd;out.F']);max([fd;out.F'])], [1 size(simulateTimes, 2)]))
 % yyaxis left;
-
+subplot(2, 3, [3 6]);cla;
+plotStateFluxes(out, t);
 
 subplot(2,3,4:5);
 yl = ylim;
@@ -115,8 +116,7 @@ if isempty(hObject)
     ylim([0 max([p1(:); p2(:); p3(:)])])
 end
 
-subplot(2, 3, [3 6]);cla;
-plotStateFluxes(out, t);
+
 
 end
 

@@ -116,7 +116,7 @@ for i_pos = 1:size(backward_pairs, 1)
     
     % Draw centered arrows for forward fluxes
     if backward_fluxes(i_pos) > max_flux
-        centered_arrow(x_start, y_start, x_end, y_end, max_flux, offset_x, offset_y, 'b', 1 + min(4, (backward_fluxes(i_pos) - max_flux)));
+        centered_arrow(x_start, y_start, x_end, y_end, max_flux, offset_x, offset_y, 'r', 1 + min(4, (backward_fluxes(i_pos) - max_flux)));
     else
         centered_arrow(x_start, y_start, x_end, y_end, backward_fluxes(i_pos), offset_x, offset_y, 'r', 1);
     end

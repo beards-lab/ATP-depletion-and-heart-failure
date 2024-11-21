@@ -313,6 +313,13 @@ if params0.RunSlack
             validZone = datatable(:, 1) > datastruct.velocitytable(17, 1) & datatable(:, 1) < datastruct.velocitytable(19, 1) - 0.1;
             % % only ramp-up at first - 
             % validZone = datatable(:, 1) > datastruct.velocitytable(16, 1) & datatable(:, 1) < datastruct.velocitytable(17, 1);            
+        case 'Fourth'
+            params.SL0 = 2.2;
+            % only the pre-last slack
+            velocitytable = [datastruct.velocitytable(1, :); datastruct.velocitytable(15:19, :)];
+            % ramp0up and peak
+            validZone = datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.1 & datatable(:, 1) < datastruct.velocitytable(19, 1) - 0.1;
+
         case 'FirstAndLast'
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
@@ -522,7 +529,7 @@ if params.EvalFitSlackOnset
         E(5) = 0*5e6*e_dt; E(6) = 0*e_ktr;
     catch e
         E(5) = 1e3;
-        disp(e);
+        warning('Eval slack onset failed');
     end
 end
 
