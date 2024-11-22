@@ -79,7 +79,7 @@ params0.RunForceVelocity = true;
 % Which slack segment to run - try 'Last', 'All', 'First', 'Fourth' -
 % defined in RunBakersExp around lines 300
 params0.RunSlack = true;
-params0.RunSlackSegments = 'Last';
+params0.RunSlackSegments = 'All';
 
 % run the force-SL length profile at steady state
 params0.RunForceLengthEstim = false;
@@ -98,6 +98,8 @@ params0.UseUniformTransitionFunc = false;
 
 % only plot the strain-rate profile
 params0.justPlotStateTransitionsFlag = false;
+params0.EvalFitSlackOnset = true;
+params0.drawForceOnset = true;
 
 RunBakersExp;
 

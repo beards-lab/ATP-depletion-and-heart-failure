@@ -401,6 +401,10 @@ RunBakersExp;
 % save tmpOpt3
 save tmpOpt5
 %% pattern search
+lb = 0.8*params0.g, ub = 1.2*params0.g;
+
+optimfun = @(g)evaluateBakersExp(g, params0);
+
 % Run the pattern search optimization
 % Create optimization options with suitable settings for high-dimensional optimization
 options = optimoptions('patternsearch', ...
@@ -414,7 +418,22 @@ options = optimoptions('patternsearch', ...
 
 [x, fval] = patternsearch(optimfun, g, [], [], [], [], lb, ub, [], options);
 
+%%
+% optparams_ = optparams;
 
+% params0 = optparams;
+params0.mods
+params0.g = x;
+params0.RunForceVelocity = false;
+params0.RunSlack = true;
+params0.RunSlackSegments = 'Fourth';
+% params0.BreakOnODEUnstable
+
+try
+RunBakersExp;
+catch e
+    disp e
+end
 
 %%
 clf;
@@ -436,18 +455,18 @@ load tmpOpt3.mat
 clf;
 params0.BreakOnODEUnstable = false;
 params0.useHalfActiveForSR = false;
-params0.RunForceVelocity = true;
+params0.RunForceVelocity = false;
 params0.RunSlack = true;
 params0.RunForceLengthEstim = false;
 params0.PlotEachSeparately = true;
-params0.EvalFitSlackOnset = true;
+params0.EvalFitSlackOnset = false;
 params0.ShowStatePlots = true;
 params0.justPlotStateTransitionsFlag = false;
 
 % params0.mods = {'ka', 'kd', 'alpha0_L','kstiff1', 'kstiff2', 'alpha0_R'};
 % params0.g    =  [1.01,   1.2 ,    1.5       ,  0.95     ,   1     ,   1      ];
-params0.g =      [0.8839    0.8620    1.1055    0.9218    1.0863    1.0291];
-
+params0.g =      [0.8839    0.8620    1.1055    0.9218    1.0863   ];
+params0.RunSlackSegments = 'Fourth';
 % params0.ka = 284.8;
 % params0.kd = 30.3;
 % % params0.alpha0 =100;
@@ -480,8 +499,8 @@ save("optTable2.mat", "T");
 %% Experiment run
 % params0.g = p_OptimGA;
 % params0.RunSlackSegments = 'Fourth-rampuponly';
-params0.RunSlackSegments = 'All';
-params0.EvalFitSlackOnset = true;
+params0.RunSlackSegments = 'Fourth';
+params0.EvalFitSlackOnset = false;
 params0.PlotEachSeparately = true;
 params0.ShowStatePlots = true;
 params0.justPlotStateTransitionsFlag = false;
@@ -494,7 +513,7 @@ params0.justPlotStateTransitionsFlag = false;
 
 params0.RunSlack = true;
 params0.RunForceLengthEstim = false;
-params0.RunForceVelocity = true;
+params0.RunForceVelocity = false;
 params0.RunForceLengthEstim = false;
 % experimenting
 % params0.FudgeVmax = true;
@@ -502,7 +521,10 @@ params0.RunForceLengthEstim = false;
 % params0.FudgeB = 121.922;
 % params0.FudgeC = -209.18;
 
+params0.alpha0_L = 95;
+
 tic
+figure(gcf);
 clf;
 LoadData;
 RunBakersExp
