@@ -2,7 +2,9 @@ function [cost_dt cost_ktr] = fitSlackForceOnset(datatable, velocitytable,t, SL,
 
 % modeldatatable = [out.t; out.SL; out.Force]';
 plotData_fit = plotData;
+plotOnsetData_fit = plotData;
 plotData_fit = false;
+% plotOnsetData_fit = false;
 
 modeldatatable = [t; SL; Force]';
 
@@ -53,7 +55,7 @@ v = dL'./dt;
 
 if plotData    
     
-    if plotData_fit
+    if plotOnsetData_fit
         nexttile;hold on;
         plot(modeldatatable(:, 1)-dropstart', modeldatatable(:, 2));
         leg_m = plot([3e-4 dt'], [2.2 SL], '*-', LineWidth=2);

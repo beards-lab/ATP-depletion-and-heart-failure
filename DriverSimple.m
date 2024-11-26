@@ -22,6 +22,9 @@ params0.UseTitinIdentifiedPassive = true;
 
 % titin viscoelasticity minimally affect the restretch force overshoot
 params0.UseTitinInterpolation = false;
+
+params0.alpha0_L = params0.alpha0;
+params0.alpha0_R = params0.alpha0;
 %% Parameter fine tuning
 % optional, already in params0
 
@@ -74,8 +77,9 @@ params0.kstiff2 = 10000;
 % params0.dr2_R = 0.00074017;
 
 %% WHAT TO RUN
+figure(3);clf;
 % Run the force-velocity profile
-params0.RunForceVelocity = true;
+params0.RunForceVelocity = false;
 
 % Which slack segment to run - try 'Last', 'All', 'First', 'Fourth' -
 % defined in RunBakersExp around lines 300
@@ -101,6 +105,13 @@ params0.UseUniformTransitionFunc = false;
 params0.justPlotStateTransitionsFlag = false;
 params0.EvalFitSlackOnset  = true;
 params0.drawForceOnset = true;
+
+params0.FudgeVmax = false;
+% params0.FudgeA = 0;
+% params0.FudgeB = 121.922;
+% params0.FudgeC = -209.18;
+params0.UseForceOnsetShift = true;
+params0.BreakOnODEUnstable = false;
 
 RunBakersExp;
 

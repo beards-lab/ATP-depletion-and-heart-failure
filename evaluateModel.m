@@ -42,7 +42,7 @@ ticId = tic;
             SL = y(3*ss + 3);
             LSE = y(3*ss + 4); % length of the serial stiffness
         end            
-        s = params.s([1, end]) + (-(SL - LSE) + params.LXBpivot)/2;
+        s = params.s(1) + (-(SL - LSE) + params.LXBpivot)/2;
         s_p0 = 1 + round(-s(1)/params.dS, 6);
         value(1) = floor(s_p0) - 1;
         direction(1) = -1;
@@ -58,6 +58,37 @@ ticId = tic;
         value(3) = elapsed - params.MaxRunTime; %
         isterminal(3) = 1; % stop
         direction(3) = 1; % find all direction 0
+        
+        if params.UseForceOnsetShift
+            %% calculate using XB force
+            % % register force onset
+            % s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
+            % s = flipud(-s);
+            % ss = params.ss; % space size (length of the s for each of p1-p3)
+            % p1_ = y(1:ss);
+            % p2_ = y(ss+1:2*ss);
+            % 
+            % % sum of all probabilities
+            % p1_1 = params.dS*sum(s.*p1_);
+            % p2_1 = params.dS*sum((s+params.dr).*p2_);
+            % 
+            % F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);
+            % fp = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+            % F_passive = fp(0.4, -0.4, 7.9, (SL-LSE)/2);
+            % % Ftotal > eps
+            % value(4) = F_passive + F_active - 1e-3;
+
+            %% calculate using LSE force
+            LSE = y(2*ss + 4); % length of the serial stiffness
+            value(4) = params.kSE*LSE - 1e-3;
+            if t > 0
+                isterminal(4) = true;
+            else
+                % do not break before zero
+                isterminal(4) = false;
+            end
+            direction(4) = 1;
+        end
     end
 
 
@@ -108,8 +139,7 @@ for vs = 1:length(T) - 1
 
         if ~isempty(te)
             % we have an event from previous run
-            fprintf('Hovna took %d steps\n', length(t))
-            imax = imax - 1;
+            ts = t(end);
             nds = params.WindowsOverflowStepCount;
             if ie == 1
                 % move right
@@ -121,8 +151,9 @@ for vs = 1:length(T) - 1
                     PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
                     PU0(3*ss-nds:3*ss) = 0;
                 end
-
                 params.LXBpivot = params.LXBpivot - nds*params.dS*2;
+                fprintf('Hovna took %d steps right\n', length(t))
+                imax = imax - 1;
             elseif ie == 2
                 % move left
                 PU0(1+nds:ss) = PU0(1:ss-nds);
@@ -136,8 +167,70 @@ for vs = 1:length(T) - 1
 
                 % dS is in half-sarcomere space, converting to sarcomere space by 2
                 params.LXBpivot = params.LXBpivot + nds*params.dS*2;
-            end
-            ts = t(end);
+                fprintf('Hovna took %d steps left\n', length(t))
+                imax = imax - 1;
+            elseif ie == 3
+                try
+                    error('ODEslower took longer than MaxRunTime %d s', params.MaxRunTime);
+                catch e
+                    handleAndRethrowCostException(e, T(end) - t(end))
+                end                
+            elseif ie == 4
+                % time at which the data start to generate force
+                t_f0 = [1.1616    1.4637    1.8162    2.2691    2.7724];
+                % t0 = interpts = t(end)
+                % i_tf0 = interp1(t_f0, ts, 'nearest');
+                ts = interp1(t_f0, t_f0, t(end), 'nearest', 'extrap');
+                sprintf('Resetting %f to %f', t(end), ts)
+                % ts = t_f0(i_tf0);
+                % ts = i_tf0;
+                % ts = t_f0
+            
+                %% unfinished business
+                % set states
+                % We start from state dsitribution before the slack, this
+                % should be in PU0
+                % ss = params.ss; 
+                % dS = params.dS;
+                % 
+                % 
+                % % p1
+                % p10 = sum(PU0(1:ss))*dS;
+                % PU0(1:ss) = zeros(1, ss);
+                % % p2
+                % p20 = sum(PU0(ss+1:2*ss))*dS;
+                % PU0(ss+1:2*ss) = zeros(1, ss);
+                % 
+                % if params.UseSuperRelaxed
+                %     SR0 = PU0(2*ss+1);
+                %     % all p2 states to SRT states
+                %     PU0(2*ss+1) = SR0 + p20;
+                % end
+                % 
+                % % all p1 states back to UD
+                % PD0 = PU0(2*ss + 5);
+                % PU0(2*ss + 5) = PD0 + p20;
+                % 
+                % if params.UseSuperRelaxedADP
+                %     SRD0 = PU0(2*ss+6);
+                % end
+                % 
+                % % test: braking force is in the p1 only
+                % y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+                % F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2)
+                % 
+                % p1_1 = F_passive / params.kstiff1; 
+                % 
+                % % ok... how is this?
+                % s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
+                % 
+                % s_i0 = floor(s_p0);
+                % s_i1 = ceil(s_p0);
+                % s_i0k = s_i1 - s_p0;
+                % 
+                % p1(s_i0) = p1_1/dS;
+                % p1(s_i1) = p1_1/dS;
+            end            
         end
         
         lastwarn('', ''); 
