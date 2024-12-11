@@ -56,7 +56,7 @@ ticId = tic;
 
         elapsed = toc(ticId); % counting current time
         value(3) = elapsed - params.MaxRunTime; %
-        isterminal(3) = 1; % stop
+        isterminal(3) = 0; % stop
         direction(3) = 1; % find all direction 0
         
         if params.UseForceOnsetShift
@@ -96,7 +96,7 @@ if params.UseTitinInterpolation
     % addpath(genpath('PassiveTitin'));
     params.TitinTable = load("PassiveTitin\titin-slack.mat").tit;
 end
-
+i_tf0 = 0;
 % vs for VelocitySegment
 for vs = 1:length(T) - 1
     ts = T(vs);
@@ -173,15 +173,25 @@ for vs = 1:length(T) - 1
                 try
                     error('ODEslower took longer than MaxRunTime %d s', params.MaxRunTime);
                 catch e
-                    handleAndRethrowCostException(e, T(end) - t(end))
+                    handleAndRethrowCostException(e, 1e6 + 1e3*(T(end) - t(end)));
                 end                
             elseif ie == 4
                 % time at which the data start to generate force
                 t_f0 = [1.1616    1.4637    1.8162    2.2691    2.7724];
-                % t0 = interpts = t(end)
-                % i_tf0 = interp1(t_f0, ts, 'nearest');
-                ts = interp1(t_f0, t_f0, t(end), 'nearest', 'extrap');
-                sprintf('Resetting %f to %f', t(end), ts)
+                i_tf0 = i_tf0 + 1;                
+                i_tf1 = interp1(t_f0, 1:5, t(end), 'nearest', 'extrap');
+                
+                % pick whichever is higher - we can miss the zero crossing,
+                % we must not step twice into the same river                
+                if i_tf0 > length(t_f0)
+                    % end the cycle - we done here
+                    break;
+                else
+                    ts = t_f0(max(i_tf0, i_tf1));
+                end
+
+
+                % sprintf('Resetting %f to %f', t(end), ts)
                 % ts = t_f0(i_tf0);
                 % ts = i_tf0;
                 % ts = t_f0
@@ -246,13 +256,14 @@ for vs = 1:length(T) - 1
         out = storeOutputs(fcn,out, PU, params, t);
 
         if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
-            warning('ODEslower is not stable')
             if params.BreakOnODEUnstable
                 try
                     error('ODEslower is not stable');
                 catch e
                     handleAndRethrowCostException(e, T(end) - t(end))
                 end
+            else
+                warning('ODEslower is not stable')
             end
             % break;
         end        
@@ -420,6 +431,7 @@ nS = params.NumberOfStates; % number of strain-dependent states
         out.RSRD2PD(i) = rates(10);
         out.RPD2SRD(i) = rates(11);
         out.RSRD2SR(i) = rates(12);
+        out.RT2(i)  = rates(13);
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke

@@ -1,4 +1,4 @@
-%% simplest 
+% simplest 
 clear;
 figure(2);
 clf; 
@@ -30,10 +30,12 @@ params0.alpha0_R = params0.alpha0;
 
 % New S_D state with the transitions
 params0.UseSuperRelaxedADP = true;
-params0.ksrd = 10;
+params0.ksrd = 100;
 params0.kmsrd = 0.25;
 params0.ksr2srd = 5;
+params0.sigma2 = 1e2;
 params0.sigma_srd1 = params0.sigma1;
+params0.sigma_srd2 = 5;
 
 %   DAB fiddling with parameter values
 % left and right side of the A1 detachment strain sensitivity
@@ -76,7 +78,7 @@ params0.kstiff2 = 10000;
 % params0.k2_R = 41291.3;
 % params0.dr2_R = 0.00074017;
 
-%% WHAT TO RUN
+% WHAT TO RUN
 figure(3);clf;
 % Run the force-velocity profile
 params0.RunForceVelocity = false;
@@ -102,7 +104,7 @@ params0.modelFcn = 'dPUdT_CombinedTransitions';
 params0.UseUniformTransitionFunc = false;
 
 % only plot the strain-rate profile
-params0.justPlotStateTransitionsFlag = false;
+params0.justPlotStateTransitionsFlag = true;
 params0.EvalFitSlackOnset  = true;
 params0.drawForceOnset = true;
 
@@ -113,9 +115,22 @@ params0.FudgeVmax = false;
 params0.UseForceOnsetShift = true;
 params0.BreakOnODEUnstable = false;
 
+params0.UseA2Reattaching = false;
+params0.useHalfActiveForSR = true;
+
+% params0.k_2 = 50;
+
+% params0.ghostSave = '';
+params0.ghostLoad = 'NoReattach';
+
+
+% tic
 RunBakersExp;
+% toctime = [toctime toc];
 
 
+% mean(toctime)
+% toctime = [];
 %% fancy plot
 fig = figure(80085);clf;hold on;
 t0 = 2.7594;

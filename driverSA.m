@@ -19,6 +19,7 @@ cost_sam = []; % SA minus
 % ModelParamsOptim_fudgeSlackVelocities
 % ModelParamsInitOptim_slack4
 ModelParams_SR
+ModelParams_FVfit
 
 params0.UseOverlapFactor = false;
 % params0.ksr = params0.ksr0;
@@ -59,7 +60,8 @@ params0.UseDirectSRXTransition = false;
 % params0.L_thick = 1.67; % Length of thick filament, um
 % params0.L_hbare = 0.10; % Length of bare region of thick filament, um
 % params0.L_thin  = 1.20; % Length of thin filament, um
-
+%%
+params0.UseUniformTransitionFunc = false;
 params0.drawPlots = true;
 params0.drawForceOnset = true;
 params0.PlotEachSeparately = true;
@@ -80,13 +82,13 @@ params0.UsePassiveForSR = false;
 % params0.kstiff2 = 1.8e4;
 % params0.kstiff1 = 10.2e3;
 
-params0.MaxSlackNegativeForce = 0;
-params0.FudgeVmax = true;
-params0.FudgeVmax = 1;
-params0.vmax1 = 20;
-params0.FudgeA = 0;
-params0.FudgeB = 121.922;
-params0.FudgeC = -209.18;
+% params0.MaxSlackNegativeForce = 0;
+% params0.FudgeVmax = false;
+% params0.FudgeVmax = 1;
+% params0.vmax1 = 20;
+% params0.FudgeA = 0;
+% params0.FudgeB = 121.922;
+% params0.FudgeC = -209.18;
 
 % params0.vmax = 18;
 
@@ -98,19 +100,32 @@ params0.FudgeC = -209.18;
 params0.ghostLoad = 'DtKtr_OV';
 tic
 
+params0.UseForceOnsetShift = false;
+params0.UseA2Reattaching = false;
+params0.RunSlack = true;
+params0.RunSlackSegments = 'All';
+params0.UseSuperRelaxedADP = true;
+
+
 RunBakersExp;
 toc
 sum(E)
 %% experiment with SRD
 figure(1);clf;
-params0.UseSuperRelaxedADP = false;
+params0.UseSuperRelaxedADP = true;
 params0.UseSuperRelaxed = true;
 params0.UsePassiveForSR = false;
 
-params0.kmsr = 20;
-params0.ksr0 = 1;
-params0.sigma1 = 1e6;
-params0.sigma2 = 1e6;
+% params0.kmsr = 20;
+% params0.ksr0 = 1;
+% params0.sigma1 = 1e6;
+params0.sigma2 = 1000;
+
+params0.ksrd = 50;
+params0.kmsrd = 1;
+params0.ksr2srd = 10;
+params0.sigma_srd1 = 1e6;
+params0.sigma_srd2 = 5;
 
 params0.ksrd0 = params0.ksr0;
 params0.kmsrd = params0.kmsr;
@@ -119,6 +134,7 @@ params0.ksr2srd = .1;
 params0.RunStairs = false;
 params0.RunSlack = true;
 params0.RunForceVelocity = false;
+params0.justPlotStateTransitionsFlag = true;
 
 params0.RunSlackSegments = 'ramp-down';
 % params0.RunSlackSegments = 'ramp-up';
@@ -128,7 +144,7 @@ RunBakersExp;
 %%
 ModelParamsInit_TF2_slack4;
 ModelParamsOptim_tf2_slackLast;
-ModelParamsOptim_tmp;
+% ModelParamsOptim_tmp;
 %%
 figure(1001); clf; hold on;
 params0.RunSlackSegments = 'All';
@@ -263,10 +279,15 @@ params0.g = [0.9765    1.1966    1.6759    0.2419    1.1190    0.8689    1.3629 
 params0.g = [0.9578    1.4289    1.6017    0.2347    1.1474    0.8426    1.3470    1.3556    0.9765    0.3708    0.9696    0.4100    1.0063    0.5208    1.0063    0.5792    1.9811    1.3405];
 % force velocity optim
 params0.mods = {'ka', 'kd', 'alpha0_L','kstiff1', 'kstiff2', 'alpha0_R'};
+
+% current mods
+params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'dr0', 'k1', 'alpha1', 'k_1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE'};
+params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'k1', 'alpha1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE'};
+
 %%
-% params0.g = ones(size(params0.mods));
+params0.g = ones(size(params0.mods));
 saSet = 1:length(params0.mods);
-RunMDelta = true; % run minus delta as well?
+RunMDelta = false; % run minus delta as well?
 
 params0.ghostLoad = '';
 SAFact = 1.01;
@@ -352,8 +373,8 @@ hold on;plot([0 length(sorted_infl)+1], [c0 c0])
 % params0.mods = params0.mods(sorted_infl)
 %% Optim fminsearch
 
-
-params0.RunSlack = false;
+params0.MaxRunTime = 1;
+% params0.RunSlack = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
@@ -366,23 +387,32 @@ params0.ShowResidualPlots = false;
 optimfun = @(g)evaluateBakersExp(g, params0);
 x = fminsearch(optimfun, g, options)
 params0.g = x;
+g = x;
 
+%%
+clf;
 params0.PlotEachSeparately = true;
+params0.UseForceOnsetShift = true;
+params0.RunForceLengthEstim = true;
+params0.RunForceVelocity = true;
+params0.ErrorMultiplier = [100 1 1 1 1 1 1];
 RunBakersExp;
 % params0.g = params0.g(1:26);
 % save tmpFminSlackOpt;
-% writeParamsToMFile('ModelParams_surroFmin.m', params0);
+% writeParamsToMFile('ModelParams_V1_Fmin2.m', params0);
+% writeParamsToMFile('ModelParams_V1_Fmin3.m', params0);
 %% optim surrogateopt
 
-options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',true, MaxFunctionEvaluations=5000);
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 6*60*60, 'UseParallel',true, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', x', MaxFunctionEvaluations=5000);
 
 optparams = params0;
 % optparams.mods = optparams.mods(sorted_infl(1:20))
-optparams.BreakOnODEUnstable = false;
-optparams.RunForceVelocity = true;
+optparams.BreakOnODEUnstable = true;
+optparams.RunForceVelocity = false;
 optparams.RunForceLengthEstim = false;
-optparams.RunSlack = false;
+optparams.RunSlack = true;
 optparams.RunSlackSegments = 'All';
+optparams.EvalFitSlackOnset = false;
 
 % g = ones(length(optparams.mods), 1);
 % retrieve from table
@@ -397,9 +427,11 @@ optimfun = @(g)evaluateBakersExp(g, optparams);
 [x,fval,exitflag,output,trials] = surrogateopt(optimfun, lb,ub, options);
 
 params0.g = x;
+params0.UseForceOnsetShift = false;
 RunBakersExp;
+% writeParamsToMFile('ModelParams_V1_Surro.m', params0);
 % save tmpOpt3
-save tmpOpt5
+save tmpSurrOpt
 %% pattern search
 lb = 0.8*params0.g, ub = 1.2*params0.g;
 
@@ -408,34 +440,54 @@ optimfun = @(g)evaluateBakersExp(g, params0);
 % Run the pattern search optimization
 % Create optimization options with suitable settings for high-dimensional optimization
 options = optimoptions('patternsearch', ...
-                       'UseParallel', true, ...
+                       'UseParallel', false, ...
                        'Display', 'iter', ...
                        'PollMethod', 'GSSPositiveBasis2N', ...  % Polling method
                        'SearchMethod', 'MADSPositiveBasis2N', ... % Search method
                        'MaxIterations', 50, ...
                        'MaxFunctionEvaluations', 2000, ...
-                       'MeshTolerance', 1e-3);  % Tolerance for the mesh size
+                       'MeshTolerance', 1e-3, 'PlotFcn', 'psplotbestf');  % Tolerance for the mesh size
 
-[x, fval] = patternsearch(optimfun, g, [], [], [], [], lb, ub, [], options);
+[x, fval] = patternsearch(optimfun, x, [], [], [], [], lb, ub, [], options);
 
-%%
+%% WGA search
+
+% Set WGA options
+options = optimoptions('wga', 'MaxGenerations', 100, 'PopulationSize', 200);
+
+% Run the Wild Geese Algorithm
+[x, fval] = wga(optimfun, length(lb), lb, ub, options);
+
+% Display the results
+disp('Optimal solution found:');
+disp(x);
+disp('Objective function value at optimal solution:');
+disp(fval);
+
+%% playground
 % optparams_ = optparams;
 
 % params0 = optparams;
-params0.mods
-params0.g = x;
-params0.RunForceVelocity = false;
-params0.RunSlack = true;
-params0.RunSlackSegments = 'Fourth';
+% params0.mods
+% params0.g = x;
+% params0.RunForceVelocity = false;
+% params0.RunSlack = true;
+% params0.RunSlackSegments = 'Fourth';
 % params0.BreakOnODEUnstable
 
 try
+    clf;
+    params0.ShowStatePlots = true;
+    tic
 RunBakersExp;
+toc
+
+
 catch e
     disp e
 end
 
-%%
+%% playground
 clf;
 
 params0.g = ones(length(params0.mods), 1);
@@ -485,6 +537,9 @@ sum(E)
 % T = table('VariableNames',["mod", "lb", "val", "ub"])
 % T = table()
 clear t_mods t_val;
+optparams = params0;
+% optparams.mods = {'ksr0', 'kmsr', 'sigma1', 'sigma2', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd1', 'sigma_srd2', 'L_thick', 'L_hbare', 'L_thin', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'dr0', 'k1', 'alpha1', 'k_1', 'alpha_1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'dr2_R', 'kstiff1', 'kstiff2', 'dr'};
+optparams.mods = params0.mods;
 for i = 1:length(optparams.mods)
     t_mods(i) = string(optparams.mods{i});
     t_val(i) = optparams.(optparams.mods{i});
@@ -494,7 +549,7 @@ T = table(t_mods', t_val'*0.1, t_val', t_val'*10);
 T.Properties.VariableNames = ["mods", "lb", "val", "ub"];
 
 % manually edit the values
-save("optTable2.mat", "T");
+% save("optTable3.mat", "T");
 
 %% Experiment run
 % params0.g = p_OptimGA;
@@ -567,8 +622,8 @@ clf;RunBakersExp;
 
 figure(8340);clf;
 LoadData;
-params0.ksr = params0.ksr0;
-params0.kmsr
+% params0.ksr = params0.ksr0;
+% params0.kmsr
 % params0.L_thick = 1.67; % Length of thick filament, um
 % params0.L_hbare = 0.10; % Length of bare region of thick filament, um
 % params0.L_thin  = 1.20; % Length of thin filament, um
@@ -607,19 +662,19 @@ params0.UseDirectSRXTransition = false;
 % rather extreme parametrization - max rate in, max dependence out
 % a bit weird shape - the force depends on force
 % from SR
-params0.ksr0 = 100/20;
-params0.sigma1 = 10e0;
+% params0.ksr0 = 100/20;
+% params0.sigma1 = 10e0;
 % to SR
-params0.kmsr = 6000/20*2;
-params0.sigma2 = 1e6;
+% params0.kmsr = 6000/20*2;
+% params0.sigma2 = 1e6;
 
 % Other way around
 % from SR
-params0.ksr0 = 100;
-params0.sigma1 = 1e6;
+% params0.ksr0 = 100;
+% params0.sigma1 = 1e6;
 % to SR
-params0.kmsr = 5000;
-params0.sigma2 = 20e0;
+% params0.kmsr = 5000;
+% params0.sigma2 = 20e0;
 % 
 % Other way around - less steep
 % from SR
@@ -640,21 +695,21 @@ params0.sigma2 = 20e0;
 
 % Dans tests
 % out of SR
-params0.ksr0 = 10;
-params0.sigma1 = 50e6;
+% params0.ksr0 = 10;
+% params0.sigma1 = 50e6;
 % to SR
-params0.kmsr = 30;
-params0.sigma2 = 1e6;
-params0.UseDirectSRXTransition = false;
-
-params0.ka = 25;
-params0.kd = 1;
+% params0.kmsr = 30;
+% params0.sigma2 = 1e6;
+% params0.UseDirectSRXTransition = false;
+% 
+% params0.ka = 25;
+% params0.kd = 1;
 
 %
-F_SR = 80;PT = 0.15;
-RSR2PT = params0.ksr0*exp(F_SR/params0.sigma1);
-RPT2SR = params0.kmsr*exp(-F_SR/params0.sigma2);
-r_SR = RPT2SR/RSR2PT*PT
+% F_SR = 80;PT = 0.15;
+% RSR2PT = params0.ksr0*exp(F_SR/params0.sigma1);
+% RPT2SR = params0.kmsr*exp(-F_SR/params0.sigma2);
+% r_SR = RPT2SR/RSR2PT*PT
 %
 params0.justPlotStateTransitionsFlag = false;
 % params0.UseTitinInterpolation = false;
@@ -681,7 +736,7 @@ params0.ghostLoad = 'tmp';
 % for fudgeB and C x =    0.8414    1.0641
 %
 % params0.g = [1.4747    0.9379]
-params0.FudgeVmax = true;
+% params0.FudgeVmax = true;
 % params0.justPlotStateTransitionsFlag = false;
 tic
 RunBakersExp;

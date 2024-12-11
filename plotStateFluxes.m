@@ -24,13 +24,14 @@ UD2SD = out.RPD2SRD(i_pos);
 UD2UT = 0;  % Previously t2d, then s22s1
 A12UD = out.R1D(i_pos);  % Previously a12t, then a12s2
 A22A1 = out.R21(i_pos);
+UT2A2 = out.RT2(i_pos);
 
 % Define flux between SD and ST
 SD2ST = out.RSRD2SR(i_pos);
 
 % Assemble forward and backward fluxes into arrays
 forward_fluxes = [UT2UD, UD2A1, A12A2, A22UT, ST2UT, SD2UD];
-backward_fluxes = [UD2UT, A12UD, A22A1, UT2ST, UD2SD, SD2ST];
+backward_fluxes = [UD2UT, A12UD, A22A1, UT2ST, UD2SD, SD2ST, UT2A2];
 
 % Define the maximal flux
 if nargin < 3
@@ -52,7 +53,7 @@ text(x + 0.1, y +0.1, labels, 'FontSize', 12, 'FontWeight', 'bold');
 forward_pairs = [1 2; 2 3; 3 4; 4 1; 5 1; 6 2];
 
 % Mapping backward fluxes to their corresponding start and end indices
-backward_pairs = [2 1; 3 2; 4 3; 1 5; 2 6; 6 5];
+backward_pairs = [2 1; 3 2; 4 3; 1 5; 2 6; 6 5; 1 4];
 
 % Offset for parallel arrows
 vertical_offset = 0.02;

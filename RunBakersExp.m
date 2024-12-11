@@ -1,5 +1,6 @@
 E = [];
-modelFcn = @dPUdTCaSimpleAlternative2State;
+% modelFcn = @dPUdTCaSimpleAlternative2State;
+modelFcn = @dPUdT_CombinedTransitions;
 
 if isfield(params0, 'modelFcn')
     modelFcn = str2func(params0.modelFcn);
@@ -14,9 +15,10 @@ if params0.RunForceVelocity
     t_sl0 = [0 0.1];
 
     params = getParams(params);
+    params.UseForceOnsetShift = false;
     F_active = [];
 
-    params.UseTitinModel = false;
+    % params.UseTitinModel = false;
     % params.UseSerialStiffness = false;
     if isfield(params, 'PU0')
         params = rmfield(params, 'PU0');

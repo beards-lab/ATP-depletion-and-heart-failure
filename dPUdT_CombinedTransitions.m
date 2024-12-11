@@ -20,31 +20,32 @@ end
 % if ~params.UseCa
     NP = 0;
 
-if ~params.UseSLInput
+% if ~params.UseSLInput
     SL = PU(2*ss + 3);
     dSL = vel;
-else
-    if t >= params.datatable(end-1, 1)
-        % if the sim time is over the datatable length, hold the SL
-        SL = params.datatable(end, 2);
-        dSL = 0;
-    elseif t <= params.datatable(1, 1)
-        SL = params.datatable(1, 2);
-        dSL = 0;
-    else
-        % TODO make it faster in sorted list
-        % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
-        i = find(params.datatable(:, 1) >= t,1,'First');    
-    %     i = min(length(params.datatable(:, 1))-1, i);
-        SL = params.datatable(i, 2);
-        if i == 1
-            dSL = 0;
-        else
-            dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
-        end
-    end
-    vel = dSL;
-end    
+% else
+%     % too slow
+%     if t >= params.datatable(end-1, 1)
+%         % if the sim time is over the datatable length, hold the SL
+%         SL = params.datatable(end, 2);
+%         dSL = 0;
+%     elseif t <= params.datatable(1, 1)
+%         SL = params.datatable(1, 2);
+%         dSL = 0;
+%     else
+%         % TODO make it faster in sorted list
+%         % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
+%         i = find(params.datatable(:, 1) >= t,1,'First');    
+%     %     i = min(length(params.datatable(:, 1))-1, i);
+%         SL = params.datatable(i, 2);
+%         if i == 1
+%             dSL = 0;
+%         else
+%             dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
+%         end
+%     end
+%     vel = dSL;
+% end    
 
     
 % P_SRs = 1 - P_SR;
@@ -82,6 +83,9 @@ s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
 s = flipud(-s);
 dS = params.dS;
 
+if true
+    [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
+else
 % estimate the position of the actual index of zero strain
 % IMPORTANT: s MUST be around 0 somewhere!
 s_p0 = 1 + round(-s(1)/params.dS, 6); % strain position in space at 0
@@ -111,6 +115,7 @@ else
         s_i1 = ceil(s_p0);
         s_i0k = s_i1 - s_p0;
 end
+end
 
 % sum of all probabilities
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
@@ -121,7 +126,8 @@ PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR + P_SRD)); % unattached perm
     F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
 
 if params.UseOverlapFactor
-    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + PT + PD); % overlap factor
+    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
+
 end    
 
 F_passive = 0;
@@ -141,12 +147,9 @@ if params.UseTitinInterpolation
         min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
 end
 
-if params.useHalfActiveForSR
-    F_total = F_active/2 + F_passive;
-else
-    % default
-    F_total = F_active + F_passive;
-end
+% default
+F_total = F_active + F_passive;
+
 % F_total = max(0, F_total);
 
 
@@ -173,8 +176,8 @@ end
 if params.justPlotStateTransitionsFlag
     % s = s - (s(end) - s(1))/2; 
     s = -0.05:0.001:0.05;
-    F_total = -5:0.1:80;
-    F_passive = -5:0.1:10;
+    F_total = -5:1:80;
+    F_passive = -5:1:10;
     p1 = ones(size(p1));
     p2 = ones(size(p2));
     
@@ -216,13 +219,19 @@ else
     R2T = p2.*(params.k2 + kL + kR);
 end
 
+
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
 if params.UsePassiveForSR
     F_SR = F_passive;
 else
-    F_SR = F_total;
+    if params.useHalfActiveForSR
+        F_SR  = F_active/2 + F_passive;
+    else
+    % default
+        F_SR  = F_total;
+    end
 end
 
 % F_SR = (SL-LSE);
@@ -239,8 +248,8 @@ else
 end
 
 if params.UseSuperRelaxed     
-	RSR2PT = params.kmsr*exp(F_total/params.sigma1)*P_SR;
-    RPT2SR = params.ksr0*exp(-F_total/params.sigma2)*PT;
+	RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*P_SR;
+    RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*PT;
 else 
     RSR2PT = 0;
     RPT2SR = 0;    
@@ -263,6 +272,18 @@ dPD = RSRD2PD - RPD2SRD + RTD - RD1 + sum(R1D)*dS;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 
+if params.UseA2Reattaching
+    [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) + params.dr, params.dS, params.ss);
+    RT2 = params.k_2*PT;
+    dp2(s_i0_a2) = dp2(s_i0_a2) + s_i0k*(RT2/dS); % attachment
+    dp2(s_i1_a2) = dp2(s_i1_a2) + (1-s_i0k_a2)*(RT2/dS); % attachment    
+    % PT state is calculated as a complement of all states to 1, so we do
+    % not have to specify the outflow
+    % PT = ...
+else
+    RT2 = 0;
+end
+
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
     dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
@@ -273,7 +294,7 @@ dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydro
 
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
 outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];
-rates = [RTD, RD1, sum([R1D, R12,R21,R2T, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR];
+rates = [RTD, RD1, sum([R1D, R12,R21,R2T, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR, RT2];
 
 %% breakpints
 if t >= 1.20162642e+00 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
@@ -281,3 +302,36 @@ if t >= 1.20162642e+00 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
 end
 
 % disp('oj')
+end
+
+function [s_i0, s_i1, s_i0k] = attachmentPoint(s0, dS, ss)
+    % estimate the position of the actual index of zero strain
+    % IMPORTANT: s MUST be around 0 somewhere!
+    s_p0 = 1 + round(-s0/dS, 6); % strain position in space at 0
+    
+    if isnan(s_p0) || floor(s_p0) < 0
+        % this can happen during numerical rottfinding iteration step, should be avoided in the result
+        s_i0 = 1; % just hold on..
+        s_i1 = 2;
+        s_i0k = 1;
+        % warning(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
+    elseif floor(s_p0) == 0
+        s_i0 = 1;
+        s_i1 = 2;
+        s_i0k = 1;
+    elseif ceil(s_p0) == ss
+        s_i0 = ss - 1;
+        s_i1 = ss;
+        s_i0k = 0;
+    elseif ceil(s_p0) > ss
+        s_i0 = ss - 1;
+        s_i1 = ss;
+        s_i0k = 0;
+        % error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
+    else
+        % if params.UseSpaceInterpolation
+        s_i0 = floor(s_p0);
+        s_i1 = ceil(s_p0);
+        s_i0k = s_i1 - s_p0;
+    end
+end
