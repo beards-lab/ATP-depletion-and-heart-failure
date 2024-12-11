@@ -1,5 +1,10 @@
-function [cost_c0 rampShift] = evalPowerFit(params, Farr, Tarr, plotResults, rampShift, pCa)
-%%
+function [cost_c0, rampShift, residuals] = evalPowerFit(params, Farr, Tarr, plotResults, rampShift, pCa)
+%% first three params define offset, exponent and multiplicator. Fourth
+% params = [offset, exponent, multiplicator, fitLimit]
+% fitLimit - limits the fit range. Positive means 0 -- fitLimit, 
+% negative means fitLimit -- 60
+useLogResidual = true;
+
 if any(params(1:3) < 0)
     cost_c0 = Inf;
     rampShift = [];
@@ -173,7 +178,14 @@ for i_rds = [4 3 2 1]
         
         % c0 = goodness.rmse;
         % c0 = sum((pf(ae.tau, t_s) - Fint).^2);
-        c0 = sum(abs(log10(pf(ae.tau, t_s)) - log10(Fint)).^2);
+        residuals{i_rds, 1} = t_s - t_s(1);
+        if useLogResidual
+            residuals{i_rds, 2} = abs(log10(pf(ae.tau, t_s)) - log10(Fint)).^2;
+        else
+            residuals{i_rds, 2} = (pf(ae.tau, t_s) - Fint).^2;
+        end
+        % c0 = sum(abs(log10(pf(ae.tau, t_s)) - log10(Fint)).^2);
+        c0 = sum(residuals{i_rds, 2});
         if c0 < 0
             stop = true;
         end

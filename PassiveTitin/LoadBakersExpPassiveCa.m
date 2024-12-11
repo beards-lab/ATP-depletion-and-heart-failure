@@ -32,7 +32,8 @@ clear;clc;
 % S1 = dir('../data/PassiveCaSrc2/20231102');
 % S1 = dir('../data/PassiveCaSrc2/20231107');
 % S1 = dir('../data/PassiveCaSrc2/20240705');
-S1 = dir('../data/PassiveCaSrc2/20241010');
+% S1 = dir('../data/PassiveCaSrc2/20241010');
+S1 = dir('../data/PassiveCaSrc2/20241121');
 
 S1 = S1(~[S1.isdir]);
 [~,idx] = sort({S1.name});
@@ -261,10 +262,12 @@ for i_logtrace = 1:size(dsc, 1)
             ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
             ramp_shift_array{2} = [68, 139.100];
             ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200];
-        case {'20240705', '20241010'}
+        case {'20240705', '20241010', '20241121'}
             ramp_shift_array{1} = [107.500,377.500,557.500,727.500,900.100,1308.500,1478.500,1658.600];
             ramp_shift_array{2} = [68-11.9, 139.100 - 8.9];
             ramp_shift_array{3} = [121.300,391.200,571.200,741.200,929.600-6.38,1021.200,1291.200,1471.200,1641.200,1811.200,2227.200,2402.200,2577.100,2752.200] - 8;
+        otherwise
+            error('Unknown dataset, check this at line ~251');
     end
 
     % Identify position of individual ramps

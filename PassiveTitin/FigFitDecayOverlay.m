@@ -8,6 +8,7 @@ load pca11data.mat
 %% load from raw data
 dsc = load('DataStruct20240705.mat').dsc;
 dsc = load('DataStruct20241010.mat').dsc;
+dsc = load('DataStruct20241121.mat').dsc;
 % dsc = load('DataStruct20231010.mat').dsc;
 
 % Farr={};Tarr = {};

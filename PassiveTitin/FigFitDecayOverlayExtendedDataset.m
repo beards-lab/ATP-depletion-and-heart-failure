@@ -1,10 +1,11 @@
 dsc = load('DataStruct20241010.mat').dsc;
+% dsc = load('DataStruct20241121.mat').dsc;
 
 %% all input combinations
 
 % relaxed
-% ids = 1; arr = [2 3 4 5];
-% x = [5.1073    0.1500    4.2836];
+ids = 1; arr = [2 3 4 5];
+x = [5.1073    0.1500    4.2836];
 % ids = 1; arr = [9 8 7 6];
 % x = [3.0652    0.2952    5.4493];
 
@@ -13,12 +14,12 @@ dsc = load('DataStruct20241010.mat').dsc;
 % x = [5.2542    0.1328    3.1200];
 
 % max Ca, PNB and Mava
-ids = 3; arr = [7 8 9 11];
+% ids = 3; arr = [7 8 9 11];
 % last 10s
 % x = [4.5449    0.2347    4.5626  -10.0684];
 % first 10s
-x = [12.4807    0.4731    5.0766    3.4441];
-x = [12.4807    0.6731    5.0766    10.4441];
+% x = [12.4807    0.4731    5.0766    3.4441];
+% x = [12.4807    0.6731    5.0766    10.4441];
 
 % 10C - no Ca, just PNB mava
 % ids = 4; arr = [2 3 4 5];
@@ -37,15 +38,18 @@ x = [12.4807    0.6731    5.0766    10.4441];
 % x = [3.5907    0.1182    2.1046];
 
 [Tarr Farr] = getArrs(dsc, ids, arr);
-
-c = evalPowerFit(x, Farr, Tarr, true, [], false)
-
+%%
+figure(100);clf;
+[c shifts, res] = evalPowerFit(x, Farr, Tarr, true, [], false)
+figure(101);clf;
+plot(log10(res{1, 1}), res{1, 2},log10(res{2, 1}),res{2, 2}, 'x-')
+% plot(res{1, 1}, res{1, 2},res{2, 1}, res{2, 2},res{3, 1}, res{3, 2},res{4, 1}, res{4, 2})
 %%
 fitfun = @(init) evalPowerFit(init, Farr, Tarr, true);
-%%
-%%
+
+
 options = optimset('Display','iter', 'TolFun', 1e-4, 'Algorithm','sqp', 'UseParallel', true, ...
-    'TolX', 0.0001, 'PlotFcns', @optimplotfval, 'MaxIter', 50);
+    'TolX', 0.0001, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
 
 % Tarr{4} = [];Farr{4} = [];Tarr{3} = [];Farr{3} = [];
 % Tarr{2} = [];Farr{2} = [];Tarr{1} = [];Farr{1} = [];
@@ -55,7 +59,7 @@ init = x;
 fitfunOpt = @(init) evalPowerFit(init, Farr, Tarr, false);
 x = fminsearch(fitfunOpt, init, options)
 
-%%
+
 
 % Tarr{3} = [];Tarr{2} = [];Tarr{1} = [];
 % x = [15.7900    0.3980    2.0187   16.2781];
