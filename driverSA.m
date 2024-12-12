@@ -395,23 +395,34 @@ params0.PlotEachSeparately = true;
 params0.UseForceOnsetShift = true;
 params0.RunForceLengthEstim = true;
 params0.RunForceVelocity = true;
-params0.ErrorMultiplier = [100 1 1 1 1 1 1];
+params0.ErrorMultiplier = [1000 1 1 1 1 1 1];
+% params0.ghostSave = 'FminS_allParams';
+params0.ghostSave = '';
+%%
+clf;
+% figure(3003)
+params0.mu = 1e0;
+params0.justPlotStateTransitionsFlag = false;
+params0.UseForceOnsetShift = false;
+params0.MaxSlackNegativeForce = -Inf;
+tic
 RunBakersExp;
+toc
 % params0.g = params0.g(1:26);
 % save tmpFminSlackOpt;
 % writeParamsToMFile('ModelParams_V1_Fmin2.m', params0);
 % writeParamsToMFile('ModelParams_V1_Fmin3.m', params0);
 %% optim surrogateopt
 
-options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 6*60*60, 'UseParallel',true, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', x', MaxFunctionEvaluations=5000);
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 0.8*60*60, 'UseParallel',true, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', x', MaxFunctionEvaluations=5000);
 
 optparams = params0;
 % optparams.mods = optparams.mods(sorted_infl(1:20))
 optparams.BreakOnODEUnstable = true;
-optparams.RunForceVelocity = false;
-optparams.RunForceLengthEstim = false;
-optparams.RunSlack = true;
-optparams.RunSlackSegments = 'All';
+% optparams.RunForceVelocity = false;
+% optparams.RunForceLengthEstim = false;
+% optparams.RunSlack = true;
+% optparams.RunSlackSegments = 'All';
 optparams.EvalFitSlackOnset = false;
 
 % g = ones(length(optparams.mods), 1);
@@ -440,7 +451,7 @@ optimfun = @(g)evaluateBakersExp(g, params0);
 % Run the pattern search optimization
 % Create optimization options with suitable settings for high-dimensional optimization
 options = optimoptions('patternsearch', ...
-                       'UseParallel', false, ...
+                       'UseParallel', true, ...
                        'Display', 'iter', ...
                        'PollMethod', 'GSSPositiveBasis2N', ...  % Polling method
                        'SearchMethod', 'MADSPositiveBasis2N', ... % Search method

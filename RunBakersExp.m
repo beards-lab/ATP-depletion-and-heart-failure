@@ -128,7 +128,7 @@ if params0.RunForceVelocity
     end
 
     if ~isempty(params.ghostSave)
-        ghost = [F_active(1, :), -vel(:)];
+        ghost = [F_active(1, :), -vel(:)'];
         save(['Ghost_' params.ghostSave '_FV'], 'ghost');
     end
 end
@@ -585,6 +585,12 @@ if params0.RunForceLengthEstim
     E(end+1) = Es*1e0;
 end
 
+
+%% READJUST ERROR FUNCTION
+if isfield(params0, 'ErrorMultiplier')
+    erl = 1:min(length(E), length(params0.ErrorMultiplier));
+    E(erl) = E(erl).*params0.ErrorMultiplier(erl);
+end
 
 
 function mono = makeMonotonous(a)
