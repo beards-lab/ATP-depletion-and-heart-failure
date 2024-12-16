@@ -225,5 +225,291 @@ package CrossBridgeCycling
     annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
           coordinateSystem(preserveAspectRatio=false)));
   end HlasSercomere;
-  annotation (uses(Modelica(version="4.0.0")));
+
+  model SrxDrx
+    Physiolibrary.Chemical.Components.Substance DRX(solute_start=1 - SRX_init)
+      annotation (Placement(transformation(extent={{-62,-22},{-42,-2}})));
+    Physiolibrary.Chemical.Components.Substance SRX(solute_start=SRX_init)
+      annotation (Placement(transformation(extent={{-60,40},{-40,60}})));
+    Modelica.Blocks.Math.MultiSum multiSum(nu=2)
+      annotation (Placement(transformation(extent={{24,28},{36,16}})));
+    Physiolibrary.Chemical.Components.Clearance clearance(Clearance(displayUnit
+          ="l/min") = 1.6666666666667e-05)
+      annotation (Placement(transformation(extent={{-32,70},{-12,90}})));
+    Physiolibrary.Chemical.Components.Clearance clearance1(Clearance(
+          displayUnit="ml/min") = 0.000166667)
+      annotation (Placement(transformation(extent={{-108,-22},{-128,-2}})));
+    parameter Physiolibrary.Types.AmountOfSubstance SRX_init(displayUnit="mol")
+       = 0.5 "Initial solute amount in compartment";
+    parameter Physiolibrary.Types.VolumeFlowRate SolutionFlow=0
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+  equation
+    connect(SRX.solute, multiSum.u[1]) annotation (Line(points={{-44,40},{-44,
+            23.05},{24,23.05}}, color={0,0,127}));
+    connect(DRX.solute, multiSum.u[2]) annotation (Line(points={{-46,-22},{-46,
+            -42},{-22,-42},{-22,20.95},{24,20.95}}, color={0,0,127}));
+    connect(SRX.q_out, clearance.q_in) annotation (Line(
+        points={{-50,50},{-64,50},{-64,80},{-32,80}},
+        color={107,45,134},
+        thickness=1));
+    connect(clearance1.q_in, DRX.q_out) annotation (Line(
+        points={{-108,-12},{-52,-12}},
+        color={107,45,134},
+        thickness=1));
+    annotation (experiment(
+        StopTime=300,
+        __Dymola_NumberOfIntervals=1500,
+        Tolerance=1e-05,
+        __Dymola_Algorithm="Dassl"));
+  end SrxDrx;
+
+  model SrxDrx_fluxes
+    extends SrxDrx(
+      SolutionFlow=0,
+      clearance1(Clearance(displayUnit="l/min") = DRXClearance,
+          useSolutionFlowInput=true),
+      clearance(Clearance=SRXClearance, useSolutionFlowInput=true));
+    Physiolibrary.Chemical.Components.Stream Stream(SolutionFlow=relaxingRate)
+      annotation (Placement(transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=90,
+          origin={-66,22})));
+    Physiolibrary.Chemical.Components.Stream Stream1(SolutionFlow=DrxRate)
+      annotation (Placement(transformation(
+          extent={{10,-10},{-10,10}},
+          rotation=90,
+          origin={-86,22})));
+    Modelica.Blocks.Sources.RealExpression realExpression(y=if time > 0 then
+          DRXClearance else 0)
+      annotation (Placement(transformation(extent={{-156,-2},{-136,18}})));
+    parameter Physiolibrary.Types.VolumeFlowRate DRXClearance(displayUnit=
+          "l/min") = 0.000166667
+      "Clearance of solute if useSolutionFlowInput=false";
+    Modelica.Blocks.Sources.RealExpression realExpression2(y=if time > 0 then
+          SRXClearance else 0)
+      annotation (Placement(transformation(extent={{16,78},{-4,98}})));
+    parameter Physiolibrary.Types.VolumeFlowRate SRXClearance(displayUnit=
+          "l/min") = 1.6666666666667e-05
+      "Clearance of solute if useSolutionFlowInput=false";
+    parameter Physiolibrary.Types.VolumeFlowRate relaxingRate(displayUnit=
+          "l/min") = 8.3333333333333e-07
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+    parameter Physiolibrary.Types.VolumeFlowRate DrxRate(displayUnit="l/min")
+       = 1.6666666666667e-06
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+  equation
+    connect(Stream.q_in, DRX.q_out) annotation (Line(
+        points={{-66,12},{-66,-12},{-52,-12}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream.q_out, SRX.q_out) annotation (Line(
+        points={{-66,32},{-66,36},{-64,36},{-64,50},{-50,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_in, clearance.q_in) annotation (Line(
+        points={{-86,32},{-86,80},{-32,80}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_out, DRX.q_out) annotation (Line(
+        points={{-86,12},{-86,-12},{-52,-12}},
+        color={107,45,134},
+        thickness=1));
+    connect(realExpression.y, clearance1.solutionFlow)
+      annotation (Line(points={{-135,8},{-118,8},{-118,-5}}, color={0,0,127}));
+    connect(realExpression2.y, clearance.solutionFlow) annotation (Line(points=
+            {{-5,88},{-6,88},{-6,98},{-22,98},{-22,87}}, color={0,0,127}));
+    annotation (experiment(
+        StartTime=-3000,
+        StopTime=300,
+        __Dymola_NumberOfIntervals=1500,
+        Tolerance=1e-05,
+        __Dymola_Algorithm="Dassl"));
+  end SrxDrx_fluxes;
+
+  model UtUdSrtSrd
+    Physiolibrary.Chemical.Components.Substance UT(solute_start=0.5 - SRX_init/
+          2)
+      annotation (Placement(transformation(extent={{-60,-80},{-40,-60}})));
+    Physiolibrary.Chemical.Components.Substance UD(solute_start=0.5 - SRX_init/
+          2) annotation (Placement(transformation(extent={{38,-80},{58,-60}})));
+    parameter Physiolibrary.Types.AmountOfSubstance SRX_init(displayUnit="mol")
+       = 0.5 "Initial solute amount in compartment";
+    parameter Physiolibrary.Types.VolumeFlowRate SolutionFlow=0
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+    Physiolibrary.Chemical.Components.Substance SD(solute_start=SRX_init/2)
+      annotation (Placement(transformation(extent={{40,74},{60,94}})));
+    Physiolibrary.Chemical.Components.Substance ST(solute_start=SRX_init/2)
+      annotation (Placement(transformation(extent={{-62,76},{-42,96}})));
+    Physiolibrary.Chemical.Components.Stream kH(SolutionFlow(displayUnit=
+            "l/min") = 4.1666666666667e-06)
+      annotation (Placement(transformation(extent={{-40,-40},{-20,-20}})));
+    Physiolibrary.Chemical.Components.Stream kS2D(SolutionFlow(displayUnit=
+            "l/min") = 8.3333333333333e-05) annotation (Placement(
+          transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=90,
+          origin={50,-10})));
+    Physiolibrary.Chemical.Components.Stream kL(SolutionFlow(displayUnit=
+            "l/min") = 8.3333333333333e-05)
+      annotation (Placement(transformation(extent={{40,40},{20,60}})));
+    Physiolibrary.Chemical.Components.Stream KS2T(SolutionFlow(displayUnit=
+            "l/min") = 0.00016666666666667) annotation (Placement(
+          transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=270,
+          origin={-50,30})));
+    Modelica.Blocks.Math.MultiSum SRX(nu=2)
+      annotation (Placement(transformation(extent={{80,54},{92,66}})));
+    Modelica.Blocks.Math.MultiSum DRX(nu=2)
+      annotation (Placement(transformation(extent={{82,-96},{94,-84}})));
+    Physiolibrary.Chemical.Sensors.MolarFlowMeasure molarFlowMeasure
+      annotation (Placement(transformation(extent={{-20,60},{0,40}})));
+    Physiolibrary.Chemical.Sources.UnlimitedSolutePumpOut
+      unlimitedSolutePumpOut(useSoluteFlowInput=true)
+      annotation (Placement(transformation(extent={{-80,40},{-100,60}})));
+    Modelica.Blocks.Sources.RealExpression realExpression(y=if time >
+          decay_time then -molarFlowMeasure.molarFlowRate else 0)
+      annotation (Placement(transformation(extent={{-130,56},{-110,76}})));
+    parameter Modelica.Blocks.Interfaces.RealOutput decay_time=0.0
+      "Value of Real output";
+    Modelica.Blocks.Math.MultiSum UnmarkedATP(nu=2)
+      annotation (Placement(transformation(extent={{94,6},{82,-6}})));
+  equation
+    connect(ST.q_out, KS2T.q_in) annotation (Line(
+        points={{-52,86},{-50,86},{-50,40}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS2T.q_out, UT.q_out) annotation (Line(
+        points={{-50,20},{-50,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(UT.q_out, kH.q_in) annotation (Line(
+        points={{-50,-70},{-50,-30},{-40,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(kH.q_out, UD.q_out) annotation (Line(
+        points={{-20,-30},{50,-30},{50,-70},{48,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(UD.q_out, kS2D.q_in) annotation (Line(
+        points={{48,-70},{50,-70},{50,-20}},
+        color={107,45,134},
+        thickness=1));
+    connect(SD.q_out, kL.q_in) annotation (Line(
+        points={{50,84},{50,50},{40,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(ST.solute, SRX.u[1]) annotation (Line(points={{-46,76},{-50,76},{
+            -50,72},{-66,72},{-66,100},{74,100},{74,58.95},{80,58.95}}, color={
+            0,0,127}));
+    connect(SD.solute, SRX.u[2]) annotation (Line(points={{56,74},{56,61.05},{
+            80,61.05}}, color={0,0,127}));
+    connect(UT.solute, DRX.u[1]) annotation (Line(points={{-44,-80},{-44,-91.05},
+            {82,-91.05}}, color={0,0,127}));
+    connect(UD.solute, DRX.u[2]) annotation (Line(points={{54,-80},{54,-88.95},
+            {82,-88.95}}, color={0,0,127}));
+    connect(kL.q_out, molarFlowMeasure.q_out) annotation (Line(
+        points={{20,50},{0,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(molarFlowMeasure.q_in, ST.q_out) annotation (Line(
+        points={{-20,50},{-50,50},{-50,86},{-52,86}},
+        color={107,45,134},
+        thickness=1));
+    connect(unlimitedSolutePumpOut.q_in, KS2T.q_in) annotation (Line(
+        points={{-80,50},{-50,50},{-50,40}},
+        color={107,45,134},
+        thickness=1));
+    connect(realExpression.y, unlimitedSolutePumpOut.soluteFlow)
+      annotation (Line(points={{-109,66},{-94,66},{-94,54}}, color={0,0,127}));
+    connect(SRX.y, UnmarkedATP.u[1]) annotation (Line(points={{93.02,60},{98,60},
+            {98,1.05},{94,1.05}}, color={0,0,127}));
+    connect(DRX.y, UnmarkedATP.u[2]) annotation (Line(points={{95.02,-90},{100,
+            -90},{100,-1.05},{94,-1.05}}, color={0,0,127}));
+    connect(kL.q_in, kS2D.q_out) annotation (Line(
+        points={{40,50},{50,50},{50,0}},
+        color={107,45,134},
+        thickness=1));
+    annotation (experiment(
+        StartTime=-2500,
+        StopTime=5000,
+        __Dymola_Algorithm="Dassl"));
+  end UtUdSrtSrd;
+
+  model UtUdSrtSrd_V1
+    extends UtUdSrtSrd(kS2D(SolutionFlow=8.3333333333333e-07), KS2T(
+          SolutionFlow=3.3333333333333e-06));
+    annotation (experiment(
+        StartTime=-2500,
+        StopTime=2500,
+        __Dymola_Algorithm="Dassl"));
+  end UtUdSrtSrd_V1;
+
+  model UtUdSrtSrd_Ud2Ut "Reverse hydrolysis"
+    extends UtUdSrtSrd(kS2D(SolutionFlow=1.6666666666667e-07), KS2T(
+          SolutionFlow=1.6666666666667e-07));
+    Physiolibrary.Chemical.Components.Stream Stream4(SolutionFlow(displayUnit=
+            "l/min") = 1.6666666666667e-06)
+      annotation (Placement(transformation(extent={{24,-66},{4,-46}})));
+    Physiolibrary.Chemical.Sensors.MolarFlowMeasure molarFlowMeasure1
+      annotation (Placement(transformation(extent={{-32,-46},{-12,-66}})));
+    Physiolibrary.Chemical.Components.Stream Stream5(SolutionFlow(displayUnit=
+            "l/min") = 1.6666666666667e-06)
+      annotation (Placement(transformation(extent={{-10,64},{10,84}})));
+  equation
+    connect(Stream4.q_out, molarFlowMeasure1.q_out) annotation (Line(
+        points={{4,-56},{-12,-56}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream4.q_in, UD.q_out) annotation (Line(
+        points={{24,-56},{50,-56},{50,-70},{48,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(molarFlowMeasure1.q_in, UT.q_out) annotation (Line(
+        points={{-32,-56},{-50,-56},{-50,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream5.q_in, KS2T.q_in) annotation (Line(
+        points={{-10,74},{-50,74},{-50,40}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream5.q_out, SD.q_out) annotation (Line(
+        points={{10,74},{50,74},{50,84}},
+        color={107,45,134},
+        thickness=1));
+  end UtUdSrtSrd_Ud2Ut;
+
+  model UtUdSrtSrd_BackS
+    extends UtUdSrtSrd(kS2D(SolutionFlow=1.6666666666667e-06));
+    Physiolibrary.Chemical.Components.Stream KS1T(SolutionFlow(displayUnit=
+            "l/min") = 1.6666666666667e-06) annotation (Placement(
+          transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=90,
+          origin={-70,30})));
+    Physiolibrary.Chemical.Components.Stream KS1D(SolutionFlow(displayUnit=
+            "l/min") = 1.6666666666667e-06) annotation (Placement(
+          transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=270,
+          origin={72,-10})));
+  equation
+    connect(KS1T.q_out, molarFlowMeasure.q_in) annotation (Line(
+        points={{-70,40},{-70,50},{-20,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS1T.q_in, UT.q_out) annotation (Line(
+        points={{-70,20},{-70,-30},{-50,-30},{-50,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS1D.q_in, kL.q_in) annotation (Line(
+        points={{72,0},{72,50},{40,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS1D.q_out, kH.q_out) annotation (Line(
+        points={{72,-20},{72,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+  end UtUdSrtSrd_BackS;
+  annotation (uses(Modelica(version="4.0.0"), Physiolibrary(version="2.4.1")));
 end CrossBridgeCycling;
