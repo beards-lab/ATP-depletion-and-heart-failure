@@ -11,6 +11,7 @@ vel = params.Vums;
 ss = params.ss; % space size (length of the s for each of p1-p3)
 p1 = PU(1:ss);
 p2 = PU(ss+1:2*ss);
+
 if params.UseSuperRelaxed
     P_SR = PU(2*ss+1);
 else
@@ -117,9 +118,18 @@ else
 end
 end
 
+if params.UseA2Popping
+    s_pop = s <= params.pop_s;
+    % ignoring at this level
+    % all probabilities are auto shifted to UT
+    p2(s_pop) = 0;
+end
+
+
+
 % sum of all probabilities
 p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-p2_0 = dS*sum(p2); p2_1 = dS*sum((s+params.dr).*p2);
+p2_0 = dS*sum(p2); p2_1 = dS*sum(((s+params.dr).^params.estiff).*p2);
 
 % non-hydrolized ATP in non-super relaxed state
 PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 

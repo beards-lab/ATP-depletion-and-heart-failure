@@ -2,8 +2,8 @@
 dryRun = false;
 
 % Define the folders - this is the input and output
-nextFolder = '../data/PassiveCaSrc2/20241121_renamed';
-nextRenamedFolder = '../data/PassiveCaSrc2/20241121_BeforeRenaming';
+nextFolder = '../data/PassiveCaSrc2/20241212_BeforeRenaming';
+nextRenamedFolder = '../data/PassiveCaSrc2/20241212_renamed';
 
 % this is the renaming key - keep those up
 inputFolder = '../data/PassiveCaSrc2/20241010_BeforeRenaming';

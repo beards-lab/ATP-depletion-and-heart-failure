@@ -283,9 +283,12 @@ params0.mods = {'ka', 'kd', 'alpha0_L','kstiff1', 'kstiff2', 'alpha0_R'};
 % current mods
 params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'dr0', 'k1', 'alpha1', 'k_1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE'};
 params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'k1', 'alpha1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE'};
+params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'k1', 'alpha1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE'};
+params0.mods = {'kmsr', 'ksrd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'k2', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE', 'mu', 'estiff'}
 
-%%
 params0.g = ones(size(params0.mods));
+%%
+
 saSet = 1:length(params0.mods);
 RunMDelta = false; % run minus delta as well?
 
@@ -337,7 +340,7 @@ xticks(1:length(params0.mods))
 xticklabels(params0.mods)
 
 %% only effective ones
-params0.mods(cost_sap ~= c0)
+params0.mods(cost_sap == c0)
 %% sort by reduced and most increased
 % c0 - min(cost_sam, cost_sap)
 cost_cmb = cost_sap;
@@ -379,13 +382,15 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
 
+params0.PlotEachSeparately = false;
+params0.ghostLoad = '';
 params0.ShowResidualPlots = false;
 
 % g = params0.g;
 % g = ones(length(params0.mods), 1);
 % g = params0.g(1:length(g))
 optimfun = @(g)evaluateBakersExp(g, params0);
-x = fminsearch(optimfun, g, options)
+x = fminsearch(optimfun, params0.g, options)
 params0.g = x;
 g = x;
 
@@ -396,16 +401,28 @@ params0.UseForceOnsetShift = true;
 params0.RunForceLengthEstim = true;
 params0.RunForceVelocity = true;
 params0.ErrorMultiplier = [1000 1 1 1 1 1 1];
-% params0.ghostSave = 'FminS_allParams';
+% params0.ghostSave = 'FminS_v2';
+params0.ghostLoad = 'FminS_allParams';
 params0.ghostSave = '';
 %%
 clf;
 % figure(3003)
 params0.mu = 1e0;
 params0.justPlotStateTransitionsFlag = false;
-params0.UseForceOnsetShift = false;
+params0.UseForceOnsetShift = true;
 params0.MaxSlackNegativeForce = -Inf;
+params0.SimTitle = 'hey';
+%%
+% apply g
+% params0 = getParams(params0, params0.g, false, true);
+clf;
+% params0.PlotEachSeparately = true;
+% params0.SimTitle = 'ff'
+params0.UseA2Popping = false;
+params0.pop_s = - 0.03;
+params0.ghostLoad = 'FminS_v2';
 tic
+
 RunBakersExp;
 toc
 % params0.g = params0.g(1:26);
@@ -455,7 +472,7 @@ options = optimoptions('patternsearch', ...
                        'Display', 'iter', ...
                        'PollMethod', 'GSSPositiveBasis2N', ...  % Polling method
                        'SearchMethod', 'MADSPositiveBasis2N', ... % Search method
-                       'MaxIterations', 50, ...
+                       'MaxIterations', 500, ...
                        'MaxFunctionEvaluations', 2000, ...
                        'MeshTolerance', 1e-3, 'PlotFcn', 'psplotbestf');  % Tolerance for the mesh size
 
