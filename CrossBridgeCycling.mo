@@ -433,7 +433,9 @@ package CrossBridgeCycling
     annotation (experiment(
         StartTime=-2500,
         StopTime=5000,
-        __Dymola_Algorithm="Dassl"));
+        __Dymola_Algorithm="Dassl"),
+      Diagram(coordinateSystem(extent={{-140,-100},{100,100}})),
+      Icon(coordinateSystem(extent={{-140,-100},{100,100}})));
   end UtUdSrtSrd;
 
   model UtUdSrtSrd_V1
@@ -511,5 +513,348 @@ package CrossBridgeCycling
         color={107,45,134},
         thickness=1));
   end UtUdSrtSrd_BackS;
-  annotation (uses(Modelica(version="4.0.0"), Physiolibrary(version="2.4.1")));
+
+  model UtUdSrtSrd_XBCycling "Remaining XB cycling in attached"
+    extends UtUdSrtSrd;
+    Physiolibrary.Chemical.Components.Stream XBCycling(SolutionFlow(displayUnit
+          ="l/min") = 1.6666666666667e-06)
+      annotation (Placement(transformation(extent={{20,-120},{0,-100}})));
+    Physiolibrary.Chemical.Sensors.MolarFlowMeasure XBCyclingMeasure
+      annotation (Placement(transformation(extent={{-40,-100},{-20,-120}})));
+    Physiolibrary.Chemical.Sources.UnlimitedSolutePumpOut
+      unlimitedSolutePumpOut1(useSoluteFlowInput=true)
+      annotation (Placement(transformation(extent={{-78,-60},{-98,-40}})));
+    Modelica.Blocks.Sources.RealExpression realExpression1(y=if time >
+          decay_time then -XBCyclingMeasure.molarFlowRate else 0)
+      annotation (Placement(transformation(extent={{-128,-44},{-108,-24}})));
+  equation
+    connect(XBCycling.q_out, XBCyclingMeasure.q_out) annotation (Line(
+        points={{0,-110},{-20,-110}},
+        color={107,45,134},
+        thickness=1));
+    connect(XBCycling.q_in, UD.q_out) annotation (Line(
+        points={{20,-110},{64,-110},{64,-56},{50,-56},{50,-70},{48,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(XBCyclingMeasure.q_in, UT.q_out) annotation (Line(
+        points={{-40,-110},{-66,-110},{-66,-50},{-50,-50},{-50,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(realExpression1.y, unlimitedSolutePumpOut1.soluteFlow) annotation (
+        Line(points={{-107,-34},{-92,-34},{-92,-46}}, color={0,0,127}));
+    connect(unlimitedSolutePumpOut1.q_in, UT.q_out) annotation (Line(
+        points={{-78,-50},{-50,-50},{-50,-70}},
+        color={107,45,134},
+        thickness=1));
+    annotation (Diagram(coordinateSystem(extent={{-140,-120},{100,100}})), Icon(
+          coordinateSystem(extent={{-140,-120},{100,100}})));
+  end UtUdSrtSrd_XBCycling;
+
+  model UtUdSrtSrd_XBCycling_BackS
+    extends UtUdSrtSrd_XBCycling(
+      kL(SolutionFlow=1.6666666666667e-06),
+      kH(SolutionFlow=0.00016666666666667),
+      XBCycling(SolutionFlow=1.6666666666667e-05),
+      kS2D(SolutionFlow=1.6666666666667e-06),
+      KS2T(SolutionFlow=1.6666666666667e-06));
+    Physiolibrary.Chemical.Components.Stream KS1T(SolutionFlow(displayUnit=
+            "l/min") = 0)                   annotation (Placement(
+          transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=90,
+          origin={-70,30})));
+    Physiolibrary.Chemical.Components.Stream KS1D(SolutionFlow(displayUnit=
+            "l/min") = 0)                   annotation (Placement(
+          transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=270,
+          origin={72,-10})));
+  equation
+    connect(KS1T.q_in, UT.q_out) annotation (Line(
+        points={{-70,20},{-70,-30},{-50,-30},{-50,-70}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS1T.q_out, molarFlowMeasure.q_in) annotation (Line(
+        points={{-70,40},{-70,50},{-20,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS1D.q_in, kL.q_in) annotation (Line(
+        points={{72,0},{72,50},{40,50}},
+        color={107,45,134},
+        thickness=1));
+    connect(KS1D.q_out, kH.q_out) annotation (Line(
+        points={{72,-20},{72,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+  end UtUdSrtSrd_XBCycling_BackS;
+
+  model DRXOnly
+    Physiolibrary.Chemical.Components.Substance UT(solute_start=0.5 - SRX_init/2)
+      annotation (Placement(transformation(extent={{-60,-60},{-40,-40}})));
+    Physiolibrary.Chemical.Components.Substance UD(solute_start=0.5 - SRX_init/2)
+             annotation (Placement(transformation(extent={{20,-60},{40,-40}})));
+    Physiolibrary.Chemical.Components.Stream kH(SolutionFlow(displayUnit=
+            "l/min") = 0.0016666666666667)
+      annotation (Placement(transformation(extent={{-20,-40},{0,-20}})));
+    Modelica.Blocks.Math.MultiSum DRX(nu=2)
+      annotation (Placement(transformation(extent={{74,-70},{86,-58}})));
+    Physiolibrary.Chemical.Components.Stream XBCycling(SolutionFlow(displayUnit
+          ="l/min") = RelaxedATPCycling)
+      annotation (Placement(transformation(extent={{20,-90},{0,-70}})));
+    Physiolibrary.Chemical.Sensors.MolarFlowMeasure XBCyclingMeasure
+      annotation (Placement(transformation(extent={{-40,-90},{-20,-70}})));
+    Physiolibrary.Chemical.Sources.UnlimitedSolutePumpOut
+      unlimitedSolutePumpOut1(useSoluteFlowInput=true)
+      annotation (Placement(transformation(extent={{-80,-20},{-100,-40}})));
+    Modelica.Blocks.Sources.RealExpression realExpression1(y=if time > decay_time
+           then -XBCyclingMeasure.molarFlowRate else 0)
+      annotation (Placement(transformation(extent={{-60,-100},{-80,-80}})));
+    Modelica.Blocks.Math.MultiSum UnmarkedATP(nu=2)
+      annotation (Placement(transformation(extent={{86,28},{74,16}})));
+    Physiolibrary.Chemical.Components.Substance SRX(solute_start=SRX_init)
+      annotation (Placement(transformation(extent={{-44,56},{-24,76}})));
+    Modelica.Blocks.Math.MultiSum multiSum(nu=1)
+      annotation (Placement(transformation(extent={{74,52},{86,40}})));
+    Physiolibrary.Chemical.Components.Stream Stream(SolutionFlow=relaxingRate)
+      annotation (Placement(transformation(
+          extent={{-10,-10},{10,10}},
+          rotation=90,
+          origin={-50,38})));
+    Physiolibrary.Chemical.Components.Stream Stream1(SolutionFlow=DrxRate)
+      annotation (Placement(transformation(
+          extent={{10,-10},{-10,10}},
+          rotation=90,
+          origin={-64,38})));
+    parameter Physiolibrary.Types.AmountOfSubstance SRX_init(displayUnit="mol")
+      =0.5   "Initial solute amount in compartment";
+    parameter Physiolibrary.Types.VolumeFlowRate SolutionFlow=0
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+    parameter Modelica.Blocks.Interfaces.RealOutput decay_time=0.0
+      "Value of Real output";
+    parameter Physiolibrary.Types.VolumeFlowRate DrxRate(displayUnit="l/min")=
+      1.6666666666667e-06
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+    parameter Physiolibrary.Types.VolumeFlowRate relaxingRate(displayUnit=
+          "l/min")=8.3333333333333e-07
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+
+    parameter Physiolibrary.Types.VolumeFlowRate RelaxedATPCycling(displayUnit=
+          "l/min") = 0.00016666666666667
+      "Volumetric flow of solution if useSolutionFlowInput=false";
+  equation
+    connect(UT.q_out,kH. q_in) annotation (Line(
+        points={{-50,-50},{-50,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(kH.q_out,UD. q_out) annotation (Line(
+        points={{0,-30},{30,-30},{30,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(UT.solute,DRX. u[1]) annotation (Line(points={{-44,-60},{-44,-65.05},
+            {74,-65.05}}, color={0,0,127}));
+    connect(UD.solute,DRX. u[2]) annotation (Line(points={{36,-60},{36,-62.95},
+            {74,-62.95}}, color={0,0,127}));
+    connect(XBCycling.q_out,XBCyclingMeasure. q_out) annotation (Line(
+        points={{0,-80},{-20,-80}},
+        color={107,45,134},
+        thickness=1));
+    connect(XBCycling.q_in,UD. q_out) annotation (Line(
+        points={{20,-80},{56,-80},{56,-30},{30,-30},{30,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(XBCyclingMeasure.q_in,UT. q_out) annotation (Line(
+        points={{-40,-80},{-64,-80},{-64,-30},{-50,-30},{-50,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(realExpression1.y,unlimitedSolutePumpOut1. soluteFlow) annotation (
+        Line(points={{-81,-90},{-94,-90},{-94,-34}},  color={0,0,127}));
+    connect(unlimitedSolutePumpOut1.q_in,UT. q_out) annotation (Line(
+        points={{-80,-30},{-50,-30},{-50,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(SRX.solute,multiSum. u[1]) annotation (Line(points={{-28,56},{-28,
+            46},{74,46}},       color={0,0,127}));
+    connect(Stream.q_out,SRX. q_out) annotation (Line(
+        points={{-50,48},{-50,66},{-34,66}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream.q_in, kH.q_in) annotation (Line(
+        points={{-50,28},{-50,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_out, kH.q_in) annotation (Line(
+        points={{-64,28},{-64,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_in, SRX.q_out) annotation (Line(
+        points={{-64,48},{-64,66},{-34,66}},
+        color={107,45,134},
+        thickness=1));
+    connect(multiSum.y, UnmarkedATP.u[1]) annotation (Line(points={{87.02,46},{
+            92,46},{92,23.05},{86,23.05}},
+                                        color={0,0,127}));
+    connect(DRX.y, UnmarkedATP.u[2]) annotation (Line(points={{87.02,-64},{92,
+            -64},{92,20.95},{86,20.95}},
+                                    color={0,0,127}));
+    annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
+          coordinateSystem(preserveAspectRatio=false), graphics={Line(
+            points={{-30,-90},{-30,-90},{-56,-90}},
+            color={28,108,200},
+            arrow={Arrow.None,Arrow.Filled})}),
+      experiment(
+        StartTime=-100,
+        StopTime=100,
+        __Dymola_NumberOfIntervals=5000,
+        __Dymola_Algorithm="Dassl"));
+  end DRXOnly;
+
+  model DRXOnly_optim
+    extends DRXOnly(
+      DrxRate(displayUnit="l/min") = 3.00009E-06,
+      RelaxedATPCycling(displayUnit="l/min") = 4.16667E-05,
+      relaxingRate(displayUnit="l/min") = 2.66677E-05);
+    extends Toepfer2020;
+
+    Optimization.Criteria.Signals.IntegratedSquaredDeviation
+      integratedSquaredDeviation
+      annotation (Placement(transformation(extent={{42,60},{62,80}})));
+    Modelica.Blocks.Sources.RealExpression realExpression2(y=ATPFluorescence)
+      annotation (Placement(transformation(extent={{2,66},{22,86}})));
+  equation
+    connect(UT.q_out,kH. q_in) annotation (Line(
+        points={{-50,-50},{-50,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(UT.solute,DRX. u[1]) annotation (Line(points={{-44,-60},{-44,-65.05},
+            {74,-65.05}}, color={0,0,127}));
+    connect(UD.solute,DRX. u[2]) annotation (Line(points={{36,-60},{36,-62.95},
+            {74,-62.95}}, color={0,0,127}));
+    connect(realExpression1.y,unlimitedSolutePumpOut1. soluteFlow) annotation (
+        Line(points={{-81,-90},{-94,-90},{-94,-34}},  color={0,0,127}));
+    connect(unlimitedSolutePumpOut1.q_in,UT. q_out) annotation (Line(
+        points={{-80,-30},{-50,-30},{-50,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(SRX.solute,multiSum. u[1]) annotation (Line(points={{-28,56},{-28,
+            46},{74,46}},       color={0,0,127}));
+    connect(Stream.q_in, kH.q_in) annotation (Line(
+        points={{-50,28},{-50,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_out, kH.q_in) annotation (Line(
+        points={{-64,28},{-64,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(multiSum.y, UnmarkedATP.u[1]) annotation (Line(points={{87.02,46},{
+            96,46},{96,23.05},{86,23.05}},
+                                        color={0,0,127}));
+    connect(DRX.y, UnmarkedATP.u[2]) annotation (Line(points={{87.02,-64},{96,
+            -64},{96,20.95},{86,20.95}},
+                                    color={0,0,127}));
+    connect(integratedSquaredDeviation.u1, realExpression2.y)
+      annotation (Line(points={{40,76},{23,76}}, color={0,0,127}));
+    connect(UnmarkedATP.y, integratedSquaredDeviation.u2) annotation (Line(points
+          ={{72.98,22},{8,22},{8,64},{40,64}}, color={0,0,127}));
+    annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
+          coordinateSystem(preserveAspectRatio=false)),
+      experiment(
+        StartTime=-1000,
+        StopTime=200,
+        __Dymola_NumberOfIntervals=5000,
+        __Dymola_Algorithm="Dassl"));
+  end DRXOnly_optim;
+
+  model Toepfer2020 "Data from PMID: 31983222"
+
+    Real ATPFluorescence = a*exp(-b*x) + c*exp(-d*x);
+    Real x = max(0, time);
+    parameter Real a = 0.70, b = 0.052, c=0.30, d = 0.0061;
+
+    annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
+          coordinateSystem(preserveAspectRatio=false)));
+  end Toepfer2020;
+
+  model DRXOnly_optimized
+    extends DRXOnly(
+      DrxRate(displayUnit="l/min") = 3.00009E-06*tune_a,
+      RelaxedATPCycling(displayUnit="l/min") = 4.16667E-05*tune_b,
+      relaxingRate(displayUnit="l/min") = 2.66677E-05*tune_c);
+    extends Toepfer2020;
+    parameter Real tune_a=2.0107438322077007,
+                               tune_b=1.2262857238897689,
+                                           tune_c=2.5880342477940874;
+    Optimization.Criteria.Signals.IntegratedSquaredDeviation
+      integratedSquaredDeviation
+      annotation (Placement(transformation(extent={{42,60},{62,80}})));
+    Modelica.Blocks.Sources.RealExpression realExpression2(y=ATPFluorescence)
+      annotation (Placement(transformation(extent={{2,66},{22,86}})));
+  equation
+    connect(UT.q_out,kH. q_in) annotation (Line(
+        points={{-50,-50},{-50,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(kH.q_out,UD. q_out) annotation (Line(
+        points={{0,-30},{42,-30},{42,-50},{30,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(UT.solute,DRX. u[1]) annotation (Line(points={{-44,-60},{-44,-65.05},
+            {74,-65.05}}, color={0,0,127}));
+    connect(UD.solute,DRX. u[2]) annotation (Line(points={{36,-60},{36,-62.95},
+            {74,-62.95}}, color={0,0,127}));
+    connect(XBCycling.q_out,XBCyclingMeasure. q_out) annotation (Line(
+        points={{0,-80},{-4,-80},{-4,-72},{-6,-72},{-6,-88},{-20,-80}},
+        color={107,45,134},
+        thickness=1));
+    connect(XBCycling.q_in,UD. q_out) annotation (Line(
+        points={{20,-80},{56,-80},{56,-34},{42,-34},{42,-50},{30,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(XBCyclingMeasure.q_in,UT. q_out) annotation (Line(
+        points={{-40,-80},{-74,-80},{-74,-28},{-50,-28},{-50,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(realExpression1.y,unlimitedSolutePumpOut1. soluteFlow) annotation (
+        Line(points={{-81,-90},{-94,-90},{-94,-34}},  color={0,0,127}));
+    connect(unlimitedSolutePumpOut1.q_in,UT. q_out) annotation (Line(
+        points={{-80,-30},{-50,-30},{-50,-50}},
+        color={107,45,134},
+        thickness=1));
+    connect(SRX.solute,multiSum. u[1]) annotation (Line(points={{-28,56},{-28,
+            46},{74,46}},       color={0,0,127}));
+    connect(Stream.q_out,SRX. q_out) annotation (Line(
+        points={{-50,48},{-50,52},{-70,52},{-70,66},{-34,66}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream.q_in, kH.q_in) annotation (Line(
+        points={{-50,28},{-50,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_out, kH.q_in) annotation (Line(
+        points={{-64,28},{-64,-30},{-20,-30}},
+        color={107,45,134},
+        thickness=1));
+    connect(Stream1.q_in, SRX.q_out) annotation (Line(
+        points={{-64,48},{-94,48},{-94,66},{-34,66}},
+        color={107,45,134},
+        thickness=1));
+    connect(multiSum.y, UnmarkedATP.u[1]) annotation (Line(points={{87.02,46},{
+            96,46},{96,23.05},{86,23.05}},
+                                        color={0,0,127}));
+    connect(DRX.y, UnmarkedATP.u[2]) annotation (Line(points={{87.02,-64},{96,
+            -64},{96,20.95},{86,20.95}},
+                                    color={0,0,127}));
+    connect(integratedSquaredDeviation.u1, realExpression2.y)
+      annotation (Line(points={{40,76},{23,76}}, color={0,0,127}));
+    connect(UnmarkedATP.y, integratedSquaredDeviation.u2) annotation (Line(points
+          ={{72.98,22},{8,22},{8,64},{40,64}}, color={0,0,127}));
+    annotation (Icon(coordinateSystem(preserveAspectRatio=false)), Diagram(
+          coordinateSystem(preserveAspectRatio=false)),
+      experiment(
+        StartTime=-1000,
+        StopTime=200,
+        __Dymola_NumberOfIntervals=5000,
+        __Dymola_Algorithm="Dassl"));
+  end DRXOnly_optimized;
+  annotation (uses(Modelica(version="4.0.0"), Physiolibrary(version="2.4.1"),
+      Optimization(version="2.2.6")));
 end CrossBridgeCycling;
