@@ -2,8 +2,8 @@
 dryRun = false;
 
 % Define the folders - this is the input and output
-nextFolder = '../data/PassiveCaSrc2/20241212_BeforeRenaming';
-nextRenamedFolder = '../data/PassiveCaSrc2/20241212_renamed';
+nextFolder = '../data/PassiveCaSrc2/20241217_BeforeRenaming';
+nextRenamedFolder = '../data/PassiveCaSrc2/20241217';
 
 % this is the renaming key - keep those up
 inputFolder = '../data/PassiveCaSrc2/20241010_BeforeRenaming';
@@ -46,7 +46,7 @@ for i = 1:length(renamedFiles)
     end
 end
 
-% Rename files in nextFiles according to the renaming pattern
+%% Rename files in nextFiles according to the renaming pattern
 for i = 1:length(nextFiles)
     filerename = nextFiles(i).name;
     % filePath = fullfile(nextFolder, nextFiles(i).name);
@@ -54,7 +54,9 @@ for i = 1:length(nextFiles)
     if isKey(renameMap, filerename)
         newName = renameMap(filerename);
         % Copy and rename the file
-        if ~dryRun
+        if exist(fullfile(nextRenamedFolder, newName), 'file')
+            warning('File %s in nextFiles already there. Skipping', nextFiles(i).name);
+        elseif ~dryRun
             movefile(fullfile(nextFolder, nextFiles(i).name), fullfile(nextRenamedFolder, newName));
             fprintf('%d: File %s > %s.. \n', i, nextFiles(i).name, newName);
         else

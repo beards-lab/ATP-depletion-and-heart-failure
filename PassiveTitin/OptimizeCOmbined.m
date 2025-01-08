@@ -441,7 +441,7 @@ kpcorr = 1/(params(18)^params(3)); kdcorr = 1/(params(18)^params(5)); alphaUCorr
 convertLref([1 2 6 9 18 20 22]) = [kpcorr kdcorr alphaUCorr kpcorr 1/params(18) alphaUCorr kdcorr];
 params = params.*convertLref;
  
-% messing around
+%% messing around
 params(1) = 1.1296e+03; % kp
 params(1) = 5.1296e+03; % kp
 % params(1) = 20.1296e+03; % kp
