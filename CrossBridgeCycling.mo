@@ -322,7 +322,7 @@ package CrossBridgeCycling
               coordinateSystem(preserveAspectRatio=false)));
       end ChaseData;
 
-      block TimeTable_ATPChaseControl1
+      block TimeTable_ATPChaseControl1 "Chase control 1 from Van Roest"
         extends Modelica.Blocks.Sources.CombiTimeTable(table=[0,1; 18,0.704575;
               27.994,0.628669; 37.988,0.532319; 47.982,0.519323; 57.976,
               0.463446; 67.97,0.443831; 77.964,0.402628; 87.958,0.347676;
@@ -341,10 +341,28 @@ package CrossBridgeCycling
               517.703,0.03962; 527.697,0.010416; 537.691,0.034826; 547.685,
               0.028304; 557.679,0.00202; 567.673,0.034802; 577.667,0.017985;
               587.661,-0.00431; 597.655,0.024556; 607.649,0.021514; 617.643,-0.00358]);
+
+        Real ATPFluorescence = a*exp(-b*x) + c*exp(-d*x);
+        Real x = max(0, time);
+        parameter Real a = 0.70, b = 0.052, c=1-a, d = 0.0061;
+      //   Real cnt(start = 0);
+      //   Integer currentRow( start = 1);
+      equation
+
+      //   when time > table[1, 1:end] then
+      //     cnt = pre(cnt) + 1;
+      //   end when;
+
+      //   when time > table[pre(currentRow), 1] then
+      //     cnt = pre(cnt) + 1; // Increment the counter
+      //     currentRow = pre(currentRow) + 1; // Move to the next row
+      //   end when;
+
+        annotation (experiment(StopTime=100, __Dymola_Algorithm="Dassl"));
       end TimeTable_ATPChaseControl1;
 
-      block TimeTable_ATPChaseControl2
-        extends Modelica.Blocks.Sources.TimeTable(table=[0,1; 18,0.626512;
+      block TimeTable_ATPChaseControl2 "Chase control 2 from Van Roest"
+       extends Modelica.Blocks.Sources.CombiTimeTable(table=[18,0.626512;
               27.994,0.505251; 37.988,0.405251; 47.982,0.329185; 57.976,
               0.245353; 67.97,0.246881; 77.964,0.178039; 87.958,0.151591;
               97.952,0.12387; 107.946,0.111044; 117.94,0.099013; 127.935,
@@ -365,7 +383,7 @@ package CrossBridgeCycling
       end TimeTable_ATPChaseControl2;
 
       block TimeTable_ATPChaseControl3
-        extends Modelica.Blocks.Sources.TimeTable(table=[0,1; 18,0.757024;
+       extends Modelica.Blocks.Sources.CombiTimeTable(table=[18,0.757024;
               27.994,0.70275; 37.988,0.693936; 47.982,0.666516; 57.976,0.641676;
               67.97,0.592881; 77.964,0.563653; 87.958,0.522787; 97.952,0.47;
               107.946,0.434256; 117.94,0.402298; 127.935,0.355838; 137.929,
@@ -386,7 +404,7 @@ package CrossBridgeCycling
       end TimeTable_ATPChaseControl3;
 
       block TimeTable_ATPChaseControl4
-        extends Modelica.Blocks.Sources.TimeTable(table=[0,1; 18,0.704575;
+       extends Modelica.Blocks.Sources.CombiTimeTable(table=[18,0.704575;
               27.994,0.628669; 37.988,0.532319; 47.982,0.519323; 57.976,
               0.463446; 67.97,0.443831; 77.964,0.402628; 87.958,0.347676;
               97.952,0.306668; 107.946,0.254855; 117.94,0.222877; 127.935,
@@ -1315,8 +1333,6 @@ post-ratchetted",
             points={{-50,-50},{-50,-72},{0,-72}},
             color={107,45,134},
             thickness=1));
-        connect(realExpression1.y,unlimitedSolutePumpOut1. soluteFlow) annotation (
-            Line(points={{-99,-82},{-94,-82},{-94,-34}},  color={0,0,127}));
         connect(SRX.solute, SRX_all.u[1]) annotation (Line(points={{-28,56},{
                 -28,40},{-34,40}},
                               color={0,0,127}));
@@ -1864,295 +1880,145 @@ post-ratchetted",
     end LoadingPhase;
 
     package LabelLib
-      connector StateTransLabel
-        Bodylight.Types.AmountOfSubstance m;
-        flow Bodylight.Types.MolarFlowRate q;
-        stream Bodylight.Types.Fraction c;
-        annotation (Icon(coordinateSystem(preserveAspectRatio=false), graphics
-              ={Rectangle(
-                extent={{-100,100},{100,-100}},
-                lineColor={107,45,134},
-                lineThickness=1,
-                fillColor={255,255,255},
-                fillPattern=FillPattern.Solid)}),                      Diagram(
-              coordinateSystem(preserveAspectRatio=false), graphics={Rectangle(
-                extent={{-100,100},{100,-100}},
-                lineColor={107,45,134},
-                lineThickness=1,
-                fillColor={255,255,255},
-                fillPattern=FillPattern.Solid)}));
-      end StateTransLabel;
 
-      model StateCompartment
+      package Obsolete
+        model TestXB
+          extends Modelica.Icons.Example;
+          parameter Real k=0.016666666666666666;
+          Bodylight.Population.LabeledPopulation.Components.StateCompartment
+            SRX(pop_start(displayUnit="mol"), nPorts=2)
+            annotation (Placement(transformation(extent={{-60,40},{-40,60}})));
+          Bodylight.Population.LabeledPopulation.Components.StateCompartment
+            DRX_T(pop_start(displayUnit="mol") = 1 - A2.pop_start, nPorts=4)
+            annotation (Placement(transformation(extent={{-60,-40},{-40,-20}})));
+          Bodylight.Population.LabeledPopulation.Components.StateCompartment
+            DRX_D(pop_start(displayUnit="mol"), nPorts=2)
+            annotation (Placement(transformation(extent={{60,-40},{40,-20}})));
+          Bodylight.Population.LabeledPopulation.Components.StateTransition
+            k_srx_m(k=0.23295219*k) annotation (Placement(transformation(
+                extent={{-10,-10},{10,10}},
+                rotation=270,
+                origin={-30,10})));
+          Bodylight.Population.LabeledPopulation.Components.StateTransition
+            k_srx_p(k=12.128469*k) annotation (Placement(transformation(
+                extent={{10,-10},{-10,10}},
+                rotation=270,
+                origin={-20,10})));
+          Bodylight.Population.LabeledPopulation.Components.StateTransition kH(
+              k=k*100)
+            annotation (Placement(transformation(extent={{-8,-56},{12,-36}})));
+          Bodylight.Population.LabeledPopulation.Components.StateTransition
+            kH_m(
+            k=k*1.1060009,
+            useDynamicFlowLabeling=true,
+            labelIn=time > -ageTime and time < 0,
+            labelOut=time > 0) annotation (Placement(transformation(
+                extent={{-10,-10},{10,10}},
+                rotation=180,
+                origin={2,-36})));
+          Bodylight.Population.LabeledPopulation.Components.StateCompartment A2
+            (pop_start(displayUnit="mol") = 0.04, nPorts=0) "Attached state"
+            annotation (Placement(transformation(extent={{60,40},{40,60}})));
+          parameter Modelica.Units.SI.Time ageTime=60;
+          Modelica.Blocks.Sources.RealExpression totalLabel(y=SRX.labelAmount + DRX_D.labelAmount
+                 + DRX_T.labelAmount + A2.labelAmount)
+            annotation (Placement(transformation(extent={{-96,78},{-76,98}})));
+          Modelica.Blocks.Sources.RealExpression SRXLabel(y=SRX.labelAmount)
+            annotation (Placement(transformation(extent={{-96,58},{-76,78}})));
+          Modelica.Blocks.Sources.RealExpression DrxLabel(y=DRX_D.labelAmount + DRX_T.labelAmount)
+            annotation (Placement(transformation(extent={{-96,38},{-76,58}})));
+          Real totalLabelNorm "Label normalized to chase onset";
+            Real normFactor(start = 1);
+            Real SRX_fraction(start = 0);
+        equation
+          if time > 0 then
+            totalLabelNorm = totalLabel.y/normFactor;
+          else
+            totalLabelNorm = 1;
+          end if;
 
-        parameter Integer nPorts=0 "Number of ports"
-          annotation(Evaluate=true, Dialog(connectorSizing=true, tab="General",group="Ports"));
+          when time > 0 then
+            normFactor = totalLabel.y;
+            SRX_fraction = SRXLabel.y / totalLabel.y;
+          end when;
 
+          connect(SRX.lpop[1], k_srx_m.lpop_a) annotation (Line(
+              points={{-40.2,40.15},{-30,40.15},{-30,20}},
+              color={107,45,134},
+              thickness=1));
+          connect(k_srx_m.lpop_b, DRX_T.lpop[1]) annotation (Line(
+              points={{-30,0},{-30,-39.975},{-40.2,-39.975}},
+              color={107,45,134},
+              thickness=1));
+          connect(k_srx_p.lpop_b, SRX.lpop[2]) annotation (Line(
+              points={{-20,20},{-20,40},{-40.2,40},{-40.2,40.65}},
+              color={107,45,134},
+              thickness=1));
+          connect(k_srx_p.lpop_a, DRX_T.lpop[2]) annotation (Line(
+              points={{-20,0},{-20,-12},{-30,-12},{-30,-39.725},{-40.2,-39.725}},
+              color={107,45,134},
+              thickness=1));
+          connect(DRX_T.lpop[3], kH.lpop_a) annotation (Line(
+              points={{-40.2,-39.475},{-40.2,-40},{-20,-40},{-20,-46},{-8,-46}},
+              color={107,45,134},
+              thickness=1));
+          connect(kH.lpop_b, DRX_D.lpop[1]) annotation (Line(
+              points={{12,-46},{24,-46},{24,-39.85},{40.2,-39.85}},
+              color={107,45,134},
+              thickness=1));
+          connect(kH_m.lpop_b, DRX_T.lpop[4]) annotation (Line(
+              points={{-8,-36},{-20,-36},{-20,-39.225},{-40.2,-39.225}},
+              color={107,45,134},
+              thickness=1));
+          connect(kH_m.lpop_a, DRX_D.lpop[2]) annotation (Line(
+              points={{12,-36},{24,-36},{24,-39.35},{40.2,-39.35}},
+              color={107,45,134},
+              thickness=1));
+          annotation (experiment(
+              StartTime=-620,
+              StopTime=600,
+              __Dymola_Algorithm="Dassl"));
+        end TestXB;
 
+        model TestXB_Ctrl1
+          extends Obsolete.TestXB
+                        (
+            kH(k=100),
+            k_srx_m(k=0.23295219*tune_a),
+            k_srx_p(k=12.128469*tune_b),
+            kH_m(k=1.1060009*tune_c),
+            ageTime=600.0);
+          Data.TimeTable_ATPChaseControl1 timeTable_ATPChaseControl1
+            annotation (Placement(transformation(extent={{-60,80},{-40,100}})));
+          Optimization.Criteria.Signals.IntegratedSquaredDeviation
+            integratedSquaredDeviation
+            annotation (Placement(transformation(extent={{-6,92},{2,84}})));
+          Modelica.Blocks.Sources.RealExpression totalLabelNorm_expr(y=if time > 0
+                 then totalLabelNorm else 0)
+            annotation (Placement(transformation(extent={{-40,72},{-20,92}})));
+            parameter Real tune_a = 1, tune_b = 1, tune_c = 1;
+        equation
+          connect(integratedSquaredDeviation.u1, totalLabelNorm_expr.y) annotation (
+              Line(points={{-6.8,85.6},{-19,85.6},{-19,82}}, color={0,0,127}));
+          connect(timeTable_ATPChaseControl1.y, integratedSquaredDeviation.u2)
+            annotation (Line(points={{-39,90},{-38,90.4},{-6.8,90.4}}, color={0,0,127}));
+        end TestXB_Ctrl1;
 
-        StateTransLabel stateTransLabel[nPorts]
-          annotation (Placement(transformation(extent={{88,-106},{108,-86}})));
-              parameter Bodylight.Types.AmountOfSubstance m_start = 1e-9;
-              Bodylight.Types.AmountOfSubstance m(start = m_start);
-              Real labelAmount;
-              Real labelFlows[nPorts];
-              parameter Real initialLabel = 0;
-      initial equation
-        labelAmount = m*initialLabel;
-      equation
-        for i in 1:nPorts loop
-          stateTransLabel[i].m = m;
-          labelFlows[i] = actualStream(stateTransLabel[i].c)*stateTransLabel[i].q;
-          stateTransLabel[i].c = labelAmount/m;
-        end for;
-        der(m) = sum(stateTransLabel.q);
-        der(labelAmount) = sum(labelFlows);
-        annotation (Icon(coordinateSystem(preserveAspectRatio=false), graphics={
-              Rectangle(
-                extent={{-100,100},{100,-100}},
-                lineColor={107,45,134},
-                lineThickness=1,
-                fillColor={255,255,255},
-                fillPattern=FillPattern.Solid),
-              Text(
-                extent={{-100,-40},{100,80}},
-                textColor={107,45,134},
-                textString="%name"),
-              Text(
-                extent={{-100,-100},{100,-60}},
-                textColor={107,45,134},
-                textString="State")}),                                 Diagram(
-              coordinateSystem(preserveAspectRatio=false)));
+        model TestXB_Ctrl1_reparam
+          "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1"
+          extends CrossBridgeCycling.mantATP.LabelLib.Obsolete.TestXB_Ctrl1
+                                                                  (
+            tune_a=1,
+            tune_b=1,
+            tune_c=1,
+            kH_m(k=0.066*tune_c),
+            k_srx_m(k=0.014*tune_a),
+            k_srx_p(k=48.5*tune_b),
+            ageTime=60.0,
+            kH(k=80.0));
 
-      end StateCompartment;
-
-      model StateTransition
-        StateTransLabel stateTransLabel_in
-          annotation (Placement(transformation(extent={{-110,-10},{-90,10}})));
-        StateTransLabel stateTransLabel_out
-          annotation (Placement(transformation(extent={{90,-10},{110,10}})));
-
-
-        parameter Real k = 0;
-        Real rate;
-
-        parameter Boolean allowReverse = true;
-        parameter Boolean useRateInput = false;
-        parameter Boolean useDynamicFlowLabeling=false
-          annotation (choices(checkBox=true));
-        Boolean labelIn=false
-          "When the outflow should be fully labeled. Accepts an expression."
-          annotation (Dialog(group="Time varying boolean signal", enable=
-                useDynamicFlowLabeling));
-        Boolean labelOut=false
-          "When the outflow should be fully unlabeled. Accepts an expression."
-          annotation (Dialog(group="Time varying boolean signal", enable=
-                useDynamicFlowLabeling));
-
-        Modelica.Blocks.Interfaces.RealInput rateInput = rate if useRateInput annotation (Placement(transformation(
-                extent={{-120,-60},{-80,-20}}), iconTransformation(extent={{-120,
-                  -60},{-80,-20}})));
-      equation
-        if not useRateInput then
-          rate = k;
-        end if;
-        // preferred direction
-        stateTransLabel_out.c =if labelIn then 1 elseif labelOut then 0 else inStream(stateTransLabel_in.c);
-
-        // should not happen
-        stateTransLabel_in.c  =if labelIn then 1 elseif labelOut then 0 else inStream(stateTransLabel_out.c);
-
-        stateTransLabel_in.q + stateTransLabel_out.q = 0;
-        stateTransLabel_in.q = if allowReverse or stateTransLabel_in.m > stateTransLabel_out.m then stateTransLabel_in.m *rate else 0;
-        annotation (Icon(coordinateSystem(preserveAspectRatio=false), graphics={Polygon(
-                points={{-70,-102},{-50,-82},{-30,-62},{-10,-42},{0,-32},{10,-42},{62,
-                    -94},{68,-88},{70,-112},{44,-106},{52,-100},{0,-50},{-62,-108},{-62,
-                    -102},{-70,-102}},
-                lineColor={107,45,134},
-                lineThickness=1,
-                fillColor={255,255,255},
-                fillPattern=FillPattern.Solid, visible = DynamicSelect(useDynamicFlowLabeling, useDynamicFlowLabeling and labelFlow)), Polygon(
-                points={{-80,-30},{40,-30},{40,-30},{40,-50},{80,-20},{-80,-20},{-74,-26},
-                    {-80,-30}},
-                lineColor={107,45,134},
-                lineThickness=1,
-                fillColor={102,44,145},
-                fillPattern=FillPattern.Solid),
-              Text(
-                extent={{-100,-20},{102,20}},
-                textColor={107,45,134},
-                textString="%name")}),
-                                Diagram(coordinateSystem(preserveAspectRatio=false)));
-
-
-      end StateTransition;
-
-      model Test
-        extends Modelica.Icons.Example;
-        StateCompartment A(
-          m_start(displayUnit="mol") = 0.5,
-          nPorts=2,
-          initialLabel=1.0)
-          annotation (Placement(transformation(extent={{-60,0},{-40,20}})));
-        StateTransition stateTransition(k=1, useDynamicFlowLabeling=false)
-          annotation (Placement(transformation(extent={{-20,-24},{0,-4}})));
-        StateCompartment B(m_start(displayUnit="mol") = 0.5, nPorts=2)
-          annotation (Placement(transformation(extent={{40,0},{20,20}})));
-        StateTransition stateTransition1(
-          k=0.1,
-          useDynamicFlowLabeling=true,
-          labelIn=time > 1 and time < 2) annotation (Placement(transformation(
-              extent={{-10,-10},{10,10}},
-              rotation=180,
-              origin={-10,-8})));
-      equation
-        connect(A.stateTransLabel[1], stateTransition.stateTransLabel_in)
-          annotation (Line(points={{-40.2,0.15},{-40,0.15},{-40,-14},{-20,-14}},
-              color={0,0,0}));
-        connect(stateTransition.stateTransLabel_out, B.stateTransLabel[1])
-          annotation (Line(points={{0,-14},{20,-14},{20,0.15},{20.2,0.15}},
-              color={0,0,0}));
-        connect(stateTransition1.stateTransLabel_out, A.stateTransLabel[2])
-          annotation (Line(points={{-20,-8},{-40.2,-8},{-40.2,0.65}}, color={0,
-                0,0}));
-        connect(stateTransition1.stateTransLabel_in, B.stateTransLabel[2])
-          annotation (Line(points={{0,-8},{20.2,-8},{20.2,0.65}}, color={0,0,0}));
-        annotation (experiment(StopTime=10, __Dymola_Algorithm="Dassl"));
-      end Test;
-
-      model TestXB
-        extends Modelica.Icons.Example;
-        parameter Real k=0.016666666666666666;
-        StateCompartment SRX(m_start(displayUnit="mol"),
-                             nPorts=2)
-          annotation (Placement(transformation(extent={{-60,40},{-40,60}})));
-        StateCompartment DRX_T(m_start(displayUnit="mol") = 1 - A2.m_start,
-                                                               nPorts=4)
-          annotation (Placement(transformation(extent={{-60,-40},{-40,-20}})));
-        StateCompartment DRX_D(m_start(displayUnit="mol"),
-                               nPorts=2)
-          annotation (Placement(transformation(extent={{60,-40},{40,-20}})));
-        StateTransition k_srx_m(k=0.23295219*k) annotation (Placement(transformation(
-              extent={{-10,-10},{10,10}},
-              rotation=270,
-              origin={-30,10})));
-        StateTransition k_srx_p(k=12.128469*k) annotation (Placement(transformation(
-              extent={{10,-10},{-10,10}},
-              rotation=270,
-              origin={-20,10})));
-        StateTransition kH(k=k*100)
-          annotation (Placement(transformation(extent={{-8,-56},{12,-36}})));
-        StateTransition kH_m(
-          k=k*1.1060009,
-          useDynamicFlowLabeling=true,
-          labelIn=time > -ageTime and time < 0,
-          labelOut=time > 0) annotation (Placement(transformation(
-              extent={{-10,-10},{10,10}},
-              rotation=180,
-              origin={2,-36})));
-        StateCompartment A2(m_start(displayUnit="mol") = 0.04,
-            nPorts=0) "Attached state"
-          annotation (Placement(transformation(extent={{60,40},{40,60}})));
-        parameter Modelica.Units.SI.Time ageTime=60;
-        Modelica.Blocks.Sources.RealExpression totalLabel(y=SRX.labelAmount + DRX_D.labelAmount
-               + DRX_T.labelAmount + A2.labelAmount)
-          annotation (Placement(transformation(extent={{-96,78},{-76,98}})));
-        Modelica.Blocks.Sources.RealExpression SRXLabel(y=SRX.labelAmount)
-          annotation (Placement(transformation(extent={{-96,58},{-76,78}})));
-        Modelica.Blocks.Sources.RealExpression DrxLabel(y=DRX_D.labelAmount + DRX_T.labelAmount)
-          annotation (Placement(transformation(extent={{-96,38},{-76,58}})));
-        Real totalLabelNorm "Label normalized to chase onset";
-          Real normFactor(start = 1);
-          Real SRX_fraction(start = 0);
-      equation
-        if time > 0 then
-          totalLabelNorm = totalLabel.y/normFactor;
-        else
-          totalLabelNorm = 1;
-        end if;
-
-        when time > 0 then
-          normFactor = totalLabel.y;
-          SRX_fraction = SRXLabel.y / totalLabel.y;
-        end when;
-
-        connect(SRX.stateTransLabel[1], k_srx_m.stateTransLabel_in) annotation (Line(
-            points={{-40.2,40.15},{-30,40.15},{-30,20}},
-            color={107,45,134},
-            thickness=1));
-        connect(k_srx_m.stateTransLabel_out, DRX_T.stateTransLabel[1]) annotation (
-            Line(
-            points={{-30,0},{-30,-39.975},{-40.2,-39.975}},
-            color={107,45,134},
-            thickness=1));
-        connect(k_srx_p.stateTransLabel_out, SRX.stateTransLabel[2]) annotation (Line(
-            points={{-20,20},{-20,40},{-40.2,40},{-40.2,40.65}},
-            color={107,45,134},
-            thickness=1));
-        connect(k_srx_p.stateTransLabel_in, DRX_T.stateTransLabel[2]) annotation (
-            Line(
-            points={{-20,0},{-20,-12},{-30,-12},{-30,-39.725},{-40.2,-39.725}},
-            color={107,45,134},
-            thickness=1));
-        connect(DRX_T.stateTransLabel[3], kH.stateTransLabel_in) annotation (Line(
-            points={{-40.2,-39.475},{-40.2,-40},{-20,-40},{-20,-46},{-8,-46}},
-            color={107,45,134},
-            thickness=1));
-        connect(kH.stateTransLabel_out, DRX_D.stateTransLabel[1]) annotation (Line(
-            points={{12,-46},{24,-46},{24,-39.85},{40.2,-39.85}},
-            color={107,45,134},
-            thickness=1));
-        connect(kH_m.stateTransLabel_out, DRX_T.stateTransLabel[4]) annotation (Line(
-            points={{-8,-36},{-20,-36},{-20,-39.225},{-40.2,-39.225}},
-            color={107,45,134},
-            thickness=1));
-        connect(kH_m.stateTransLabel_in, DRX_D.stateTransLabel[2]) annotation (Line(
-            points={{12,-36},{24,-36},{24,-39.35},{40.2,-39.35}},
-            color={107,45,134},
-            thickness=1));
-        annotation (experiment(
-            StartTime=-620,
-            StopTime=600,
-            __Dymola_Algorithm="Dassl"));
-      end TestXB;
-
-      model TestXB_Ctrl1
-        extends TestXB(
-          kH(k=100),
-          k_srx_m(k=0.23295219*tune_a),
-          k_srx_p(k=12.128469*tune_b),
-          kH_m(k=1.1060009*tune_c),
-          ageTime=600.0);
-        Data.TimeTable_ATPChaseControl1 timeTable_ATPChaseControl1
-          annotation (Placement(transformation(extent={{-60,80},{-40,100}})));
-        Optimization.Criteria.Signals.IntegratedSquaredDeviation
-          integratedSquaredDeviation
-          annotation (Placement(transformation(extent={{-6,92},{2,84}})));
-        Modelica.Blocks.Sources.RealExpression totalLabelNorm_expr(y=if time > 0
-               then totalLabelNorm else 0)
-          annotation (Placement(transformation(extent={{-40,72},{-20,92}})));
-          parameter Real tune_a = 1, tune_b = 1, tune_c = 1;
-      equation
-        connect(integratedSquaredDeviation.u1, totalLabelNorm_expr.y) annotation (
-            Line(points={{-6.8,85.6},{-19,85.6},{-19,82}}, color={0,0,127}));
-        connect(timeTable_ATPChaseControl1.y, integratedSquaredDeviation.u2)
-          annotation (Line(points={{-39,90},{-38,90.4},{-6.8,90.4}}, color={0,0,127}));
-      end TestXB_Ctrl1;
-
-      model TestXB_Ctrl1_reparam
-        "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1"
-        extends CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1(
-          tune_a=1,
-          tune_b=1,
-          tune_c=1,
-          kH_m(k=0.066*tune_c),
-          k_srx_m(k=0.014*tune_a),
-          k_srx_p(k=48.5*tune_b),
-          ageTime=60.0,
-          kH(k=80.0));
-
-        /* Automatically generated at Mon Mar 17 18:44:15 2025 */
-        /*
+          /* Automatically generated at Mon Mar 17 18:44:15 2025 */
+          /*
     The final optimization result was as follows:
     
     Evaluation #29
@@ -2265,28 +2131,28 @@ post-ratchetted",
                             automaticSensitivityTolerance=true,
                             sensitivityTolerance=9.9999999999999995e-7))))
  */
-        annotation (Documentation(info=
-                "<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"),
-            experiment(
-            StartTime=-600,
-            StopTime=618,
-            __Dymola_Algorithm="Dassl"));
-      end TestXB_Ctrl1_reparam;
+          annotation (Documentation(info=
+                  "<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"),
+              experiment(
+              StartTime=-600,
+              StopTime=618,
+              __Dymola_Algorithm="Dassl"));
+        end TestXB_Ctrl1_reparam;
 
-      model TestXB_Ctrl1_reparam_optimized
-        "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1_reparam"
-        extends CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1_reparam
-        ( tune_a=0.3425014844385265,
-          tune_b=0.3039679462342411,
-          tune_c=0.3016761386731495,
-          timeTable_ATPChaseControl1(
-            smoothness=Modelica.Blocks.Types.Smoothness.LinearSegments,
-            extrapolation=Modelica.Blocks.Types.Extrapolation.HoldLastPoint,
-            offset={offset}),
-          break connect(timeTable_ATPChaseControl1.y, integratedSquaredDeviation.u2));
+        model TestXB_Ctrl1_reparam_optimized
+          "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1_reparam"
+          extends CrossBridgeCycling.mantATP.LabelLib.Obsolete.TestXB_Ctrl1_reparam
+          ( tune_a=0.3425014844385265,
+            tune_b=0.3039679462342411,
+            tune_c=0.3016761386731495,
+            timeTable_ATPChaseControl1(
+              smoothness=Modelica.Blocks.Types.Smoothness.LinearSegments,
+              extrapolation=Modelica.Blocks.Types.Extrapolation.HoldLastPoint,
+              offset={offset}),
+            break connect(timeTable_ATPChaseControl1.y, integratedSquaredDeviation.u2));
 
-        /* Automatically generated at Mon Mar 17 21:03:49 2025 */
-        /*
+          /* Automatically generated at Mon Mar 17 21:03:49 2025 */
+          /*
     The final optimization result was as follows:
     
     Evaluation #21
@@ -2406,26 +2272,28 @@ post-ratchetted",
                             automaticSensitivityTolerance=true,
                             sensitivityTolerance=9.9999999999999995e-7))))
  */
-        parameter Real offset=1e-3 "Offsets of output signals";
-      equation
-        connect(timeTable_ATPChaseControl1.y[1], integratedSquaredDeviation.u2)
-          annotation (Line(points={{-39,90},{-40,90},{-40,104},{-12,104},{-12,90.4},{-6.8,
-                90.4}}, color={0,0,127}));
-        annotation (Documentation(info="<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"));
-      end TestXB_Ctrl1_reparam_optimized;
+          parameter Real offset=1e-3 "Offsets of output signals";
+        equation
+          connect(timeTable_ATPChaseControl1.y[1], integratedSquaredDeviation.u2)
+            annotation (Line(points={{-39,90},{-12,90},{-12,90.4},{-6.8,90.4}},
+                color={0,0,127}));
+          annotation (Documentation(info=
+                  "<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"));
+        end TestXB_Ctrl1_reparam_optimized;
 
-      model TestXB_Ctrl1_kH100
-        "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1"
-        extends CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1(
-          tune_a=0.30961658908765416,
-          tune_b=0.13154201047488814,
-          tune_c=0.2992989266852087,
-          kH_m(k=0.066*tune_c),
-          k_srx_m(k=0.014*tune_a),
-          k_srx_p(k=48.5*tune_b));
+        model TestXB_Ctrl1_kH100
+          "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1"
+          extends CrossBridgeCycling.mantATP.LabelLib.Obsolete.TestXB_Ctrl1
+                                                                  (
+            tune_a=0.30961658908765416,
+            tune_b=0.13154201047488814,
+            tune_c=0.2992989266852087,
+            kH_m(k=0.066*tune_c),
+            k_srx_m(k=0.014*tune_a),
+            k_srx_p(k=48.5*tune_b));
 
-        /* Automatically generated at Mon Mar 17 18:44:15 2025 */
-        /*
+          /* Automatically generated at Mon Mar 17 18:44:15 2025 */
+          /*
     The final optimization result was as follows:
     
     Evaluation #29
@@ -2538,20 +2406,21 @@ post-ratchetted",
                             automaticSensitivityTolerance=true,
                             sensitivityTolerance=9.9999999999999995e-7))))
  */
-        annotation (Documentation(info=
-                "<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"));
-      end TestXB_Ctrl1_kH100;
+          annotation (Documentation(info=
+                  "<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"));
+        end TestXB_Ctrl1_kH100;
 
-      model TestXB_Ctrl1_kH_80
-        "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1_optimized80"
-        extends CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1_kH100       (
-          tune_a=0.3119781015780103,
-          tune_b=0.1066006396495426,
-          tune_c=0.3004175637648112,
-          kH(k=80));
+        model TestXB_Ctrl1_kH_80
+          "Optimized model parameters of CrossBridgeCycling.mantATP.LabelLib.TestXB_Ctrl1_optimized80"
+          extends CrossBridgeCycling.mantATP.LabelLib.Obsolete.TestXB_Ctrl1_kH100
+                                                                               (
+            tune_a=0.3119781015780103,
+            tune_b=0.1066006396495426,
+            tune_c=0.3004175637648112,
+            kH(k=80));
 
-        /* Automatically generated at Mon Mar 17 20:19:18 2025 */
-        /*
+          /* Automatically generated at Mon Mar 17 20:19:18 2025 */
+          /*
     The final optimization result was as follows:
     
     Evaluation #25
@@ -2664,18 +2533,70 @@ post-ratchetted",
                             automaticSensitivityTolerance=true,
                             sensitivityTolerance=9.9999999999999995e-7))))
  */
-        annotation (Documentation(info="<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"),
-            experiment(
-            StartTime=-1620,
-            StopTime=600,
-            __Dymola_NumberOfIntervals=5000,
-            __Dymola_Algorithm="Dassl"));
-      end TestXB_Ctrl1_kH_80;
+          annotation (Documentation(info="<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"),
+              experiment(
+              StartTime=-1620,
+              StopTime=600,
+              __Dymola_NumberOfIntervals=5000,
+              __Dymola_Algorithm="Dassl"));
+        end TestXB_Ctrl1_kH_80;
 
-      model TestXB_A2
-        extends TestXB(A2(m_start=0.4, nPorts=1), DRX_T(nPorts=5));
-        extends TestXB_Ctrl1_reparam_optimized;
-        StateTransition k2(
+        model TestXB_Ctrl1_reparam_optimized_A2
+          extends Obsolete.TestXB_Ctrl1_reparam_optimized
+                                                (A2(nPorts=1, pop_start(
+                                                                      displayUnit
+                  ="mol") = 0.4), DRX_T(nPorts=5));
+          Bodylight.Population.LabeledPopulation.Components.StateTransition k2(
+            k=50,
+            useRateInput=true,
+            useDynamicFlowLabeling=true,
+            labelIn=time > -ageTime and time < 0,
+            labelOut=time > 0) annotation (Placement(transformation(
+                extent={{-10,-10},{10,10}},
+                rotation=180,
+                origin={22,40})));
+          Modelica.Blocks.Sources.RealExpression SRXLabel1(y=if time > -ageTime
+                 and A2.pop > 1e-6 then k2.k else 0)
+            annotation (Placement(transformation(extent={{62,58},{42,78}})));
+        equation
+          connect(SRXLabel1.y,k2. rateInput)
+            annotation (Line(points={{41,68},{32,68},{32,44}}, color={0,0,127}));
+          connect(k2.lpop_a, A2.lpop[1]) annotation (Line(
+              points={{32,40},{32,40.4},{40.2,40.4}},
+              color={107,45,134},
+              thickness=1));
+          connect(k2.lpop_b, DRX_T.lpop[5]) annotation (Line(
+              points={{12,40},{6,40},{6,-18},{-30,-18},{-30,-39.975},{-40.2,-39.975},
+                  {-40.2,-39.6}},
+              color={107,45,134},
+              thickness=1));
+          annotation (experiment(
+              StartTime=-600,
+              StopTime=618,
+              __Dymola_NumberOfIntervals=5000,
+              __Dymola_Algorithm="Dassl"));
+        end TestXB_Ctrl1_reparam_optimized_A2;
+      end Obsolete;
+
+      model XBCycling
+        extends Modelica.Icons.Example;
+        parameter Real offset=1e-3 "Offsets of output signals";
+        replaceable Data.TimeTable_ATPChaseControl1 timeTable_ATPChase(
+          smoothness=Modelica.Blocks.Types.Smoothness.LinearSegments,
+          extrapolation=Modelica.Blocks.Types.Extrapolation.HoldLastPoint,
+          offset={offset}) constrainedby Modelica.Blocks.Sources.CombiTimeTable
+          annotation (Placement(transformation(extent={{-60,80},{-40,100}})));
+        Optimization.Criteria.Signals.IntegratedSquaredDeviation
+          integratedSquaredDeviation
+          annotation (Placement(transformation(extent={{-6,92},{2,84}})));
+        Modelica.Blocks.Sources.RealExpression totalLabelNorm_expr(y=if time >
+              timeTable_ATPChase.t_min then totalLabelNorm else
+              timeTable_ATPChase.y[1])
+          annotation (Placement(transformation(extent={{-40,72},{-20,92}})));
+        parameter Real tune_a=0.32245011274220486;
+        parameter Real tune_b=0.2882752381092468;
+        parameter Real tune_c=0.2845516720912324;
+        Bodylight.Population.LabeledPopulation.Components.StateTransition k2(
           k=50,
           useRateInput=true,
           useDynamicFlowLabeling=true,
@@ -2684,62 +2605,349 @@ post-ratchetted",
               extent={{-10,-10},{10,10}},
               rotation=180,
               origin={20,40})));
-        Modelica.Blocks.Sources.RealExpression SRXLabel1(y=if time > -ageTime then k2.k
-               else 0)
+        Modelica.Blocks.Sources.RealExpression SRXLabel1(y=if time > -ageTime and A2.pop >
+              1e-6 then k2.k else 0)
           annotation (Placement(transformation(extent={{60,58},{40,78}})));
       equation
-        connect(k2.stateTransLabel_in, A2.stateTransLabel[1]) annotation (Line(
-            points={{30,40},{36,40},{36,40.4},{40.2,40.4}},
-            color={107,45,134},
-            thickness=1));
-        connect(k2.stateTransLabel_out, DRX_T.stateTransLabel[5]) annotation (Line(
-            points={{10,40},{-10,40},{-10,-22},{-30,-22},{-30,-39.975},{-40.2,-39.975},
-                {-40.2,-39.6}},
-            color={107,45,134},
-            thickness=1));
-        connect(SRXLabel1.y, k2.rateInput)
-          annotation (Line(points={{39,68},{30,68},{30,44}}, color={0,0,127}));
-        annotation (experiment(
-            StartTime=-620,
-            StopTime=600,
-            __Dymola_NumberOfIntervals=15000,
-            __Dymola_Algorithm="Dassl"));
-      end TestXB_A2;
-
-      model TestXB_Ctrl1_reparam_optimized_A2
-        extends TestXB_Ctrl1_reparam_optimized(A2(nPorts=1, m_start(displayUnit
-                ="mol") = 0.4), DRX_T(nPorts=5));
-        StateTransition k2(
-          k=50,
-          useRateInput=true,
+        connect(integratedSquaredDeviation.u1, totalLabelNorm_expr.y) annotation (
+            Line(points={{-6.8,85.6},{-19,85.6},{-19,82}}, color={0,0,127}));
+      public
+        parameter Real k=0.016666666666666666;
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment SRX(
+            pop_start, nPorts=2)
+          annotation (Placement(transformation(extent={{-60,40},{-40,60}})));
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment DRX_T(
+            pop_start = 1 - A2.pop_start, nPorts=5)
+          annotation (Placement(transformation(extent={{-60,-40},{-40,-20}})));
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment DRX_D(
+            pop_start, nPorts=2)
+          annotation (Placement(transformation(extent={{60,-40},{40,-20}})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition k_srx_m(k=0.014
+              *tune_a) annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=270,
+              origin={-30,10})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition k_srx_p(k=48.5
+              *tune_b) annotation (Placement(transformation(
+              extent={{10,-10},{-10,10}},
+              rotation=270,
+              origin={-20,10})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kH(k=80.0)
+          annotation (Placement(transformation(extent={{-8,-56},{12,-36}})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kH_m(
+          k=0.066*tune_c,
           useDynamicFlowLabeling=true,
           labelIn=time > -ageTime and time < 0,
           labelOut=time > 0) annotation (Placement(transformation(
               extent={{-10,-10},{10,10}},
               rotation=180,
-              origin={22,40})));
-        Modelica.Blocks.Sources.RealExpression SRXLabel1(y=if time > -ageTime
-               and A2.m > 1e-6 then k2.k else 0)
-          annotation (Placement(transformation(extent={{62,58},{42,78}})));
+              origin={2,-36})));
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment A2(
+            pop_start = 1e-9, nPorts=1) "Attached state"
+          annotation (Placement(transformation(extent={{60,40},{40,60}})));
+        parameter Modelica.Units.SI.Time ageTime=60.0;
+        Modelica.Blocks.Sources.RealExpression totalLabel(y=SRX.labelAmount + DRX_D.labelAmount
+               + DRX_T.labelAmount + A2.labelAmount)
+          annotation (Placement(transformation(extent={{-96,78},{-76,98}})));
+        Modelica.Blocks.Sources.RealExpression SRXLabel(y=SRX.labelAmount)
+          annotation (Placement(transformation(extent={{-96,58},{-76,78}})));
+        Modelica.Blocks.Sources.RealExpression DrxLabel(y=DRX_D.labelAmount + DRX_T.labelAmount)
+          annotation (Placement(transformation(extent={{-96,38},{-76,58}})));
+        Real totalLabelNorm "Label normalized to chase onset";
+        Real normFactor(start=1);
+        Real SRX_fraction(start=0);
+
+        Real photobleaching(start = 1) "Photobleaching decay starts with aging";
+        parameter Real k_pb = 0;
+        Real totalLabel_PB = totalLabel.y*photobleaching "Total label including photobleaching";
       equation
+
+        der(photobleaching) = if time >  -ageTime then -photobleaching*k_pb else 0;
+
+        if time > 0 then
+          totalLabelNorm = totalLabel_PB/normFactor;
+        else
+          totalLabelNorm = 1;
+        end if;
+        when time > 0 then
+          normFactor = totalLabel.y;
+          SRX_fraction = SRXLabel.y/totalLabel.y;
+        end when;
+        connect(SRX.lpop[1], k_srx_m.lpop_a) annotation (Line(
+            points={{-40.2,40.15},{-30,40.15},{-30,20}},
+            color={107,45,134},
+            thickness=1));
+        connect(k_srx_m.lpop_b, DRX_T.lpop[1]) annotation (Line(
+            points={{-30,0},{-30,-40},{-40.2,-40}},
+            color={107,45,134},
+            thickness=1));
+        connect(k_srx_p.lpop_b, SRX.lpop[2]) annotation (Line(
+            points={{-20,20},{-20,40},{-40.2,40},{-40.2,40.65}},
+            color={107,45,134},
+            thickness=1));
+        connect(k_srx_p.lpop_a, DRX_T.lpop[2]) annotation (Line(
+            points={{-20,0},{-20,-12},{-30,-12},{-30,-39.8},{-40.2,-39.8}},
+            color={107,45,134},
+            thickness=1));
+        connect(DRX_T.lpop[3], kH.lpop_a) annotation (Line(
+            points={{-40.2,-39.6},{-40.2,-40},{-20,-40},{-20,-46},{-8,-46}},
+            color={107,45,134},
+            thickness=1));
+        connect(kH.lpop_b, DRX_D.lpop[1]) annotation (Line(
+            points={{12,-46},{24,-46},{24,-39.85},{40.2,-39.85}},
+            color={107,45,134},
+            thickness=1));
+        connect(kH_m.lpop_b, DRX_T.lpop[4]) annotation (Line(
+            points={{-8,-36},{-20,-36},{-20,-39.4},{-40.2,-39.4}},
+            color={107,45,134},
+            thickness=1));
+        connect(kH_m.lpop_a, DRX_D.lpop[2]) annotation (Line(
+            points={{12,-36},{24,-36},{24,-39.35},{40.2,-39.35}},
+            color={107,45,134},
+            thickness=1));
+        connect(timeTable_ATPChase.y[1], integratedSquaredDeviation.u2)
+          annotation (Line(points={{-39,90},{-12,90},{-12,90.4},{-6.8,90.4}},
+              color={0,0,127}));
         connect(SRXLabel1.y,k2. rateInput)
-          annotation (Line(points={{41,68},{32,68},{32,44}}, color={0,0,127}));
-        connect(k2.stateTransLabel_in, A2.stateTransLabel[1]) annotation (Line(
-            points={{32,40},{32,40.4},{40.2,40.4}},
+          annotation (Line(points={{39,68},{30,68},{30,44}}, color={0,0,127}));
+        connect(k2.lpop_a, A2.lpop[1]) annotation (Line(
+            points={{30,40},{30,40.4},{40.2,40.4}},
             color={107,45,134},
             thickness=1));
-        connect(k2.stateTransLabel_out, DRX_T.stateTransLabel[5]) annotation (
-            Line(
-            points={{12,40},{6,40},{6,-18},{-30,-18},{-30,-39.975},{-40.2,
-                -39.975},{-40.2,-39.6}},
+        connect(k2.lpop_b, DRX_T.lpop[5]) annotation (Line(
+            points={{10,40},{-10,40},{-10,-22},{-30,-22},{-30,-39.975},{-40.2,-39.975},
+                {-40.2,-39.2}},
             color={107,45,134},
             thickness=1));
-        annotation (experiment(
-            StartTime=-600,
-            StopTime=618,
+        annotation (Documentation(info="<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"),
+            experiment(
+            StartTime=-120,
+            StopTime=600,
             __Dymola_NumberOfIntervals=5000,
             __Dymola_Algorithm="Dassl"));
-      end TestXB_Ctrl1_reparam_optimized_A2;
+      end XBCycling;
+
+      model XBCycling_A2
+        extends XBCycling(
+          A2(pop_start
+                    =0.4),
+          tune_a=0.32209674728815296,
+          tune_b=0.2580328344792636,
+          tune_c=0.2954172194469952);
+      end XBCycling_A2;
+
+      model XBCycling_kH120
+        extends XBCycling_A2(
+          kH(k=120),
+          tune_a=0.31375624657832374,
+          tune_b=0.37443405317894396,
+          tune_c=0.28187438139777166);
+      end XBCycling_kH120;
+
+      model XBCycling_Ctrl2
+        extends XBCycling_A2(
+          redeclare Data.TimeTable_ATPChaseControl2 timeTable_ATPChase,
+          tune_a=0.8141449138950674,
+          tune_b=0.05421442918723505,
+          tune_c=0.35936611043631195);
+      end XBCycling_Ctrl2;
+
+      model XBCycling_ADP
+        extends XBCycling(DRX_D(nPorts=4));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kH_m1
+          (
+          k=0.1,
+          useDynamicFlowLabeling=true,
+          labelIn=false,
+          labelOut=time > 0) annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=270,
+              origin={36,-60})));
+      equation
+        connect(DRX_D.lpop[3], kH_m1.lpop_a) annotation (Line(
+            points={{40.2,-39.6},{36,-39.6},{36,-50}},
+            color={107,45,134},
+            thickness=1));
+        connect(kH_m1.lpop_b, DRX_D.lpop[4]) annotation (Line(
+            points={{36,-70},{36,-88},{48,-88},{48,-39.6},{40.2,-39.6}},
+            color={107,45,134},
+            thickness=1));
+      end XBCycling_ADP;
+
+      model XBCyclingModel4 "Dan's shcematics. Does not really fullfill the ageTime test"
+        extends Modelica.Icons.Example;
+        parameter Real offset=1e-3 "Offsets of output signals";
+        replaceable Data.TimeTable_ATPChaseControl1 timeTable_ATPChase(
+          smoothness=Modelica.Blocks.Types.Smoothness.LinearSegments,
+          extrapolation=Modelica.Blocks.Types.Extrapolation.HoldLastPoint,
+          offset={offset}) constrainedby Modelica.Blocks.Sources.CombiTimeTable
+          annotation (Placement(transformation(extent={{-60,80},{-40,100}})));
+        Optimization.Criteria.Signals.IntegratedSquaredDeviation
+          integratedSquaredDeviation
+          annotation (Placement(transformation(extent={{-6,92},{2,84}})));
+        Modelica.Blocks.Sources.RealExpression totalLabelNorm_expr(y=if time >
+              timeTable_ATPChase.t_min then totalLabelNorm else
+              timeTable_ATPChase.y[1])
+          annotation (Placement(transformation(extent={{-40,72},{-20,92}})));
+        parameter Real tune_a=0.9206235568303319;
+        parameter Real tune_b=0.5934329417957546;
+        parameter Real tune_c=0.2728835066814295;
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kTs(
+          k=50*tune_c,
+          useRateInput=false,
+          useDynamicFlowLabeling=true,
+          labelIn=time > -ageTime and time < 0,
+          labelOut=time > 0) annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=180,
+              origin={20,40})));
+        Modelica.Blocks.Sources.RealExpression SRXLabel1(y=if time > -ageTime and A2.pop >
+              1e-6 then kTs.k else 0)
+          annotation (Placement(transformation(extent={{60,58},{40,78}})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kD2S(k=0.004)
+          annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=90,
+              origin={40,6})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kS2D(k=0)
+          annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=270,
+              origin={58,6})));
+      equation
+        connect(integratedSquaredDeviation.u1, totalLabelNorm_expr.y) annotation (
+            Line(points={{-6.8,85.6},{-19,85.6},{-19,82}}, color={0,0,127}));
+      public
+        parameter Real k=0.016666666666666666;
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment SRX(
+            pop_start, nPorts=3)
+          annotation (Placement(transformation(extent={{-60,40},{-40,60}})));
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment DRX_T(
+            pop_start = 1 - A2.pop_start, nPorts=4)
+          annotation (Placement(transformation(extent={{-60,-40},{-40,-20}})));
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment DRX_D(
+            pop_start, nPorts=4)
+          annotation (Placement(transformation(extent={{60,-40},{40,-20}})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kS2T(k=0.004*
+              tune_a)
+          annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=270,
+              origin={-30,10})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kT2S(k=0)
+          annotation (Placement(transformation(
+              extent={{10,-10},{-10,10}},
+              rotation=270,
+              origin={-20,10})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kH(k=50)
+          annotation (Placement(transformation(extent={{-8,-56},{12,-36}})));
+        Bodylight.Population.LabeledPopulation.Components.StateTransition kT(
+          k=0.025*tune_b,
+          useDynamicFlowLabeling=true,
+          labelIn=time > -ageTime and time < 0,
+          labelOut=time > 0) annotation (Placement(transformation(
+              extent={{-10,-10},{10,10}},
+              rotation=180,
+              origin={2,-36})));
+        Bodylight.Population.LabeledPopulation.Components.StateCompartment A2(
+            pop_start = 1e-9, nPorts=2) "Attached state"
+          annotation (Placement(transformation(extent={{60,40},{40,60}})));
+        parameter Modelica.Units.SI.Time ageTime=60.0;
+        Modelica.Blocks.Sources.RealExpression totalLabel(y=SRX.labelAmount + DRX_D.labelAmount
+               + DRX_T.labelAmount + A2.labelAmount)
+          annotation (Placement(transformation(extent={{-96,78},{-76,98}})));
+        Modelica.Blocks.Sources.RealExpression SRXLabel(y=SRX.labelAmount)
+          annotation (Placement(transformation(extent={{-96,58},{-76,78}})));
+        Modelica.Blocks.Sources.RealExpression DrxLabel(y=DRX_D.labelAmount + DRX_T.labelAmount)
+          annotation (Placement(transformation(extent={{-96,38},{-76,58}})));
+        Real totalLabelNorm "Label normalized to chase onset";
+        Real normFactor(start=1);
+        Real SRX_fraction(start=0);
+
+        Real photobleaching(start = 1) "Photobleaching decay starts with aging";
+        parameter Real k_pb = 1e-3;
+        Real totalLabel_PB = totalLabel.y*photobleaching "Total label including photobleaching";
+      equation
+
+        der(photobleaching) = if time >  -ageTime then -photobleaching*k_pb else 0;
+
+        if time > 0 then
+          totalLabelNorm = totalLabel_PB/normFactor;
+        else
+          totalLabelNorm = 1;
+        end if;
+        when time > 0 then
+          normFactor = totalLabel.y;
+          SRX_fraction = SRXLabel.y/totalLabel.y;
+        end when;
+        connect(SRX.lpop[1], kS2T.lpop_a) annotation (Line(
+            points={{-40.2,40.0667},{-30,40.0667},{-30,20}},
+            color={107,45,134},
+            thickness=1));
+        connect(kS2T.lpop_b, DRX_T.lpop[1]) annotation (Line(
+            points={{-30,0},{-30,-39.975},{-40.2,-39.975}},
+            color={107,45,134},
+            thickness=1));
+        connect(kT2S.lpop_b, SRX.lpop[2]) annotation (Line(
+            points={{-20,20},{-20,40},{-40.2,40},{-40.2,40.4}},
+            color={107,45,134},
+            thickness=1));
+        connect(kT2S.lpop_a, DRX_T.lpop[2]) annotation (Line(
+            points={{-20,0},{-20,-12},{-30,-12},{-30,-39.725},{-40.2,-39.725}},
+            color={107,45,134},
+            thickness=1));
+        connect(DRX_T.lpop[3], kH.lpop_a) annotation (Line(
+            points={{-40.2,-39.475},{-40.2,-40},{-20,-40},{-20,-46},{-8,-46}},
+            color={107,45,134},
+            thickness=1));
+        connect(kH.lpop_b, DRX_D.lpop[1]) annotation (Line(
+            points={{12,-46},{24,-46},{24,-39.975},{40.2,-39.975}},
+            color={107,45,134},
+            thickness=1));
+        connect(kT.lpop_b, DRX_T.lpop[4]) annotation (Line(
+            points={{-8,-36},{-20,-36},{-20,-39.225},{-40.2,-39.225}},
+            color={107,45,134},
+            thickness=1));
+        connect(kT.lpop_a, DRX_D.lpop[2]) annotation (Line(
+            points={{12,-36},{24,-36},{24,-39.725},{40.2,-39.725}},
+            color={107,45,134},
+            thickness=1));
+        connect(timeTable_ATPChase.y[1], integratedSquaredDeviation.u2)
+          annotation (Line(points={{-39,90},{-12,90},{-12,90.4},{-6.8,90.4}},
+              color={0,0,127}));
+        connect(SRXLabel1.y, kTs.rateInput)
+          annotation (Line(points={{39,68},{30,68},{30,44}}, color={0,0,127}));
+        connect(kTs.lpop_a, A2.lpop[1]) annotation (Line(
+            points={{30,40},{30,40.15},{40.2,40.15}},
+            color={107,45,134},
+            thickness=1));
+        connect(kD2S.lpop_b, A2.lpop[1]) annotation (Line(
+            points={{40,16},{40.2,18},{40.2,40.15}},
+            color={107,45,134},
+            thickness=1));
+        connect(kD2S.lpop_a, DRX_D.lpop[3]) annotation (Line(
+            points={{40,-4},{40,-16},{36,-16},{36,-39.475},{40.2,-39.475}},
+            color={107,45,134},
+            thickness=1));
+        connect(kS2D.lpop_a, A2.lpop[2]) annotation (Line(
+            points={{58,16},{58,36},{40.2,36},{40.2,40.65}},
+            color={107,45,134},
+            thickness=1));
+        connect(kS2D.lpop_b, DRX_D.lpop[4]) annotation (Line(
+            points={{58,-4},{58,-16},{36,-16},{36,-39.225},{40.2,-39.225}},
+            color={107,45,134},
+            thickness=1));
+        connect(kTs.lpop_b, SRX.lpop[3]) annotation (Line(
+            points={{10,40},{8,40.7333},{-40.2,40.7333}},
+            color={107,45,134},
+            thickness=1));
+        annotation (Documentation(info="<html><p>This class was automatically generated by the Optimization Library. It includes an inherited class with optimized tuner values. More information is found in the text layer of the class.</p></html>"),
+            experiment(
+            StartTime=-600,
+            StopTime=600,
+            __Dymola_NumberOfIntervals=5000,
+            __Dymola_Algorithm="Dassl"));
+      end XBCyclingModel4;
     end LabelLib;
   end mantATP;
 
