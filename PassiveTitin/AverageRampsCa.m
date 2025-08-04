@@ -1,7 +1,7 @@
 % processes the Ca data, expects dataset, peaks, relaxed{rds} and leg_names from AverageRamps
 
-norm_opt = "none";
-% norm_opt = "Fmax";
+% norm_opt = "none";
+norm_opt = "Fmax";
 
 % clearvars -except dataset peaks leg_names;
 
@@ -13,22 +13,25 @@ norm_opt = "none";
 % dataset{4} = load('DataStruct20231027.mat');
 % dataset{5} = load('DataStruct20231102.mat');
 % dataset{6} = load('DataStruct20231107.mat');
+%% Get Fmax
+AverageRamps_findFmax;
+
 %% Get the ss F of the slowest active ramp
-ss_pointers = [2, 2;3,7;3,7;3,7;3,7;3,7];
-dataset_ssF = [];
-clf;hold on;
-for i = 1:size(dataset, 2)
-    if fmax_pointers(i, 1) == 0
-        % no fmax measured
-        dataset_ssF(i) = NaN;
-        continue;
-    end
-    dttbl = dataset{i}.dsc{ss_pointers(i, 1), ss_pointers(i, 2)}.datatable;
-    i_ss = find(dttbl.L > max(dttbl.L)*0.999, 40, 'last') - 10;
-    dataset_ssF(i) = mean(dttbl.F(i_ss));
-    pl(i) = plot(dttbl.t, dttbl.F); plot(dttbl.t(i_ss), dttbl.F(i_ss), '|');
-end
-legend(pl, leg_names);
+% ss_pointers = [2, 2;3,7;3,7;3,7;3,7;3,7];
+% dataset_ssF = [];
+% clf;hold on;
+% for i = 1:size(dataset, 2)
+%     if fmax_pointers(i, 1) == 0
+%         % no fmax measured
+%         dataset_ssF(i) = NaN;
+%         continue;
+%     end
+%     dttbl = dataset{i}.dsc{ss_pointers(i, 1), ss_pointers(i, 2)}.datatable;
+%     i_ss = find(dttbl.L > max(dttbl.L)*0.999, 40, 'last') - 10;
+%     dataset_ssF(i) = mean(dttbl.F(i_ss));
+%     pl(i) = plot(dttbl.t, dttbl.F); plot(dttbl.t(i_ss), dttbl.F(i_ss), '|');
+% end
+% legend(pl, leg_names);
 %% cell for each ramp
 % ramp durations
 rds = [100, 10, 1, 0.1];
@@ -36,11 +39,12 @@ rds = [100, 10, 1, 0.1];
 % dataset, logtrace, ramp for each ramp duration
 % only final dataset
 pCa = 4.4;
-% pCa = 5.5;
-% pCa = 5.75;
-% pCa = 6;
-% pCa = 6.25;
+pCa = 5.5;
+pCa = 5.75;
+pCa = 6;
+pCa = 6.25;
 limit60sPlus = true;
+dsName = sprintf('AvgMava_pCa%0.1f', pCa);
 
 switch pCa
     case 4.4
@@ -50,32 +54,28 @@ switch pCa
         pCaData{4} = [1, 3, 10;2, 3,10;3, 3,10;4,3,10;5, 3,10;6, 3,10];
         % indexes of active PNB 300s hold datasets
         i_pca100ms_hold = [3 10; 3 10; 3 10;3 10; 3 10; 3 10];    
-        dsName = 'AvgMAVA_pCa4.4';
     case 5.5
         %% 5.5 - only 100ms in latter experiments
         pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
-        pCaData{4} = [1,3,5;2,3,11;3,3,11;4,3,12;5,3,12;6,3,12];
-        i_pca100ms_hold = [3 5; 3 11; 3 11;3 12; 3 12; 3 12];
-        dsName = 'AvgMAVA_pCa5.5';
+        pCaData{4} = [1,3,12;2,3,12;3,3,12;4,3,12;5,3,12;6,3,12];
+        % i_pca100ms_hold = [3 5; 3 11; 3 11;3 12; 3 12; 3 12];
     case 5.75
         %% 5.75 - only 100ms in latter experiments
         pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
-        pCaData{4} = [1,4,5;2,3,12;3,3,12;4,3,13;5,3,13;6,3,13];
-        i_pca100ms_hold = [4 5; 3 12; 3 12;3 13; 3 13; 3 13];
-        dsName = 'AvgMAVA_pCa5.75';
+        pCaData{4} = [1,3,13;2,3,13;3,3,13;4,3,13;5,3,13;6,3,13];
+        % i_pca100ms_hold = [4 5; 3 12; 3 12;3 13; 3 13; 3 13];
     case 6.0
         %% 6.0 - only 100ms in latter experiments
         pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
-        pCaData{4} = [1,5,5;2,3,13;3,3,13;4,3,14;5,3,14;6,3,14];
-        i_pca100ms_hold = [5 5; 3 13; 3 13;3 14; 3 14; 3 14];
-        dsName = 'AvgMAVA_pCa6';
+        pCaData{4} = [1,3,14;2,3,14;3,3,14;4,3,14;5,3,14;6,3,14];
+        % i_pca100ms_hold = [5 5; 3 13; 3 13;3 14; 3 14; 3 14];
     case 6.25
         %% 6.25 - only 100ms in latter experiments
         pCaData{1} = [];pCaData{2} = [];pCaData{3} = [];
-        pCaData{4} = [1,6,5;2,3,14;3,3,14;4,3,15;5,3,15;6,3,15];
-        i_pca100ms_hold = [5 5; 3 14; 3 14;3 15; 3 15; 3 15];
-        dsName = 'AvgMAVA_pCa6.25';
+        pCaData{4} = [1,3,15;2,3,15;3,3,15;4,3,15;5,3,15;6,3,15];
+        % i_pca100ms_hold = [5 5; 3 14; 3 14;3 15; 3 15; 3 15];
 end
+    
 
 %% Get corresponding relaxed for scaling options
 
@@ -549,7 +549,8 @@ end
 %% resample and save and plot the AVG
 for i_rds = [4 3 2 1]
     if isempty(FarrCorr{i_rds})
-        
+        % skip for slow ramps in higher pCa
+        continue;
     end
     t = TarrCorr{i_rds};
     t_ignore = 0.001; 

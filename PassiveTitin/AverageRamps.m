@@ -23,6 +23,7 @@ leg_names = ["20241010 M","20241121 F","20241212 F","20241217 F","20241219 M","2
 AverageRamps_findFmax;
 
 %% Figure representative ramps
+if exist('PlotFig2AndDie', 'var') && PlotFig2AndDie
 ts = [dataset{6}.dsc{1, 1}.datatable.t; ...
     dataset{6}.dsc{1, 1}.datatable.t(end) + dataset{6}.dsc{2, 1}.datatable.t ;...
     dataset{6}.dsc{1, 1}.datatable.t(end) + dataset{6}.dsc{2, 1}.datatable.t(end)  + dataset{6}.dsc{3, 1}.datatable.t];
@@ -95,7 +96,8 @@ gc.YAxis(1).TickLabel = [];
 gc.XTick = [0 0.25 0.5];
 
 exportgraphics(f,'Figures/RepreRamps.png','Resolution',150)
-
+return
+end
 %% cell for each ramp
 % ramp durations - indexes the _relaxed_
 rds = [100, 10, 1, 0.1];
