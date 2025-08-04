@@ -286,6 +286,9 @@ params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd
 params0.mods = {'ksr0', 'kmsr', 'sigma1', 'kmsrd', 'ksrd', 'ksr2srd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'k1', 'alpha1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE'};
 params0.mods = {'kmsr', 'ksrd', 'sigma_srd2', 'ka', 'kah', 'kd', 'alpha0_L', 'alpha0_R', 'k2', 'k2_R', 'alpha2_L', 'alpha2_R', 'kstiff1', 'kstiff2', 'dr', 'kSE', 'mu', 'estiff'}
 
+params0.mods = {'kstiff1', 'kstiff2', 'dr', 'mu', 'estiff', 'kstiff1_n', 'kstiff2_n'};
+
+params0.mods = {'k1', 'alpha1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'dr2_L', 'dr2_R', 'alpha2', 'dr2', 'kstiff1', 'kstiff2', 'dr', 'kstiff1_n', 'kstiff2_n'}
 params0.g = ones(size(params0.mods));
 %%
 
@@ -295,10 +298,10 @@ RunMDelta = false; % run minus delta as well?
 params0.ghostLoad = '';
 SAFact = 1.01;
 c0 = isolateRunBakersExp(params0);
+p0 = params0;
 params0.PlotEachSeparately = false;
 params0.ShowStatePlots = false;
 params0.ShowResidualPlots = false;
-p0 = params0;
 
 for i_m = saSet
     % reset params
@@ -345,8 +348,8 @@ params0.mods(cost_sap == c0)
 % c0 - min(cost_sam, cost_sap)
 cost_cmb = cost_sap;
 % cost_cmb = min(cost_sam, cost_sap);
+cost_diff = c0 - cost_cmb;
 
-cost_diff = c0 - cost_cmb
 % better value
 [val_bett cost_diff_better_i] = sort(cost_diff.*(cost_diff > 0), 'descend');
 % most influential
@@ -378,13 +381,14 @@ hold on;plot([0 length(sorted_infl)+1], [c0 c0])
 
 params0.MaxRunTime = 1;
 % params0.RunSlack = false;
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500, 'MaxFunEvals', 1500);
 % g = [1, 1, 1, 1, 1, 1, 1, 1];
 % g = [1.2539    0.4422];
 
-params0.PlotEachSeparately = false;
+% params0.PlotEachSeparately = false;
 params0.ghostLoad = '';
 params0.ShowResidualPlots = false;
+params0.BreakOnODEUnstable = true;
 
 % g = params0.g;
 % g = ones(length(params0.mods), 1);
@@ -407,22 +411,47 @@ params0.ghostSave = '';
 %%
 clf;
 % figure(3003)
-params0.mu = 1e0;
+% params0.mu = 1e0;
 params0.justPlotStateTransitionsFlag = false;
 params0.UseForceOnsetShift = true;
-params0.MaxSlackNegativeForce = -Inf;
+params0.MaxSlackNegativeForce = -5;
 params0.SimTitle = 'hey';
-%%
+%
+% params0 = load('FminS_allParams_params.mat').params
 % apply g
 % params0 = getParams(params0, params0.g, false, true);
 clf;
 % params0.PlotEachSeparately = true;
 % params0.SimTitle = 'ff'
 params0.UseA2Popping = false;
-params0.pop_s = - 0.03;
-params0.ghostLoad = 'FminS_v2';
-tic
+params0.pop_s = -0.01;
+params0.ghostSave = '';
+params0.ghostLoad = 'POP_BASE';
+% params0.ghostLoad = 'FminS_v2';
 
+params0.UseLimitedSRDTransition = false;
+params0.Srd_max = 50;
+params0.Srd_n = 0.4;
+params0.PlotEachSeparately = true;
+params0.ShowStatePlots = true;
+params0.RunSlack = true;
+params0.RunForceVelocity = false;
+params0.RunForceLengthEstim = false;
+% params0.dr = 0.02;
+params0.estiff = 1.0;
+
+params0.UseNegativeKstiff = true;
+
+params0.kstiff1_n = 1.2156e+04*0.1;
+params0.kstiff2_n = 9.1194e+03*0.1;
+
+
+params0.UseForceOnsetShift = false;
+%% params0.d_pop = params0.dr*2;
+clf;
+% params0.g(4:7) = [300 1 1 0.001];
+tic
+LoadData
 RunBakersExp;
 toc
 % params0.g = params0.g(1:26);
@@ -430,8 +459,9 @@ toc
 % writeParamsToMFile('ModelParams_V1_Fmin2.m', params0);
 % writeParamsToMFile('ModelParams_V1_Fmin3.m', params0);
 %% optim surrogateopt
-
-options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 0.8*60*60, 'UseParallel',true, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', x', MaxFunctionEvaluations=5000);
+x = params0.g;
+g = x;
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 4*60*60, 'UseParallel',true, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', x', MaxFunctionEvaluations=5000);
 
 optparams = params0;
 % optparams.mods = optparams.mods(sorted_infl(1:20))
@@ -441,7 +471,7 @@ optparams.BreakOnODEUnstable = true;
 % optparams.RunSlack = true;
 % optparams.RunSlackSegments = 'All';
 optparams.EvalFitSlackOnset = false;
-
+% optparams.RunSlackSegments
 % g = ones(length(optparams.mods), 1);
 % retrieve from table
 % T = load("optTable.mat").T;
@@ -456,10 +486,12 @@ optimfun = @(g)evaluateBakersExp(g, optparams);
 
 params0.g = x;
 params0.UseForceOnsetShift = false;
+
 RunBakersExp;
 % writeParamsToMFile('ModelParams_V1_Surro.m', params0);
 % save tmpOpt3
-save tmpSurrOpt
+% save tmpSurrOpt
+save tmpOpt6
 %% pattern search
 lb = 0.8*params0.g, ub = 1.2*params0.g;
 
@@ -582,11 +614,13 @@ T.Properties.VariableNames = ["mods", "lb", "val", "ub"];
 %% Experiment run
 % params0.g = p_OptimGA;
 % params0.RunSlackSegments = 'Fourth-rampuponly';
-params0.RunSlackSegments = 'Fourth';
-params0.EvalFitSlackOnset = false;
+params0.RunSlackSegments = 'All';
+params0.EvalFitSlackOnset = true;
 params0.PlotEachSeparately = true;
 params0.ShowStatePlots = true;
 params0.justPlotStateTransitionsFlag = false;
+
+params0.rsl0 = 1.05;
 
 % params0.Lsc0 = 1.51;
 % params0.xrate = 1;
@@ -597,14 +631,14 @@ params0.justPlotStateTransitionsFlag = false;
 params0.RunSlack = true;
 params0.RunForceLengthEstim = false;
 params0.RunForceVelocity = false;
-params0.RunForceLengthEstim = false;
+params0.RunForceLengthEstim = true;
 % experimenting
 % params0.FudgeVmax = true;
 % params0.FudgeA = 0;
 % params0.FudgeB = 121.922;
 % params0.FudgeC = -209.18;
 
-params0.alpha0_L = 95;
+% params0.alpha0_L = 95;
 
 tic
 figure(gcf);
@@ -766,10 +800,73 @@ params0.ghostLoad = 'tmp';
 % params0.g = [1.4747    0.9379]
 % params0.FudgeVmax = true;
 % params0.justPlotStateTransitionsFlag = false;
+params0.justPlotStateTransitionsFlag = true;
+params0.dr2_R = -params0.dr;
+params0.dr2_L = params0.dr;
 tic
+figure(8008);clf;
 RunBakersExp;
 toc
 sum(E)
+%% Test W detachment func
+% params0 = load("FminS_allParams_params.mat").params;
+params0 = struct();
+ModelParamsInit_Wdetachment
+params0.UseNominalForDrs = true;
+
+% ModelParamsOptim_DoublePeakOptim
+params0.UseWDetachment = true;
+params0.UseNegativeKstiff = true;
+params0.kstiff1_n = params0.kstiff1;
+params0.kstiff2_n = params0.kstiff2;
+
+params0.UseLimitedSRDTransition = false;
+params0.UseA2Popping = false;
+params0.ghostSave = '';
+% 
+params0.k1 = 100;
+params0.alpha1 = 10;
+
+params0.UseWDetachment = true;
+params0.k2_L = 1;
+params0.alpha2_L = 200;
+params0.dr2_L = 1;
+% 
+params0.k2 = 100;
+params0.alpha2 = 9e3;
+params0.dr2 = 1;
+
+params0.k2_R = 1;
+params0.alpha2_R = 200;
+params0.dr2_R = 1;
+
+params0.justPlotStateTransitionsFlag = false;
+
+params0.RunForceVelocity = false;
+params0.RunForceVelocity = false;
+params0.RunSlack = true;
+params0.PlotEachSeparately = true;
+params0.RunForceLengthEstim = false;
+params0.RunSlackSegments = 'FirstAndLastShort';
+params0.EvalFitSlackOnset = false;
+
+params0.UseSuperRelaxedADP = false;
+params0.kSE = kSE;
+params0.rsl0 = rsl2_0;
+
+params0.mods = {'k1', 'alpha1', 'k2', 'k2_L', 'k2_R', 'alpha2_L', 'alpha2_R', 'dr2_L', 'dr2_R', 'alpha2', 'dr2', 'kstiff1', 'kstiff2', 'dr', 'kstiff1_n', 'kstiff2_n'};
+params0.g = [1.0051    1.0006    0.9907    0.9905    1.0208    1.0134    0.9910    0.9799    1.0247    1.0033    1.0111    1.0061   1.0084    1.0090    1.0007    0.9936];
+
+%%
+figure(8009);clf;
+params0.justPlotStateTransitionsFlag = true;
+params0.ShowStatePlots = true;
+tic
+RunBakersExp;
+toc
+
+% writeParamsToMFile('ModelParamsFmin_Wdetachment.m', params0);
+
 %% plot overlay
 figure(222);clf;
 dropstart = velocitytable([3, 7, 11, 15, 19], 1);
@@ -792,10 +889,106 @@ LXB = 1.6:0.1:3.8;
     L_T_HS2 = max(LXB*0.5 - (LXB-L_thin),L_hbare*0.5);
     L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
     N_overlap = L_ov*2/(L_thick - L_hbare);
-
+% clf;
 hold on;plot(LXB, N_overlap.^2, '-', LineWidth=2)
-xlabel('SL');ylabel('OV');legend('OV', 'OV^2')
+xlabel('SL');ylabel('OV');legend('OV', 'OV^2');
 
+%% Estimate rsl0
+params = params0;
+% estimation from slack extrapolation at 2.2
+LSE = (2.2-2.07);
+% F = kSE*LSE;
+kSE = 77/LSE;
+
+% force at 2.0
+LSEat2_0 = 60/kSE;
+SL0 = 2.0;
+
+rsl2_2 = (2.2 + LSE)/2.2;
+rsl2_0 = (SL0 + LSEat2_0)/SL0;
+params.kSE = kSE;
+params.rsl0 = rsl2_0;
+
+params.Velocity = 0;
+params.SL0 = 2.0;
+
+params = getParams(params, [], true);
+[F out] = evaluateModel(@dPUdT_CombinedTransitions, [0 2], params);
+clf;nexttile;plot(out.t, out.Force);
+nexttile;plot(out.t, out.SL, out.t, out.LXB);
+
+%%
+
+params = params0;
+params.kmsr = 0;
+params.ksr0 = 0;
+params.UseSuperRelaxedADP = false;
+params.Velocity = 0;
+
+% sr
+% SR = 0.1;
+% params.SL0 = 2.0;
+% params.rsl = 1.05;
+
+SL = [2.2 2.0400    2.0000    1.9600    1.9200  1.8800];
+df = [76.5 68.3878   65.5438   59.2362   52.5507   43.9655];
+
+SR = zeros(6, 1)
+% SR = ones(6, 1)*0.5;
+SR = [1 1 1 1 1 1]
+% F = []
+
+% x_sr = [0.2    0.1    0.09    0.1413    0.3    0.35];
+x_sr = [0.2118    0.1006    0.1054   0.1395    0.1821    0.3311];
+x_sr = [0.21    0.1006    0.1054   0.1395    0.1821    0.3311];
+% x_sr = SR;
+E = optthat(params0, x_sr, true);
+nexttile;plot(SL, x_sr, '*-');
+%%
+optimfun = @(g)optthat(params0, g, false);
+x_sr = fminsearch(optimfun, x_sr, options)
+
+
+function E = optthat(params0, SR, plotThat)
+%%
+    if any(SR > 1 | SR < 0)
+        E = inf;
+        return;
+    end
+    params = params0;
+    params.kmsr = 0;
+    params.ksr0 = 0;
+    params.UseSuperRelaxedADP = false;
+    params.Velocity = 0;
+    
+    % sr
+    % SR = 0.1;
+    % params.SL0 = 2.0;
+    % params.rsl = 1.05;
+    
+    SL = [2.2 2.0400    2.0000    1.9600    1.9200  1.8800];
+    df = [76.5 68.3878   65.5438   59.2362   52.5507   43.9655];
+    
+    if plotThat
+        clf;
+        % nexttile;hold on;
+    end
+    for i_SL = 1:length(SL)
+        params.SL0 = SL(i_SL);    
+        params = getParams(params, [], true);
+        params.PU0(2*params.ss+1) = SR(i_SL);
+        % params.PU0(2*params.ss + 3) = SL(i_SL);
+        [F(i_SL) out] = evaluateModel(@dPUdT_CombinedTransitions, [0 20], params);
+        if plotThat
+            % plot(out.t, out.Force);
+            % plot(out.t, out.LXB);
+        end
+    end
+    if plotThat
+        nexttile;plot(SL, df, '*-', SL, F,'*-');
+    end
+    E = sum((df - F).^2);
+end
 
 
 function cost = isolateRunBakersExp(params0)

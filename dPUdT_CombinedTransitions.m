@@ -118,22 +118,28 @@ else
 end
 end
 
-if params.UseA2Popping
-    s_pop = s <= params.pop_s;
-    % ignoring at this level
-    % all probabilities are auto shifted to UT
-    p2(s_pop) = 0;
-end
-
-
 
 % sum of all probabilities
-p1_0 = dS*sum(p1); p1_1 = dS*sum(s.*p1);
-p2_0 = dS*sum(p2); p2_1 = dS*sum(((s+params.dr).^params.estiff).*p2);
+p1_0 = dS*sum(p1); 
+p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
+
+if params.UseNegativeKstiff
+    p1_1_pos = dS*sum(s.*p1.*(s>=0));
+    p1_1_neg = dS*sum(s.*p1.*(s<=0));
+    p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
+    p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
+    F_active = params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);     
+    p1_1 = p1_1_neg + p1_1_pos;
+    p2_1 = p2_1_pos + p2_1_neg;
+else
+    p1_1 = dS*sum(s.*p1);
+    p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
+    F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
+end
 
 % non-hydrolized ATP in non-super relaxed state
 PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 
-    F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
+    
 
 if params.UseOverlapFactor
     N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
@@ -186,7 +192,7 @@ end
 if params.justPlotStateTransitionsFlag
     % s = s - (s(end) - s(1))/2; 
     s = -0.05:0.001:0.05;
-    F_total = -5:1:80;
+    F_total = -50:1:80;
     F_passive = -5:1:10;
     p1 = ones(size(p1));
     p2 = ones(size(p2));
@@ -224,9 +230,14 @@ else
     R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
     R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 
-    kL = min(1e4, params.k2_L*((s+0)<=0).*(1 - exp(-(s+0)*params.alpha2_L)).^2);
-    kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
-    R2T = p2.*(params.k2 + kL + kR);
+    if params.UseWDetachment
+        R2T = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
+        R2T = min(1e4, R2T.*p2);
+    else
+        kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
+        kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
+        R2T = p2.*(params.k2 + kL + kR);
+    end
 end
 
 
@@ -247,7 +258,11 @@ end
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
     RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*P_SRD;
-    RPD2SRD = params.ksrd*exp(-F_SR/params.sigma_srd2)*PD;
+    if params.UseLimitedSRDTransition
+        RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)));
+    else
+        RPD2SRD = params.ksrd*exp(-F_SR/params.sigma_srd2)*PD;
+    end
     RSRD2SR = params.ksr2srd*P_SRD;
     dU_SRD = -RSRD2PD  + RPD2SRD - RSRD2SR;
 else
@@ -296,18 +311,34 @@ end
 
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
+try
     dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
     dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS); % attachment
+catch e
+    disp e
+end
 
 % if ~params.UseCa
     dNP = 0;
+
+if params.UseA2Popping
+    s_pop = s <= params.pop_s;
+    % ignoring at this level
+    % all probabilities are auto shifted to UT
+    if any(s_pop==1) && t > 0
+        dp2(s_pop) = -p2(s_pop)*1e6;
+        % dp1(s_pop) = -p1(s_pop)*1e6;
+    end
+end
+
+
 
 f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
 outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];
 rates = [RTD, RD1, sum([R1D, R12,R21,R2T, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR, RT2];
 
 %% breakpints
-if t >= 1.20162642e+00 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t >= 0 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

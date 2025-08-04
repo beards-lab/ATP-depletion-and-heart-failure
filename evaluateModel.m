@@ -383,6 +383,12 @@ else
     fp = 1; % do not skip, we have just one datapoint!
 end
 nS = params.NumberOfStates; % number of strain-dependent states
+if length(T) > 1.5e4    
+    Tnew = linspace(T(1), T(end), 1e4)
+    PU = interp1(T, PU, Tnew);
+    T = Tnew;
+end
+
     for j = fp:length(T)
 %         dt = T(j);
         i = length(out.t) + 1;

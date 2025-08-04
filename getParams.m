@@ -32,6 +32,7 @@ end
         'Slim_l', 1.6, ... % minimal XB length (left bound)
         'Slim_r', 2.2, ... % maximal XB length (right bound)
         'SL0', SL0, ... % initial SL length
+        'rsl0', 1, ... % default extra stretch given by serial spring element
         'LSE0', 0, ... % initial length of the spring    
         'SLmax', Inf, ...
         'OutputAtSL', Inf, ...    
@@ -247,7 +248,7 @@ end
         U_SRD = 0;
         NP = 0;
         PuATP = 0;
-        SL0 = params.SL0;
+        SL0 = params.SL0*params.rsl0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
         if params.NumberOfStates == 2
