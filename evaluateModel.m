@@ -25,7 +25,19 @@ params = rmfield(params, 'EvalAtp');
 params = rmfield(params, 'vmax');
 params = rmfield(params, 'UseSerialStiffness');
 
-% params = rmfield(params, 'UseTitinModel');
+if isfield(params, 'RemoveField') && ~isempty(params.RemoveField)
+    % Split on commas or spaces (one or more)
+    fieldsToRemove = regexp(params.RemoveField, '[,\s]+', 'split');
+    % Remove empty entries (in case of double spaces or trailing commas)
+    fieldsToRemove = fieldsToRemove(~cellfun('isempty', fieldsToRemove));
+
+    % Remove only fields that exist
+    fieldsToRemove = intersect(fieldnames(params), fieldsToRemove);
+
+    if ~isempty(fieldsToRemove)
+        params = rmfield(params, fieldsToRemove);
+    end
+end
 
 
 if isfield(params, 'ksrm')
@@ -433,11 +445,13 @@ end
         out.R2T(i) = rates(6);
         out.XB_Ripped(i) = rates(7);
         out.RSR2PT(i) = rates(8);
-        out.RPT2SR(i) = rates(9);
-        out.RSRD2PD(i) = rates(10);
-        out.RPD2SRD(i) = rates(11);
-        out.RSRD2SR(i) = rates(12);
-        out.RT2(i)  = rates(13);
+        if length(rates) >= 9
+            out.RPT2SR(i) = rates(9);
+            out.RSRD2PD(i) = rates(10);
+            out.RPD2SRD(i) = rates(11);
+            out.RSRD2SR(i) = rates(12);
+            out.RT2(i)  = rates(13);
+        end
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke

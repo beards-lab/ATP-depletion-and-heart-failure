@@ -164,8 +164,13 @@ if params0.RunKtr
     % relative to max value from data to run optimizer faster
     % Frel = out.FXB(i_0:end)./55;
     i_ktr = find(Frel >= 1-exp(-1), 1);
-    Ktr = 1/out.t(i_ktr+i_0);
-    E(2) = abs(Ktr-Ktr_mean(1)).^2;
+    if ~isempty(i_ktr) 
+        Ktr = 1/out.t(i_ktr+i_0);
+        E(2) = abs(Ktr-Ktr_mean(1)).^2;
+    else
+        Ktr = Inf;
+        E(2) = Inf;
+    end
 
     if ~isempty(params.ghostSave)
         ghost = [out.t;out.Force/out.Force(end)]';
@@ -326,11 +331,19 @@ if params0.RunSlack
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
+        case 'FirstAndLastShort'
+            velocitytable = datastruct.velocitytable([1:6 19:23], :);
+            velocitytable([5:6 9:10], 1) = velocitytable([5:6, 9:10], 1) + 1;
+            % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
+            validZone = datatable(:, 1) > datastruct.velocitytable(3, 1) - 0.1 & datatable(:, 1) < datastruct.velocitytable(3, 1)+0.04 ...
+                | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(19, 1) + 0.04;            
+            
         case 'FirstAndLastExtended'
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             velocitytable([5:6 9:10], 1) = velocitytable([5:6, 9:10], 1) + 1;
             % validZone = (datatable(:, 1) > 1 & datatable(:, 1) < 1.45) | (datatable(:, 1) > 2.7);
-            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);            
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) ...
+                | datatable(:, 1) > datastruct.velocitytable(18, 1) & datatable(:, 1) < datastruct.velocitytable(21, 1);            
         case 'AllButLast'
     % all but the last
     velocitytable = datastruct.velocitytable(1:19, :);
@@ -436,7 +449,11 @@ if params0.RunSlack
 
     if ~isempty(params.ghostSave)
         ghost = [out.t; out.Force]';
+        
+        % do not save ghostSave command!
+        gs = params0.ghostSave; params0.ghostSave = '';
         save(['Ghost_' params.ghostSave '_slack'], 'ghost', "params0");
+        params0.ghostSave = gs;
     end
     if params.PlotEachSeparately
         % axes('position',[0.55 0.1 0.4 0.35]); hold on;
@@ -580,6 +597,7 @@ end
 %% FORCE LENGTH ESTIMATED relation
 if params0.RunForceLengthEstim
     params = params0;
+    params.PlotEachSeparately = true;
     gp = ones(5, 1);
     Es = simulateForceLengthEstim(ones(5, 1), params, modelFcn, params.PlotEachSeparately);
     E(end+1) = Es*1e0;

@@ -35,5 +35,15 @@ legend('T to SR', 'SR to T','D to SRD', 'SRD to D');
 % ylim([0, myl])
 xlim([F_SR(1) F_SR(end)])
 xlabel('Force (kPa)');ylabel('Transition rate (1/s)');
+return
+
+%% test Hill SRD transition
+% F_SR, RPD2SRD,
+figure(24);clf;hold on;
+plot(F_SR, RPD2SRD, 'o-', F_SR, RSRD2PD, 'o-');
+
+D2SRD_hill = @(K, n, x) K./(1+exp(n*(x)));
+
+plot(F_SR, D2SRD_hill(200, 0.4, F_SR), 'x-');
 
 % s - Distance from attachment point

@@ -337,6 +337,13 @@ f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
 outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];
 rates = [RTD, RD1, sum([R1D, R12,R21,R2T, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR, RT2];
 
+if params.DryRun
+    f = zeros(size(PU));
+    outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1];
+    rates = zeros(1, 13);
+    return;
+end
+
 %% breakpints
 if any(~isreal(f)) || t >= 0 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
