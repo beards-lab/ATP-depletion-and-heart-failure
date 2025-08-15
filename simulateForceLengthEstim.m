@@ -44,9 +44,11 @@ if plotThat
     plot(SL,F_total,'x-', SL,F_passive,'x--', LineWidth=2);
     title('Steady-state tension');xlabel('SL');ylabel('Tension (kPa)');
     legend('Data (estimated)', 'Simulation', 'Passive tension component (model)')
-    nexttile();
-    plot(SL, p1_0, '|-', SL, p2_0, '|-', SL, PuT, '|-',SL, PuD, '|-', SL, SR, '|-', LineWidth=1.5)
-    legend('A1','A2','UT','UD', 'SR')
+    if params.ShowStatePlots
+        nexttile();
+        plot(SL, p1_0, '|-', SL, p2_0, '|-', SL, PuT, '|-',SL, PuD, '|-', SL, SR, '|-', LineWidth=1.5)
+        legend('A1','A2','UT','UD', 'SR')
+    end
 
 end
 

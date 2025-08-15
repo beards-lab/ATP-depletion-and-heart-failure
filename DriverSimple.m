@@ -94,7 +94,7 @@ params0.RunForceLengthEstim = false;
 % Show all the ramps overlapped. Only for 'All' slacks
 params0.EvalFitSlackOnset = false;
 
-params0.ShowStatePlots  = true;
+params0.ShowStatePlots  = false;
 % params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
 
 LoadData;
@@ -104,7 +104,7 @@ params0.modelFcn = 'dPUdT_CombinedTransitions';
 params0.UseUniformTransitionFunc = false;
 
 % only plot the strain-rate profile
-params0.justPlotStateTransitionsFlag = true;
+params0.justPlotStateTransitionsFlag = false;
 params0.EvalFitSlackOnset  = true;
 params0.drawForceOnset = true;
 
@@ -161,3 +161,6 @@ ylabel('*Muscle length (L/L_0)');
 return;
 
 
+
+gh = load('Ghost_NoReattach_slack.mat')
+params0 = gh.params0

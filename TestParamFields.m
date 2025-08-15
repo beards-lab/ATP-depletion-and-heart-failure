@@ -11,7 +11,7 @@ toc
 
 %% Find params and vals using wildcards
 
-matchStructFields(params0, 'Run*', false, true);
+matchStructFields(params0, '*', true, true);
 
 %%
 params0 = getParams();
