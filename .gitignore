@@ -1,4 +1,7 @@
+Thrash/
 Dan2/
+XB/
+.gitignore
 *.png
 *.asv
 *.mat
@@ -10,3 +13,7 @@ buildlog.txt
 ds*.txt
 dsmodel.c
 *.exe
+ctrl1.csv
+PARAMETERS.xlsx
+UpdatePhysiolibraryToBodylight.bat
+*PARAMETERS.xlsx
