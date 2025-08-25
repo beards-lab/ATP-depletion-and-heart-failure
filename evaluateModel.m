@@ -14,16 +14,17 @@ ss = params.ss;
 params = updateRates(params);
 
 % inactive switches
-params = rmfield(params, 'UseSlack');
-params = rmfield(params, 'UseP31Shift');
-params = rmfield(params, 'F_act_UseP31');
-params = rmfield(params, 'UseMutualPairingAttachment');
-params = rmfield(params, 'UseSpaceDiscretization');
-params = rmfield(params, 'UseSpaceInterpolation');
-params = rmfield(params, 'UseKstiff3');
-params = rmfield(params, 'EvalAtp');
-params = rmfield(params, 'vmax');
-params = rmfield(params, 'UseSerialStiffness');
+
+% params = rmfield(params, 'UseSlack');
+% params = rmfield(params, 'UseP31Shift');
+% params = rmfield(params, 'F_act_UseP31');
+% params = rmfield(params, 'UseMutualPairingAttachment');
+% params = rmfield(params, 'UseSpaceDiscretization');
+% params = rmfield(params, 'UseSpaceInterpolation');
+% params = rmfield(params, 'UseKstiff3');
+% params = rmfield(params, 'EvalAtp');
+% params = rmfield(params, 'vmax');
+% params = rmfield(params, 'UseSerialStiffness');
 
 if isfield(params, 'RemoveField') && ~isempty(params.RemoveField)
     % Split on commas or spaces (one or more)
@@ -394,7 +395,7 @@ if length(T) > 1
 else
     fp = 1; % do not skip, we have just one datapoint!
 end
-nS = params.NumberOfStates; % number of strain-dependent states
+Ns = params.NumberOfStates; % number of strain-dependent states
 if length(T) > 1.5e4    
     Tnew = linspace(T(1), T(end), 1e4)
     PU = interp1(T, PU, Tnew);
@@ -418,13 +419,13 @@ end
         out.v(i) = params.v;
         out.t(i) = T(j);
 
-        out.SR(i) = PU(j, nS*params.ss+1);
-        out.NR(i) = 1- PU(j, nS*params.ss+1);
-        out.NP(i) = PU(j, nS*params.ss+2);
-        out.SL(i) = PU(j, nS*params.ss+3);
-        out.LSE(i) = PU(j, nS*params.ss+4);
-        out.PuR(i) = PU(j, nS*params.ss+5);
-        out.SRD(i) = PU(j, nS*params.ss+6);
+        out.SR(i) = PU(j, Ns*params.ss+1);
+        out.NR(i) = 1- PU(j, Ns*params.ss+1);
+        out.NP(i) = PU(j, Ns*params.ss+2);
+        out.SL(i) = PU(j, Ns*params.ss+3);
+        out.LSE(i) = PU(j, Ns*params.ss+4);
+        out.PuR(i) = PU(j, Ns*params.ss+5);
+        out.SRD(i) = PU(j, Ns*params.ss+6);
         
         % get the XB force from the dpudt directly        
         [~, outputs, rates] = fcn(T(j), PU(j, :)', params); 
@@ -455,13 +456,13 @@ end
 
         % first moments invalid due to shifting in strain s        
         % p1_0, p2_0, p3_0, p2_1, p3_1_stroke
-        if nS == 2
+        if Ns == 2
             out.p1_0(i) = outputs(5);
             out.p2_0(i) = outputs(6);
             out.p1_1(i) = outputs(7);
             out.p2_1(i) = outputs(8);
             out.PuATP(i) = outputs(9);
-        elseif nS == 3
+        elseif Ns == 3
             out.p1_0(i) = outputs(5);
             out.p2_0(i) = outputs(6);
             out.p3_0(i) = outputs(7);

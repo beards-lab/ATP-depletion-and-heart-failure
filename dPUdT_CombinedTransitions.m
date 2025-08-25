@@ -11,9 +11,16 @@ vel = params.Vums;
 ss = params.ss; % space size (length of the s for each of p1-p3)
 p1 = PU(1:ss);
 p2 = PU(ss+1:2*ss);
+if length(PU) > 3*ss
+    p3 = PU(2*ss+1:3*ss);
+    Ns = 3; % number of states
+else
+    p3 = 0;
+    Ns = 2; % number of states
+end
 
 if params.UseSuperRelaxed
-    P_SR = PU(2*ss+1);
+    P_SR = PU(Ns*ss+1);
 else
     P_SR = 0;
 end
@@ -22,7 +29,7 @@ end
     NP = 0;
 
 % if ~params.UseSLInput
-    SL = PU(2*ss + 3);
+    SL = PU(Ns*ss + 3);
     dSL = vel;
 % else
 %     % too slow
@@ -50,11 +57,11 @@ end
 
     
 % P_SRs = 1 - P_SR;
-LSE = PU(2*ss + 4); % length of the serial stiffness
-PD = PU(2*ss + 5);
+LSE = PU(Ns*ss + 4); % length of the serial stiffness
+PD = PU(Ns*ss + 5);
 
 if params.UseSuperRelaxedADP
-    P_SRD = PU(2*ss+6);
+    P_SRD = PU(Ns*ss+6);
 else
     P_SRD = 0;
 end
@@ -84,66 +91,35 @@ s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
 s = flipud(-s);
 dS = params.dS;
 
-if true
-    [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
-else
-% estimate the position of the actual index of zero strain
-% IMPORTANT: s MUST be around 0 somewhere!
-s_p0 = 1 + round(-s(1)/params.dS, 6); % strain position in space at 0
-
-if isnan(s_p0) || floor(s_p0) < 0
-    % this can happen during numerical rottfinding iteration step, should be avoided in the result
-    s_i0 = 1; % just hold on..
-    s_i1 = 2;
-    s_i0k = 1;
-    % warning(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
-elseif floor(s_p0) == 0
-    s_i0 = 1;
-    s_i1 = 2;
-    s_i0k = 1;
-elseif ceil(s_p0) == params.ss
-    s_i0 = params.ss - 1;
-    s_i1 = params.ss;
-    s_i0k = 0;
-elseif ceil(s_p0) > params.ss
-    s_i0 = params.ss - 1;
-    s_i1 = params.ss;
-    s_i0k = 0;
-    % error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
-else
-    % if params.UseSpaceInterpolation
-        s_i0 = floor(s_p0);
-        s_i1 = ceil(s_p0);
-        s_i0k = s_i1 - s_p0;
-end
-end
+[s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
 
 
 % sum of all probabilities
 p1_0 = dS*sum(p1); 
 p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
+p3_0 = dS*sum(p3);
+p3_1 = dS*sum((s+params.drp3).*p3);
 
 if params.UseNegativeKstiff
     p1_1_pos = dS*sum(s.*p1.*(s>=0));
     p1_1_neg = dS*sum(s.*p1.*(s<=0));
     p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
     p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
-    F_active = params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);     
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);     
     p1_1 = p1_1_neg + p1_1_pos;
     p2_1 = p2_1_pos + p2_1_neg;
 else
     p1_1 = dS*sum(s.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
-    F_active = params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
 end
 
 % non-hydrolized ATP in non-super relaxed state
-PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 
+PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 
     
 
 if params.UseOverlapFactor
     N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
-
 end    
 
 F_passive = 0;
@@ -221,7 +197,7 @@ if params.UseUniformTransitionFunc
     R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2, 2); % P1 to P2
     R21 = f1*p2.*sd(params.k_1, params.alpha_1, params.alpha_1, params.dr_1, 2, 2); % p2 to p1
     
-    R2T = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
+    R2 = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 else 
 	strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));																		
     R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
@@ -231,15 +207,17 @@ else
     R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 
     if params.UseWDetachment
-        R2T = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
-        R2T = min(1e4, R2T.*p2);
+        R2 = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
+        R2 = min(1e4, R2.*p2);
     else
         kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
         kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
-        R2T = p2.*(params.k2 + kL + kR);
+        R2 = p2.*(params.k2 + kL + kR);
     end
 end
 
+R3 = params.k3*p3;
+R3m = params.k3m*p3;
 
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
@@ -281,7 +259,7 @@ else
 end
 
 if params.UseDirectSRXTransition
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2T)*dS + RSRD2SR;
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2)*dS + RSRD2SR;
 else    
     dU_SR = -RSR2PT  + RPT2SR + RSRD2SR;
 end
@@ -295,7 +273,8 @@ end
 % state 0: unattached, ATP-cocked
 dPD = RSRD2PD - RPD2SRD + RTD - RD1 + sum(R1D)*dS;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
-dp2 = + R12 - R21  - R2T - XB_Ripped; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp2 = + R12 - R21  - R2 - XB_Ripped + R3m ; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp3 = - R3 + R3m + R2;
 
 if params.UseA2Reattaching
     [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) + params.dr, params.dS, params.ss);
@@ -332,10 +311,15 @@ if params.UseA2Popping
 end
 
 
+if Ns == 2 
+    f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];    
+elseif Ns == 3
+    f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT];
+end
 
-f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
-outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];
-rates = [RTD, RD1, sum([R1D, R12,R21,R2T, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR, RT2];
+rates = [RTD, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR, RT2];
 
 if params.DryRun
     f = zeros(size(PU));
@@ -345,7 +329,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t >= 0 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t >= 1.4 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

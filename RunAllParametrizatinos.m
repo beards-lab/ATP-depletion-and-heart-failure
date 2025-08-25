@@ -43,12 +43,15 @@ done = [];
 errs = [];
 
 %%
-for i_pfn = 9:length(filenames)
+% for i_pfn = 1:length(filenames)
+for i_pfn = 20:30
 % for i_pfn = done
     cf = figure(1420);clf;
     params0 = getParams();
 
     % params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+    params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+    params0.modelFcn = 'dPUdT_CombinedTransitions';
     run(filenames{i_pfn})
 
     params0.RunForceVelocity = true;
@@ -57,12 +60,32 @@ for i_pfn = 9:length(filenames)
     params0.RunForceLengthEstim = false;
     params0.RunSlackSegments = 'All';
     params0.drawForceOnset = true;
+    params0.SimTitle = filenames{i_pfn};
+    params0.modelFcn = 'dPUdT_CombinedTransitions';
+    params0.justPlotStateTransitionsFlag = false;
+    
+
+    params0.RemoveField ='ksrm';
+
+    % adjsut ksr0 and kmsr bullshiut
+    if params0.kmsr > params0.ksr0
+        ksr0 = params0.kmsr;
+        params0.kmsr = params0.ksr0;
+        params0.ksr0 = ksr0;        
+    end
+
+    if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
+        params0.alpha0_R = params0.alpha0 ;
+        params0.alpha0_R = params0.alpha0 ;
+        fprintf('Updating alpha... \n');
+    end
 
 % initialize parameters
     
     tic
     try
         fprintf('Ruunning #%g: %s...', i_pfn, filenames{i_pfn});
+        % fprintf('ksr0: %g, kmsr: %g. ', params0.ksr0, params0.kmsr);
         RunBakersExp;
         done = [done, i_pfn];
         fprintf('Ok.\n');

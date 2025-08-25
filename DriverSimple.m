@@ -164,3 +164,221 @@ return;
 
 gh = load('Ghost_NoReattach_slack.mat')
 params0 = gh.params0
+
+%%
+clear;clf;
+params0 = getParams();
+ModelParamsInitNiceSlack;
+params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+params0.modelFcn = 'dPUdT_CombinedTransitions';
+ksr0 = params0.kmsr;
+params0.kmsr = params0.ksr0;
+params0.ksr0 = ksr0;
+
+% params0.drp3 = 0.01;
+% params0.dr = 0.007;
+params0.drp3 = params0.dr;
+
+params0.k3m = 0;
+params0.k3 = 1500; 
+
+params0.RunStairs = true;    
+params0.RunForceVelocity = false;
+    params0.RunSlack = true;
+    params0.EvalFitSlackOnset = true;
+    params0.RunForceLengthEstim = true;
+    params0.RunSlackSegments = 'All';
+    params0.drawForceOnset = true;
+
+
+    if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
+        params0.alpha0_R = params0.alpha0 ;
+        params0.alpha0_R = params0.alpha0 ;
+        fprintf('Updating alpha... \n');
+    end
+
+    params0.NumberOfStates = 3;
+
+
+
+LoadData;
+params0.ShowStatePlots = true;
+params0.EvalFitSlackOnset = true;
+params0.RunForceLengthEstim = true;
+RunBakersExp;
+
+%%
+params0 = getParams();
+ModelParams_V1_Fmin2;
+
+if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
+    params0.alpha0_R = params0.alpha0 ;
+    params0.alpha0_R = params0.alpha0 ;
+    fprintf('Updating alpha... \n');
+end
+
+LoadData;
+params0.ShowStatePlots = true;
+params0.EvalFitSlackOnset = true;
+params0.RunForceLengthEstim = true;
+RunBakersExp;
+%%
+clf;
+nexttile;hold on;
+feats_ghost = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable);
+
+
+%% 
+clf;
+s = out.p1_0 + out.p2_0 + out.p3_0 + out.PuR + out.PuATP + out.SR + out.SRD;
+plot(s)
+
+%%
+clf;
+plot(out.t, out.RTD);
+plot(out.t, out.SL, out.t, out.LXB)
+%% test stretch
+clf;
+params0 = getParams();
+ModelParamsInitNiceSlack;
+params0 = getParams(params0, [], true);
+
+Ns = 2;
+
+params0.Vums = 0;
+ss = params0.ss; % space size (length of the s for each of p1-p3)
+SL = PU(Ns*ss + 3);
+LSE = PU(Ns*ss + 4); % length of the serial stiffness
+s = params0.s' + (-(SL - LSE) + params0.LXBpivot)/2;
+% s = params.s' - (-(SL - LSE) + params.LXBpivot)/2;
+s = flipud(-s);
+
+
+for pi = 1:ss
+
+    PU = params0.PU0';
+    p1 = PU(1:ss);
+    p2 = PU(ss+1:2*ss);
+    
+
+    p1(pi) = 1/params0.dS;
+    PU(1:ss) = p1;
+    [~, out] = dPUdT_CombinedTransitions(0, PU, params0);
+    F1(pi) = out(2);
+
+    p2(pi) = 1/params0.dS;
+    PU(ss+1:2*ss) = p2;
+    [~, out] = dPUdT_CombinedTransitions(0, PU, params0);
+    F2(pi) = out(2);
+
+    if params0.NumberOfStates == 3
+        p3 = PU(2*ss +1:3*ss);
+        p3(pi) = 1/params0.dS;
+        PU(2*ss+1:3*ss) = p3;
+        [~, out] = dPUdT_CombinedTransitions(0, PU, params0);
+        F3(pi) = out(2);
+    end
+end
+
+plot(s, F1, s, F2)
+
+%% test extracting features
+% Plot signal
+figure(221); clf;
+nexttile;hold on;
+feats_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable);
+title('data');
+%%
+nexttile;hold on;
+feats_sim = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable);
+title('Sim');   
+
+%% plot the features
+figure(232);clf; 
+tiledlayout("flow");
+N_feats = size(feats_sim, 2);
+
+% build the sample fn
+% fn = fieldnames(feats_sim);
+% quoted = cellfun(@(s) ['''' s ''''], fn, 'UniformOutput', false);
+% fprintf('fn = {%s};\n', strjoin(quoted, ', '));
+% sample fn
+fn = {'ktr', 'A', 't0', 'SLslack', 'v_restretch', 'peak1_y', 'peak1_t', 'peak1_SL', 'peak1_dSL', 'peak2', 'vall_t', 'vall_y', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'ovrsht_t', 'steady'};
+fn = {'ktr.SLslack', 'A.SLslack', 't0', 'Am', 'peak1_y.SLslack', 'peak1_y.v_restretch','peak1_dSL', 'peak2.v_restretch', 'vall_t.v_restretch', 'vall_y', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'steady'};
+
+
+for i_feat = 1:size(fn, 2)
+    nexttile();
+
+    % num_elements = length(feats_data); % Get the number of elements in your struct
+    % fd = zeros(1, num_elements); % Preallocate an array of zeros with the correct size
+    % 
+    % for i_elem = 1:num_elements
+    %     current_value = feats_data(i_elem).(fn{i_feat});
+    %     if isempty(current_value)
+    %         fd(i_elem) = NaN; % Replace empty with NaN
+    %     else
+    %         fd(i_elem) = current_value; % Assign the actual value
+    %     end
+    % end
+    % 
+    % num_elements = length(feats_sim); % Get the number of elements in your struct
+    % fs = zeros(1, num_elements); % Preallocate an array of zeros with the correct size
+    % 
+    % for i_elem = 1:num_elements
+    %     current_value = feats_sim(i_elem).(fn{i_feat});
+    %     if isempty(current_value)
+    %         fs(i_elem) = NaN; % Replace empty with NaN
+    %     else
+    %         fs(i_elem) = current_value; % Assign the actual value
+    %     end
+    % end
+    featnames = split(fn{i_feat}, '.');
+    feat_y = featnames{1};
+    if length(featnames) == 1
+        fd_x = 1:N_feats;fs_x = 1:N_feats;fg_x = 1:N_feats;
+    else
+        feat_x = featnames{2};
+        fd_x = [feats_data.(feat_x)];
+        fs_x = [feats_sim.(feat_x)];
+        if exist("feats_ghost", "var") && ~isempty(feats_ghost)
+            fg_x = [feats_ghost.(feat_x)];
+        else
+            fg_x = NaN(size(1:N_feats));
+        end
+    end
+
+    fd = [feats_data.(feat_y)];
+    fs = [feats_sim.(feat_y)];
+    if exist("feats_ghost", "var") && ~isempty(feats_ghost)
+        fg = [feats_ghost.(feat_y)];
+    else
+        fg = NaN(size(1:N_feats));
+    end
+
+    plot(fd_x, fd, 'o--', fs_x, fs, 'x--', fg_x, fg, '+--');
+    title(fn{i_feat});
+end
+
+nexttile; plot([feats_data.t0], [feats_data.SLslack]-2.2);ylim([-inf, 0]);title("dt vs dSL");hold on;
+t = (-1:0.1:3)*1e-3;plot(t, -16*t - 0.125);
+nexttile; plot(diff([feats_data.SLslack]-2.2)./diff([feats_data.t0]));ylim([-inf, 0]);title("dt vs dSL (um/s)")
+% plot(out.t, out.Force)
+
+
+% plot(t_slack, -y_slack, '*');
+
+%% Test distributed passive onset model
+a = 1;
+y = @(t0, t) max(0, a*(t-t0)) + (t-t0 > 0)*1;
+
+t = -2:0.1:10;
+ytot = zeros(size(t));
+sm = -1:0.1:1;
+for t0 = sm
+    ytot = ytot + y(t0, t);
+end
+ytot = ytot / length(sm);
+clf;
+plot(t, y(0, t));hold on;
+plot(t, ytot);
