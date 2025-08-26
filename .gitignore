@@ -1,13 +1,12 @@
 Thrash/
 Dan2/
 XB/
-.gitignore
 *.png
 *.asv
 *.mat
 *.pptx
 *.docx
-/PAT.github
+*.xml
 dymparams.txt
 buildlog.txt
 ds*.txt
@@ -16,4 +15,3 @@ dsmodel.c
 ctrl1.csv
 PARAMETERS.xlsx
 UpdatePhysiolibraryToBodylight.bat
-*PARAMETERS.xlsx
