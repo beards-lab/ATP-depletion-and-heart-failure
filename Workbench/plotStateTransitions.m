@@ -2,9 +2,10 @@
 myl = 500;
 
 % figure(22); clf;
-nexttile; title('R1D'); hold on;
-plot(s, R1D, 'x-');
-ylim([0, myl])
+nexttile; title('R1D'); cla;hold on;
+plot([s(1), s(end)], [RD1, RD1], '|-')
+    plot(s, R1D,'x-');
+% ylim([0, myl])
 xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 
@@ -22,7 +23,7 @@ xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 legend('R12', 'R21')
 
 nexttile; title('R2T'); hold on;
-plot(s, R2T, 'x-');
+plot(s, R2, 'x-');
 ylim([0, myl])
 xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');

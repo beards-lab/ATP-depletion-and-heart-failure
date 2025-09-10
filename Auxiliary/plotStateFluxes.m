@@ -47,7 +47,14 @@ plot(x, y, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 10);
 
 % Add state labels
 labels = {'UT', 'UD', 'A1', 'A2', 'ST', 'SD'};
-text(x + 0.1, y +0.1, labels, 'FontSize', 12, 'FontWeight', 'bold');
+values = [out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos), out.SR(i_pos), out.SRD(i_pos)];
+
+labels = cellfun(@(s, v) sprintf('%s (%.0f%%)', s, v*100), ...
+                 labels, num2cell(values), 'UniformOutput', false);
+
+% x_offsets = [0.1, -0.1, -0.1, 0.1, 0.1, -0.1];
+y_offsets = [0.1, 0.1, 0.1, 0.1, -0.1, -0.1];
+text(x + 0.05, y +y_offsets, labels, 'FontSize', 12, 'FontWeight', 'bold');
 
 % Mapping forward fluxes to their corresponding start and end indices
 forward_pairs = [1 2; 2 3; 3 4; 4 1; 5 1; 6 2];
@@ -93,6 +100,8 @@ for i_pos = 1:size(forward_pairs, 1)
     else
         centered_arrow(x_start, y_start, x_end, y_end, forward_fluxes(i_pos), offset_x, offset_y, 'b', 1);
     end
+    text((x_start + x_end) / 2 + 2*horizontal_offset, (y_start + y_end) / 2 + 2*vertical_offset, ...
+        sprintf('%.2g s^{-1} \n %.2g s^{-1}', forward_fluxes(i_pos), forward_fluxes(i_pos)./values(i_pos)))
 end
 
 % Plotting backward fluxes

@@ -91,9 +91,6 @@ s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
 s = flipud(-s);
 dS = params.dS;
 
-[s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
-
-
 % sum of all probabilities
 p1_0 = dS*sum(p1); 
 p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
@@ -157,7 +154,7 @@ if params.FudgeVmax && t > -1
     end
     dLSEdt = vel - velHS;
 else
-    Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
+    Force = sign(LSE)*abs(max(params.MaxSlackNegativeForce, params.kSE*LSE)).^params.ekSE;
     % Force = params.kSE*LSE*(LSE >= 0) + params.kSEn*LSE*(LSE < 0);
     velHS = (Force - F_total)/params.mu;
     dLSEdt = vel - velHS;
@@ -167,11 +164,11 @@ end
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
     % s = s - (s(end) - s(1))/2; 
-    s = -0.05:0.001:0.05;
+    s = (-0.05:0.001:0.05)';
     F_total = -50:1:80;
     F_passive = -5:1:10;
-    p1 = ones(size(p1));
-    p2 = ones(size(p2));
+    p1 = ones(size(s));
+    p2 = ones(size(s));
     
     PD = 1;PT = 1;P_SR = 1;
 end
@@ -210,7 +207,11 @@ else
         R2 = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
         R2 = min(1e4, R2.*p2);
     else
-        kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
+        if params.UseNegativeForceRip && Force < 0
+            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*max(1, -Force);
+        else
+            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
+        end
         kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
         R2 = p2.*(params.k2 + kL + kR);
     end
@@ -251,7 +252,8 @@ else
 end
 
 if params.UseSuperRelaxed     
-	RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*P_SR;
+    % RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*P_SR;
+	RSR2PT = params.kmsr*(1 + log(max(1, F_SR))*params.sigma1)*P_SR;
     RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*PT;
 else 
     RSR2PT = 0;
@@ -290,9 +292,38 @@ end
 
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
+% Attachment
 try
-    dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
-    dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS); % attachment
+    if params.A1AttachmentWidth <= dS
+    
+            [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
+            dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
+            dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS); % attachment
+            % dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS)*(F_passive/10); % attachment
+            % dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS)*(F_passive/10); % attachment
+    else
+        % inputs: dp1, RD1, dS, Ax, x0
+        % grid indices: assume s_j = j*dS
+        % [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);% nearest left grid index
+        % x_center = 0; % strain position in space at 0;
+        Ax = params.A1AttachmentWidth;
+        s_i0 = 1 + round(-s(1)/dS, 6); % strain position in space at 0
+        
+        %% choose kernel support in indices
+        halfspan = ceil(Ax/dS); 
+        att = zeros(size(dp1));
+        for jj = floor(max(1,s_i0-halfspan)):ceil(min(length(dp1), s_i0+halfspan))
+            % jj = max(1, min(length(dp1), jj));
+            xj = s(jj);
+            dist = abs(xj - 0.0); % distance from 0
+            % if dist <= Ax
+            w = max(0,1 - dist/Ax);   % triangular weight
+                % w = 1;
+                % dp1(jj) = dp1(jj) + (RD1/dS) * w*dS/Ax;        
+            att(jj) = w;
+        end
+        dp1 = dp1 + att/sum(att)*RD1/dS;
+    end
 catch e
     disp e
 end
@@ -329,7 +360,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t >= 1.4 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t > -0.24 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

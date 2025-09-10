@@ -292,12 +292,20 @@ end
 %% SLACK
 if params0.RunSlack
     params = params0;
-    datastruct = load('data/bakers_slack8mM_all.mat');
+
+    if isfield(params, 'velocitytableonfile')
+    
+    % datastruct = load("data\bakers_slack8mM_all_fix.mat");
+    % datastruct = load("data\bakers_slack8mM_all_fudge.mat");
+        datastruct = load(['data/' params.velocitytableonfile ]);
+    else
+        datastruct = load('data/bakers_slack8mM_all.mat');
+    end
     datatable = datastruct.datatable;
     validZone = datatable(:, 1) > 1;
     
     
-    datastruct.velocitytable(1, 1) = -2;
+    % datastruct.velocitytable(1, 1) = -2;
 
     % show the indexes
     % [(1:length(datastruct.velocitytable))' datastruct.velocitytable]
@@ -407,7 +415,7 @@ if params0.RunSlack
     % error('hovna')
 
     % params.SL0 = 2.2;
-    params.Slim_l = 1.85;
+    params.Slim_l = 1.80;
     % params.Slim_r = 2.2;
     % params.LXBpivot = 2.2;
     % params.dS = 0.0025;
@@ -447,14 +455,6 @@ if params0.RunSlack
 
     % tet = [tet; params.N, et]
 
-    if ~isempty(params.ghostSave)
-        ghost = [out.t; out.Force]';
-        
-        % do not save ghostSave command!
-        gs = params0.ghostSave; params0.ghostSave = '';
-        save(['Ghost_' params.ghostSave '_slack'], 'ghost', "params0");
-        params0.ghostSave = gs;
-    end
     if params.PlotEachSeparately
         % axes('position',[0.55 0.1 0.4 0.35]); hold on;
         nexttile;
@@ -534,6 +534,14 @@ if params0.RunSlack
         end
     end
 
+    if ~isempty(params.ghostSave)
+        ghost = [out.t; out.Force]';
+        
+        % do not save ghostSave command!
+        gs = params0.ghostSave; params0.ghostSave = '';
+        save(['Ghost_' params.ghostSave '_slack'], 'ghost', "params0");
+        params0.ghostSave = gs;
+    end
 
     %% SAVE FIG
     if params.PlotEachSeparately
@@ -543,6 +551,7 @@ if params0.RunSlack
             saveas(fig, ['XBBakersDataFit_' params.ghostSave '.png']);
         end
     end
+
 
 if params.EvalFitSlackOnset    
     try

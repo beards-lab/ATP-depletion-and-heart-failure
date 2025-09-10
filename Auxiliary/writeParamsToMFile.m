@@ -1,7 +1,7 @@
 function writeParamsToMFile(filename, params, modNames, comment)
 % Writes params to m file, so we can easily load. 
 
-    if nargin < 3
+    if nargin < 3 || isempty(modNames)
         modNames = fieldnames(params);
     end
 
@@ -18,12 +18,23 @@ function writeParamsToMFile(filename, params, modNames, comment)
 
     params = getParams(params, params.g, false, true);
     for i_row = 1:length(modNames)
-        if length(params.(modNames{i_row})) == 1        
-            fprintf(fid, 'params0.%s = %g;\r\n', modNames{i_row}, params.(modNames{i_row}));
-        elseif ischar(params.(modNames{i_row})) && ~isempty(params.(modNames{i_row}))
-             fprintf(fid, "params0.%s = '%s';\r\n", modNames{i_row}, params.(modNames{i_row}));
+        par = params.(modNames{i_row});
+        nam = modNames{i_row};
+        if length(par) == 1        
+            fprintf(fid, 'params0.%s = %g;\r\n', nam, par);
+        elseif ischar(par) && ~isempty(par)
+             fprintf(fid, "params0.%s = '%s';\r\n", nam, par);
+        elseif all(size(par) > 1) ...
+            && nam ~= "s" ...
+            && nam ~= "g" ...
+            && nam ~= "mods" ...
+            && nam ~= "datatable" ...
+            && nam ~= "PU0"
+            % matrix
+            par_s = mat2str(par);
+            fprintf(fid, "params0.%s = %s;\r\n", nam, par_s); 
         else
-            fprintf("Skipping %s\r\n", modNames{i_row});
+            fprintf("Skipping %s\r\n", nam);
             continue;
         end
     end

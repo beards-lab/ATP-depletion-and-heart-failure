@@ -257,9 +257,15 @@ for vs = 1:length(T) - 1
         end
         
         lastwarn('', ''); 
-        if isfield(params, 'ResetSRat') && ~isempty(params.ResetSRat) && ~isempty(find(params.ResetSRat(:, 1) == ts, 1))
-            SR = params.ResetSRat(find(params.ResetSRat(:, 1) == ts, 1), 2);
-            PU0(2*ss+1) = SR;
+        if isfield(params, 'ResetSRat') && ~isempty(params.ResetSRat) && ~isempty(find(round(params.ResetSRat(:, 1), 4) == round(ts, 4), 1))
+            SR_in = params.ResetSRat(find(round(params.ResetSRat(:, 1), 4) == round(ts, 4), 1), 2);
+            
+            if params.UseSafeSRReset
+            
+                PU0 = resetSRHelper(PU0, SR_in, params);
+            else
+                PU0(2*ss+1) = SR_in;
+            end
         end
         [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
 

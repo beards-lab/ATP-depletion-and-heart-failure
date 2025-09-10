@@ -1,5 +1,5 @@
 % simplest 
-clear;
+% clear;
 figure(2);
 clf; 
 % initialize parameters
@@ -166,7 +166,7 @@ gh = load('Ghost_NoReattach_slack.mat')
 params0 = gh.params0
 
 %%
-clear;clf;
+% clear;clf;
 params0 = getParams();
 ModelParamsInitNiceSlack;
 params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
@@ -210,6 +210,7 @@ RunBakersExp;
 %%
 params0 = getParams();
 ModelParams_V1_Fmin2;
+params0.UseForceOnsetShift = 1;
 
 if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
     params0.alpha0_R = params0.alpha0 ;
@@ -223,9 +224,9 @@ params0.EvalFitSlackOnset = true;
 params0.RunForceLengthEstim = true;
 RunBakersExp;
 %%
-clf;
+figure(243);clf;
 nexttile;hold on;
-feats_ghost = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable);
+feats_sim = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable);
 
 
 %% 
@@ -289,96 +290,22 @@ nexttile;hold on;
 feats_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable);
 title('data');
 %%
-nexttile;hold on;
+% nexttile;hold on;
+figure(221); clf;hold on;
 feats_sim = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable);
 title('Sim');   
 
 %% plot the features
-figure(232);clf; 
-tiledlayout("flow");
-N_feats = size(feats_sim, 2);
+fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'Am|SLslack|0', 'peak1_y|SLslack|0', 'peak1_y|v_restretch|0','peak1_dSL', 'peak2|v_restretch', 'vall_t|v_restretch|0.1', 'vall_y', 'vall2_dy|_|0', 'vall2_t|_|0', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
+figure
+plotFeatures(feats_data, feats_sim, feats_ghost, fn);
 
-% build the sample fn
-% fn = fieldnames(feats_sim);
-% quoted = cellfun(@(s) ['''' s ''''], fn, 'UniformOutput', false);
-% fprintf('fn = {%s};\n', strjoin(quoted, ', '));
-% sample fn
-fn = {'ktr', 'A', 't0', 'SLslack', 'v_restretch', 'peak1_y', 'peak1_t', 'peak1_SL', 'peak1_dSL', 'peak2', 'vall_t', 'vall_y', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'ovrsht_t', 'steady'};
-fn = {'ktr.SLslack', 'A.SLslack', 't0', 'Am', 'peak1_y.SLslack', 'peak1_y.v_restretch','peak1_dSL', 'peak2.v_restretch', 'vall_t.v_restretch', 'vall_y', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'steady'};
+% Eval features
+%%
+figure(8008135);clf;
+cost = evalFeatureCost(feats_data, feats_sim, fn);
+pie(cost(cost > 0), fn(cost > 0))
 
-
-for i_feat = 1:size(fn, 2)
-    nexttile();
-
-    % num_elements = length(feats_data); % Get the number of elements in your struct
-    % fd = zeros(1, num_elements); % Preallocate an array of zeros with the correct size
-    % 
-    % for i_elem = 1:num_elements
-    %     current_value = feats_data(i_elem).(fn{i_feat});
-    %     if isempty(current_value)
-    %         fd(i_elem) = NaN; % Replace empty with NaN
-    %     else
-    %         fd(i_elem) = current_value; % Assign the actual value
-    %     end
-    % end
-    % 
-    % num_elements = length(feats_sim); % Get the number of elements in your struct
-    % fs = zeros(1, num_elements); % Preallocate an array of zeros with the correct size
-    % 
-    % for i_elem = 1:num_elements
-    %     current_value = feats_sim(i_elem).(fn{i_feat});
-    %     if isempty(current_value)
-    %         fs(i_elem) = NaN; % Replace empty with NaN
-    %     else
-    %         fs(i_elem) = current_value; % Assign the actual value
-    %     end
-    % end
-    featnames = split(fn{i_feat}, '.');
-    feat_y = featnames{1};
-    if length(featnames) == 1
-        fd_x = 1:N_feats;fs_x = 1:N_feats;fg_x = 1:N_feats;
-    else
-        feat_x = featnames{2};
-        fd_x = [feats_data.(feat_x)];
-        fs_x = [feats_sim.(feat_x)];
-        if exist("feats_ghost", "var") && ~isempty(feats_ghost)
-            fg_x = [feats_ghost.(feat_x)];
-        else
-            fg_x = NaN(size(1:N_feats));
-        end
-    end
-
-    fd = [feats_data.(feat_y)];
-    fs = [feats_sim.(feat_y)];
-    if exist("feats_ghost", "var") && ~isempty(feats_ghost)
-        fg = [feats_ghost.(feat_y)];
-    else
-        fg = NaN(size(1:N_feats));
-    end
-
-    plot(fd_x, fd, 'o--', fs_x, fs, 'x--', fg_x, fg, '+--');
-    title(fn{i_feat});
-end
-
-nexttile; plot([feats_data.t0], [feats_data.SLslack]-2.2);ylim([-inf, 0]);title("dt vs dSL");hold on;
-t = (-1:0.1:3)*1e-3;plot(t, -16*t - 0.125);
-nexttile; plot(diff([feats_data.SLslack]-2.2)./diff([feats_data.t0]));ylim([-inf, 0]);title("dt vs dSL (um/s)")
-% plot(out.t, out.Force)
-
-
-% plot(t_slack, -y_slack, '*');
-
-%% Test distributed passive onset model
-a = 1;
-y = @(t0, t) max(0, a*(t-t0)) + (t-t0 > 0)*1;
-
-t = -2:0.1:10;
-ytot = zeros(size(t));
-sm = -1:0.1:1;
-for t0 = sm
-    ytot = ytot + y(t0, t);
-end
-ytot = ytot / length(sm);
-clf;
-plot(t, y(0, t));hold on;
-plot(t, ytot);
+%% 
+runStatesInTime(out, params0);
+getParams
