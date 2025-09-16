@@ -165,8 +165,8 @@ end
 if params.justPlotStateTransitionsFlag
     % s = s - (s(end) - s(1))/2; 
     s = (-0.05:0.001:0.05)';
-    F_total = -50:1:80;
-    F_passive = -5:1:10;
+    F_total = linspace(-50, 80, 8);
+    F_passive = linspace(-5, 10, 8);
     p1 = ones(size(s));
     p2 = ones(size(s));
     
@@ -185,6 +185,17 @@ g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 RTD = g2*params.kah*PT;
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
 
+if params.UsePassiveForSR
+    F_SR = F_passive;
+else
+    if params.useHalfActiveForSR
+        F_SR  = F_active/2 + F_passive;
+    else
+    % default
+        F_SR  = F_total;
+    end
+end
+
 if params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
     % dPUdT_TransitionRates;
@@ -196,8 +207,10 @@ if params.UseUniformTransitionFunc
     
     R2 = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 else 
+    f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
+
 	strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));																		
-    R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+    R1D = f(F_SR, 2, 3)*params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
         + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
 
     R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
@@ -207,8 +220,9 @@ else
         R2 = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
         R2 = min(1e4, R2.*p2);
     else
-        if params.UseNegativeForceRip && Force < 0
-            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*max(1, -Force);
+        if params.UseNegativeForceRip
+            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
+            % *max(1, -Force*10);
         else
             kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
         end
@@ -223,16 +237,6 @@ R3m = params.k3m*p3;
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
-if params.UsePassiveForSR
-    F_SR = F_passive;
-else
-    if params.useHalfActiveForSR
-        F_SR  = F_active/2 + F_passive;
-    else
-    % default
-        F_SR  = F_total;
-    end
-end
 
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
@@ -360,7 +364,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t > -0.24 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t > 2.952 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

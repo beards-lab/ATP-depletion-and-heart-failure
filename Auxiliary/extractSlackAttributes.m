@@ -1,4 +1,5 @@
 function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, out)
+
     if nargin < 5
         out = [];
     end
@@ -16,6 +17,9 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
     % each set starts with negative velocity
     segments = find(velocitytable(:, 2) < 0)';
 
+    % marker size
+    ms = 12;
+
     for i_seg =  1:length(segments)
         if segments(i_seg) + 4 > length(velocitytable)
             warning('Out of segments, out of determination..');
@@ -32,7 +36,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         plot(t - t_seg, y, '-|b', 'LineWidth', 1.2);
 
         % cut off at 10kPa
-        win = data_t > velocity_segment(2) & data_t < velocity_segment(3) & data_y > 5; % & data_t < t_seg + 0.048;
+        win = data_t > velocity_segment(2) & data_t < velocity_segment(3) & data_y > 10; % & data_t < t_seg + 0.048;
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
     
@@ -41,7 +45,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             [ae be] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01], 'Lower', [10, 0.01, 0.0], 'Upper', [200 200 0.1]);
             init_tail = [0:0.001:0.15];
             plot(init_tail, ae(init_tail),'--', t, ae(t), LineWidth=2)
-            plot(ae.t0, 0, '*', LineWidth=2, MarkerSize=8);
+            plot(ae.t0, 0, '*', LineWidth=2, MarkerSize=ms);
             plot(t, y-ae(t),'-', LineWidth=1);
             
             feats.ktr = ae.k;
@@ -73,7 +77,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             feats.peak1_t = peak1_t(1) - t(1);
             feats.peak1_SL = SL(find(t >= peak1_t(1), 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
-            plot(peak1_t, peak1_y, '*');
+            plot(peak1_t, peak1_y, '*', MarkerSize=ms);
         else
             feats.peak1_y = NaN;
             feats.peak1_t = NaN;
@@ -81,11 +85,11 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             feats.peak1_dSL = NaN;
         end
         feats.peak2 = y(end);
-        plot(t(end), feats.peak2, '*');
+        plot(t(end), feats.peak2, '*', MarkerSize=ms);
         [vall_y, vall_t] = findpeaks(-y, t, MinPeakDistance=0.01, MinPeakProminence=2);
         feats.vall_t = vall_t - t(1);
         feats.vall_y = -vall_y;
-        plot(vall_t, -vall_y, '*');
+        plot(vall_t, -vall_y, '*', MarkerSize=ms);
                 
         % steady state
         win = data_t >= velocity_segment(5) - 0.02 & data_t <= velocity_segment(5);
@@ -104,14 +108,14 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         feats.vall2_dy = u_v - feats.steady;
         feats.vall2_t = t(u_i) - t(1);
         
-        plot(t(u_i), u_v, '*')
+        plot(t(u_i), u_v, '*', MarkerSize=ms)
         % plot(t, smoothdata(y, 1, "gaussian", 10))
         
         % smooth data from 
         [o_v, o_i] = max(smoothdata(y(u_i:end), 1, "gaussian", 10));
         feats.ovrsht_dy = o_v - feats.steady;
         feats.ovrsht_t = t(o_i+u_i-1);
-        plot(feats.ovrsht_t, o_v, '*')
+        plot(feats.ovrsht_t, o_v, '*', MarkerSize=ms)
 
         if ~isempty(out)
             feats.XTOR = out.RTD;

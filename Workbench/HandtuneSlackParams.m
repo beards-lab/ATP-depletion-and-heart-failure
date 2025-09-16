@@ -106,7 +106,7 @@ RunBakersExp;
 toc
 
 
-% writeParamsToMFile('ModelParamsInitNiceSlack_prescribedSR_var1.m', params0, [], "Pretty nice fit, but the SR is fudged");
+% writeParamsToMFile('ModelParamsInitNiceSlack_prescribedSR_var2.m', params0, [], "Pretty nice fit, but the SR is fudged");
 %
 % StatesInTime
 %% prescribed SR
@@ -114,12 +114,14 @@ clf;
 clear params0;
 ModelParamsInitNiceSlack_prescribedSR
 params0.velocitytableonfile = 'bakers_slack8mM_all_fix.mat';
-params0.velocitytableonfile = 'bakers_slack8mM_all_extendedSlack.mat';
+% params0.velocitytableonfile = 'bakers_slack8mM_all_extendedSlack.mat';
+params0.RunSlackSegments = 'All';
 
-sr_dist = (linspace(0, 1, 5)').^0.5;
-sr_mi = 0.2; sr_ma = 0.7;
+sr_dist = (linspace(0, 1, 5)').^.6;
+sr_mi = 0.2; sr_ma = 0.6;
 sr_dist = sr_dist*(sr_ma - sr_mi) + sr_mi;
-params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), sr_dist];
+% params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), sr_dist];
+params0.ResetSRat = [];
 params0.kmsr = .01;
 params0.ksr0 = 5;
 % params0.kmsr = 0;
@@ -129,6 +131,7 @@ params0.kstiff2 = params0.kstiff1;
 params0.UseForceOnsetShift = false;
 params0.UseSuperRelaxed = true;
 params0.UseOverlap = true;
+params0.UseOverlapFactor = true;
 params0.UseNegativeForceRip = true;
 % params0.k1 = 1500;
 params0.justPlotStateTransitionsFlag = false;
@@ -137,11 +140,24 @@ RunBakersExp;
 %%
 matchStructFields(params0, 'Use*', [0], true)   % print values
 %%
+clf;
 clear params0
-ModelParamsInitNiceSlack_prescribedSR_var1;
+% ModelParamsInitNiceSlack_prescribedSR_var1;
+ModelParamsInitNiceSlack_prescribedSR_var2;
 
-params0.UseOverlap = false;
-params0.UseOverlapFactor = true;
+params0.RunSlackSegments = 'Last';
+params0.RunSlackSegments = 'All';
+params0.UseSafeSRReset = true;
+params0.kmsr = 0.02;
+params0.k1 = 85;
+params0.kSE = 600;
+
+% params0.UseNegativeForceRip = false;
+% params0.UseOverlap = false;
+% params0.UseOverlapFactor = true;
+params0.justPlotStateTransitionsFlag = false;
+% params0.UsePassiveForSR = false;
+% params0.MaxSlackNegativeForce = -2;
 
 RunBakersExp;
 %% Extract simulated features
@@ -152,11 +168,12 @@ velocitytable =    datastruct.velocitytable;
 
 figure(221); clf;hold on;
 feats_sim = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, out);
+% feats_sim.params = params0;
 title('Sim');   
 
 % plot the features
 fn = {'ktr|SLdiff', 'A|SLdiff', 't0|SLslack', 'SLslack|t0|0', 'Am|SLslack|', 'peak1_y|SLslack|0', 'peak1_y|v_restretch|0','peak1_dSL', 'peak2|v_restretch', 'vall_t|v_restretch|0.1', 'vall_y', 'vall2_dy|v_restretch|0', 'ovrsht_dy|_|0', 'steady'};
-% figure
+figure(80085)
 plotFeatures(feats_data, feats_sim, feats_ghost, fn);
 %%
 F = 0:1:100;
@@ -207,8 +224,6 @@ nexttile;hold on;
 feats_data2 = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable);
 title('data');
 
-sld2 = -[feats_data2.SLdiff];
-t2 = [feats_data2.t0];
 
 [t',sld']
 
@@ -217,6 +232,14 @@ plotFeatures(feats_data, feats_data2, feats_ghost, fn);
 
 %%
 clf;
+
+sld = -[feats_data.SLdiff];
+t = [feats_data.t0];
+
+sld2 = -[feats_data2.SLdiff];
+t2 = [feats_data2.t0];
+
+
 % USING MYCURVEFIT, predicts -0.169 at t = 0 for 2 ATP
 t_ = linspace(0, t(end)*1.5, 100);
 y8 = -0.4667455 + 0.3412689*exp(-54.36518*t_);
@@ -227,4 +250,14 @@ k2 = [feats_data2.steady]./y2(1);
 
 plot(t, sld, 'x-', t_, y8, '--', t2, sld2, 'x-', t_, y2, '--', LineWidth=2);
 ylim([-inf, 0]);
+xlim([0 0.1])
 
+hold on;
+
+% clf
+% t_seg = find(velocitytable(:, 2) < 0, 1);
+isegs = out.t>velocitytable(19, 1);
+t = out.t(isegs);
+lxb = out.LXB(isegs);
+
+plot(t - t(1) - 0.015, lxb - 2.2)

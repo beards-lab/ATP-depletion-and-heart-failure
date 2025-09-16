@@ -459,8 +459,8 @@ if params0.RunSlack
         % axes('position',[0.55 0.1 0.4 0.35]); hold on;
         nexttile;
         yyaxis right;
-        plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, 'o-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
-        plot(out.t, out.SL, '-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+        pl1 = plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, '-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+        % pl2 = plot(out.t, out.SL, '-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
         
         yyaxis left;hold on;
 
@@ -476,11 +476,11 @@ if params0.RunSlack
         % params0.ghostSave = 'NiceFit_Compliant';
 
         plot(datatable(:, 1),datatable(:, 3),'k-','linewidth',0.5);
-        
+        pl5 = plot(datatable(validZone, 1),datatable(validZone, 3),'k-','linewidth',1.5);        
 
-        plot(out.t,out.Force,'b-','linewidth',1.5);
-        plot(out.t,out.FXBPassive,'b--','linewidth',1.5);
-        plot(datatable(validZone, 1),datatable(validZone, 3),'k-','linewidth',1.5);
+        pl3 = plot(out.t,out.Force,'b-','linewidth',1.5);
+        pl4 = plot(out.t,out.FXBPassive,'b--','linewidth',1.5);
+        
         % plot(Tspan,F_active,'linewidth',1.5);
         xlabel('$t$ (sec.)','interpreter','latex','fontsize',16);
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
@@ -494,9 +494,9 @@ if params0.RunSlack
 
 
         if exist('gp', 'var') && isvalid(gp)
-            legend(['Ghost ' params.ghostLoad],'F data', 'F sim','SL data*', 'SL sim*', 'Location', 'best');
+            legend([gp; pl1(2:3); pl5; pl3;pl4], ['Ghost ' params.ghostLoad],'SL*', 'LXB*','Force (data)', 'Force (sim)', 'Passive (sim)', 'Location', 'best');
         else
-            legend('F data', 'F sim','SL data*', 'SL sim*', 'Location', 'best');
+            legend([pl1(2:3); pl5; pl3;pl4],'SL*', 'LXB*','Force (data)', 'Force (sim)', 'Passive (sim)', 'Location', 'best');
         end
 
         if params.ShowStatePlots
