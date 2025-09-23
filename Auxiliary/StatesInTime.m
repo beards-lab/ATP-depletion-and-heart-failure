@@ -62,7 +62,8 @@ plotStateFluxes(out, t);
 
 subplot(2,3,4:5);
 yl = ylim;
-cla;hold on;
+% cla;hold on;
+
 % hold on;
 % ss = 101; % params.ss;
 % s = -0.1:0.002:0.1;%params.s;
@@ -102,7 +103,11 @@ end
 % end
 
 m = max([p1, p2, p3]);
-plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', [zer zer], [0 m], '--k', LineWidth=1.5);
+% plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', [zer zer], [0 m], '--k', LineWidth=1.5);
+plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', ...
+    [zer zer], [0 m], '--k', ...
+    [zer zer]+out.LSE(ti), [0 m], ':k', ...
+    LineWidth=1.5);
 % plot(s, -1 + min(params.alpha2, (exp(abs(params.alpha2*(s-0.5*params.dr).^params.alpha3)))));
 
 text(0 + params.dS/2, m, ...

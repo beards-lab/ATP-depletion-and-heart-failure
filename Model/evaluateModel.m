@@ -116,7 +116,8 @@ for vs = 1:length(T) - 1
     %             et = 0; %elapsed time
     tend = T(vs+1); % ending time of simulation in the current segment
 
-    params.v = params.Velocity(vs);
+    params.v = params.Velocity(vs)*params.rsl0;
+    % params.v = params.Velocity(vs);    
     params.Vums = params.v*params.ML; % velocity in um/s
 
 

@@ -208,7 +208,8 @@ if params.UseUniformTransitionFunc
     R2 = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 else 
     f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
-
+    s_b = s;
+    % s = s*( max(-1, -Force))
 	strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));																		
     R1D = f(F_SR, 2, 3)*params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
         + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
@@ -364,7 +365,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t > 2.952 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t > 1.2099 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

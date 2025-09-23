@@ -409,7 +409,7 @@ if params0.RunSlack
     end     
     
     params.Velocity = velocitytable(:, 2);
-    params.datatable = datatable;
+    % params.datatable = datatable;
 
     % plot(datatable(:, 1), datatable(:, 3), 'k', datatable(validZone, 1), datatable(validZone, 3), 'r|');
     % error('hovna')
@@ -459,7 +459,7 @@ if params0.RunSlack
         % axes('position',[0.55 0.1 0.4 0.35]); hold on;
         nexttile;
         yyaxis right;
-        pl1 = plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, '-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
+        pl1 = plot(datatable(:, 1),datatable(:, 2), '-', out.t, out.SL, '--', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
         % pl2 = plot(out.t, out.SL, '-', out.t, out.LXB, ':', 'Linewidth', 2, 'MarkerSize', 3);
         
         yyaxis left;hold on;
@@ -494,9 +494,9 @@ if params0.RunSlack
 
 
         if exist('gp', 'var') && isvalid(gp)
-            legend([gp; pl1(2:3); pl5; pl3;pl4], ['Ghost ' params.ghostLoad],'SL*', 'LXB*','Force (data)', 'Force (sim)', 'Passive (sim)', 'Location', 'best');
+            legend([gp; pl1(1:3); pl5; pl3;pl4], ['Ghost ' params.ghostLoad],'MLx2.0', 'SL*', 'LXB*','Force (data)', 'Force (sim)', 'Passive (sim)', 'Location', 'best');
         else
-            legend([pl1(2:3); pl5; pl3;pl4],'SL*', 'LXB*','Force (data)', 'Force (sim)', 'Passive (sim)', 'Location', 'best');
+            legend([pl1(1:3); pl5; pl3;pl4],'MLx2.0', 'SL*', 'LXB*','Force (data)', 'Force (sim)', 'Passive (sim)', 'Location', 'best');
         end
 
         if params.ShowStatePlots

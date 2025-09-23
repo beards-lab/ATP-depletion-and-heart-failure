@@ -133,10 +133,21 @@ params0.UseSuperRelaxed = true;
 params0.UseOverlap = true;
 params0.UseOverlapFactor = true;
 params0.UseNegativeForceRip = true;
+params0.mu = 1e-1;
 % params0.k1 = 1500;
 params0.justPlotStateTransitionsFlag = false;
 RunBakersExp;
+%% prestretch
+clf;
+params0 = getParams();
+ModelParamsInitNiceSlack
+% params0.SL0 = 2.0;
+% params0.RunForceVelocity = false;
+% params0.RunKtr = false;
+params0.kSE = 600;
+params0.rsl0 = findLSEPreStretch(2.0, 57, params0);
 
+RunBakersExp;
 %%
 matchStructFields(params0, 'Use*', [0], true)   % print values
 %%
@@ -145,8 +156,8 @@ clear params0
 % ModelParamsInitNiceSlack_prescribedSR_var1;
 ModelParamsInitNiceSlack_prescribedSR_var2;
 
-params0.RunSlackSegments = 'Last';
-params0.RunSlackSegments = 'All';
+params0.RunSlackSegments = 'First';
+% params0.RunSlackSegments = 'All';
 params0.UseSafeSRReset = true;
 params0.kmsr = 0.02;
 params0.k1 = 85;
