@@ -33,9 +33,31 @@ p3_0 = dS*sum(p3);
 PT = max(0, 1 - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD)); % unattached permissive fraction
 
 
-% reseting the p2
-PU(ss+1:2*ss) = p2*max([0, 1/p2_0*(p2_0 - SR_in)]);
+if params.UseSuperRelaxed
+    % reseting the p2
+    newp2 = max(0, min(p2_0, p2_0 + PT- SR_in ));
+    PU(ss+1:Ns*ss) = p2*newp2/p2_0;
+    
+    
+    % reseting the SR
+    PU(Ns*ss+1) = min(p2_0+PT, SR_in);
+elseif params.UseSuperRelaxedADP
+    if P_SRD > SR_in
+        warning('Setting SRXD to a lower value');
+    end
+    % reseting the SRD
+    PU(Ns*ss+6) = min(p2_0+PT+PD, SR_in);
 
-% reseting the SR
-PU(Ns*ss+1) = min(p2_0+PT, SR_in);
+    % while taking from PD
+    PU(Ns*ss + 5) = max(PD-SR_in, 0);
+    
+    % and from PT
+    % ...claculated automatically
+
+    % and the p2
+    newp2 = max(0, min(p2_0, p2_0 + PT + PD- SR_in ));
+    PU(ss+1:Ns*ss) = p2*newp2/p2_0;
+        
+end
+
 end

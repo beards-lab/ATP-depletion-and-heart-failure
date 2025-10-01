@@ -305,7 +305,7 @@ if params0.RunSlack
     validZone = datatable(:, 1) > 1;
     
     
-    % datastruct.velocitytable(1, 1) = -2;
+    datastruct.velocitytable(1, 1) = -20;
 
     % show the indexes
     % [(1:length(datastruct.velocitytable))' datastruct.velocitytable]

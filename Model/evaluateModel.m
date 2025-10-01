@@ -265,7 +265,11 @@ for vs = 1:length(T) - 1
             
                 PU0 = resetSRHelper(PU0, SR_in, params);
             else
-                PU0(2*ss+1) = SR_in;
+                if params.UseSuperRelaxed
+                    PU0(2*ss+1) = SR_in;
+                elseif params.UseSuperRelaxedADP
+                    PU0(2*ss+6) = SR_in;
+                end
             end
         end
         [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);

@@ -98,15 +98,14 @@ params0.ekSE = 1;
 
 params0.MaxSlackNegativeForce = -5;
 
-params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), linspace(20, 80, 5)'];
+% params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), linspace(20, 80, 5)'];
 params0.velocitytableonfile = 'bakers_slack8mM_all_extendedSlack.mat';
+
+% params0.velocitytableonfile = 'bakers_isovelocity.mat';
 % params0.ksr0 = 0;
 RunBakersExp;
 % plot(out.t, out.RD1);
-toc
-
-
-% writeParamsToMFile('ModelParamsInitNiceSlack_prescribedSR_var2.m', params0, [], "Pretty nice fit, but the SR is fudged");
+% writeParamsToMFile('ModelParamsInitNiceSlack_prescribedSrxD.m', params0, [], "Pretty nice fit, but the SrxD is fudged");
 %
 % StatesInTime
 %% prescribed SR
@@ -115,12 +114,17 @@ clear params0;
 ModelParamsInitNiceSlack_prescribedSR
 params0.velocitytableonfile = 'bakers_slack8mM_all_fix.mat';
 % params0.velocitytableonfile = 'bakers_slack8mM_all_extendedSlack.mat';
+params0.velocitytableonfile = 'bakers_isovelocity.mat';
+
 params0.RunSlackSegments = 'All';
 
 sr_dist = (linspace(0, 1, 5)').^.6;
 sr_mi = 0.2; sr_ma = 0.6;
 sr_dist = sr_dist*(sr_ma - sr_mi) + sr_mi;
-% params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), sr_dist];
+params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), sr_dist];
+
+params0.UseSafeSRReset = true;
+
 params0.ResetSRat = [];
 params0.kmsr = .01;
 params0.ksr0 = 5;
@@ -136,6 +140,17 @@ params0.UseNegativeForceRip = true;
 params0.mu = 1e-1;
 % params0.k1 = 1500;
 params0.justPlotStateTransitionsFlag = false;
+
+
+params0.UseSuperRelaxed = false
+params0.UseSuperRelaxedADP = true;
+
+params0.kmsrd = 40;
+params0.sigma_srd1 = 1e6;
+params0.ksrd = .07;
+params0.sigma_srd2 = 1e6;
+
+
 RunBakersExp;
 %% prestretch
 clf;
@@ -148,6 +163,33 @@ params0.kSE = 600;
 params0.rsl0 = findLSEPreStretch(2.0, 57, params0);
 
 RunBakersExp;
+StatesInTime
+%% Test Srx_ADP
+
+clf;
+params0 = getParams();
+ModelParamsInitNiceSlack_dr01
+
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = true;
+
+params0.ksrd =  0.0038016;
+params0.sigma_srd1 = 1e6;
+
+params0.kmsrd =  0.0073827;
+params0.sigma_srd2 = 1e6;
+
+% params0.SL0 = 2.0;
+% params0.RunForceVelocity = false;
+% params0.RunKtr = false;
+params0.kSE = 5000;
+params0.ShowStatePlots  = true;
+% params0.rsl0 = findLSEPreStretch(2.0, 57, params0);
+params0.velocitytableonfile = 'bakers_slack8mM_all_fix.mat';
+
+RunBakersExp;
+
+
 %%
 matchStructFields(params0, 'Use*', [0], true)   % print values
 %%
@@ -171,6 +213,96 @@ params0.justPlotStateTransitionsFlag = false;
 % params0.MaxSlackNegativeForce = -2;
 
 RunBakersExp;
+%% 
+
+%% read bakers titin data to read the slack
+
+base = 'data/PassiveCaSrc2/20241220/';
+base = 'data/PassiveCaSrc2/20241219/';
+base = 'data/PassiveCaSrc2/20241217/';
+base = 'data/PassiveCaSrc2/20241212/';
+base = 'data/PassiveCaSrc2/20241121/';
+fn = [base  '01_05_0.1s_RelaxS2F.txt'];
+fn = [base  '03_05_0.1s_Relax_PNB_Mava.txt'];
+fn = [base  '03_10_0.1s_pCa_4.4_PNB_Mava.txt'];
+
+
+fn = [base  '01_05_0.1s_RelaxS2F.txt'];
+fn = [base  '03_02_100s_Relax_PNB_Mava.txt'];
+fn = [base  '01_09_100s_RelaxF2S.txt'];
+fn = [base  '03_10_0.1s_pCa_4.4_PNB_Mava.txt'];
+
+fn = [base  '01_01_Log_Relax.txt'];
+fn = [base  '02_01_Log_Fmax.txt'];
+fn = [base  '03_01_Log_PNB_Mava.txt'];
+
+tb = readtable(fn, "NumHeaderLines",3);
+tb.Properties.VariableNames = {'t', 'ML', 'F', 'SL'};
+
+figure;clf;hold on;
+clf;hold on;
+nexttile;
+plot(tb.t, tb.ML*2, tb.t, tb.SL)
+nexttile;
+plot(tb.t, tb.F)
+% plot(tb.t, tb.SL)
+
+% figure
+% plot(tb.SL, tb.F)
+
+%% for time ~ 1814 and 20241220/03_01_Log_PNB_Mava.txt, the force to 2*ML -
+% SL:
+FL = [1.4, +0.0560 - 1.9;6.424,+ 0.0679-2.35;27.663,+0.15-2.35];
+clf; plot(FL(:, 2), FL(:, 1), '*-'); hold on;
+
+fun = @(a, SL0, c, x) a*(x-SL0).^c;
+
+% fitoptions('init')
+f = fit(FL(:, 2), FL(:, 1), fun, 'StartPoint', [0.1, 1.5, 1]);
+sl = 1.9:0.05:2.5;
+plot(sl,f(sl))
+%%
+
+% Parameters
+S = 30000;            % max samples to show ("snake" length)
+R = 30000;             % new samples per second
+T = 10;             % total duration in seconds
+
+dt = 1/R;           % time step
+N = T * R;          % total number of samples
+
+% Example signal (circle + noise)
+t = linspace(0, T, N);
+xData = tb.SL;
+yData = tb.F;
+
+% Initialize plot
+figure;clf;
+hPlot = plot(nan, nan, '-o');
+% xlim([-1.5 1.5]); ylim([-1.5 1.5]);
+axis equal;
+grid on;
+title('Snake XY Trace');
+
+% Animate
+for k = 1:100:N
+    idxStart = max(1, k-S+1);   % sliding window start
+    set(hPlot, 'XData', xData(idxStart:k), 'YData', yData(idxStart:k));
+    xlim([1.5, 2.5])
+    drawnow;
+    pause(dt);  % control update rate
+end
+
+
+
+%% further testing srx d
+ModelParamsInitNiceSlack_prescribedSrxD;
+clf;
+params0.justPlotStateTransitionsFlag = false;
+params0.RunSlackSegments = 'All';
+params0.UsePassiveForSR = false;
+
+RunBakersExp;
 %% Extract simulated features
 % datastruct = load('data/bakers_slack8mM_all_extendedSlack.mat');
 % datastruct = load('data/bakers_slack8mM_all_fix.mat');
@@ -186,6 +318,9 @@ title('Sim');
 fn = {'ktr|SLdiff', 'A|SLdiff', 't0|SLslack', 'SLslack|t0|0', 'Am|SLslack|', 'peak1_y|SLslack|0', 'peak1_y|v_restretch|0','peak1_dSL', 'peak2|v_restretch', 'vall_t|v_restretch|0.1', 'vall_y', 'vall2_dy|v_restretch|0', 'ovrsht_dy|_|0', 'steady'};
 figure(80085)
 plotFeatures(feats_data, feats_sim, feats_ghost, fn);
+%%
+
+matchStructFields(params0, 'Use*', [], true);
 %%
 F = 0:1:100;
 params0.kSE = 500;
@@ -272,3 +407,115 @@ t = out.t(isegs);
 lxb = out.LXB(isegs);
 
 plot(t - t(1) - 0.015, lxb - 2.2)
+
+%% try to get the best params
+
+%% baseline
+clf;
+params0 = getParams();
+ModelParamsInitOptim_slackAll
+params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+params0.modelFcn = 'dPUdT_CombinedTransitions';
+params0.velocitytableonfile = 'bakers_isovelocity.mat';
+RunBakersExp;
+%%
+% ksr0 = params0.kmsr;
+% params0.kmsr = params0.ksr0;
+% params0.ksr0 = ksr0;
+% % params0.dS = 0.002;
+% % params0.dS = 0.004;
+% 
+% % params0.drp3 = 0.01;
+% % params0.dr = 0.007;
+% params0.drp3 = params0.dr;
+% 
+% params0.k3m = 0;
+% params0.k3 = 1500; 
+
+params0.RunStairs = false;    
+params0.RunForceVelocity = false;
+
+params0.RunSlack = true;
+params0.EvalFitSlackOnset = false;
+params0.RunForceLengthEstim = false;
+params0.RunSlackSegments = 'All';
+params0.drawForceOnset = true;
+
+
+if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
+    params0.alpha0_R = params0.alpha0 ;
+    params0.alpha0_R = params0.alpha0 ;
+    fprintf('Updating alpha... \n');
+end
+
+% params0.NumberOfStates = 2;
+params0.UseTitinInterpolation = 0;
+params0.RunSlackSegments = 'Last';
+
+% params0.ghostSave = 'testdS';
+% params0.ghostLoad = 'testdS';
+params0.dS = 0.0027;
+params0.Slim_r = 2.3;
+params0.dr = 0.01;
+% params0.A1AttachmentWidth = 3*params0.dS;
+% params0.kstiff1
+% params0.kstiff2 = params0.kstiff2*2.2;
+% params0.dr = 0.01;
+% params0.xrate = 2;
+params0.k2_L = params0.k2_L*5;
+params0.k2_R = params0.k2_R;
+params0.alpha2_R = 1;
+params0.RunSlackSegments = 'First';
+params0.kstiff1 = 15000;
+params0.kstiff2  = params0.kstiff1;
+
+figure(10);
+LoadData;
+params0.ShowStatePlots = true;
+params0.EvalFitSlackOnset = true;
+params0.UseNegativeForceRip = false;
+params0.MaxSlackNegativeForce = -6;
+
+params0.RunForceLengthEstim = false;
+params0.justPlotStateTransitionsFlag = false;
+
+
+% params0.ksr0 = params0.ksr0 /10;
+% params0.kmsr = params0.kmsr/10;
+% params0.kd = 20;
+% params0.ka = 50;
+params0.UseOverlap = true;
+params0.UseSuperRelaxed = true;
+
+% params0.ksr0 = 4.3;
+% params0.kmsr = 6.4e-3;
+% params0.UsePassiveForSR = true;
+% params0.sigma1 = 750;
+% 
+% params0.A1AttachmentWidth = 1*params0.dS;
+% params0.kstiff1 = 12000;
+% params0.kstiff2  = params0.kstiff1;
+% 
+% clf;
+% tic
+% params0.SL0 = 2.2;
+% params0.kSE = 500;
+% params0.ekSE = 1.5;
+% 
+% params0.kSE = 50000;
+% params0.ekSE = 1;
+
+params0.MaxSlackNegativeForce = -5;
+
+% params0.ResetSRat = [velocitytable(velocitytable(:, 2) < 0, 1), linspace(20, 80, 5)'];
+% params0.velocitytableonfile = 'bakers_slack8mM_all_extendedSlack.mat';
+params0.velocitytableonfile = 'bakers_slack8mM_all_fix.mat';
+
+% params0.velocitytableonfile = 'bakers_isovelocity.mat';
+% params0.ksr0 = 0;
+RunBakersExp;
+% plot(out.t, out.RD1);
+% writeParamsToMFile('ModelParamsInitNiceSlack_updated.m', params0, [], "Pretty nice fit, but the SrxD is fudged");
+%
+% StatesInTime
+

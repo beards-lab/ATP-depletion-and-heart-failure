@@ -208,11 +208,9 @@ if params.UseUniformTransitionFunc
     R2 = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 else 
     f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
-    s_b = s;
+    % s_b = s;
     % s = s*( max(-1, -Force))
 	strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));																		
-    R1D = f(F_SR, 2, 3)*params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
-        + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
 
     R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
     R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
@@ -222,10 +220,18 @@ else
         R2 = min(1e4, R2.*p2);
     else
         if params.UseNegativeForceRip
+           R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+        + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+            
             kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
+ 
             % *max(1, -Force*10);
         else
+            R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+                + strainDep(params.alpha0_R, params.dr0).*(s> 0))*f(F_SR, 2, 3); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
+            
             kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
+            
         end
         kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
         R2 = p2.*(params.k2 + kL + kR);
@@ -257,8 +263,8 @@ else
 end
 
 if params.UseSuperRelaxed     
-    % RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*P_SR;
-	RSR2PT = params.kmsr*(1 + log(max(1, F_SR))*params.sigma1)*P_SR;
+    RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*P_SR;
+	% RSR2PT = params.kmsr*(1 + log(max(1, F_SR))*params.sigma1)*P_SR;
     RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*PT;
 else 
     RSR2PT = 0;
@@ -365,7 +371,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t > 1.2099 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t > 2.76 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 
