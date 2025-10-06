@@ -1,12 +1,24 @@
 %% ISovelocity table
+isovelocitydata = false;
 
-opts = detectImportOptions('../data/2021 06 15 isovelocity fit Filip.xlsx', 'Sheet', 1); % Specify the sheet to read from
-opts.DataRange = 'A5'; % Set the data range starting from the 5th row
-dataTable = readtable('../data/2021 06 15 isovelocity fit Filip.xlsx', opts); % Load the data into a table
+if isovelocitydata
+    opts = detectImportOptions('data/2021 06 15 isovelocity fit Filip.xlsx', 'Sheet', 1); % Specify the sheet to read from
+    opts.DataRange = 'A5'; % Set the data range starting from the 5th row
+    dataTable = readtable('data/2021 06 15 isovelocity fit Filip.xlsx', opts); % Load the data into a table
+    
+    % Limit to 3 columns and rename variables
+    dataTable = dataTable(:, 1:3);
+    dataTable.Properties.VariableNames = {'t', 'L', 'F'};
 
-% Limit to 3 columns and rename variables
-dataTable = dataTable(:, 1:3);
-dataTable.Properties.VariableNames = {'t', 'L', 'F'};
+else
+    datatable = load("data\bakers_slack8mM_all.mat").datatable;
+    t = datatable(:, 1)*1000; % Extract time data
+    L = datatable(:, 2); % Extract L data
+    F = datatable(:, 3); % Extract F data
+    
+    % Create the table with the specified column names
+    dataTable = table(t, L, F, 'VariableNames', {'t', 'L', 'F'});
+end
 %%
 figure(1); clf; hold on;
 plot(dataTable.t, dataTable.L*100, 'DisplayName', 'L');
@@ -27,18 +39,29 @@ grid on;
 % ft = ft(1:subsampleFactor:end);
 % ff = ff(1:subsampleFactor:end);
 
+if isovelocitydata
+    threshold = 0.01; % Define a threshold for fast rise
+    riseVelocities = find(diff(dataTable.L)./diff(dataTable.t) > threshold) + 1; % Find indices of fast rises
+    riseIndices = riseVelocities([false; diff(riseVelocities) > 1000]);
+    winstart = 480 - 480;
+else
+    velocitytable = load("data\bakers_slack8mM_all.mat").velocitytable;
+    times = velocitytable(find(velocitytable(:, 2) < 0) + 3, 1)*1000;
+    
+    % Find indices of vector t where it starts with values in times
+    riseIndices = arrayfun(@(x) find(t > x, 1, 'first'), times);
+% startIndices = startIndices(~isnan(startIndices)); % Remove any NaN values
+    winstart = 20;
+end
+%
 
-threshold = 0.01; % Define a threshold for fast rise
-riseVelocities = find(diff(dataTable.L)./diff(dataTable.t) > threshold) + 1; % Find indices of fast rises
-riseIndices = riseVelocities([false; diff(riseVelocities) > 1000]);
-
-winstart = 480 - 480;
-winsize = 4000;
+winsize = 400;
 % Align F to start at these bump-ups
 alignedF = zeros(size(dataTable.F)); % Initialize aligned F
 % Plot the aligned data
 figure(2); clf; 
 for i = 1:length(riseIndices)
+    %%
     win = riseIndices(i) + winstart:min(length(dataTable.L), riseIndices(i)+winsize);
     % nexttile(1);hold on;plot(dataTable.t(win) - dataTable.t(win(1)), dataTable.L(win), 'DisplayName', 'L');   
     nexttile();hold on;
@@ -47,7 +70,7 @@ for i = 1:length(riseIndices)
     plot(ft, ff, 'DisplayName', 'F');   
     
     y_exp = @(A, k, t0, B, x) max(0, A*(1-exp(-(x-t0)*k)) + B);
-    
+    plot(ft, y_exp(10, 20, 0, 65, ft));
     y_2nd = @(A, zeta, wn, t0, B, x) ...
     (A*(1 - 1./sqrt(1-zeta.^2) .* ...
     exp(-zeta*wn.*(x-t0)) .* ...
