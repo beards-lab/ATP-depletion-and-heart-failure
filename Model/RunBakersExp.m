@@ -47,7 +47,7 @@ if params0.RunForceVelocity
                         breakpointIsHappening = 1; % only to place a bp
                     end
                 end
-            catch e
+            catch e 
                 % wraps additional error for the optimizer
                 handleAndRethrowCostException(e, t_ss*(length(vel) - j));
             end
@@ -415,7 +415,7 @@ if params0.RunSlack
     % error('hovna')
 
     % params.SL0 = 2.2;
-    params.Slim_l = 1.80;
+    % params.Slim_l = 1.85;
     % params.Slim_r = 2.2;
     % params.LXBpivot = 2.2;
     % params.dS = 0.0025;
@@ -568,6 +568,24 @@ end
 end
 %% FORCE VELOCITY RESIMULATION
 if params0.RunForceVelocityTime
+
+TODO REDO THIS integrate that
+
+% postprocess the isovelocity velocities
+
+constantSpeedSegment = find(velocitytable(:, 2) > 0) - 3;
+speeds = -velocitytable(constantSpeedSegment, 2);
+
+x = velocitytable(constantSpeedSegment, 1);
+smashed2_0_data = arrayfun(@(x) find(datatable(:, 2) < 2.0 & datatable(:, 1) > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
+smashed2_0_model = arrayfun(@(x) find(out.SL < 2.0 & out.t > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
+
+clf;hold on;
+plot(out.t, out.Force); plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=2);
+plot(out.t, out.Force, out.t, out.SL); hold on; plot(datatable(smashed2_0, 1), datatable(smashed2_0, 2), 'x', LineWidth=2);
+modelForce = out.Force(smashed2_0_model);
+plot(modelForce, speeds, 'x', LineWidth=2)
+
     params = params0;
 
     % datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";

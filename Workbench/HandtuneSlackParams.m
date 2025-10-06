@@ -411,13 +411,52 @@ plot(t - t(1) - 0.015, lxb - 2.2)
 %% try to get the best params
 
 %% baseline
-clf;
+figure(13);clf;
 params0 = getParams();
 ModelParamsInitOptim_slackAll
-params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
-params0.modelFcn = 'dPUdT_CombinedTransitions';
+% params0.modelFcn = 'dPUdTCaSimpleAlternative2State';
+% params0.modelFcn = 'dPUdT_CombinedTransitions_old';
 params0.velocitytableonfile = 'bakers_isovelocity.mat';
+
+ % adjsut ksr0 and kmsr bullshiut
+    if params0.kmsr > params0.ksr0
+        ksr0 = params0.kmsr;
+        params0.kmsr = params0.ksr0;
+        params0.ksr0 = ksr0;        
+    end
+
+    if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
+        params0.alpha0_R = params0.alpha0 ;
+        params0.alpha0_R = params0.alpha0 ;
+        fprintf('Updating alpha... \n');
+    end
+params0.Slim_l = 1.85 + 0.01;
+% params0.Slim_l = 1.80 + 0.0027*20 + 0.0;
+params0.Slim_l = 1.80;
+params0.Slim_r = 2.31;
+% params0.kSE = 1000;
+params0.dS = 0.0027/2;
+params0.dS = 0.00;
+% params0.Slim_r = 2.3;
+% params0.dr = 0.01;
+params0.RunSlackSegments = 'All';
+params0.A1AttachmentWidth = 0.012;
+params0.dS = 0.003;
+params0.kstiff1 = 1.2e4;
+params0.kstiff2 = params0.kstiff1;
+params0.kSE  = 1000;
+params0.ka = 30;
+params0.k1 = 200;
+% params0.dr
+params0.ShowStatePlots = true;
+tic
 RunBakersExp;
+toc
+params.dS
+params.ss
+%%
+figure(11);
+StatesInTime
 %%
 % ksr0 = params0.kmsr;
 % params0.kmsr = params0.ksr0;
@@ -518,4 +557,62 @@ RunBakersExp;
 % writeParamsToMFile('ModelParamsInitNiceSlack_updated.m', params0, [], "Pretty nice fit, but the SrxD is fudged");
 %
 % StatesInTime
+%% Soo...
+% matchStructFields(params0, 'Use*', [], true);
+clf;
+% Simplest model
+% add complexities
 
+params0 = getParams();
+ModelParamsInitOptim_slackAll
+
+if params0.alpha0 ~= 0 && params0.alpha0_R == 0 && params0.alpha0_R == 0
+    params0.alpha0_R = params0.alpha0 ;
+    params0.alpha0_R = params0.alpha0 ;
+    fprintf('Updating alpha... \n');
+end
+
+params0.UseSerialStiffness = false;
+
+
+params0.RunSlackSegments = 'Last';
+params0.A1AttachmentWidth = 0.002;
+params0.dS = 0.001;
+params0.Slim_r = 2.2;
+params0.Slim_l = 2.1;
+params0.WindowsOverflowStepCount = -1;
+params0.BreakOnODEUnstable = false;
+
+params0.UseSuperRelaxed = false;
+params0.UseTitinInterpolation = false;
+params0.ShowStatePlots = true;
+
+
+params0.k2 = 50;
+
+params0.k_1 = 0;
+params0.UseStrictDetachmentAt = 0.02;
+params0.justPlotStateTransitionsFlag = false;
+
+params0.Velocity = -1;
+t_sl0 = [0 0.1];
+params0 = getParams(params0, [], true);
+
+tic
+[F out] = evaluateModel(modelFcn, t_sl0, params0);
+% RunBakersExp
+toc
+
+%% 
+
+ModelParams_FVfit
+params0.Velocity = -1;
+params = params0;
+params0.Slim_r = 2.2;
+params0.Slim_l = 2.1;
+params0.WindowsOverflowStepCount = -1;
+
+params0 = getParams(params0, [], true);
+[F out] = evaluateModel(modelFcn, t_sl0, params0);
+
+StatesInTime

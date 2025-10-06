@@ -154,7 +154,12 @@ for vs = 1:length(T) - 1
         if ~isempty(te)
             % we have an event from previous run
             ts = t(end);
-            nds = params.WindowsOverflowStepCount;
+            if params.WindowsOverflowStepCount < 0
+                nds = floor(params.ss/4);
+            else
+                nds = params.WindowsOverflowStepCount;
+            end
+            
             if ie == 1
                 % move right
                 PU0(1:ss-nds) = PU0(1+nds:ss);
@@ -166,7 +171,7 @@ for vs = 1:length(T) - 1
                     PU0(3*ss-nds:3*ss) = 0;
                 end
                 params.LXBpivot = params.LXBpivot - nds*params.dS*2;
-                fprintf('Hovna took %d steps right\n', length(t))
+                fprintf('Hovna took %d steps right at %f s \n', nds, ts)
                 imax = imax - 1;
             elseif ie == 2
                 % move left
@@ -181,7 +186,7 @@ for vs = 1:length(T) - 1
 
                 % dS is in half-sarcomere space, converting to sarcomere space by 2
                 params.LXBpivot = params.LXBpivot + nds*params.dS*2;
-                fprintf('Hovna took %d steps left\n', length(t))
+                fprintf('Hovna took %d steps left at %f s \n', nds, ts)
                 imax = imax - 1;
             elseif ie == 3
                 try

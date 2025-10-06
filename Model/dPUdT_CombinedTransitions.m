@@ -9,8 +9,8 @@ vel = params.Vums;
 
 % Decompose State Variables from PU vector
 ss = params.ss; % space size (length of the s for each of p1-p3)
-p1 = PU(1:ss);
-p2 = PU(ss+1:2*ss);
+p1 = PU(1:ss); p1(p1<0) = 0;
+p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
 if length(PU) > 3*ss
     p3 = PU(2*ss+1:3*ss);
     Ns = 3; % number of states
@@ -207,10 +207,9 @@ if params.UseUniformTransitionFunc
     
     R2 = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
 else 
-    f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
     % s_b = s;
     % s = s*( max(-1, -Force))
-	strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^2));																		
+    strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^params.StrainExp));																		
 
     R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
     R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
@@ -220,18 +219,14 @@ else
         R2 = min(1e4, R2.*p2);
     else
         if params.UseNegativeForceRip
-           R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
-        + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
-            
-            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
- 
-            % *max(1, -Force*10);
-        else
+            f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
             R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
-                + strainDep(params.alpha0_R, params.dr0).*(s> 0))*f(F_SR, 2, 3); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant
-            
-            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
-            
+        + strainDep(params.alpha0_R, params.dr0).*(s> 0))*f(F_SR, 2, 3); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant           
+            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
+         else
+           R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+        + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant            
+            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);           
         end
         kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
         R2 = p2.*(params.k2 + kL + kR);
@@ -243,6 +238,12 @@ R3m = params.k3m*p3;
 
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+
+if params.UseStrictDetachmentAt > 0
+    strictArea = s > params.UseStrictDetachmentAt | s < -params.UseStrictDetachmentAt;
+    R2(strictArea) = p2(strictArea)*(10000);
+    R1D(strictArea) = p1(strictArea)*(10000);
+end
 
 
 % F_SR = (SL-LSE);
@@ -284,6 +285,7 @@ end
 %% governing flows
 % PT - calculated as complement of sum of all probabilities
 % state 0: unattached, ATP-cocked
+
 dPD = RSRD2PD - RPD2SRD + RTD - RD1 + sum(R1D)*dS;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2 - XB_Ripped + R3m ; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
@@ -305,7 +307,8 @@ end
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
 % Attachment
 try
-    if params.A1AttachmentWidth <= dS
+    % if params.A1AttachmentWidth <= dS
+    if params.A1AttachmentWidth == 0
     
             [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
             dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
@@ -371,7 +374,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t > 2.76 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t > 0.038 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 
