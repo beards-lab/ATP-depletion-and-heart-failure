@@ -10,7 +10,6 @@ end
 
 if params0.RunForceVelocity
     params = params0;
-    params.Slim_l = 1.9;
     t_ss = [0 1];
     t_sl0 = [0 0.1];
 
@@ -23,15 +22,36 @@ if params0.RunForceVelocity
     if isfield(params, 'PU0')
         params = rmfield(params, 'PU0');
     end
+
     for a = params.EvalAtp
         params.MgATP = ATP_c(a);
-        for j = 1:length(vel)
+        N = length(vel);
+        % paralelize?
+        if isempty(gcp('nocreate'))
+            parple = [];
+        else
+            parple = gcp('nocreate');
+            % Launch asynchronous tasks
+            futures = cell(1, N);
+        end
+
+        for j = 1:N
             try
                 if vel(j) == 0
                     params.SL0 = 2.0;
                     params.Velocity = 0;
+                    
+                    % optimize for speed, force is up to 80
+                    dsl = 80/params.kSE;
+                    params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
+                    params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
                     [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
                 else
+                    % optimize for speed, force is up to 80
+                    dsl = 80/params.kSE;
+                    params.Slim_r = 2.2 + params.A1AttachmentWidth + params.dS;
+                    params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
+
                     params.SL0 = 2.2;
                     % true to start from 2.2um steady state isntead from scratch.
                     % Neither is perfect though
@@ -42,7 +62,11 @@ if params0.RunForceVelocity
                         params.PU0 = out.PU(end, :);
                     end
                     params.Velocity = vel(j);
-                    [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);
+                    if isempty(parple)
+                        [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);                        
+                    else
+                         futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_sl0/abs(vel(j)), params);
+                    end
                     if abs(vel(j)) >= 3
                         breakpointIsHappening = 1; % only to place a bp
                     end
@@ -52,10 +76,18 @@ if params0.RunForceVelocity
                 handleAndRethrowCostException(e, t_ss*(length(vel) - j));
             end
         end
+        if ~isempty(parple)
+            for j = 1:N 
+                if ~isempty(futures{j})
+                    [F_active(a, j), out] = fetchOutputs(futures{j}); 
+                end
+            end
+        end
     end
+
     % cost function
     % E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
-    E(1) = sum((F_active(params.EvalAtp,:)./Data_ATP(:,params.EvalAtp+1)' - 1).^2, 'all');
+    E(1) = sum((F_active(params.EvalAtp,1:length(vel))./Data_ATP(1:length(vel),params.EvalAtp+1)' - 1).^2, 'all');
     % normalize by number of data points
     E(1) = E(1)/size(Data_ATP, 1)/length(params.EvalAtp);
 
@@ -101,7 +133,7 @@ if params0.RunForceVelocity
         end
         for a = params.EvalAtp
             set(gca,'ColorOrderIndex',a);
-            ls = [ls plot(F_active(a, :), -vel,'-','linewidth',1)];
+            ls = [ls plot(F_active(a, :), -vel,'x-','linewidth',2, MarkerSize=20)];
         end
         % legend('8mM', '4mM', '2mM');
         ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
