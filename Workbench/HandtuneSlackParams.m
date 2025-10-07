@@ -616,3 +616,105 @@ params0 = getParams(params0, [], true);
 [F out] = evaluateModel(modelFcn, t_sl0, params0);
 
 StatesInTime
+
+
+%% Identify the force velocity kurva
+clf;
+params0 = getParams();
+ModelParamsInitNiceSlack;
+LoadData;
+
+params0.dr = 0.01;
+params0.RunForceVelocity = true;    
+params0.RunSlack = false;
+
+params0.EvalAtp = [1];
+
+params0.UseSuperRelaxed = false;
+
+params0.UsePieceWiseStrainDep = true;
+params0.UseStrainDep4R1D = false;
+params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 8, 8, 100, 100];
+params0.PieceWiseStrainDepDx = linspace(0, params0.dr*2, length(params0.PieceWiseStrainDepParams));
+params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.25 0.5 0.75 1 10 100];
+params0.dS = 0.002;
+params0.A1AttachmentWidth = params0.dS * 2;
+
+kstiff = 1.4e4;
+params0.kstiff1 = kstiff;
+params0.kstiff2 = kstiff;
+params0.kstiff3 = kstiff;
+% params0.kSE = 1000;
+
+params0.justPlotStateTransitionsFlag = false;
+vel = [0 -0.5, -1];
+
+params0.SaveBest = false;
+
+% params0.Slim_l = 1.8;
+% params0.Slim_r = 2.21;
+params0.BreakOnODEUnstable = true;
+tic
+RunBakersExp;
+toc
+
+%%
+StatesInTime
+
+%% optimize?
+
+params0.PlotEachSeparately = false;
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
+% g = [1, 1, 1, 1, 1, 1, 1, 1];
+% g = [1.2539    0.4422];
+
+% params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 8, 8, 100, 100];
+params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.5 1 2 100];
+params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 32, 100];
+
+pwsel = (2:5);
+optimfun = @(pw)evalSDP(params0, pw, pwsel);
+params0.PlotEachSeparately = false;
+pwsdp = params0.PieceWiseStrainDepParams(pwsel);
+% pwsdp = x;
+x = fminsearch(optimfun, pwsdp, options)
+
+%%
+clf;
+params0.PlotEachSeparately = true;
+params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 32, 100];
+params0.PieceWiseStrainDepParams(pwsel) = x;
+% params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 9, 10, 100, 100];
+% vel = [0, -0.5, -1];
+% p = parpool('threads');
+% delete(p)
+tic
+evalSDP(params0, pwsdp, pwsel);
+toc
+
+
+function E = evalSDP(params0, PWSDP, pwsel)
+
+
+    % Ensure monotonic increasing y (clip or enforce)
+    for i = 2:length(PWSDP)
+        if PWSDP(i) <= PWSDP(i-1)
+            E = 100;
+            return;
+            PWSDP(i) = PWSDP(i-1) + 1e-3;
+        end
+    end
+
+    % pwsdp = params0.PieceWiseStrainDepParams;
+    % pwsdp(pwsel) = PWSDP; 
+    params0.PieceWiseStrainDepParams(pwsel) = PWSDP;
+    LoadData;
+    vel = [0, -0.5, -1];
+    RunBakersExp;
+end
+
+%%
+c = parcluster('threads');   % get the cluster object
+c.NumWorkers                 % see current limit (probably 2)
+c.NumWorkers = 4;            % set to 4 (or whatever your CPU can handle)
+saveProfile(c);  

@@ -196,7 +196,30 @@ else
     end
 end
 
-if params.UseUniformTransitionFunc
+if params.UsePieceWiseStrainDep
+    
+    % % Ensure monotonic increasing y (clip or enforce)
+    % for i = 2:length(args)
+    %     if args(i) <= args(i-1)
+    %         args(i) = args(i-1) + 1e-3;
+    %     end
+    % end
+
+    % Monotonic cubic interpolation
+    f = @(x)pchip(params.PieceWiseStrainDepX, params.PieceWiseStrainDepParams, x);   
+    
+    if params.UseStrainDep4R1D
+        R1D = params.kd*p1.*f(s);
+    else
+        R1D = params.kd*p1;
+    end
+
+
+    R12 = params.k1*p1.*f(s);
+    R21 = R12*0;
+    R2 = params.k2*p2.*f(s+params.dr);
+
+elseif params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
     % dPUdT_TransitionRates;
     sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
