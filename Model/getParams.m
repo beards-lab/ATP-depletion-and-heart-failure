@@ -119,6 +119,7 @@ end
         'UseNegativeForceRip', false, ...
         'UseStrictDetachmentAt', 0, ...
         'StrainExp', 2,...
+        'MaxStrainArraySize', 0, ...
         'UseSafeSRReset', false ...
         );
 
@@ -249,10 +250,15 @@ end
         % params.LXBpivot = params.SL0;
         % params.LXBpivot = params.Slim_l + (params.Slim_r - params.Slim_l)/2;
         params.LXBpivot = params.Slim_l;
-        % params.ss = params.N;
         params.s = ((params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot)/2;
+        if params.MaxStrainArraySize > 0
+            % half-sarcomere strain limit
+            limitedN =  (params.Slim_l + (0:2*params.dS:2*params.dS*params.MaxStrainArraySize) - params.LXBpivot)/2;        
+            if length(limitedN) < length(params.s)
+                params.s = limitedN;
+            end
+        end
         params.ss = length(params.s);
-%         params.s_i0 = 0; % not used in this context, searched for in each iteration
     else
     
         % refresh these

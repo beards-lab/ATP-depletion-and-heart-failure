@@ -647,74 +647,116 @@ params0.kstiff3 = kstiff;
 % params0.kSE = 1000;
 
 params0.justPlotStateTransitionsFlag = false;
+params0.PlotEachSeparately = false;
 vel = [0 -0.5, -1];
 
 params0.SaveBest = false;
-
+params0.WindowsOverflowStepCount = -1; % set to auto
 % params0.Slim_l = 1.8;
 % params0.Slim_r = 2.21;
 params0.BreakOnODEUnstable = true;
+params0.MaxStrainArraySize = 60;
 tic
 RunBakersExp;
+ttoc = toc
+
+% ArrSiz = []; ArrSizTime = [];
+% ArrSiz = [ArrSiz, params.ss];
+% ArrSizTime = [ArrSizTime, ttoc];
+
+% m2025b = load("ArrayTimingLogFV.mat")
+% scatter(ArrSiz, ArrSizTime, m2025b.ArrSiz, m2025b.ArrSizTime)
+%%
+% plot(ArrSiz, ArrSizTime, 'x', m2025b.ArrSiz, m2025b.ArrSizTime, 'x', linewidth = 1)
+legend('2023a', '2025b');xlabel('Strain array size');ylabel('Time');title('Force velocity run, vel = [0 -0.5, -1];')
+% save('ArrayTimingLogFV2023a', "ArrSizTime", "ArrSiz")
+% save('ArrayTimingLogFV2025b', "m2025b")
+%%
+StatesInTime
+
+%% reset init
+params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.5 1 2 10];
+params0.PieceWiseStrainDepParams = [1, 1, 1.5, 2, 500, 1000];
+pwsel = (3:4);
+params0.mods = {"ka", "kd", "k1", "k2", "dr2"};
+params0.g = [2.5 1, 1, 1];
+
+x = [params0.PieceWiseStrainDepParams(pwsel) params0.g];
+
+%% jsut run
+clf;
+params0.PlotEachSeparately = true;
+params0.ShowStatePlots = true;
+params0.justPlotStateTransitionsFlag = false;
+params0.kstiff1 = 1000;
+params0.kstiff2 = 20000;
+params0.kSE = 1000;
+params0.dr2 = params0.dr;
+
+params0.PieceWiseStrainDepParams(pwsel) = x(1:length(pwsel));
+params0.g = x(length(pwsel)+1:end);
+pwsdp = [params0.PieceWiseStrainDepParams(pwsel) params0.g];
+% delete(p)
+tic
+params0.WindowsOverflowStepCount = -1; % set to auto
+params0.kah = 40;
+[E, out] = evalSDP(params0, pwsdp, pwsel);
+disp(E)
 toc
 
-%%
+%% 
+params = params0;
+params.Slim_l = out.Slim_l;
+params.Slim_r = out.Slim_r;
 StatesInTime
 
 %% optimize?
 
 params0.PlotEachSeparately = false;
+params0.justPlotStateTransitionsFlag = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
-% g = [1, 1, 1, 1, 1, 1, 1, 1];
-% g = [1.2539    0.4422];
 
-% params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 8, 8, 100, 100];
-params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.5 1 2 100];
-params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 32, 100];
-
-pwsel = (2:5);
 optimfun = @(pw)evalSDP(params0, pw, pwsel);
 params0.PlotEachSeparately = false;
-pwsdp = params0.PieceWiseStrainDepParams(pwsel);
-% pwsdp = x;
+
 x = fminsearch(optimfun, pwsdp, options)
 
-%%
-clf;
-params0.PlotEachSeparately = true;
-params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 32, 100];
-params0.PieceWiseStrainDepParams(pwsel) = x;
-% params0.PieceWiseStrainDepParams = [1, 1, 4, 8, 9, 10, 100, 100];
-% vel = [0, -0.5, -1];
-% p = parpool('threads');
-% delete(p)
-tic
-evalSDP(params0, pwsdp, pwsel);
-toc
 
 
-function E = evalSDP(params0, PWSDP, pwsel)
+function [E out] = evalSDP(params0, G, pwsel)
+    E = 100;
 
+    PWSDP = G(1:length(pwsel));
+    params0.g = G(length(pwsel)+1:end);
 
     % Ensure monotonic increasing y (clip or enforce)
     for i = 2:length(PWSDP)
-        if PWSDP(i) <= PWSDP(i-1)
-            E = 100;
+        if PWSDP(i) <= PWSDP(i-1)            
             return;
             PWSDP(i) = PWSDP(i-1) + 1e-3;
         end
+    end
+    if any(G(1:end-1) < 0)
+        return;
     end
 
     % pwsdp = params0.PieceWiseStrainDepParams;
     % pwsdp(pwsel) = PWSDP; 
     params0.PieceWiseStrainDepParams(pwsel) = PWSDP;
     LoadData;
-    vel = [0, -0.5, -1];
-    RunBakersExp;
+    vel = [0,-0.5, -1, -2];
+    try
+        % params0.PlotEachSeparately = true;
+        RunBakersExp;
+    catch e
+        return;
+    end
 end
 
-%%
-c = parcluster('threads');   % get the cluster object
-c.NumWorkers                 % see current limit (probably 2)
-c.NumWorkers = 4;            % set to 4 (or whatever your CPU can handle)
-saveProfile(c);  
+% %%
+% c = parcluster('threads');   % get the cluster object
+% c.NumWorkers                 % see current limit (probably 2)
+% c.NumWorkers = 4;            % set to 4 (or whatever your CPU can handle)
+% saveProfile(c);  
+
+%% 

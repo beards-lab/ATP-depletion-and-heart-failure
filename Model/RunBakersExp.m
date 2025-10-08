@@ -10,10 +10,10 @@ end
 
 if params0.RunForceVelocity
     params = params0;
-    t_ss = [0 1];
+    t_ss = [0 0.1];
     t_sl0 = [0 0.1];
 
-    params = getParams(params);
+    % params = getParams(params);
     params.UseForceOnsetShift = false;
     F_active = [];
 
@@ -45,14 +45,25 @@ if params0.RunForceVelocity
                     dsl = 80/params.kSE;
                     params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
                     params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
-                    [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
+                    params = getParams(params);
+                    
+                    if isempty(parple)
+                        [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
+                    else
+                         futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_ss, params);
+                    end
                 else
                     % optimize for speed, force is up to 80
                     dsl = 80/params.kSE;
                     params.Slim_r = 2.2 + params.A1AttachmentWidth + params.dS;
                     params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
+                    
+                    % experimentally cut in half
+                    % params.Slim_l = params.Slim_r - (params.Slim_r-params.Slim_l)/2;
+                    params.Slim_l = params.Slim_r - 2*params.dS*params.MaxStrainArraySize;
 
                     params.SL0 = 2.2;
+                    params = getParams(params);
                     % true to start from 2.2um steady state isntead from scratch.
                     % Neither is perfect though
                     if ~isfield(params, 'PU0')
@@ -83,6 +94,10 @@ if params0.RunForceVelocity
                 end
             end
         end
+
+        out.Slim_r = params.Slim_r;
+        out.Slim_l = params.Slim_l;
+
     end
 
     % cost function

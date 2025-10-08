@@ -155,7 +155,7 @@ for vs = 1:length(T) - 1
             % we have an event from previous run
             ts = t(end);
             if params.WindowsOverflowStepCount < 0
-                nds = floor(params.ss/4);
+                nds = floor(params.ss/3);
             else
                 nds = params.WindowsOverflowStepCount;
             end

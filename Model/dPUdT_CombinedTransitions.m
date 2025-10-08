@@ -217,7 +217,7 @@ if params.UsePieceWiseStrainDep
 
     R12 = params.k1*p1.*f(s);
     R21 = R12*0;
-    R2 = params.k2*p2.*f(s+params.dr);
+    R2 = params.k2*p2.*f(s + params.dr2 - params.dr);
 
 elseif params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT

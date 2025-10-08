@@ -1,8 +1,10 @@
 % draw interactive plot in time
 t_init = 2.77;
 t_init = 0;
+t_init = out.t(round(end/2));
 
 figure(10);clf;
+params = getParams(params);
 plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, '-', LineWidth=1.5)
 legend('P1','P2','PuATP','PuR', 'SR')
 figure(11);
