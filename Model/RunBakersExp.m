@@ -23,11 +23,15 @@ if params0.RunForceVelocity
         params = rmfield(params, 'PU0');
     end
 
+    if isfield(params, 'FV_velocities')
+        vel = params.FV_velocities;
+    end    
+
     for a = params.EvalAtp
         params.MgATP = ATP_c(a);
         N = length(vel);
         % paralelize?
-        if isempty(gcp('nocreate'))
+        if isempty(gcp('nocreate')) || params.justPlotStateTransitionsFlag
             parple = [];
         else
             parple = gcp('nocreate');
@@ -45,10 +49,12 @@ if params0.RunForceVelocity
                     dsl = 80/params.kSE;
                     params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
                     params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
+                    
                     params = getParams(params);
                     
                     if isempty(parple)
                         [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
+                        outs(j) = out;
                     else
                          futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_ss, params);
                     end
@@ -60,7 +66,7 @@ if params0.RunForceVelocity
                     
                     % experimentally cut in half
                     % params.Slim_l = params.Slim_r - (params.Slim_r-params.Slim_l)/2;
-                    params.Slim_l = params.Slim_r - 2*params.dS*params.MaxStrainArraySize;
+                    % params.Slim_l = params.Slim_r - 2*params.dS*params.MaxStrainArraySize;
 
                     params.SL0 = 2.2;
                     params = getParams(params);
@@ -75,6 +81,7 @@ if params0.RunForceVelocity
                     params.Velocity = vel(j);
                     if isempty(parple)
                         [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);                        
+                        outs(j) = out;
                     else
                          futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_sl0/abs(vel(j)), params);
                     end
@@ -86,11 +93,13 @@ if params0.RunForceVelocity
                 % wraps additional error for the optimizer
                 handleAndRethrowCostException(e, t_ss*(length(vel) - j));
             end
+            
         end
         if ~isempty(parple)
             for j = 1:N 
                 if ~isempty(futures{j})
                     [F_active(a, j), out] = fetchOutputs(futures{j}); 
+                    outs(j) = out;
                 end
             end
         end
@@ -135,7 +144,7 @@ if params0.RunForceVelocity
         if ~isempty(params.ghostLoad) && exist(['Ghost_' params.ghostLoad '_FV.mat'],'file')
             ghost = load(['Ghost_' params.ghostLoad '_FV']);
             ghost = ghost.ghost;
-            gp = plot(ghost(:, 1), ghost(:, 2), '-', 'Linewidth', 3, 'Color', [0.5843    0.8157    0.9882]);
+            gp = plot(ghost(:, 1), ghost(:, 2), 'x-', 'Linewidth', 4, 'Color', [0.5843    0.8157    0.9882]);
         else
             clear gp;
         end
@@ -175,8 +184,12 @@ if params0.RunForceVelocity
     end
 
     if ~isempty(params.ghostSave)
-        ghost = [F_active(1, :), -vel(:)'];
-        save(['Ghost_' params.ghostSave '_FV'], 'ghost');
+        if size(vel, 1) > size(vel, 2) 
+            ghost = [F_active(1, :), -vel(:)'];
+        else
+            ghost = [F_active(1, :)', -vel(:)];
+        end
+        save(['Ghost_' params.ghostSave '_FV'], 'ghost', "params0");
     end
 end
 % return;

@@ -639,36 +639,45 @@ params0.PieceWiseStrainDepDx = linspace(0, params0.dr*2, length(params0.PieceWis
 params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.25 0.5 0.75 1 10 100];
 params0.dS = 0.002;
 params0.A1AttachmentWidth = params0.dS * 2;
+params0.dr2 = params0.dr;
+
 
 kstiff = 1.4e4;
-params0.kstiff1 = kstiff;
+params0.kstiff1 = kstiff/10;
 params0.kstiff2 = kstiff;
 params0.kstiff3 = kstiff;
 % params0.kSE = 1000;
 
 params0.justPlotStateTransitionsFlag = false;
-params0.PlotEachSeparately = false;
-vel = [0 -0.5, -1];
+params0.PlotEachSeparately = true;
+vel = [0 -0.5, -2];
+% vel = 0;
 
+% params0.ka = 50;
+% params0.kd = 100;
 params0.SaveBest = false;
 params0.WindowsOverflowStepCount = -1; % set to auto
 % params0.Slim_l = 1.8;
 % params0.Slim_r = 2.21;
 params0.BreakOnODEUnstable = true;
-params0.MaxStrainArraySize = 60;
+params0.MaxStrainArraySize = 40;
 tic
+params0.ka = 20;
 RunBakersExp;
 ttoc = toc
+disp(E)
 
+% p = parpool('threads', 4);
 % ArrSiz = []; ArrSizTime = [];
 % ArrSiz = [ArrSiz, params.ss];
 % ArrSizTime = [ArrSizTime, ttoc];
 
 % m2025b = load("ArrayTimingLogFV.mat")
+% m2023 = load("ArrayTimingLogFV2023a.mat")
 % scatter(ArrSiz, ArrSizTime, m2025b.ArrSiz, m2025b.ArrSizTime)
 %%
-% plot(ArrSiz, ArrSizTime, 'x', m2025b.ArrSiz, m2025b.ArrSizTime, 'x', linewidth = 1)
-legend('2023a', '2025b');xlabel('Strain array size');ylabel('Time');title('Force velocity run, vel = [0 -0.5, -1];')
+% plot(ArrSiz, ArrSizTime, 'x',m2023.ArrSiz, m2023.ArrSizTime, 'x', m2025b.ArrSiz, m2025b.ArrSizTime, 'x', linewidth = 1)
+% legend('2023a', '2025b');xlabel('Strain array size');ylabel('Time');title('Force velocity run, vel = [0 -0.5, -1];')
 % save('ArrayTimingLogFV2023a', "ArrSizTime", "ArrSiz")
 % save('ArrayTimingLogFV2025b', "m2025b")
 %%
@@ -676,10 +685,11 @@ StatesInTime
 
 %% reset init
 params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.5 1 2 10];
-params0.PieceWiseStrainDepParams = [1, 1, 1.5, 2, 500, 1000];
+params0.PieceWiseStrainDepParams = [1, 1, 1.5, 20, 500, 1000];
 pwsel = (3:4);
-params0.mods = {"ka", "kd", "k1", "k2", "dr2"};
-params0.g = [2.5 1, 1, 1];
+params0.mods = {"ka", "kd", "k1", "k2", "dr2", "kstiff2"};
+params0.g = [1, 1, 1, 1, 1, 1];
+params0.g = [    1.8959    1.9026    1.3554    1.0420    1.8285    0.6381    0.5234    1.8207];
 
 x = [params0.PieceWiseStrainDepParams(pwsel) params0.g];
 
@@ -692,38 +702,96 @@ params0.kstiff1 = 1000;
 params0.kstiff2 = 20000;
 params0.kSE = 1000;
 params0.dr2 = params0.dr;
+params0.kd = 50;
 
 params0.PieceWiseStrainDepParams(pwsel) = x(1:length(pwsel));
 params0.g = x(length(pwsel)+1:end);
 pwsdp = [params0.PieceWiseStrainDepParams(pwsel) params0.g];
+vel = [0 -0.5, -1, -2, -3, -4 -5];
+% vel = [0 -0.5, -1, -3];
+% vel = [0]
+
+params0.ghostSave = '';
+% params0.ghostSave = 'SimplestOptim';
+% params0.ghostSave = 'Simplest';
+params0.ghostLoad = 'Simplest';
+params0.ghostLoad = 'SimplestOptim';
+
+% p = parpool('threads', 4);
 % delete(p)
+
 tic
 params0.WindowsOverflowStepCount = -1; % set to auto
 params0.kah = 40;
-[E, out] = evalSDP(params0, pwsdp, pwsel);
+params0.ksr0 = 250;
+params0.sigma1 = 20;
+
+params0.MaxStrainArraySize = -1;
+
+params0.RunForceVelocity = true;
+params0.RunSlack = false;
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = false;
+[E, out, outs] = evalSDP(params0, pwsdp, pwsel, vel);
 disp(E)
 toc
+% writeParamsToMFile('SimplestFVOptim', params0, '', 'Optim of force velocity curve. Good unless for V=0');
+% writeParamsToMFile('SimplestFVOptim2', params0, '', 'Optim of force velocity curve. Worse, but better for V=0');
+
+% matchStructFields(params0, '*')
+
+%% Run slack
+figure(2)
+params0.RunForceVelocity = false;
+params0.RunSlack = true;
+params0.BreakOnODEUnstable = false;
+params0.MaxStrainArraySize = 60;
+RunBakersExp
+
+%%
+
+LoadData
+
+plot
+%%
+for i = 1:length(outs)
+    fprintf('ATP TOR %0.1f/s \n', outs(i).RTD(end));
+    
+end
+
 
 %% 
 params = params0;
-params.Slim_l = out.Slim_l;
-params.Slim_r = out.Slim_r;
+% params.Slim_l = out.Slim_l;
+% params.Slim_r = out.Slim_r;
 StatesInTime
 
 %% optimize?
-
+pwsdp = x;
 params0.PlotEachSeparately = false;
 params0.justPlotStateTransitionsFlag = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
 
-optimfun = @(pw)evalSDP(params0, pw, pwsel);
+optimfun = @(pw)evalSDP(params0, pw, pwsel, vel);
 params0.PlotEachSeparately = false;
 
 x = fminsearch(optimfun, pwsdp, options)
 
+%% SA
+
+params0.justPlotStateTransitionsFlag = false;
+params = getParams(params0, params0.g, false, true);
+g_names = fieldnames(params);
+g_names = g_names(1:3);
+g = ones(1, length(g_names));
+params.FV_velocities = [0 -0.5, -1, -3];
+params.MaxStrainArraySize = 60;
+params.BreakOnODEUnstable = true;
+E = calcSensitivities(g, params, [], g_names, true)
 
 
-function [E out] = evalSDP(params0, G, pwsel)
+
+function [E out outs] = evalSDP(params0, G, pwsel, v)
     E = 100;
 
     PWSDP = G(1:length(pwsel));
@@ -744,12 +812,13 @@ function [E out] = evalSDP(params0, G, pwsel)
     % pwsdp(pwsel) = PWSDP; 
     params0.PieceWiseStrainDepParams(pwsel) = PWSDP;
     LoadData;
-    vel = [0,-0.5, -1, -2];
+    % vel = [0,-0.5, -1, -2];
+    vel = v;
     try
         % params0.PlotEachSeparately = true;
-        RunBakersExp;
+        RunBakersExp;        
     catch e
-        return;
+        rethrow(e);
     end
 end
 

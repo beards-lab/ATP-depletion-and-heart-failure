@@ -6,12 +6,21 @@ for k = 1:length(g)
     disp(num2str(k) + ": " + g_names{k} + '...')
     g_s = g;
     g_s(k) = g(k)*(1 - delta);
+    tic
     E(k, 1) = evaluateBakersExp(g_s, params);
+    toc
 %     g_s(k) = g0(k)
 %     E(k, 2) = evaluateProblem(fcn, g_s, false, evalParts);;
+
+% ignore right
+if false
     E(k, 2) = E0;
     g_s(k) = g(k)*(1 + delta);
     E(k, 3) = evaluateBakersExp(g_s, params);
+end
+
+
+
     % does this even matter? 
     % i.e. does using zero produces error lower than double?
 %     if tryZeros

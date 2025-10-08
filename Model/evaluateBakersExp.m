@@ -1,7 +1,7 @@
 function [Et E] = evaluateBakersExp(g, params0)
 % Evaluate Bakers' problem
-if any(g<0) || ...
-        params0.kstiff1 < params0.kstiff1_n || params0.kstiff2 < params0.kstiff2_n
+if any(g<0)% || ...
+        %params0.kstiff1 < params0.kstiff1_n || params0.kstiff2 < params0.kstiff2_n
     Et = NaN;
     return;
 end
