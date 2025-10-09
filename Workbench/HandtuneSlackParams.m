@@ -708,7 +708,7 @@ params0.PieceWiseStrainDepParams(pwsel) = x(1:length(pwsel));
 params0.g = x(length(pwsel)+1:end);
 pwsdp = [params0.PieceWiseStrainDepParams(pwsel) params0.g];
 vel = [0 -0.5, -1, -2, -3, -4 -5];
-% vel = [0 -0.5, -1, -3];
+vel = [0 -0.5, -1, -3];
 % vel = [0]
 
 params0.ghostSave = '';

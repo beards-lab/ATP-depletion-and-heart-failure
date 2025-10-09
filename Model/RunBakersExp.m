@@ -629,50 +629,22 @@ end
 %% FORCE VELOCITY RESIMULATION
 if params0.RunForceVelocityTime
 
-TODO REDO THIS integrate that
 
-% postprocess the isovelocity velocities
-
-constantSpeedSegment = find(velocitytable(:, 2) > 0) - 3;
-speeds = -velocitytable(constantSpeedSegment, 2);
-
-x = velocitytable(constantSpeedSegment, 1);
-smashed2_0_data = arrayfun(@(x) find(datatable(:, 2) < 2.0 & datatable(:, 1) > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
-smashed2_0_model = arrayfun(@(x) find(out.SL < 2.0 & out.t > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
-
-clf;hold on;
-plot(out.t, out.Force); plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=2);
-plot(out.t, out.Force, out.t, out.SL); hold on; plot(datatable(smashed2_0, 1), datatable(smashed2_0, 2), 'x', LineWidth=2);
-modelForce = out.Force(smashed2_0_model);
-plot(modelForce, speeds, 'x', LineWidth=2)
+    isovelocity = load('../data/bakers_isovelocity.mat', 'datatable', 'velocitytable');
+    datatable = isovelocity.datatable;
+    velocitytable = isovelocity.velocitytable;
 
     params = params0;
-
-    % datafile = "data/2021 06 15 isovelocity fit Filip.xlsx";
-    % datatable = readtable(datafile, ...
-    %     "filetype", 'spreadsheet', ...
-    %     'VariableNamingRule', 'modify', ...
-    %     'Sheet', '8 mM', ...
-    %     'Range', 'A5:C86004');
-    % 
-    % datatable.Properties.VariableNames = {'Time', 'L', 'F'};
-    % datatable.Properties.VariableUnits = {'ms', 'Lo', 'kPa'};
-    % 
-    % params.datatable = table2array(datatable);
-    % datatable = table2array(datatable);
-    % save('data/isovelocity.mat', 'datatable')
-    datatable = load('data/isovelocity.mat').datatable;
-    datatable(:, 2) = 2*datatable(:, 2);
-    datatable(:, 1) = datatable(:, 1)/1000;
+    % here the isovelocity was in ML isntead of SL
+    % datatable(:, 2) = 2*datatable(:, 2);
+    % here the isovelocity was in ms isntead of s
+    % datatable(:, 1) = datatable(:, 1)/1000;
     params.datatable = datatable;
-
-    params.UseSLInput = true;
+    params.Velocity = velocitytable(:, 2);
 
     params.SL0 = 2.2;
     params.Slim_l = 1.5;
     params.Slim_r = 2.25;
-    % params.LXBpivot = 2.2;
-    % params.dS = 0.0025;
     if isfield(params, 'PU0')
         params = rmfield(params, 'PU0');
     end
@@ -681,8 +653,41 @@ plot(modelForce, speeds, 'x', LineWidth=2)
     params = getParams(params, params.g, true);
     % velocitytable(1, 1) = 2;
     % velocitytable = velocitytable(1:4, 1);
-    % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
-    [F out] = evaluateModel(modelFcn, [0 1], params);
+    [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+    %%  postprocess the isovelocity velocities
+    
+    constantSpeedSegment = find(velocitytable(:, 2) > 0) - 3;
+    speeds = -velocitytable(constantSpeedSegment, 2);
+    
+    x = velocitytable(constantSpeedSegment(1), 1);
+    smashed2_0_data = arrayfun(@(x) find(datatable(:, 2) < 2.0 & datatable(:, 1) > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
+    % we are not sure it won
+    smashed2_0_model = arrayfun(@(x) find(out.SL <= 2.0 & out.t > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
+    %%
+    clf;
+    nexttile;hold on;
+    plot(datatable(:, 1), datatable(:, 2)/2*100,'k-', datatable(:, 1), datatable(:, 3), 'k--'); 
+    plot(datatable(smashed2_0_data, 1), datatable(smashed2_0_data, 3), 'o', LineWidth=4, MarkerSize=12);
+    
+    isValid = cellfun(@(x) ~isempty(x),  smashed2_0_model);
+    plot(out.t, out.Force, out.t, out.SL/2*100);
+    plot(out.t(smashed2_0_model{isValid}), out.Force(smashed2_0_model{isValid}), 'x', LineWidth=4, MarkerSize=12);
+    plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=4, MarkerSize=12);
+    
+    %%
+    nexttile;hold on;
+    modelForce = out.Force(smashed2_0_model);    
+    
+    a = 1; % ATP 8 for now
+    plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1])
+    plot(modelForce, speeds, 'x', LineWidth=2, MarkerSize=12);
+    if exist('F_active', 'var')
+        % we have simulated the force-constvelocity, so lets compare
+        plot(F_active, -vel(2:end), '+', LineWidth=2, MarkerSize=12);
+        legend('data', 'Force-velocity timecourse', 'force velocity estim');
+    else
+        legend('data', 'Force-velocity timecourse');
+    end
 end
 
 %% FORCE LENGTH ESTIMATED relation
