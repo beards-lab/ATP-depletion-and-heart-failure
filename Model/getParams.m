@@ -27,7 +27,7 @@ end
     params0 = struct(...
         'N', 30, ... % number of bins. Could be overwritten when UseCalculatedN = 1
         'Slim', 0.2, ... % left and right distance. Overridden by Slim_l/r when UseCalculatedN = 1
-        'LXBpivot', 2.1, ... % reference starting point for the probability distribution dicretization (um)
+        'LXBpivot', SL0, ... % reference starting point for the probability distribution dicretization (um)
         'dS', 50e-3, ... % default distance between strain bins (um)
         'Slim_l', 1.6, ... % minimal XB length (left bound)
         'Slim_r', 2.2, ... % maximal XB length (right bound)
@@ -120,7 +120,8 @@ end
         'UseStrictDetachmentAt', 0, ...
         'StrainExp', 2,...
         'MaxStrainArraySize', 0, ...
-        'UseSafeSRReset', false ...
+        'UseSafeSRReset', false, ...
+        'LegacyStrainFlipping', true...
         );
 
 % , false, ...
@@ -249,16 +250,36 @@ end
         % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
         % params.LXBpivot = params.SL0;
         % params.LXBpivot = params.Slim_l + (params.Slim_r - params.Slim_l)/2;
-        params.LXBpivot = params.Slim_l;
-        params.s = ((params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot)/2;
-        if params.MaxStrainArraySize > 0
-            % half-sarcomere strain limit
-            limitedN =  (params.Slim_l + (0:2*params.dS:2*params.dS*params.MaxStrainArraySize) - params.LXBpivot)/2;        
-            if length(limitedN) < length(params.s)
-                params.s = limitedN;
+        params.LXBpivot = params.SL0; 
+
+        % we have 2 half-sarcomeres, so the step is double
+        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot;        
+        if params.MaxStrainArraySize < length(SL_strain)
+            % half-sarcomere strain limit - ready for contraction
+            if abs(params.Slim_r - params.LXBpivot) > abs(params.Slim_l - params.LXBpivot)
+                % its closer to slim_r - lets cut off the Slim_l
+                SL_strain = SL_strain (1:params.MaxStrainArraySize);                    
+            else
+                % pivot closer to slim_l - lets cut off the slim_r
+                SL_strain = SL_strain(end-params.MaxStrainArraySize+1:end);            
             end
         end
+        
+        if params.LegacyStrainFlipping
+            % we have two half-sarcomeres, so divide by 2
+            params.s = SL_strain/2;
+        else
+            % the xontraction direction is positive
+            params.s = flipud(-SL_strain')/2;
+        end
+
         params.ss = length(params.s);
+
+
+        LSE = 0;
+        s = params.s' + (-(params.SL0 - LSE) + params.LXBpivot)/2;
+        % s = params.s' - (-(SL - LSE) + params.LXBpivot)/2;
+        s = flipud(-s);
     else
     
         % refresh these

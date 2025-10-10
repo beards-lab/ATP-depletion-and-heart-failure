@@ -50,7 +50,7 @@ if params0.RunForceVelocity
                     params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
                     params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
                     
-                    params = getParams(params);
+                    % params = getParams(params);
                     
                     if isempty(parple)
                         [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
@@ -69,7 +69,7 @@ if params0.RunForceVelocity
                     % params.Slim_l = params.Slim_r - 2*params.dS*params.MaxStrainArraySize;
 
                     params.SL0 = 2.2;
-                    params = getParams(params);
+                    % params = getParams(params);
                     % true to start from 2.2um steady state isntead from scratch.
                     % Neither is perfect though
                     if ~isfield(params, 'PU0')

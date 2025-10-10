@@ -73,8 +73,12 @@ ss = params.ss;
 % s = params.s + (out.SL(ti) - out.LSE(ti)) - params.LXBpivot;
 % s = params.s - (out.SL(ti) - out.LSE(ti)) + params.LXBpivot;
 % s = params.s' + (-(out.SL(ti) - out.LSE(ti)) + params.LXBpivot)/2;
-s = params.s' + (-(out.SL(ti) - out.LSE(ti)) + out.LXBPivot(ti))/2;
-s = flipud(-s);
+if params.LegacyStrainFlipping
+    s = params.s' + (-(out.SL(ti) - out.LSE(ti)) + out.LXBPivot(ti))/2;
+    s = flipud(-s);
+else
+    s = params.s - (-(out.SL(ti) - out.LSE(ti)) + out.LXBPivot(ti))/2;
+end
 % s = params.s + (out.SL(ti) - out.LSE(ti));
 % zer = (out.SL(ti) - out.LSE(ti));
 zer = 0;

@@ -619,8 +619,8 @@ StatesInTime
 
 
 %% Identify the force velocity kurva
-clf;
-params0 = getParams();
+
+% params0 = getParams();
 ModelParamsInitNiceSlack;
 LoadData;
 
@@ -640,10 +640,11 @@ params0.PieceWiseStrainDepX = -params0.dr*[-100 0 0.25 0.5 0.75 1 10 100];
 params0.dS = 0.002;
 params0.A1AttachmentWidth = params0.dS * 2;
 params0.dr2 = params0.dr;
+params0.LegacyStrainFlipping = false;
 
 
 kstiff = 1.4e4;
-params0.kstiff1 = kstiff/10;
+params0.kstiff1 = kstiff/10; 
 params0.kstiff2 = kstiff;
 params0.kstiff3 = kstiff;
 % params0.kSE = 1000;
@@ -652,21 +653,24 @@ params0.justPlotStateTransitionsFlag = false;
 params0.PlotEachSeparately = true;
 vel = [0 -0.5, -2];
 % vel = 0;
+% vel = -2;
 
-% params0.ka = 50;
+% params0.ka = 50; 
 % params0.kd = 100;
 params0.SaveBest = false;
 params0.WindowsOverflowStepCount = -1; % set to auto
 % params0.Slim_l = 1.8;
 % params0.Slim_r = 2.21;
-params0.BreakOnODEUnstable = true;
-params0.MaxStrainArraySize = 40;
+params0.BreakOnODEUnstable = false;
+params0.MaxStrainArraySize = 60;
 tic
 params0.ka = 20;
+figure(1);clf;
 RunBakersExp;
 ttoc = toc
 disp(E)
 
+figure(12);clf;plot(out.t, out.Force)
 % p = parpool('threads', 4);
 % ArrSiz = []; ArrSizTime = [];
 % ArrSiz = [ArrSiz, params.ss];
@@ -695,6 +699,7 @@ x = [params0.PieceWiseStrainDepParams(pwsel) params0.g];
 
 %% jsut run
 clf;
+SimplestFVOptim3
 params0.PlotEachSeparately = true;
 params0.ShowStatePlots = true;
 params0.justPlotStateTransitionsFlag = false;
@@ -736,7 +741,7 @@ params0.UseSuperRelaxedADP = false;
 disp(E)
 toc
 % writeParamsToMFile('SimplestFVOptim', params0, '', 'Optim of force velocity curve. Good unless for V=0');
-% writeParamsToMFile('SimplestFVOptim2', params0, '', 'Optim of force velocity curve. Worse, but better for V=0');
+% writeParamsToMFile('SimplestFVOptim3.mat', params0, '', 'Optim of force velocity curve. Worse, but better for V=0');
 
 % matchStructFields(params0, '*')
 

@@ -9,6 +9,8 @@ vel = params.Vums;
 
 % Decompose State Variables from PU vector
 ss = params.ss; % space size (length of the s for each of p1-p3)
+dS = params.dS; % step size
+
 p1 = PU(1:ss); p1(p1<0) = 0;
 p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
 if length(PU) > 3*ss
@@ -86,10 +88,12 @@ end
 % Negative - shorter, Positive - longer
 % need to cut the change in two because half-sarcomere means half the speed
 % and half the space change
-s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
-% s = params.s' - (-(SL - LSE) + params.LXBpivot)/2;
-s = flipud(-s);
-dS = params.dS;
+if params.LegacyStrainFlipping
+    s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
+    s = flipud(-s);
+else
+    s = params.s - (-(SL - LSE) + params.LXBpivot)/2;
+end
 
 % sum of all probabilities
 p1_0 = dS*sum(p1); 

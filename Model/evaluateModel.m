@@ -55,12 +55,14 @@ ticId = tic;
             SL = y(3*ss + 3);
             LSE = y(3*ss + 4); % length of the serial stiffness
         end            
-        s = params.s(1) + (-(SL - LSE) + params.LXBpivot)/2;
-        s_p0 = 1 + round(-s(1)/params.dS, 6);
-        value(1) = floor(s_p0) - 1;
+        pivo = (-(SL - LSE) + params.LXBpivot)/2;
+        % index of the 0 from the end
+        % s_p0 = 1 + round(s/params.dS, 6);        
+        value(1) = -pivo + params.s(end) - params.dS;
         direction(1) = -1;
 
-        value(2) = ceil(s_p0) - params.ss;
+        % value(2) = ceil(s_p0) - params.ss;
+        value(2) = -pivo + params.s(1) + params.dS;
         direction(2) = 1;
         isterminal = [true,true, true];
         % if any(abs(value)< 1e-3)
