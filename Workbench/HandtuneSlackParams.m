@@ -744,6 +744,18 @@ toc
 % writeParamsToMFile('SimplestFVOptim3.mat', params0, '', 'Optim of force velocity curve. Worse, but better for V=0');
 
 % matchStructFields(params0, '*')
+%%
+clf;
+SimplestFVOptim3
+vel = [0, -0.5, -2];
+params0.ghostSave = '';
+params0.ghostLoad = 'SimplestFVOptim';
+params0.MaxStrainArraySize = 40;
+params0.PieceWiseStrainDepX = [ 0.1   0.01      0   -0.0025   -0.0050   -0.0075   -0.0100   -1.0000];
+m = 50;
+params0.PieceWiseStrainDepParams = [10.0000 5   1.0000    0.0005   m m m m];
+params0.justPlotStateTransitionsFlag = false;
+RunBakersExp
 
 %% Run slack
 figure(2)
@@ -794,7 +806,7 @@ params.MaxStrainArraySize = 60;
 params.BreakOnODEUnstable = true;
 E = calcSensitivities(g, params, [], g_names, true)
 
-
+%%
 
 function [E out outs] = evalSDP(params0, G, pwsel, v)
     E = 100;

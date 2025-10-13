@@ -40,7 +40,7 @@ if params0.RunForceVelocity
         end
 
         for j = 1:N
-            try
+            % try
                 if vel(j) == 0
                     params.SL0 = 2.0;
                     params.Velocity = 0;
@@ -89,10 +89,10 @@ if params0.RunForceVelocity
                         breakpointIsHappening = 1; % only to place a bp
                     end
                 end
-            catch e 
+            % catch e 
                 % wraps additional error for the optimizer
-                handleAndRethrowCostException(e, t_ss*(length(vel) - j));
-            end
+                % handleAndRethrowCostException(e, t_ss*(length(vel) - j));
+            % end
             
         end
         if ~isempty(parple)

@@ -9,6 +9,10 @@ function writeParamsToMFile(filename, params, modNames, comment)
         comment = '';
     end
 
+    if ~contains(filename, '.')
+        filename = [filename '.m'];
+    end
+
     
     fid = fopen(filename, 'w');
     fprintf(fid, "%% Generated file to manipulate the simulation parameters directly\r\n"); 
@@ -24,12 +28,13 @@ function writeParamsToMFile(filename, params, modNames, comment)
             fprintf(fid, 'params0.%s = %g;\r\n', nam, par);
         elseif ischar(par) && ~isempty(par)
              fprintf(fid, "params0.%s = '%s';\r\n", nam, par);
-        elseif all(size(par) > 1) ...
+        elseif any(size(par) > 1) ...
             && nam ~= "s" ...
             && nam ~= "g" ...
             && nam ~= "mods" ...
             && nam ~= "datatable" ...
-            && nam ~= "PU0"
+            && nam ~= "PU0" ...
+            && all(size(par(:)) < 100) 
             % matrix
             par_s = mat2str(par);
             fprintf(fid, "params0.%s = %s;\r\n", nam, par_s); 

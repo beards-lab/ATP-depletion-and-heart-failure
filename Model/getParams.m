@@ -230,9 +230,9 @@ end
     %% Fill in the missing input params
     
     params = fillInDefaults(params, params0);
+
     
     %% MODIFIERS
-
     if updateModifiers
         %     mods = {'kstiff1', 'kstiff2'};
         for i = 1:length(params.mods)
@@ -301,7 +301,7 @@ end
     end
     
     
-    % Build the initialization
+    %% Build the initialization
     if ~isfield(params, 'PU0') || updateInit
         p0 = zeros(1, params.ss);
         U_SR = 0;
@@ -322,6 +322,20 @@ end
         end
     end
     
+%% Reconstruct arrays: params.arr_2 = 3 -> params.arr(2) = 3
+    paramsfn = fieldnames(params);
+    for i = 1:length(paramsfn)
+        if ~contains(paramsfn{i}, '_')
+            continue;
+        end
+        arr = split(paramsfn{i}, '_');
+        if isfield(params, arr(1)) ...
+            && length(params.(arr{1})) > 1 ... % the array exists
+            && ~isempty(str2num(arr{2})) % the index is numeric
+                params.(arr{1})(str2num(arr{2})) = params.(paramsfn{i});
+        end
+    end
+
 end
 
 %%
