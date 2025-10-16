@@ -121,6 +121,7 @@ end
         'StrainExp', 2,...
         'MaxStrainArraySize', 0, ...
         'UseSafeSRReset', false, ...
+        'ShowArrayShiftWarnings', true, ...
         'LegacyStrainFlipping', true...
         );
 
@@ -232,18 +233,44 @@ end
     params = fillInDefaults(params, params0);
 
     
-    %% MODIFIERS
+    %% 1. Apply MODIFIERS for optimization
     if updateModifiers
         %     mods = {'kstiff1', 'kstiff2'};
         for i = 1:length(params.mods)
-            params.(params.mods{i}) = params.(params.mods{i})*g(i);
+            try
+                params.(params.mods{i}) = params.(params.mods{i})*g(i);
+            catch e
+                    switch e.identifier
+                        case 'MATLAB:nonExistentField'
+                            error('Mod "%s" unknown. Initialize it first.', params.mods{i});
+                        otherwise
+                            error('Failed to update "%s": check g(%d). %s', params.mods{i}, i, e.message);
+                    end
+            end
         end
 
         % ensure we delete the modifiers right after
         params.mods = {};
         params.g = [];
     end
-        
+
+    %% 2. Reconstruct arrays: params.arr_2 = 3 -> params.arr(2) = 3
+    paramsfn = fieldnames(params);
+    for i = 1:length(paramsfn)
+        if ~contains(paramsfn{i}, '__')
+            continue;
+        end
+        arr = split(paramsfn{i}, '__');
+        if isfield(params, arr(1)) ...
+            && length(params.(arr{1})) > 1 ... % the array exists
+            && ~isempty(str2num(arr{2})) % the index is numeric
+                % apply value to an array
+                params.(arr{1})(str2num(arr{2})) = params.(paramsfn{i});
+                % remove the field from the struct - it is already applied
+                params = rmfield(params, paramsfn{i});
+        end
+    end
+
 
     %% SIMULATION PARAMETERS
     if params.UseCalculatedN
@@ -322,19 +349,6 @@ end
         end
     end
     
-%% Reconstruct arrays: params.arr_2 = 3 -> params.arr(2) = 3
-    paramsfn = fieldnames(params);
-    for i = 1:length(paramsfn)
-        if ~contains(paramsfn{i}, '_')
-            continue;
-        end
-        arr = split(paramsfn{i}, '_');
-        if isfield(params, arr(1)) ...
-            && length(params.(arr{1})) > 1 ... % the array exists
-            && ~isempty(str2num(arr{2})) % the index is numeric
-                params.(arr{1})(str2num(arr{2})) = params.(paramsfn{i});
-        end
-    end
 
 end
 

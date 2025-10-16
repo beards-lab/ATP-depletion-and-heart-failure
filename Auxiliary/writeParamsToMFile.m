@@ -1,6 +1,8 @@
 function writeParamsToMFile(filename, params, modNames, comment)
 % Writes params to m file, so we can easily load. 
 
+    params = getParams(params, params.g, false, true);
+    
     if nargin < 3 || isempty(modNames)
         modNames = fieldnames(params);
     end
@@ -20,7 +22,6 @@ function writeParamsToMFile(filename, params, modNames, comment)
         fprintf(fid, "%% %s\r\n", comment); 
     end
 
-    params = getParams(params, params.g, false, true);
     for i_row = 1:length(modNames)
         par = params.(modNames{i_row});
         nam = modNames{i_row};

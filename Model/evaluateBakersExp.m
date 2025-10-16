@@ -31,6 +31,9 @@ try
     lastwarn('', ''); 
     RunBakersExp;
     Et = sum(E);
+    if Et == 0
+        Et = 1e3;
+    end
 catch e
     try
         if ~isempty(e.cause)
@@ -38,7 +41,7 @@ catch e
             causeMessage = e.cause{end}.message;
             
             % Parse the error value from the cause message
-            Et = str2double(causeMessage)*1e6;
+            Et = 1e3 + str2double(causeMessage);
         else
             Et = 1e9;
         end

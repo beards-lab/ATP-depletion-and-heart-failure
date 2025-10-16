@@ -753,10 +753,58 @@ params0.ghostLoad = 'SimplestFVOptim';
 params0.MaxStrainArraySize = 40;
 params0.PieceWiseStrainDepX = [ 0.1   0.01      0   -0.0025   -0.0050   -0.0075   -0.0100   -1.0000];
 m = 50;
-params0.PieceWiseStrainDepParams = [10.0000 5   1.0000    0.0005   m m m m];
+params0.PieceWiseStrainDepParams = [m 5   1.0000    0.0005   m m m m];
 params0.justPlotStateTransitionsFlag = false;
+% init the array mods
+params0.PieceWiseStrainDepParams__2 = params0.PieceWiseStrainDepParams(2);
+params0.PieceWiseStrainDepParams__3 = params0.PieceWiseStrainDepParams(3);
+params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
+% params0.mods = {"kd", "k1", "k2", "dr2", "kstiff2", "PieceWiseStrainDepParams__2", "PieceWiseStrainDepParams__3", "PieceWiseStrainDepParams__4"};
+% just an init
+% x = ones(1, length(params0.mods ))
+% params0.g = x;
+RunBakersExp
+%%
+% params0.mods = []
+% writeParamsToMFile('SimplestFVOptim_pre', params0, '', 'Optim of force velocity curve. Worse, but better for V=0');
+LoadData;
+clf;
+params0 = getParams();
+SimplestFVOptim_pre
+% params0.PieceWiseStrainDe
+params0.PieceWiseStrainDepParams__2 = 0.265*params0.PieceWiseStrainDepParams(2);
+params0.PieceWiseStrainDepParams__3 = 1.5*params0.PieceWiseStrainDepParams(3);
+params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
+
+% vel = [0, -0.5, -2];
+paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1','PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__2','PieceWiseStrainDepParams__4','mu','kstiff1','kd'};
+
+params0.mods = paramNames;
+params0.g = ones(1, length(paramNames));
+
+
 RunBakersExp
 
+%% run SA on my subset
+
+
+params0.FV_velocities = vel;
+params0.ShowArrayShiftWarnings = false;
+% E = calcSensitivities(params0.g, params0, [], params0.mods, true)
+E = runSA(params0, fieldnames(params0), [-0.01 +0.01]);
+
+% matchStructFields(params0, 'Show*', true, true)
+%%
+finalE = E;
+finalE(1:97, :) = e2;
+finalE(finalE == 0) = NaN;
+finalE(:, 1:2) = finalE(:, 1:2) - E0;
+
+finalET = array2table(finalE);
+finalET.Names = fieldNames;
+% finalET.CurVals = 
+
+writetable(finalET, 'sensitivites.xlsx')
 %% Run slack
 figure(2)
 params0.RunForceVelocity = false;
@@ -784,7 +832,7 @@ params = params0;
 StatesInTime
 
 %% optimize?
-pwsdp = x;
+% pwsdp = x;
 params0.PlotEachSeparately = false;
 params0.justPlotStateTransitionsFlag = false;
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 150);
@@ -793,6 +841,54 @@ optimfun = @(pw)evalSDP(params0, pw, pwsel, vel);
 params0.PlotEachSeparately = false;
 
 x = fminsearch(optimfun, pwsdp, options)
+%% optimize 2
+% g0 = params0.g;
+% g0 = x;
+params0.PlotEachSeparately = false;
+params0.justPlotStateTransitionsFlag = false;
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 100);
+p = parpool('threads', 4);
+x = fminsearch(optimfun, g0, options)
+%% surrogateOPtim
+g0 = x;
+params0.PlotEachSeparately = false;
+params0.justPlotStateTransitionsFlag = false;
+params0.BreakOnODEUnstable = true;
+
+params0.MaxRunTime = 20;
+
+optimfun = @(g)evaluateBakersExp(g, params0);
+
+
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
+% p = parpool('threads', 4)
+% p = parpool('processes', 4)
+% delete(p)
+[x,fval,exitflag,output,trials] = surrogateopt(optimfun, g0*0.5,g0*2, options);
+save env
+
+
+%% Test
+clf;
+% params0.g = x;
+params0.ghostSave = '';
+params0.ghostLoad = 'FVSurro_base';
+params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5];
+% params0.g = g0;
+params0.PlotEachSeparately = true;
+params0.justPlotStateTransitionsFlag = true;
+
+RunBakersExp;
+% LoadData
+writeParamsToMFile('FVOptimSurro', params0, '', 'Optim of force velocity curve. Good start of older params up to -3 ML/s');
+%%
+FVOptimSurro
+params0.RunForceVelocity = true;
+params0.RunForceVelocityTime = false;
+params0.BreakOnODEUnstable = false;
+RunBakersExp
+%%
+evaluateBakersExp(x, params0)
 
 %% SA
 
@@ -807,6 +903,7 @@ params.BreakOnODEUnstable = true;
 E = calcSensitivities(g, params, [], g_names, true)
 
 %%
+
 
 function [E out outs] = evalSDP(params0, G, pwsel, v)
     E = 100;

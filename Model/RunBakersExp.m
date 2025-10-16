@@ -110,8 +110,11 @@ if params0.RunForceVelocity
     end
 
     % cost function
+    [found, idx_ATP] = ismember(-vel, Data_ATP(:,1));
+    valid_idx = idx_ATP(found);
+
     % E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
-    E(1) = sum((F_active(params.EvalAtp,1:length(vel))./Data_ATP(1:length(vel),params.EvalAtp+1)' - 1).^2, 'all');
+    E(1) = sum((F_active(params.EvalAtp,found)./Data_ATP(valid_idx,params.EvalAtp+1)' - 1).^2, 'all');
     % normalize by number of data points
     E(1) = E(1)/size(Data_ATP, 1)/length(params.EvalAtp);
 
@@ -650,7 +653,7 @@ if params0.RunForceVelocityTime
     end
 
     % reset the PU0
-    params = getParams(params, params.g, true);
+    % params = getParams(params, params.g, true);
     % velocitytable(1, 1) = 2;
     % velocitytable = velocitytable(1:4, 1);
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
@@ -659,19 +662,27 @@ if params0.RunForceVelocityTime
     constantSpeedSegment = find(velocitytable(:, 2) > 0) - 3;
     speeds = -velocitytable(constantSpeedSegment, 2);
     
-    x = velocitytable(constantSpeedSegment(1), 1);
+    % x = velocitytable(constantSpeedSegment(1), 1);
     smashed2_0_data = arrayfun(@(x) find(datatable(:, 2) < 2.0 & datatable(:, 1) > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
     % we are not sure it won
     smashed2_0_model = arrayfun(@(x) find(out.SL <= 2.0 & out.t > x, 1, 'first'), velocitytable(constantSpeedSegment, 1), UniformOutput=true);
+    % add a final one at speed 0
+    speeds = [speeds;0];
+    smashed2_0_data = [smashed2_0_data; length(datatable(:, 1))];
+    smashed2_0_model = [smashed2_0_model; length(out.t)];
     %%
     clf;
     nexttile;hold on;
     plot(datatable(:, 1), datatable(:, 2)/2*100,'k-', datatable(:, 1), datatable(:, 3), 'k--'); 
     plot(datatable(smashed2_0_data, 1), datatable(smashed2_0_data, 3), 'o', LineWidth=4, MarkerSize=12);
     
-    isValid = cellfun(@(x) ~isempty(x),  smashed2_0_model);
+    [x, i] = ismember([0.5, 1], speeds)
+
+    
+    % isValid = cellfun(@(x) ~isempty(x),  smashed2_0_model);
+    % isValid = smashed2_0_model)
     plot(out.t, out.Force, out.t, out.SL/2*100);
-    plot(out.t(smashed2_0_model{isValid}), out.Force(smashed2_0_model{isValid}), 'x', LineWidth=4, MarkerSize=12);
+    plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=4, MarkerSize=12);
     plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=4, MarkerSize=12);
     
     %%
@@ -680,10 +691,11 @@ if params0.RunForceVelocityTime
     
     a = 1; % ATP 8 for now
     plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1])
+    plot(datatable(smashed2_0_data, 3), speeds, 's', LineWidth=1.5, MarkerSize=8);
     plot(modelForce, speeds, 'x', LineWidth=2, MarkerSize=12);
     if exist('F_active', 'var')
         % we have simulated the force-constvelocity, so lets compare
-        plot(F_active, -vel(2:end), '+', LineWidth=2, MarkerSize=12);
+        plot(F_active, -vel(1:end), '+', LineWidth=2, MarkerSize=12);
         legend('data', 'Force-velocity timecourse', 'force velocity estim');
     else
         legend('data', 'Force-velocity timecourse');

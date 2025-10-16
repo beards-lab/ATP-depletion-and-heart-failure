@@ -173,7 +173,9 @@ for vs = 1:length(T) - 1
                     PU0(3*ss-nds:3*ss) = 0;
                 end
                 params.LXBpivot = params.LXBpivot - nds*params.dS*2;
-                fprintf('Hovna took %d steps right at %f s \n', nds, ts)
+                if params.ShowArrayShiftWarnings
+                    fprintf('Hovna took %d steps right at %f s \n', nds, ts)
+                end
                 imax = imax - 1;
             elseif ie == 2
                 % move left
@@ -188,7 +190,9 @@ for vs = 1:length(T) - 1
 
                 % dS is in half-sarcomere space, converting to sarcomere space by 2
                 params.LXBpivot = params.LXBpivot + nds*params.dS*2;
-                fprintf('Hovna took %d steps left at %f s \n', nds, ts)
+                if params.ShowArrayShiftWarnings
+                    fprintf('Hovna took %d steps left at %f s \n', nds, ts)
+                end
                 imax = imax - 1;
             elseif ie == 3
                 try
