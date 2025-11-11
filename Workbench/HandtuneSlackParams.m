@@ -880,15 +880,53 @@ params0.justPlotStateTransitionsFlag = true;
 
 RunBakersExp;
 % LoadData
-writeParamsToMFile('FVOptimSurro', params0, '', 'Optim of force velocity curve. Good start of older params up to -3 ML/s');
-%%
-FVOptimSurro
+% writeParamsToMFile('ModelOptParams/ModelParamsFVOptimSurro', params0, '', 'Optim of force velocity curve. Good start of older params up to -3 ML/s');
+%% Test loading the opt params
+% FVOptimSurro
+clf;
+params0 = getParams();
+ModelParamsFVOptimSurro
 params0.RunForceVelocity = true;
 params0.RunForceVelocityTime = false;
 params0.BreakOnODEUnstable = false;
+% params0.PieceWiseStrainDepParams(1) = 30;
+% params0.PieceWiseStrainDepX(2) = 0.008;
+% params0.PieceWiseStrainDepX(3) = 0.001;
+
+params0.FV_velocities = -[0, 0.5, 2, 3, 5];
+
+params0.A2_PieceWiseStrainDepX = params0.PieceWiseStrainDepX;
+params0.A2_PieceWiseStrainDepParams = params0.PieceWiseStrainDepParams;
+params0.A2_PieceWiseStrainDepParams(4) = 10;
+
+% params0 = load('Ghost_FVSurro_opt_FV.mat').params0;
+params0.ghostSave = '';
+% params0.ghostSave = 'FVSurro_opt';
+params0.ghostLoad = 'FVSurro_opt';
+params0.FV_velocities = -[0, 0.5, 2, 3, 5];
+params0.UseStrainDep4R1D = true;
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = false;
+
+params0.RunForceVelocity = false;
+params0.RunForceVelocityTime = true;
 RunBakersExp
 %%
 evaluateBakersExp(x, params0)
+
+%%
+
+clf;
+params0 = getParams();
+ModelParamsFVOptimSurro
+params0.RunForceVelocity = false;
+params0.RunForceVelocityTime = false;
+params0.BreakOnODEUnstable = false;
+params0.RunSlack = true;
+
+RunBakersExp
+%% test groups
+params0.Group__FV_velocities
 
 %% SA
 
