@@ -10,6 +10,7 @@ nexttile;hold on;
 feats_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable);
 title('data');
 
+plotFeatures(feats_data, [], [], fn);
 %% baseline
 params0 = getParams();
 ModelParamsInitNiceSlack;
@@ -343,7 +344,8 @@ title('Sim');
 
 %% plot the features
 fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'SLslack|t0|0', 'Am|SLslack|', 'peak1_y|SLslack|0', 'peak1_y|v_restretch|0','peak1_dSL', 'peak2|v_restretch', 'vall_t|v_restretch|0.1', 'vall_y', 'vall2_dy|v_restretch|0', 'ovrsht_dy|_|0', 'steady'};
-plotFeatures(feats_data, feats_sim, feats_ghost, fn);
+plotFeatures(feats_data, feats_data, [], fn);
+% plotFeatures(feats_data, feats_sim, feats_ghost, fn);
 %%
 figure(222)
 % plotRates(out)

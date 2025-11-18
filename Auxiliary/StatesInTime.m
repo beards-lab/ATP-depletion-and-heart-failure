@@ -112,13 +112,16 @@ m = max([p1, p2, p3]);
 % plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', [zer zer], [0 m], '--k', LineWidth=1.5);
 plot(s, p1, '<-b', s, p2, '^-r', s+params.dr, p2, '--r', s+params.dr, p3,'>-g', ...
     [zer zer], [0 m], '--k', ...
-    [zer zer]+out.LSE(ti), [0 m], ':k', ...
+    ...% [zer zer]+out.LSE(ti), [0 m], ':k', ...
     LineWidth=1.5);
 % plot(s, -1 + min(params.alpha2, (exp(abs(params.alpha2*(s-0.5*params.dr).^params.alpha3)))));
 
 text(0 + params.dS/2, m, ...
     sprintf('p1\\_1: %1.2e\np2\\_1: %1.2e', out.p1_1(ti), out.p2_1(ti)));
 xlim([s(1), s(end)]);
+xlabel('Strain from attachment ($\mu$m)', Interpreter='latex');
+ylabel('States probability', Interpreter='latex');
+legend('A1', 'A2', 'A2+stroke');
 if ~isequal(yl, [0, 1])
     ylim(yl);
 end

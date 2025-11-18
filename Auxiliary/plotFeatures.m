@@ -18,7 +18,7 @@ end
 
 figure(80085);clf; 
 tiledlayout("flow");
-N_feats = size(feats_sim, 2);
+N_feats = size(feats_data, 2);
 
 cost = evalFeatureCost(feats_data, feats_sim, fn);
 

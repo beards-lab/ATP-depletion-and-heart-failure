@@ -238,6 +238,17 @@ end
         %     mods = {'kstiff1', 'kstiff2'};
         for i = 1:length(params.mods)
             try
+                % initialize array mods
+                if ~isfield(params, params.mods{i}) && contains(params.mods{i}, '__')
+                    arr = split(params.mods{i}, '__');
+                    if isfield(params, arr(1)) ...
+                        && length(params.(arr{1})) > 1 ... % the array exists
+                        && ~isempty(str2num(arr{2})) % the index is numeric
+                        % ok, this is valid
+                        params.(params.mods{i}) = params.(arr{1})(str2num(arr{2}));
+                    end
+                end
+
                 params.(params.mods{i}) = params.(params.mods{i})*g(i);
             catch e
                     switch e.identifier
@@ -270,6 +281,13 @@ end
                 params = rmfield(params, paramsfn{i});
         end
     end
+
+    %% 3. prep the functions
+    pwsdX = params.PieceWiseStrainDepX;
+    pwsdP = params.PieceWiseStrainDepParams;
+
+    % params.PieceWiseStrainDepFun = @(x)pchip(pwsdX, pwsdP, x);   
+    params.PieceWiseStrainDep = pchip(pwsdX, pwsdP);
 
 
     %% SIMULATION PARAMETERS

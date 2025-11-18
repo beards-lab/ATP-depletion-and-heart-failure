@@ -1,6 +1,9 @@
-function [Et E] = evaluateBakersExp(g, params0)
+function [Et E] = evaluateBakersExp(g, params0, limitNegative)
+if nargin < 3
+    limitNegative = true;
+end
 % Evaluate Bakers' problem
-if any(g<0)% || ...
+if limitNegative && any(g<0)% || ...
         %params0.kstiff1 < params0.kstiff1_n || params0.kstiff2 < params0.kstiff2_n
     Et = NaN;
     return;

@@ -1,5 +1,5 @@
 %% ISovelocity table
-isovelocitydata = false;
+isovelocitydata = true;
 
 if isovelocitydata
     opts = detectImportOptions('data/2021 06 15 isovelocity fit Filip.xlsx', 'Sheet', 1); % Specify the sheet to read from

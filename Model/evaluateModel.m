@@ -58,11 +58,13 @@ ticId = tic;
         pivo = (-(SL - LSE) + params.LXBpivot)/2;
         % index of the 0 from the end
         % s_p0 = 1 + round(s/params.dS, 6);        
-        value(1) = -pivo + params.s(end) - params.dS;
+        % value(1) = -pivo + params.s(end) - params.dS;
+        value(1) = -pivo + params.s(end) - params.A1AttachmentWidth;
         direction(1) = -1;
 
         % value(2) = ceil(s_p0) - params.ss;
-        value(2) = -pivo + params.s(1) + params.dS;
+        % value(2) = -pivo + params.s(1) + params.dS;
+        value(2) = -pivo + params.s(1) + params.A1AttachmentWidth;
         direction(2) = 1;
         isterminal = [true,true, true];
         % if any(abs(value)< 1e-3)
@@ -150,7 +152,7 @@ for vs = 1:length(T) - 1
     t = ts;
     % no event for initialization
     te = [];
-    imax = 4;
+    imax = 0;
     while t < tend
 
         if ~isempty(te)
@@ -167,16 +169,16 @@ for vs = 1:length(T) - 1
                 PU0(1:ss-nds) = PU0(1+nds:ss);
                 PU0(ss+1:2*ss-nds) = PU0(ss+1+nds:2*ss);
                 % zero the new space
-                PU0(ss-nds:ss) = 0; PU0(2*ss-nds:2*ss) = 0;
+                PU0(ss-nds+1:ss) = 0; PU0(2*ss-nds+1:2*ss) = 0;
                 if params.NumberOfStates > 2
                     PU0(2*ss +1:3*ss-nds) = PU0(2*ss +1+nds:3*ss);
-                    PU0(3*ss-nds:3*ss) = 0;
+                    PU0(3*ss-nds+1:3*ss) = 0;
                 end
                 params.LXBpivot = params.LXBpivot - nds*params.dS*2;
                 if params.ShowArrayShiftWarnings
                     fprintf('Hovna took %d steps right at %f s \n', nds, ts)
                 end
-                imax = imax - 1;
+                imax = imax + 1;
             elseif ie == 2
                 % move left
                 PU0(1+nds:ss) = PU0(1:ss-nds);
@@ -193,7 +195,7 @@ for vs = 1:length(T) - 1
                 if params.ShowArrayShiftWarnings
                     fprintf('Hovna took %d steps left at %f s \n', nds, ts)
                 end
-                imax = imax - 1;
+                imax = imax + 1;
             elseif ie == 3
                 try
                     error('ODEslower took longer than MaxRunTime %d s', params.MaxRunTime);
@@ -290,7 +292,7 @@ for vs = 1:length(T) - 1
         % ie contains the indices of the triggered events
         out = storeOutputs(fcn,out, PU, params, t);
 
-        if ~isempty(lastwarn) || imax < 0 || (~params.UseSpaceExtension && ~isempty(te))
+        if ~isempty(lastwarn) || imax > params.MaxSpaceExtensionCount || (~params.UseSpaceExtension && ~isempty(te))
             if params.BreakOnODEUnstable
                 try
                     error('ODEslower is not stable');
@@ -323,6 +325,15 @@ for vs = 1:length(T) - 1
     end
 end % end the velocity segment
 
+%% Check for leaked probs
+
+if any(out.p1_0 + out.p2_0 + out.PuATP + out.PuR + out.SR + out.SRD -1 > 1e-9)
+    if params.BreakOnODEUnstable
+        error("Leaking probs!");
+    else
+        warning("Leaking probs!");
+    end
+end
 %% Check for the length crossing IN THE LAST SEGMENT ONLY
 if params.OutputAtSL < Inf
     SL = PU(:, params.NumberOfStates*params.ss+3);
@@ -459,21 +470,23 @@ end
         % out.XB_TORs(i) = params.dS*sum(out.XB_TOR(i, :));
         out.LXBPivot(i) = params.LXBpivot;
 
-        % rates = [RTD, RD1, sum([R1D; R12;R21;XB_Ripped])*dS];
+        % rates = [RTD, RD1, sum([R1D; R12;R21;XB_Ripped])*dS];        
         out.RTD(i) = rates(1);
-        out.RD1(i) = rates(2);
-        out.R1D(i) = rates(3);
-        out.R12(i) = rates(4);
-        out.R21(i) = rates(5);
-        out.R2T(i) = rates(6);
-        out.XB_Ripped(i) = rates(7);
-        out.RSR2PT(i) = rates(8);
-        if length(rates) >= 9
-            out.RPT2SR(i) = rates(9);
-            out.RSRD2PD(i) = rates(10);
-            out.RPD2SRD(i) = rates(11);
-            out.RSRD2SR(i) = rates(12);
-            out.RT2(i)  = rates(13);
+        out.RDT(i) = rates(2);
+        out.RD1(i) = rates(3);
+        out.R1D(i) = rates(4);
+        out.R12(i) = rates(5);
+        out.R21(i) = rates(6);
+        out.R2T(i) = rates(7);
+        out.XB_Ripped(i) = rates(8);
+        out.RSR2PT(i) = rates(9);
+        if length(rates) >= 10
+            out.RPT2SR(i) = rates(10);
+            out.RSRD2PD(i) = rates(11);
+            out.RPD2SRD(i) = rates(12);
+            out.RSR2SRD(i) = rates(13);
+            out.RSRD2SR(i) = rates(14);
+            out.RT2(i)  = rates(15);
         end
 
         % first moments invalid due to shifting in strain s        

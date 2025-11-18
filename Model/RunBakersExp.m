@@ -16,6 +16,7 @@ if params0.RunForceVelocity
     % params = getParams(params);
     params.UseForceOnsetShift = false;
     F_active = [];
+    clear outs;
 
     % params.UseTitinModel = false;
     % params.UseSerialStiffness = false;

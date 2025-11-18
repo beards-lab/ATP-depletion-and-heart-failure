@@ -174,7 +174,7 @@ if params.justPlotStateTransitionsFlag
     p1 = ones(size(s));
     p2 = ones(size(s));
     
-    PD = 1;PT = 1;P_SR = 1;
+    PD = 1;PT = 1;P_SR = 1;P_SRD = 1;
 end
 
 %%
@@ -187,6 +187,8 @@ MgADP = params.MgADP;
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
 RTD = g2*params.kah*PT;
+RDT = g2*params.kamh*PD;
+
 RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
 
 if params.UsePassiveForSR
@@ -209,9 +211,7 @@ if params.UsePieceWiseStrainDep
     %     end
     % end
 
-    % Monotonic cubic interpolation
-    f = @(x)pchip(params.PieceWiseStrainDepX, params.PieceWiseStrainDepParams, x);   
-    
+    % Monotonic cubic interpolation    
     if params.UseStrainDep4R1D
         R1D = params.kd*p1.*f(s);
     else
@@ -219,13 +219,14 @@ if params.UsePieceWiseStrainDep
     end
 
     if isfield(params, 'A2_PieceWiseStrainDepX')
+        error('Not implemented atm!');
         f2 = @(x)pchip(params.A2_PieceWiseStrainDepX, params.A2_PieceWiseStrainDepParams, x);
-    else
-        f2 = f;
+    % else
+        % f2 = f;
     end
-    R12 = params.k1*p1.*f(s);
+    R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
     R21 = R12*0;
-    R2 = params.k2*p2.*f2(s + params.dr2 - params.dr);
+    R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep, s + params.dr2 - params.dr);
     % plot(params.PieceWiseStrainDepX,params.PieceWiseStrainDepParams, 'o', s, f(s), 'x-', s, f(s+ params.dr2 - params.dr), '--')
 
 elseif params.UseUniformTransitionFunc
@@ -277,7 +278,7 @@ if params.UseStrictDetachmentAt > 0
     R1D(strictArea) = p1(strictArea)*(10000);
 end
 
-
+%% Super relaxed transitions
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
     RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*P_SRD;
@@ -285,14 +286,10 @@ if params.UseSuperRelaxedADP
         RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)));
     else
         RPD2SRD = params.ksrd*exp(-F_SR/params.sigma_srd2)*PD;
-    end
-    RSRD2SR = params.ksr2srd*P_SRD;
-    dU_SRD = -RSRD2PD  + RPD2SRD - RSRD2SR;
+    end    
 else
     RSRD2PD = 0;
     RPD2SRD = 0;
-    RSRD2SR = 0;
-    dU_SRD = 0;
 end
 
 if params.UseSuperRelaxed     
@@ -304,10 +301,22 @@ else
     RPT2SR = 0;    
 end
 
+
+if params.UseSuperRelaxed && params.UseSuperRelaxedADP
+    RSRD2SR = params.ksrd2sr*P_SRD;    
+    RSR2SRD = params.ksr2srd*P_SR;
+else
+    RSRD2SR = 0;    
+    RSR2SRD = 0;
+end
+
+
+dU_SRD = RSR2SRD - RSRD2SR - RSRD2PD  + RPD2SRD ;
+
 if params.UseDirectSRXTransition
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2)*dS + RSRD2SR;
+    dU_SR = -RSR2PT  + RPT2SR + sum(R2)*dS + RSRD2SR - RSR2SRD;
 else    
-    dU_SR = -RSR2PT  + RPT2SR + RSRD2SR;
+    dU_SR = -RSR2PT  + RPT2SR + RSRD2SR - RSR2SRD;
 end
 
 if params.justPlotStateTransitionsFlag    
@@ -318,7 +327,8 @@ end
 % PT - calculated as complement of sum of all probabilities
 % state 0: unattached, ATP-cocked
 
-dPD = RSRD2PD - RPD2SRD + RTD - RD1 + sum(R1D)*dS;
+dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS;
+% dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2 - XB_Ripped + R3m ; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 dp3 = - R3 + R3m + R2;
@@ -396,7 +406,7 @@ elseif Ns == 3
     outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT];
 end
 
-rates = [RTD, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSRD2SR, RT2];
+rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2];
 
 if params.DryRun
     f = zeros(size(PU));
@@ -406,7 +416,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t > 0.038 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+if any(~isreal(f)) || t > 0.01 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 667;
 end
 

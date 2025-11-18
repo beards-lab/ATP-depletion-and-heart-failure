@@ -25,7 +25,10 @@ function writeParamsToMFile(filename, params, modNames, comment)
     for i_row = 1:length(modNames)
         par = params.(modNames{i_row});
         nam = modNames{i_row};
-        if length(par) == 1        
+        if isa(par, 'function_handle') || isa(par, 'struct')
+            fprintf("Skipping %s\r\n", nam);
+            continue;     
+        elseif length(par) == 1        
             fprintf(fid, 'params0.%s = %g;\r\n', nam, par);
         elseif ischar(par) && ~isempty(par)
              fprintf(fid, "params0.%s = '%s';\r\n", nam, par);
