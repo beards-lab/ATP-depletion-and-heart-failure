@@ -4,4 +4,7 @@
 *.pptx
 *.docx
 /PAT.github
-dymparams.txt
+*.txt
+*.c
+*.exe
+~*.*x
