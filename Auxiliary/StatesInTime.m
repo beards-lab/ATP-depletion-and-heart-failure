@@ -7,26 +7,45 @@ figure(10);clf;
 params = getParams(params);
 plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, '-', LineWidth=1.5)
 legend('P1','P2','PuATP','PuR', 'SR')
-figure(11);
+fig = figure(11);
 clf;
 % makeplot([], [], out, params);
-h = uicontrol('style','slider','units','pixel','position',[20 20 500 20], 'SliderStep', [1e-3 0.1]);
-hb = uicontrol('style','pushbutton','units','pixel','position',[540 20 120 20], 'String', 'Rescale Y');
+h = uicontrol('style','slider','units','pixel','position',[65 20 500 20], 'SliderStep', [1e-3 0.1]);
+lbl = uicontrol('Style','edit','units','pixel','Position',[5 20 55 20]); % <----- #1
+hb = uicontrol('style','pushbutton','units','pixel','position',[570 20 120 20], 'String', 'Rescale Y');
 
 % set init value
-ti = find(out.t>t_init, 1);
-h.Value  = (ti - 1)/(length(out.t)-1);
-h.Callback = @(hObject, event) makeplot(hObject, event,out, params);
+uisliderSetVal(h, out.t, t_init);
+
+h.Callback = @(hObject, event) makeplot(hObject, event,out, params, lbl);
 hb.Callback = @(hObject, event) rescalePlot(event);
+lbl.Callback = @(hObject, event) setTime(hObject, event,out, params, h);
 % addListener(h, 'ContinuousValueChange', @(hObject, event) makeplot(hObject, event,out));
 
-makeplot(h, [], out, params);
+makeplot(h, [], out, params, lbl);
 
+function setTime(uiedit, ~,out, params, uislider)
+    val = str2num(uiedit.String);
 
-function makeplot(hObject, event,out, params)
-if isempty(hObject) 
+    if isempty(val)
+        return;
+    end
+
+    uisliderSetVal(uislider, out.t, val);
+    makeplot(uislider, [],out, params, []);
+end
+
+function uisliderSetVal(uislider, t_arr, t)
+    ti = find(t_arr>t, 1);
+    uislider.Value  = (ti - 1)/(length(t_arr)-1);
+end
+
+function makeplot(hObject, ~,out, params, lbl)
+%%
+if ~exist("hObject","var") || isempty(hObject) 
     % ti = 1;
     ti = find(out.t>2.8, 1);
+    ti = length(out.t);
 else
     sval = get(hObject,'Value');
 %     t = sval*(out.t(end) - out.t(1)) + out.t(1);
@@ -34,6 +53,10 @@ else
     ti = round(sval*(length(out.t)-1)) + 1;
 end
 t = out.t(ti);
+
+if exist("lbl","var") 
+    lbl.String = t;
+end
 
 % disp(hObject)
 % disp(event)

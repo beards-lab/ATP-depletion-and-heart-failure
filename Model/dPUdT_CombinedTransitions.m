@@ -213,7 +213,7 @@ if params.UsePieceWiseStrainDep
 
     % Monotonic cubic interpolation    
     if params.UseStrainDep4R1D
-        R1D = params.kd*p1.*f(s);
+        R1D = params.kd*p1.*exp(-(s.^2) / (2*params.kd_sigma^2));
     else
         R1D = params.kd*p1;
     end
@@ -226,7 +226,7 @@ if params.UsePieceWiseStrainDep
     end
     R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
     R21 = R12*0;
-    R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep, s + params.dr2 - params.dr);
+    R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
     % plot(params.PieceWiseStrainDepX,params.PieceWiseStrainDepParams, 'o', s, f(s), 'x-', s, f(s+ params.dr2 - params.dr), '--')
 
 elseif params.UseUniformTransitionFunc

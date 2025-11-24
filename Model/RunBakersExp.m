@@ -687,17 +687,21 @@ if params0.RunForceVelocityTime
     plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=4, MarkerSize=12);
     
     %%
-    nexttile;hold on;
+    % nexttile;hold on;
+    cla;hold on;
     modelForce = out.Force(smashed2_0_model);    
     
+    [~, speed_sorted] = sort(speeds)
     a = 1; % ATP 8 for now
-    plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1])
-    plot(datatable(smashed2_0_data, 3), speeds, 's', LineWidth=1.5, MarkerSize=8);
-    plot(modelForce, speeds, 'x', LineWidth=2, MarkerSize=12);
+    plot(modelForce(speed_sorted), speeds(speed_sorted), 'x-', LineWidth=2, MarkerSize=12);
+    
+    plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',2.5,'Markersize',12,'markerfacecolor',[1 1 1])
+    plot(datatable(smashed2_0_data(speed_sorted), 3), speeds(speed_sorted), 's', LineWidth=2.5, MarkerSize=12);
+
     if exist('F_active', 'var')
         % we have simulated the force-constvelocity, so lets compare
-        plot(F_active, -vel(1:end), '+', LineWidth=2, MarkerSize=12);
-        legend('data', 'Force-velocity timecourse', 'force velocity estim');
+        plot(F_active, -vel(1:end), '+--', LineWidth=2, MarkerSize=12);
+        legend('SIM - isovelocity timecourse', 'Data - isovelocity', 'Data - isovelocity timecourse (Baker 2021)', 'SIM isovelocity steady');
     else
         legend('data', 'Force-velocity timecourse');
     end

@@ -73,7 +73,7 @@ ticId = tic;
 
         elapsed = toc(ticId); % counting current time
         value(3) = elapsed - params.MaxRunTime; %
-        isterminal(3) = 0; % stop
+        isterminal(3) = 1; % stop
         direction(3) = 1; % find all direction 0
         
         if params.UseForceOnsetShift
@@ -152,8 +152,27 @@ for vs = 1:length(T) - 1
     t = ts;
     % no event for initialization
     te = [];
+
     imax = 0;
     while t < tend
+
+        if isempty(te)
+            % in case of no event, lets check if we do not overflow anyway
+                [value, ~, direction] = movingWindow(t, PU0, []);
+                if any(value.*direction > 0)
+                    % Houston, we have a problem - lets make it non-empty
+                    te = true;
+                    prob = value.*direction;
+                    if prob(1) > 0 
+                        ie = 1;
+                    elseif prob(2) > 0
+                        ie = 2;
+                    else 
+                        % nothing here, we do not care about the others
+                        ie = 0;
+                    end
+                end
+        end
 
         if ~isempty(te)
             % we have an event from previous run
@@ -219,54 +238,6 @@ for vs = 1:length(T) - 1
 
 
                 % sprintf('Resetting %f to %f', t(end), ts)
-                % ts = t_f0(i_tf0);
-                % ts = i_tf0;
-                % ts = t_f0
-            
-                %% unfinished business
-                % set states
-                % We start from state dsitribution before the slack, this
-                % should be in PU0
-                % ss = params.ss; 
-                % dS = params.dS;
-                % 
-                % 
-                % % p1
-                % p10 = sum(PU0(1:ss))*dS;
-                % PU0(1:ss) = zeros(1, ss);
-                % % p2
-                % p20 = sum(PU0(ss+1:2*ss))*dS;
-                % PU0(ss+1:2*ss) = zeros(1, ss);
-                % 
-                % if params.UseSuperRelaxed
-                %     SR0 = PU0(2*ss+1);
-                %     % all p2 states to SRT states
-                %     PU0(2*ss+1) = SR0 + p20;
-                % end
-                % 
-                % % all p1 states back to UD
-                % PD0 = PU0(2*ss + 5);
-                % PU0(2*ss + 5) = PD0 + p20;
-                % 
-                % if params.UseSuperRelaxedADP
-                %     SRD0 = PU0(2*ss+6);
-                % end
-                % 
-                % % test: braking force is in the p1 only
-                % y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
-                % F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2)
-                % 
-                % p1_1 = F_passive / params.kstiff1; 
-                % 
-                % % ok... how is this?
-                % s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
-                % 
-                % s_i0 = floor(s_p0);
-                % s_i1 = ceil(s_p0);
-                % s_i0k = s_i1 - s_p0;
-                % 
-                % p1(s_i0) = p1_1/dS;
-                % p1(s_i1) = p1_1/dS;
             end            
         end
         
@@ -289,7 +260,7 @@ for vs = 1:length(T) - 1
 
         % te contains the times when events occurred
         % ye contains the solutions at the times when events occurred
-        % ie contains the indices of the triggered events
+        % ie contains the indices of the triggered events   
         out = storeOutputs(fcn,out, PU, params, t);
 
         if ~isempty(lastwarn) || imax > params.MaxSpaceExtensionCount || (~params.UseSpaceExtension && ~isempty(te))

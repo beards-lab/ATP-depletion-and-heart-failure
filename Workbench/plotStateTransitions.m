@@ -1,5 +1,5 @@
 % plot state transitions
-myl = 500;
+myl = 1000;
 
 % figure(22); clf;
 % ATTACHMENT - DETACHMENT
@@ -31,7 +31,7 @@ xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 % xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 legend('R12', 'R21')
 
-nexttile; title('R2T'); hold on;
+% nexttile; title('R2T'); hold on;
 plot(s, R2, 'x-');
 ylim([0, myl])
 xlim([s(1) s(end)])

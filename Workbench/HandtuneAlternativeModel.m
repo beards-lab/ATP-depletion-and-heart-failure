@@ -87,13 +87,15 @@ save env
 % writeParamsToMFile('../ModelOptParams/ModelParamsFVOptimSRXTDSurro.m', params0, '', 'Optim of force velocity curve. Good but oscillating.');
 
 %% test
-
+LoadData
+ModelParamsFVOptimSRXTDSurro
 figure(553);
 clf;
 % params0.g = x;
 % params0 = params;
 % params0.ghostSave = '';
 % params0.ghostLoad = 'FVSurro_base';
+params0.FV_velocities = -[0, 0.5, 2, 5];
 params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5];
 % params0.g = g0;
 params0.PlotEachSeparately = true;
@@ -106,19 +108,64 @@ params0.RunForceVelocityTime = false;
 params0.RunSlack = false;
 % params0.RunSlack = false;
 params0.ghostSave = '';
-params0.ghostLoad = 'ouja';
+params0.ghostLoad = 'oujaDoubleBaseNiceFit';
+params0.UseSuperRelaxed = true;
+params0.UseSuperRelaxedADP = true;
+params0.dS = 0.0011;
+params0.MaxStrainArraySize = 40;
+params0.A1AttachmentWidth = 0.003;
+params0.MaxSpaceExtensionCount = inf;
+% params = getParams(params0);
+% params.PieceWiseStrainDep
+% getParams
+params0.PieceWiseStrainDepX =      [0.1000    0.0100       0   -0.0005   -0.01   -0.100];
+params0.PieceWiseStrainDepParams = [50.0000    1.6*2    3    0.1      50      50.0000];
+% params0.PieceWiseStrainDepX =      [0.1000    0.0100  0   -0.0005   -0.01   -0.100];
+% params0.PieceWiseStrainDepParams = [50.0000    3      3      0.1      50      50.0000];
+params0.kd = 10;
+params0.dr2 = params0.dr;
+
+pwsdX2 = [0.1000    0.0100       0    -0.01   -0.100] - 0.02;
+pwsdP2 = [50    1.6    3.537    50      50.0000];
+
+% params0.PieceWiseStrainDepX = pwsdX2 + 0.01;
+% params0.PieceWiseStrainDepParams = pwsdP2;
+
+params0.PieceWiseStrainDep2 = pchip(pwsdX2, pwsdP2);
+params0.justPlotStateTransitionsFlag = false;
+params0.UseStrainDep4R1D = false;
+params0.kd_sigma = 0.002;
+
+params0.ksr0 = 50;
+params0.kmsr = 0;
+params0.kmsrd = 10;
+params0.ksrd = 0;
+params0.sigma_srd1 = 10
+
+
+
+tic
+RunBakersExp;
+StatesInTime
+toc
+nexttile();
+plot(outs(1).t, outs(1).Force, outs(2).t, outs(2).Force, outs(3).t, outs(3).Force)
+% writeParamsToMFile('ModelOptParams/ModelParamsFVOptimValley.m', params0, '', ['Optim of force velocity curve. Good but oscillating, hard to explain valley in R12. ' newline ... 
+%     'pwsdX2 = [0.1000    0.0100       0    -0.01   -0.100] - 0.02; pwsdP2 = [50    1.6    3.537    50      50.0000];' newline ...
+%     'params0.PieceWiseStrainDep2 = pchip(pwsdX2, pwsdP2);']);
+
+%%
+figure(182); clf;
+params0.RunForceVelocityTime = true;
+params0.RunForceVelocity = false;
+params0.MaxStrainArraySize = 80; 
+params0.MaxRunTime = 30;
+params0.ShowArrayShiftWarnings = true;
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
-% params0.dS = 0.0011;
-% params0.MaxStrainArraySize = 60;
-% params0.A1AttachmentWidth = 0.003;
-params0.MaxSpaceExtensionCount = inf;
-params = getParams(params0);
-params.PieceWiseStrainDep
-
 RunBakersExp;
 %%
-out = outs(end);
+out = outs(1);
 StatesInTime
 
 % plot(out.t, out.p1_0 + out.p2_0 + out.PuATP + out.PuR -1)
@@ -185,3 +232,25 @@ RunBakersExp
 legend('Data', 'Model')
 
 StatesInTime
+
+%% Compare force velocity and slack datasets
+
+fv_data = load('data/bakers_isovelocity.mat', 'datatable', 'velocitytable').datatable;
+fv_win2_2 = fv_data(:, 1) > 3.45 & fv_data(:, 1) < 3.6;
+% fv_win2_2 = fv_data(:, 1) > 0 & fv_data(:, 1) < 0.3;
+fv_win2_0 = fv_data(:, 1) > 3.9 & fv_data(:, 1) < 4;
+slack_data = load('data/bakers_slack8mM_all.mat').datatable;
+slack_win2_2 = slack_data(:, 1) > 2.72 & slack_data(:, 1) < 2.75;
+% slack_win2_2 = slack_data(:, 1) > 0 & slack_data(:, 1) < 1.15;
+slack_win2_0 = slack_data(:, 1) > 3.04 & slack_data(:, 1) < 3.6;
+
+figure(181);clf; 
+plot(fv_data(:, 1),fv_data(:, 3), slack_data(:, 1), slack_data(:, 3), '-', LineWidth=1.5);hold on;
+plot(fv_data(fv_win2_2 | fv_win2_0, 1),fv_data(fv_win2_2 | fv_win2_0, 3), slack_data(slack_win2_2 | slack_win2_0, 1), slack_data(slack_win2_2 | slack_win2_0, 3), '-', LineWidth=1.5);
+
+R1 = mean(fv_data(fv_win2_0, 3))/mean(fv_data(fv_win2_2, 3));
+text(max(fv_data(:, 1)), mean(fv_data(fv_win2_0, 3)) + 5, sprintf('%0.0f%%', R1*100), 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'FontWeight','bold')
+R2 = mean(slack_data(slack_win2_0, 3))/mean(slack_data(slack_win2_2, 3));
+text(max(slack_data(:, 1)), mean(slack_data(slack_win2_0, 3)) + 5, sprintf('%0.0f%%', R2*100), 'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', 'FontWeight','bold')
+xlabel('Time (s)');ylabel('Force (kPa)');
+legend('Isovelocity', 'Slack');

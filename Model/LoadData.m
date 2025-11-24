@@ -11,12 +11,26 @@ Data_ATP = [0		56.4048	63.6074	61.3192
         5		3.2759	1.6526	1.594
         6		2.212	1.1823	1.2117];
 
-% Data_ATP = [0		56.4048	63.6074	61.3192
-%         2		17.8025	13.5516	10.2112        
-%         6		2.212	1.1823	1.2117];
+% Anthony Baker 2021 06 15 isovelocity fit Filip.xlsx
+Data_ATP_AB2021 = [...
+0	67.39416105	65.42069119
+0.5	60.98847686	43.94730968
+1	42.70587933	27.84044045
+2	18.85391508	8.062961483
+3	12.59560277	5.10199899
+4	6.442581818	2.930592431
+5	3.513565502	1.870419908
+6	1.85557286	1.041556855];
+
 
 % Non-zero velocities
 vel = (-Data_ATP(:,1)); % ML/s
+
+%% plot the datasets together
+% plot(Data_ATP(:, [2 3 4]), Data_ATP(:, 1), 'o-', Data_ATP_AB2021(:, [2 3]), Data_ATP_AB2021(:, 1), 'o--', LineWidth=2, MarkerSize=8);hold off;
+% legend('8mM','4mM', '2mM','8mM AB2021','2mM AB2021')
+% plot(Data_ATP(:, [2 4]), Data_ATP(:, 1), 'o-', Data_ATP_AB2021(:, [2 3]), Data_ATP_AB2021(:, 1), 'o--', LineWidth=2, MarkerSize=8);hold off;
+% legend('8mM','2mM','8mM AB2021','2mM AB2021')
 
 %% Fmax (normalized.) versus [MgATP] (mM) from Ebus et al.(2001)
 % iso_data = ...
