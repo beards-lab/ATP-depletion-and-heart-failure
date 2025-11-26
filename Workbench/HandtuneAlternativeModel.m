@@ -88,6 +88,7 @@ save env
 
 %% test
 LoadData
+params0 = getParams();
 ModelParamsFVOptimSRXTDSurro
 figure(553);
 clf;
@@ -120,18 +121,20 @@ params0.MaxSpaceExtensionCount = inf;
 % getParams
 params0.PieceWiseStrainDepX =      [0.1000    0.0100       0   -0.0005   -0.01   -0.100];
 params0.PieceWiseStrainDepParams = [50.0000    1.6*2    3    0.1      50      50.0000];
-% params0.PieceWiseStrainDepX =      [0.1000    0.0100  0   -0.0005   -0.01   -0.100];
-% params0.PieceWiseStrainDepParams = [50.0000    3      3      0.1      50      50.0000];
+params0.PieceWiseStrainDepX =      [0.1000    0.0100  0   -0.01   -0.100];
+params0.PieceWiseStrainDepParams = [50.0000    3      3    50      50.0000];
 params0.kd = 10;
-params0.dr2 = params0.dr;
+params0.dr2 = 2*params0.dr;
 
 pwsdX2 = [0.1000    0.0100       0    -0.01   -0.100] - 0.02;
 pwsdP2 = [50    1.6    3.537    50      50.0000];
 
 % params0.PieceWiseStrainDepX = pwsdX2 + 0.01;
 % params0.PieceWiseStrainDepParams = pwsdP2;
+params0.PieceWiseStrainDepX = pwsdX2 + 0.02;
+params0.PieceWiseStrainDepParams = pwsdP2;
 
-params0.PieceWiseStrainDep2 = pchip(pwsdX2, pwsdP2);
+% params0.PieceWiseStrainDep2 = pchip(pwsdX2, pwsdP2);
 params0.justPlotStateTransitionsFlag = false;
 params0.UseStrainDep4R1D = false;
 params0.kd_sigma = 0.002;
@@ -158,11 +161,11 @@ plot(outs(1).t, outs(1).Force, outs(2).t, outs(2).Force, outs(3).t, outs(3).Forc
 figure(182); clf;
 params0.RunForceVelocityTime = true;
 params0.RunForceVelocity = false;
-params0.MaxStrainArraySize = 80; 
+params0.MaxStrainArraySize = 120; 
 params0.MaxRunTime = 30;
 params0.ShowArrayShiftWarnings = true;
-params0.UseSuperRelaxed = false;
-params0.UseSuperRelaxedADP = false;
+params0.UseSuperRelaxed = true;
+params0.UseSuperRelaxedADP = true;
 RunBakersExp;
 %%
 out = outs(1);
@@ -171,12 +174,56 @@ StatesInTime
 % plot(out.t, out.p1_0 + out.p2_0 + out.PuATP + out.PuR -1)
 %% Fit a FV metric
 FVfit_fun = @(a, b, c, x) a +b*exp(-x*c);
-FV_x = -params0.FV_velocities';FV_y = F_active';
-FV_t = 0:.1:10;
-[fvfit fvgood] = fit(FV_x(2:end), FV_y(2:end), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0])
+FV_t = 0:.1:6;
 
-clf;plot(FV_x, FV_y, 'x', FV_t, fvfit(FV_t), '--', LineWidth=1.5);
+clf; hold on;
+legstr = [];
+
+win = 2:8;
+win = [2 3 4 5 6];
+scaleTo = 2;
+
+FV_x = -params0.FV_velocities';FV_y = F_active'/F_active(scaleTo);
+[fvfit fvgood] = fit(FV_x(win), FV_y(win), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0]);
+plot(FV_x, FV_y, 'x', FV_t, fvfit(FV_t), '-', LineWidth=1.5, MarkerSize=12);
+% plot(FV_x(win), FV_y(win), 'x', LineWidth=3, MarkerSize=18); 
+legstr = [legstr, "Simulated points", sprintf("Fit: a=%.2f,b=%0.1f,c=%0.2f", fvfit.a, fvfit.b, fvfit.c)];
+
+
+FV_x = Data_ATP(:, 1);FV_y = Data_ATP(:, 2)/Data_ATP(scaleTo, 2);
+[fvfit fvgood] = fit(FV_x(win), FV_y(win), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0]);
+plot(FV_x, FV_y, 'x', FV_t, fvfit(FV_t), '-', LineWidth=1.5, MarkerSize=12);
+% plot(FV_x(win), FV_y(win), 'x', LineWidth=3, MarkerSize=18); 
+legstr = [legstr, "Data points", sprintf("Fit: a=%.2f,b=%0.1f,c=%0.2f", fvfit.a, fvfit.b, fvfit.c)];
+
+% FV_x = Data_ATP(:, 1);FV_y = Data_ATP(:, 3)/Data_ATP(scaleTo, 3);
+% [fvfit fvgood] = fit(FV_x(win), FV_y(win), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0]);
+% plot(FV_x, FV_y, 'x', FV_t, fvfit(FV_t), '-.', LineWidth=1.5, MarkerSize=12);
+% % plot(FV_x(win), FV_y(win), 'x', LineWidth=3, MarkerSize=18); 
+% legstr = [legstr, "Data points 4 mM", sprintf("Fit: a=%.2f,b=%0.1f,c=%0.2f", fvfit.a, fvfit.b, fvfit.c)];
+
+FV_x = Data_ATP(:, 1);FV_y = Data_ATP(:, 4)/Data_ATP(scaleTo, 4);
+[fvfit fvgood] = fit(FV_x(win), FV_y(win), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0]);
+plot(FV_x, FV_y, 'x', FV_t, fvfit(FV_t), '--', LineWidth=1.5, MarkerSize=12);
+% plot(FV_x(win), FV_y(win), 'x', LineWidth=3, MarkerSize=18); 
+legstr = [legstr, "Data points 2 mM", sprintf("Fit: a=%.2f,b=%0.1f,c=%0.2f", fvfit.a, fvfit.b, fvfit.c)];
+
+FV_x = Data_ATP_AB2021(:, 1);FV_y = Data_ATP_AB2021(:, 2)/Data_ATP_AB2021(scaleTo, 2);
+[fvfit fvgood] = fit(FV_x(win), FV_y(win), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0]);
+plot(FV_x, FV_y, '^', FV_t, fvfit(FV_t), '-', LineWidth=1.5);
+% plot(FV_x(win), FV_y(win), 'x', LineWidth=3, MarkerSize=18);
+legstr = [legstr, "Data 2021 points", sprintf("Fit: a=%.2f,b=%0.1f,c=%0.2f", fvfit.a, fvfit.b, fvfit.c)];
+
+FV_x = Data_ATP_AB2021(:, 1);FV_y = Data_ATP_AB2021(:, 3)/Data_ATP_AB2021(scaleTo, 3);
+[fvfit fvgood] = fit(FV_x(win), FV_y(win), FVfit_fun, 'StartPoint', [1, 100, 0.5], 'Lower', [0 0 0])
+plot(FV_x, FV_y, '>', FV_t, fvfit(FV_t), '--', LineWidth=1.5);
+% plot(FV_x(win), FV_y(win), 'x', LineWidth=3, MarkerSize=18);
+legstr = [legstr, "Data 2021 ATP 2 mM points", sprintf("Fit: a=%.2f,b=%0.1f,c=%0.2f", fvfit.a, fvfit.b, fvfit.c)];
+
+legend(legstr);
+
 metric = (fvfit(0)-FV_y(1))/FV_y(1);
+%%
 %%
 clf;
 pp = params.PieceWiseStrainDep;

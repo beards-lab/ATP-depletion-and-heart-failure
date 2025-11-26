@@ -218,15 +218,19 @@ if params.UsePieceWiseStrainDep
         R1D = params.kd*p1;
     end
 
+    R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
+    R21 = R12*0;    
+    
     if isfield(params, 'A2_PieceWiseStrainDepX')
         error('Not implemented atm!');
         f2 = @(x)pchip(params.A2_PieceWiseStrainDepX, params.A2_PieceWiseStrainDepParams, x);
     % else
         % f2 = f;
+    elseif isfield(params, 'PieceWiseStrainDep2')
+        R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
+    else
+        R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep, s + params.dr2 - params.dr);
     end
-    R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
-    R21 = R12*0;
-    R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
     % plot(params.PieceWiseStrainDepX,params.PieceWiseStrainDepParams, 'o', s, f(s), 'x-', s, f(s+ params.dr2 - params.dr), '--')
 
 elseif params.UseUniformTransitionFunc

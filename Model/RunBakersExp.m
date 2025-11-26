@@ -687,7 +687,7 @@ if params0.RunForceVelocityTime
     plot(out.t(smashed2_0_model), out.Force(smashed2_0_model), 'x', LineWidth=4, MarkerSize=12);
     
     %%
-    % nexttile;hold on;
+    nexttile;hold on;
     cla;hold on;
     modelForce = out.Force(smashed2_0_model);    
     
