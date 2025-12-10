@@ -4,9 +4,9 @@ t_init = 0;
 t_init = out.t(round(end/2));
 
 figure(10);clf;
-params = getParams(params);
-plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR, '-', LineWidth=1.5)
-legend('P1','P2','PuATP','PuR', 'SR')
+% params = getParams(params);
+plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR , '-', out.t, out.SRD, '-', LineWidth=1.5)
+legend('P1','P2','PuATP','PuR', 'SRT', 'SRD')
 fig = figure(11);
 clf;
 % makeplot([], [], out, params);
@@ -17,12 +17,12 @@ hb = uicontrol('style','pushbutton','units','pixel','position',[570 20 120 20], 
 % set init value
 uisliderSetVal(h, out.t, t_init);
 
-h.Callback = @(hObject, event) makeplot(hObject, event,out, params, lbl);
+h.Callback = @(hObject, event) makeplot(hObject, event,out, out.params, lbl);
 hb.Callback = @(hObject, event) rescalePlot(event);
-lbl.Callback = @(hObject, event) setTime(hObject, event,out, params, h);
+lbl.Callback = @(hObject, event) setTime(hObject, event,out, out.params, h);
 % addListener(h, 'ContinuousValueChange', @(hObject, event) makeplot(hObject, event,out));
 
-makeplot(h, [], out, params, lbl);
+makeplot(h, [], out, out.params, lbl);
 
 function setTime(uiedit, ~,out, params, uislider)
     val = str2num(uiedit.String);

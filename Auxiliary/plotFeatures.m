@@ -18,7 +18,7 @@ end
 
 figure(80085);clf; 
 tiledlayout("flow");
-N_feats = size(feats_data, 2);
+% N_feats = size(feats_data, 2);
 
 cost = evalFeatureCost(feats_data, feats_sim, fn);
 
@@ -27,7 +27,9 @@ for i_feat = 1:size(fn, 2)
 
     featnames = split(fn{i_feat}, '|');
     feat_y = featnames{1};
-    if length(featnames) == 1 || (length(featnames) >= 2 && featnames{2} == "_")
+    N_feats = length(feats_data.(feat_y));
+
+    if length(featnames) == 1 || (length(featnames) >= 2 && featnames{2} == "_" || isnumeric(featnames{2}))
         fd_x = 1:N_feats;fs_x = 1:N_feats;fg_x = 1:N_feats;
         feat_x = '';
     else
@@ -57,11 +59,9 @@ for i_feat = 1:size(fn, 2)
     end
 end
 
-nexttile; plot([feats_data.t0], [feats_data.SLslack]-2.2);ylim([-inf, 0]);title("dt vs dSL");hold on;
-t = (-1:0.1:3)*1e-3;plot(t, -16*t - 0.125);
-nexttile; plot(diff([feats_data.SLslack]-2.2)./diff([feats_data.t0]));ylim([-inf, 0]);title("dt vs dSL (um/s)")
-% plot(out.t, out.Force)
+% dt vs dSL with extrapolation
+% nexttile; plot([feats_data.t0], [feats_data.SLslack]-2.2);ylim([-inf, 0]);title("dt vs dSL");hold on;
+% t = (-1:0.1:3)*1e-3;plot(t, -16*t - 0.125);
+% nexttile; plot(diff([feats_data.SLslack]-2.2)./diff([feats_data.t0]));ylim([-inf, 0]);title("dt vs dSL (um/s)")
 
-
-% plot(t_slack, -y_slack, '*');
 end

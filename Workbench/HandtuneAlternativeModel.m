@@ -97,7 +97,7 @@ clf;
 % params0.ghostSave = '';
 % params0.ghostLoad = 'FVSurro_base';
 params0.FV_velocities = -[0, 0.5, 2, 5];
-params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5];
+% params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5];
 % params0.g = g0;
 params0.PlotEachSeparately = true;
 params0.justPlotStateTransitionsFlag = false;
@@ -112,7 +112,7 @@ params0.ghostSave = '';
 params0.ghostLoad = 'oujaDoubleBaseNiceFit';
 params0.UseSuperRelaxed = true;
 params0.UseSuperRelaxedADP = true;
-params0.dS = 0.0011;
+params0.dS = 0.0011*2*2;
 params0.MaxStrainArraySize = 40;
 params0.A1AttachmentWidth = 0.003;
 params0.MaxSpaceExtensionCount = inf;
@@ -137,20 +137,38 @@ params0.PieceWiseStrainDepParams = pwsdP2;
 % params0.PieceWiseStrainDep2 = pchip(pwsdX2, pwsdP2);
 params0.justPlotStateTransitionsFlag = false;
 params0.UseStrainDep4R1D = false;
-params0.kd_sigma = 0.002;
+% params0.kd_sigma = 0.002;
+params0.EvalFeatures = false;
 
-params0.ksr0 = 50;
-params0.kmsr = 0;
-params0.kmsrd = 10;
-params0.ksrd = 0;
-params0.sigma_srd1 = 10
+params0.ksr0 = 40;
+params0.sigma2 = 100;
+params0.kmsr = 1;
+params0.sigma1 = 12;
 
 
+params0.ksrd = 40;
+params0.sigma_srd2 = 100;
+params0.kmsrd = 1;
+params0.sigma_srd1 = 12;
+
+params0.OptimizeFVInit = false;
+
+params0.MaxStrainArraySize = 40;
+params0.dS = 0.00021;
+
+params0.RunForceVelocity = true;
+params0.RunSlack = false;
+params0.FV_velocities = -[0];
 
 tic
 RunBakersExp;
-StatesInTime
+% StatesInTime
 toc
+%%
+out = outs(end);
+figure(808);clf;StatesInTime
+%%
+
 nexttile();
 plot(outs(1).t, outs(1).Force, outs(2).t, outs(2).Force, outs(3).t, outs(3).Force)
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimValley.m', params0, '', ['Optim of force velocity curve. Good but oscillating, hard to explain valley in R12. ' newline ... 
@@ -159,8 +177,9 @@ plot(outs(1).t, outs(1).Force, outs(2).t, outs(2).Force, outs(3).t, outs(3).Forc
 
 %%
 figure(182); clf;
-params0.RunForceVelocityTime = true;
+params0.RunForceVelocityTime = false;
 params0.RunForceVelocity = false;
+params0.RunSlack = true;
 params0.MaxStrainArraySize = 120; 
 params0.MaxRunTime = 30;
 params0.ShowArrayShiftWarnings = true;
@@ -170,6 +189,7 @@ RunBakersExp;
 %%
 out = outs(1);
 StatesInTime
+
 
 % plot(out.t, out.p1_0 + out.p2_0 + out.PuATP + out.PuR -1)
 %% Fit a FV metric
@@ -223,7 +243,160 @@ legstr = [legstr, "Data 2021 ATP 2 mM points", sprintf("Fit: a=%.2f,b=%0.1f,c=%0
 legend(legstr);
 
 metric = (fvfit(0)-FV_y(1))/FV_y(1);
+%% construct feature metric - test this!
+
+% construct parameter set to vary
+paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
+% paramNames = {'baseline_dummy', 'kstiff2','k_pas'};
+paramNames = {'baseline_dummy', 'PieceWiseStrainDepX__3','PieceWiseStrainDepX__4','PieceWiseStrainDepX__5','kstiff2','k_pas','ka','kah','kamh','dr2','k2','k1','PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__2','PieceWiseStrainDepParams__4','mu','kstiff1','kd','sigma1','sigma2','sigma_srd1','sigma_srd2','dr','dS','estiff','k_pas','gamma','kSE','ekSE'};
+% construct feature set to evaluate
+% fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'SLslack|t0|0', 'Am|SLslack|', 'peak1_y|SLslack|0', 'peak1_y|v_restretch|0','peak1_dSL', 'peak2|v_restretch', 'vall_t|v_restretch|0.1', 'vall_y', 'vall2_dy|v_restretch|0', 'ovrsht_dy|_|0', 'steady'};
+% reduced set
+
+
+% simulate force-isovelocity
+% take only non-zero velocities with > 10 kPa
+params0.FV_velocities = -[0.5, 1, 3, 4];
+params0.RunForceVelocity = false;
+params0.RunSlack = false;
+params0.RunForceLengthEstim = false;
+params0.EvalFeatures = true;
+params0.PlotEachSeparately = true;
+
+params0.RunForceVelocity = true;
+% params0.RunSlack = true;
+params0.MaxRunTime = 30;
+params0.baseline_dummy = 0;
+
+% params0.EvalFeatures = true;
+% params0.RunForceLengthEstim = true;
+fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
+fn = {'FV_f|FV_v'};
+
+featureMatrixPlus = zeros(length(paramNames), length(fn));
+% params_base = params0;
+for i_param = 1:length(paramNames)
+    try
+        fprintf('Running %s..', paramNames{i_param});
+        params0.mods = paramNames(i_param);
+        params0.g = 1.01;
+        
+        figure(333); clf;
+        
+        RunBakersExp;
+        % % check the init
+        [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+        featureMatrixPlus(i_param, :) = costs;
+        savedFeats{i_param} = features_model;
+        fprintf('Done \n');
+    catch e
+        fprintf('failed. [%s] \n', e.message);
+    end
+end
 %%
+
+
+%% RUN THE OPTIM SCRIPT FOR LSQNON USING CUSTOM JACOBIAN
+
+% main_lsqnonlin_script.m
+
+% 1. Setup
+paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
+params0.g = ones(1, length(paramNames));
+params0.mods = paramNames;
+params0.FV_velocities = -[0.5, 1, 2, 4];
+params0.RunSlack = false;
+params0.RunForceVelocity = true;
+% matchStructFields(params0, 'Run*', true)
+params0.MaxStrainArraySize = 40;
+params0.MaxRunTime = 30;
+params0.EvalFeatures = true;
+params0.BreakOnODEUnstable = true;
+params0.PlotEachSeparately = false;
+
+tic
+RunBakersExp;
+toc
+%%
+[Residuals, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
+
+%%
+P0 = ones(1, length(paramNames)); 
+LB = P0*0.1; UB = P0*10;
+
+params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
+
+params0.RunSlack = false;
+params0.MaxStrainArraySize = 40;
+params0.fn = {'FV_f|FV_v'};
+
+
+% 2. Options
+options = optimoptions('lsqnonlin','SpecifyObjectiveGradient',true);
+
+% CRITICAL: Tell lsqnonlin your function provides the Jacobian
+% options.SpecifyObjectiveAndJacobian = true; 
+options.Jacobian = 'on';
+
+
+% Set MaxFunevals carefully. You only need ~1 + M model calls per outer update.
+% If you want 10 Jacobian updates, you need 10 * (1 + 15) = 160 calls.
+options.MaxFunctionEvaluations = 200; 
+options.Display = 'iter';
+
+% 3. Run the Solver
+fprintf('Starting Decoupled lsqnonlin Optimization...\n');
+
+% lsqnonlin handles the trust-region/Levenberg-Marquardt logic using
+% the Residuals and the returned Jacobian (S).
+[P_optimized, Resnorm, Residuals] = lsqnonlin(@ResidualAndJacobian, P0, LB, UB, options, params0);
+
+fprintf('\nOptimized Parameters: %s\n', mat2str(P_optimized, 4));
+fprintf('Minimum Total Cost (Sum of Squares): %.4f\n', Resnorm);
+%%
+
+
+figure(4);
+featureMatrixPlusN = featureMatrixPlus - featureMatrixPlus(1, :);
+featureMatrixPlusN > 0
+
+imagesc(featureMatrixPlusN);
+colorbar;
+axis ij tight;
+
+set(gca, 'XTick', 1:length(fn), ...
+         'XTickLabel', fn, ...
+         'YTick', 1:length(paramNames), ...
+         'YTickLabel', paramNames);
+
+xtickangle(45);
+title('Parameter Sensitivities');
+
+% Print numeric values in each cell
+for i = 1:size(featureMatrixPlusN,1)
+    for j = 1:size(featureMatrixPlusN,2)
+        text(j, i, sprintf('%.3g', featureMatrixPlusN(i,j)), ...
+            'HorizontalAlignment', 'center', ...
+            'Color', 'w');
+    end
+end
+
+%%
+clf;
+plotFeatures(features_data, savedFeats{1}, [], fn);
+
+%%
+params0.A1AttachmentWidth = 2*params0.dS;
+params0 = getParams(params0);
+params0.UseA1AttachmentKernel = true;
+params0.MaxStrainArraySize = 40;
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = false;
+tic
+RunBakersExp; 
+toc
+StatesInTime;
+
 %%
 clf;
 pp = params.PieceWiseStrainDep;
@@ -279,6 +452,17 @@ RunBakersExp
 legend('Data', 'Model')
 
 StatesInTime
+
+%% test: accessing struct IS costly
+N = 1e7;
+tic
+for i = 1:N
+    % a1 = params.dS;
+    % a2 = params.dS;
+    % a = max(0, a1);
+    a = a1;
+end
+toc
 
 %% Compare force velocity and slack datasets
 

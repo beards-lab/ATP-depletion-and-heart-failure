@@ -1,9 +1,15 @@
-function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, out)
+function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, features, out, plotResults)
 
     if nargin < 5
+        features = [];
+    end
+    if nargin < 6        
         out = [];
     end
-    features = [];
+    if nargin < 7
+        plotResults = false;
+    end
+
     feats = struct(); 
     if size(data_t, 1) < size(data_t, 2)
         data_t = data_t';
@@ -33,7 +39,6 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
 
         win = data_t > velocity_segment(2) & data_t < velocity_segment(3);
         t = data_t(win); y = data_y(win);
-        plot(t - t_seg, y, '-|b', 'LineWidth', 1.2);
 
         % cut off at 10kPa
         win = data_t > velocity_segment(2) & data_t < velocity_segment(3) & data_y > 10; % & data_t < t_seg + 0.048;
@@ -44,9 +49,13 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         try
             [ae be] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01], 'Lower', [10, 0.01, 0.0], 'Upper', [200 200 0.1]);
             init_tail = [0:0.001:0.15];
-            plot(init_tail, ae(init_tail),'--', t, ae(t), LineWidth=2)
-            plot(ae.t0, 0, '*', LineWidth=2, MarkerSize=ms);
-            plot(t, y-ae(t),'-', LineWidth=1);
+            
+            if plotResults
+                plot(t, y, '-|b', 'LineWidth', 1.2);                
+                plot(init_tail, ae(init_tail),'--', t, ae(t), LineWidth=2)
+                plot(ae.t0, 0, '*', LineWidth=2, MarkerSize=ms);
+                plot(t, y-ae(t),'-', LineWidth=1);
+            end
             
             feats.ktr = ae.k;
             feats.A = ae.A;
@@ -118,7 +127,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         plot(feats.ovrsht_t, o_v, '*', MarkerSize=ms)
 
         if ~isempty(out)
-            feats.XTOR = out.RTD;
+            feats.XTOR = out.RTD(end);
         else
             % default "goal"
             feats.XTOR = 10;
@@ -141,7 +150,20 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             features = repmat(S, 0, 1);              % 0x1 struct array
         end
 
-        features(i_seg) = feats;
+        % features(i_seg) = feats;
+        % i_seg is implicit via (end+1)
+        fieldNames = fieldnames(feats);
+        for k = 1:numel(fieldNames)
+            fname = fieldNames{k};
+            if ~isfield(features, fname)
+                features.(fname) = feats.(fname);
+            elseif ~isempty(feats.(fname))
+                features.(fname)(end+1) = feats.(fname)(1);
+            else
+                features.(fname)(end+1) = NaN;
+            end
+        end
+
     end
 
 end

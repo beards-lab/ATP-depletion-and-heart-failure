@@ -180,9 +180,9 @@ end
 %%
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
-MgATP = params.MgATP;
-Pi = params.Pi;
-MgADP = params.MgADP;
+% MgATP = params.MgATP;
+% Pi = params.Pi;
+% MgADP = params.MgADP;
 
 g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 
@@ -285,9 +285,9 @@ end
 %% Super relaxed transitions
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
-    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*P_SRD;
+    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
     if params.UseLimitedSRDTransition
-        RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)));
+        RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)))*PD;
     else
         RPD2SRD = params.ksrd*exp(-F_SR/params.sigma_srd2)*PD;
     end    
@@ -297,9 +297,9 @@ else
 end
 
 if params.UseSuperRelaxed     
-    RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*P_SR;
+    RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*max(0, P_SR);
 	% RSR2PT = params.kmsr*(1 + log(max(1, F_SR))*params.sigma1)*P_SR;
-    RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*PT;
+    RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*max(0, PT);
 else 
     RSR2PT = 0;
     RPT2SR = 0;    
@@ -307,8 +307,8 @@ end
 
 
 if params.UseSuperRelaxed && params.UseSuperRelaxedADP
-    RSRD2SR = params.ksrd2sr*P_SRD;    
-    RSR2SRD = params.ksr2srd*P_SR;
+    RSRD2SR = params.ksrd2sr*max(0, P_SRD);    
+    RSR2SRD = params.ksr2srd*max(0, P_SR);
 else
     RSRD2SR = 0;    
     RSR2SRD = 0;
@@ -354,9 +354,44 @@ end
 % Attachment
 try
     % if params.A1AttachmentWidth <= dS
-    if params.A1AttachmentWidth == 0
-    
-            [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);
+    Ax = params.A1AttachmentWidth;
+    if params.UseA1AttachmentKernel
+        % s_0 = 1 + round(-s(1)/dS, 6); % strain position in space at 0
+        % s_i0 = round(s_0);
+        % if s_i0 > 0 && s_i0 <= length(s)
+        %     halfSpan = ceil(Ax / dS);    % in bins
+        % 
+        %     x = (-halfSpan:halfSpan) * dS + s(s_i0);
+        %     % jj = floor(max(1,s_i0-halfSpan)):ceil(min(length(dp1), s_i0+halfSpan));
+        %     jj = (-halfSpan:halfSpan);
+        %     x = jj*dS + s(s_i0);
+        %     sigma = Ax/3;
+        %     K = exp(-(x.^2)/(2*sigma^2));
+        %     K = K/sum(K);
+        %     K_vp = jj + s_i0 >= 1 & jj + s_i0 <= length(dp1); % Kernel valid positions in bounds
+        %     s_pos = jj(K_vp) + s_i0;
+        %     dp1(s_pos) = dp1(s_pos) + (RD1/dS)*K(K_vp)';
+        % else
+        %     warning([num2str(t) ' : Strain array is not around 0!']);
+        % end
+        % Find nearest grid index of zero
+        s_i0 = 1 + floor(-s(1)/dS);   % much cheaper than round(x,6)    
+        if s_i0 > params.cached.halfSpan && s_i0 <= length(dp1)-params.cached.halfSpan    
+            % Valid positions (no clipping)
+            s_pos = s_i0 +  params.cached.jj;    
+            % Apply kernel mass - dS already divided in K0
+            dp1(s_pos) = dp1(s_pos) + (RD1) * params.cached.K0;    
+        else
+            % Need boundary handling
+            s_pos = s_i0 +  params.cached.jj;
+            % Logical mask for valid indices
+            vp = s_pos >= 1 & s_pos <= length(dp1);
+            % Apply kernel mass - dS already divided in K0    
+            dp1(s_pos(vp)) = dp1(s_pos(vp)) + (RD1) * params.cached.K0(vp);
+        end
+
+    elseif Ax == 0    
+            [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), dS, ss);
             dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
             dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS); % attachment
             % dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS)*(F_passive/10); % attachment
@@ -366,13 +401,14 @@ try
         % grid indices: assume s_j = j*dS
         % [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);% nearest left grid index
         % x_center = 0; % strain position in space at 0;
-        Ax = params.A1AttachmentWidth;
-        s_i0 = 1 + round(-s(1)/dS, 6); % strain position in space at 0
+        
+        % lets get that earlier in the code
+        s_0 = 1 + round(-s(1)/dS, 6); % strain position in space at 0
         
         %% choose kernel support in indices
         halfspan = ceil(Ax/dS); 
         att = zeros(size(dp1));
-        for jj = floor(max(1,s_i0-halfspan)):ceil(min(length(dp1), s_i0+halfspan))
+        for jj = floor(max(1,s_0-halfspan)):ceil(min(length(dp1), s_0+halfspan))
             % jj = max(1, min(length(dp1), jj));
             xj = s(jj);
             dist = abs(xj - 0.0); % distance from 0
@@ -382,10 +418,16 @@ try
                 % dp1(jj) = dp1(jj) + (RD1/dS) * w*dS/Ax;        
             att(jj) = w;
         end
+        % if isempty(jj)
+        %     % warning('%f: Strain array is not around 0!', t);
+        %     disp([num2str(t) ' : Strain array is not around 0!']);
+        % end
+        %%
         dp1 = dp1 + att/sum(att)*RD1/dS;
     end
 catch e
-    disp e
+    
+    disp([num2str(t) ' : ' e.message]);
 end
 
 % if ~params.UseCa
@@ -420,8 +462,11 @@ if params.DryRun
 end
 
 %% breakpints
-if any(~isreal(f)) || t > 0.01 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
-    numberofthebeast = 667;
+if t> 0.01 && any(PD > 0)
+    % P_SR < 0 % && dU_SR < 0 
+    % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+    numberofthebeast = 6678;
+    
 end
 
 % disp('oj')

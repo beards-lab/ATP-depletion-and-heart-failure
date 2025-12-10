@@ -7,7 +7,7 @@ if nargin == 0 || isempty(params)
     params = struct();
 end
 
-if nargin < 2 
+if nargin < 2
     g = ones(1, 30); % better longer than sorry    
 end
 
@@ -292,7 +292,7 @@ end
     params.PieceWiseStrainDep = pchip(pwsdX, pwsdP);
 
 
-    %% SIMULATION PARAMETERS
+    %% 4. SIMULATION PARAMETERS
     if params.UseCalculatedN
         % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
         % params.LXBpivot = params.SL0;
@@ -348,7 +348,7 @@ end
     end
     
     
-    %% Build the initialization
+    %% 5. Build the initialization
     if ~isfield(params, 'PU0') || updateInit
         p0 = zeros(1, params.ss);
         U_SR = 0;
@@ -369,6 +369,24 @@ end
         end
     end
     
+%% 6. Pre-calculate some stuff that can speed up the dxdt
+    % Precompute kernel parameters
+    halfSpan = ceil(params.A1AttachmentWidth/params.dS);
+    jj = -halfSpan:halfSpan;       % integer offsets
+    sigma = params.A1AttachmentWidth/3;                  % Gaussian width
+    
+    params.A1AttachmentKernel = makeKernel(params.dS, params.A1AttachmentWidth, 'tri');
+    % Precompute *centered* Gaussian kernel (unnormalized)
+    K0 = exp(-( (jj*params.dS).^2 ) / (2*sigma^2));
+    K0 = max(0, 1 - abs(jj)*params.dS/params.A1AttachmentWidth);
+    
+    % Normalize so sum(K)*dS = 1
+    K0 = K0' / (sum(K0) * params.dS);
+    
+    % Save constants
+    params.cached.halfSpan = halfSpan;
+    params.cached.jj       = jj;
+    params.cached.K0       = K0;
 
 end
 
@@ -385,3 +403,34 @@ function params = fillInDefaults(params, defaults)
         params.(defsfn{missingIdx(i)}) = defaults.(defsfn{missingIdx(i)}); 
     end
 end   
+
+function K = makeKernel(dS, Ax, kernelType)
+    arguments
+        dS (1,1) double {mustBePositive}
+        Ax (1,1) double {mustBePositive}
+        kernelType (1,:) char {mustBeMember(kernelType,{'tri','gauss'})} = 'gauss'
+    end
+
+    % number of grid points on each side
+    halfSpan = ceil(Ax / dS);    % in bins
+    
+    % make odd length
+    L = 2*halfSpan + 1;
+
+    % spatial coordinates (centered)
+    x = (-halfSpan:halfSpan) * dS;
+
+    switch kernelType
+        case 'tri'
+            % triangular kernel: w = max(0, 1 - |x|/Ax)
+            K = max(0, 1 - abs(x)/Ax);
+
+        case 'gauss'
+            % gaussian: sigma chosen so Ax spans roughly 3σ
+            sigma = Ax/3;
+            K = exp(-(x.^2)/(2*sigma^2));
+    end
+
+    % normalize so sum(K)*dS = 1
+    K = K / (sum(K));
+end

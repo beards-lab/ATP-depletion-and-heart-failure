@@ -156,7 +156,7 @@ for vs = 1:length(T) - 1
     imax = 0;
     while t < tend
 
-        if isempty(te)
+        if false && isempty(te)
             % in case of no event, lets check if we do not overflow anyway
                 [value, ~, direction] = movingWindow(t, PU0, []);
                 if any(value.*direction > 0)
@@ -262,6 +262,7 @@ for vs = 1:length(T) - 1
         % ye contains the solutions at the times when events occurred
         % ie contains the indices of the triggered events   
         out = storeOutputs(fcn,out, PU, params, t);
+        out.params = params;
 
         if ~isempty(lastwarn) || imax > params.MaxSpaceExtensionCount || (~params.UseSpaceExtension && ~isempty(te))
             if params.BreakOnODEUnstable

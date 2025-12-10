@@ -852,35 +852,65 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 p = parpool('threads', 4);
 x = fminsearch(optimfun, g0, options)
 %% surrogateOPtim
-g0 = x;
+
 params0.PlotEachSeparately = false;
 params0.justPlotStateTransitionsFlag = false;
 params0.BreakOnODEUnstable = true;
 
 params0.MaxRunTime = 20;
 
+params0.mods =   {'PieceWiseStrainDepX__4'     ,
+'kamh'                       ,
+'dr2'                        ,
+'k2'                         ,
+'PieceWiseStrainDepParams__2',
+'kstiff1'                    ,
+'kd'                         ,
+'sigma1'                     ,
+'sigma2'                     ,
+'sigma_srd1'                 ,
+'sigma_srd2'                 ,
+'dS'                         ,
+'estiff'                     ,
+'gamma'                      ,
+'kSE'                        ,
+'ekSE'                       };
+% params0.g = ones(size(params0.mods));
+params0.g = x;
+g0 = params0.g;
+
+
 optimfun = @(g)evaluateBakersExp(g, params0);
 
 
-options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 8*60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=6000);
 % p = parpool('threads', 4)
 % p = parpool('processes', 4)
 % delete(p)
-[x,fval,exitflag,output,trials] = surrogateopt(optimfun, g0*0.5,g0*2, options);
+[x,fval,exitflag,output,trials] = surrogateopt(optimfun, g0*0.1,g0*10, options);
 save env
 
 
 %% Test
 clf;
-% params0.g = x;
+params0.g = x;
 params0.ghostSave = '';
 params0.ghostLoad = 'FVSurro_base';
-params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5];
+params0.FV_velocities = -[0.5, 1, 2, 3, 4, 5];
 % params0.g = g0;
 params0.PlotEachSeparately = true;
-params0.justPlotStateTransitionsFlag = true;
-
+params0.justPlotStateTransitionsFlag = false;
+params0.MaxStrainArraySize = 60;
+% params0 = getParams(params0, params0.g, false, true);
+params0.dS = params0.dr /3;
+params0.MaxRunTime = Inf;
+params0.kmsr = 0; %1;
+tic
 RunBakersExp;
+toc
+%%
+out = outs(end);
+StatesInTime
 % LoadData
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimSurro', params0, '', 'Optim of force velocity curve. Good start of older params up to -3 ML/s');
 %% Test loading the opt params

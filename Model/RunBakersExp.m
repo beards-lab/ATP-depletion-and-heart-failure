@@ -1,6 +1,9 @@
 E = [];
+features_model = struct();
+features_data = struct();
 % modelFcn = @dPUdTCaSimpleAlternative2State;
 modelFcn = @dPUdT_CombinedTransitions;
+recalculateDataFeats = false;
 
 if isfield(params0, 'modelFcn')
     modelFcn = str2func(params0.modelFcn);
@@ -25,99 +28,127 @@ if params0.RunForceVelocity
     end
 
     if isfield(params, 'FV_velocities')
-        vel = params.FV_velocities;
+        FV_velocities = params.FV_velocities;
     end    
 
-    for a = params.EvalAtp
-        params.MgATP = ATP_c(a);
-        N = length(vel);
-        % paralelize?
-        if isempty(gcp('nocreate')) || params.justPlotStateTransitionsFlag
-            parple = [];
-        else
-            parple = gcp('nocreate');
-            % Launch asynchronous tasks
-            futures = cell(1, N);
-        end
-
-        for j = 1:N
-            % try
-                if vel(j) == 0
-                    params.SL0 = 2.0;
-                    params.Velocity = 0;
-                    
-                    % optimize for speed, force is up to 80
-                    dsl = 80/params.kSE;
-                    params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
-                    params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
-                    
-                    % params = getParams(params);
-                    
-                    if isempty(parple)
-                        [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
-                        outs(j) = out;
-                    else
-                         futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_ss, params);
-                    end
-                else
-                    % optimize for speed, force is up to 80
-                    dsl = 80/params.kSE;
-                    params.Slim_r = 2.2 + params.A1AttachmentWidth + params.dS;
-                    params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
-                    
-                    % experimentally cut in half
-                    % params.Slim_l = params.Slim_r - (params.Slim_r-params.Slim_l)/2;
-                    % params.Slim_l = params.Slim_r - 2*params.dS*params.MaxStrainArraySize;
-
-                    params.SL0 = 2.2;
-                    % params = getParams(params);
-                    % true to start from 2.2um steady state isntead from scratch.
-                    % Neither is perfect though
-                    if ~isfield(params, 'PU0')
-                        % speed things up by storing the initialization
-                        params.Velocity = 0;
-                        [~, out] = evaluateModel(modelFcn, t_ss, params);
-                        params.PU0 = out.PU(end, :);
-                    end
-                    params.Velocity = vel(j);
-                    if isempty(parple)
-                        [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(vel(j)), params);                        
-                        outs(j) = out;
-                    else
-                         futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_sl0/abs(vel(j)), params);
-                    end
-                    if abs(vel(j)) >= 3
-                        breakpointIsHappening = 1; % only to place a bp
-                    end
-                end
-            % catch e 
-                % wraps additional error for the optimizer
-                % handleAndRethrowCostException(e, t_ss*(length(vel) - j));
-            % end
-            
-        end
-        if ~isempty(parple)
-            for j = 1:N 
-                if ~isempty(futures{j})
-                    [F_active(a, j), out] = fetchOutputs(futures{j}); 
-                    outs(j) = out;
-                end
-            end
-        end
-
-        out.Slim_r = params.Slim_r;
-        out.Slim_l = params.Slim_l;
-
+    % this is disabled ATM
+    % for a = params.EvalAtp
+    a = 1;
+    params.MgATP = ATP_c(a);
+    N = length(FV_velocities);
+    % paralelize?
+    if isempty(gcp('nocreate')) || params.justPlotStateTransitionsFlag
+        parple = [];
+    else
+        parple = gcp('nocreate');
+        % Launch asynchronous tasks
+        futures = cell(1, N);
     end
 
+    for j = 1:N
+        % try
+            if FV_velocities(j) == 0
+                params.SL0 = 2.0;
+                params.Velocity = 0;
+                
+                % optimize for speed, force is up to 80
+                dsl = 80/params.kSE;
+                params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
+                params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
+                
+                % params = getParams(params);
+                
+                if isempty(parple)
+                    [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
+                    outs(j) = out;
+                else
+                     futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_ss, params);
+                end
+            else
+                % optimize for speed, force is up to 80
+                dsl = 80/params.kSE;
+                params.Slim_r = 2.2 + params.A1AttachmentWidth + params.dS;
+                params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
+                
+                % experimentally cut in half
+                % params.Slim_l = params.Slim_r - (params.Slim_r-params.Slim_l)/2;
+                % params.Slim_l = params.Slim_r - 2*params.dS*params.MaxStrainArraySize;
+
+                params.SL0 = 2.2;
+                % params = getParams(params);
+                % true to start from 2.2um steady state isntead from scratch.
+                % Neither is perfect though
+                if ~isfield(params, 'PU0') && params.OptimizeFVInit
+                    %% speed things up by storing the initialization
+                    % tic
+                    params.Velocity = 0;
+                    [~, out] = evaluateModel(modelFcn, t_ss, params);
+                    params.PU0 = out.PU(end, :);
+                    % toc
+                end
+                params.Velocity = FV_velocities(j);
+                if isempty(parple)
+                    %%
+                    % tic
+                    % rmfield(params, 'PU0');
+                    % params.Velocity = vel(j);
+                    [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(FV_velocities(j)), params);                        
+                    % toc
+                    % F_active
+                    outs(j) = out;
+                    % StatesInTime
+                else
+                     futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_sl0/abs(FV_velocities(j)), params);
+                end
+                if abs(FV_velocities(j)) >= 3
+                    breakpointIsHappening = 1; % only to place a bp
+                end
+            end
+        % catch e 
+            % wraps additional error for the optimizer
+            % handleAndRethrowCostException(e, t_ss*(length(vel) - j));
+        % end
+        
+    end
+    if ~isempty(parple)
+        for j = 1:N 
+            if ~isempty(futures{j})
+                [F_active(a, j), out] = fetchOutputs(futures{j}); 
+                outs(j) = out;
+            end
+        end
+    end
+
+    out.Slim_r = params.Slim_r;
+    out.Slim_l = params.Slim_l;
+
+    % end
+
     % cost function
-    [found, idx_ATP] = ismember(-vel, Data_ATP(:,1));
+    [found, idx_ATP] = ismember(-FV_velocities, Data_ATP(:,1));
     valid_idx = idx_ATP(found);
 
     % E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
     E(1) = sum((F_active(params.EvalAtp,found)./Data_ATP(valid_idx,params.EvalAtp+1)' - 1).^2, 'all');
     % normalize by number of data points
     E(1) = E(1)/size(Data_ATP, 1)/length(params.EvalAtp);
+%%    
+    if params.EvalFeatures
+        %%
+        
+        if recalculateDataFeats
+            features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,a+1)', features_data, FV_velocities);
+        else
+            % features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,a+1)', features_data, -[0.5, 1, 2, 3, 4, 5, 6, 7])
+            AllVelocities = -[0.5, 1, 2, 3, 4, 5, 6, 7];
+            AllForces = [51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
+            vsel = find(ismember(AllVelocities, FV_velocities));
+            features_data.FV_v = -AllVelocities(vsel)';
+            features_data.FV_f = AllForces(vsel)';
+            features_data.FV_fnorm = AllForces(vsel)'/AllForces(1);
+        end
+        features_model = extractForceVelocityAttributes(FV_velocities, F_active(a, :), features_model, FV_velocities);
+    end
 
     better = false;
     if params.SaveBest
@@ -161,7 +192,7 @@ if params0.RunForceVelocity
         end
         for a = params.EvalAtp
             set(gca,'ColorOrderIndex',a);
-            ls = [ls plot(F_active(a, :), -vel,'x-','linewidth',2, MarkerSize=20)];
+            ls = [ls plot(F_active(a, :), -FV_velocities,'x-','linewidth',2, MarkerSize=20)];
         end
         % legend('8mM', '4mM', '2mM');
         ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
@@ -188,10 +219,10 @@ if params0.RunForceVelocity
     end
 
     if ~isempty(params.ghostSave)
-        if size(vel, 1) > size(vel, 2) 
-            ghost = [F_active(1, :), -vel(:)'];
+        if size(FV_velocities, 1) > size(FV_velocities, 2) 
+            ghost = [F_active(1, :), -FV_velocities(:)'];
         else
-            ghost = [F_active(1, :)', -vel(:)];
+            ghost = [F_active(1, :)', -FV_velocities(:)];
         end
         save(['Ghost_' params.ghostSave '_FV'], 'ghost', "params0");
     end
@@ -617,17 +648,60 @@ if params0.RunSlack
     end
 
 
-if params.EvalFitSlackOnset    
-    try
-        % figure(8989);clf;
-        [e_dt e_ktr] = fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
-        E(4) = E(4);
-        E(5) = 0*5e6*e_dt; E(6) = 0*e_ktr;
-    catch e
-        E(5) = 1e3;
-        warning('Eval slack onset failed');
+    if params.EvalFitSlackOnset    
+        try
+            % figure(8989);clf;
+            [e_dt e_ktr] = fitSlackForceOnset(datatable, velocitytable, out.t, out.SL, out.Force, params.PlotEachSeparately & params.drawForceOnset);
+            E(4) = E(4);
+            E(5) = 0*5e6*e_dt; E(6) = 0*e_ktr;
+        catch e
+            E(5) = 1e3;
+            warning('Eval slack onset failed');
+        end
     end
-end
+
+    if params.EvalFeatures
+        %%
+        % figure(42);clf;hold on;        
+        if recalculateDataFeats
+            features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], false);
+            %% print out to store later for speed-up
+            fieldNames = fieldnames(features_data);
+            for k = 1:numel(fieldNames)
+                fname = fieldNames{k};
+                val   = features_data.(fname);
+                if ~isnumeric(val)
+                    continue;
+                end
+                s = mat2str(round(val, 4, 'significant'));
+                fprintf('features_data.%s = %s;\n', fname, s);
+            end
+        else
+            features_data.ktr = [39.76 34.18 31.63 28.36 27.6];
+            features_data.A = [68.4 65.47 58.92 52.2 43.51];
+            features_data.t0 = [0.002165 0.004643 0.007818 0.01117 0.01589];
+            features_data.Am = [58.18 55.29 52.1 47.33 41.98];
+            features_data.SLslack = [2.04 2 1.96 1.92 1.88];
+            features_data.SLdiff = [0.162 0.202 0.242 0.282 0.322];
+            features_data.v_restretch = [4 5 6 7 3];
+            features_data.peak1_y = [77.59 76.02 74.2 71.11 56.89];
+            features_data.peak1_t = [0.0035 0.003 0.0025 0.002 0.005];
+            features_data.peak1_SL = [2.068 2.034 1.99 1.954 1.912];
+            features_data.peak1_dSL = [0.028 0.034 0.03 0.034 0.032];
+            features_data.peak2 = [77.22 78.47 80.01 82.42 61.85];
+            features_data.vall_t = [0.0085 0.006 0.006 0.005 0.0095];
+            features_data.vall_y = [68.97 66.95 65.33 62.49 54.37];
+            features_data.steady = [76.91 76.48 75.98 75.53 56.75];
+            features_data.vall2_dy = [-13.56 -13.84 -13.6 -13.08 -8.826];
+            features_data.vall2_t = [0.0085 0.0055 0.008 0.0065 0.0095];
+            features_data.ovrsht_dy = [0.431 1.392 1.244 1.552 0.3205];
+            features_data.ovrsht_t = [0.2116 0.225 0.247 0.239 0.2676];
+            features_data.XTOR = [10 10 10 10 10];
+        end
+        % figure(43);clf;hold on;
+        features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, true);
+    end
+    
 
 end
 %% FORCE VELOCITY RESIMULATION
@@ -700,7 +774,7 @@ if params0.RunForceVelocityTime
 
     if exist('F_active', 'var')
         % we have simulated the force-constvelocity, so lets compare
-        plot(F_active, -vel(1:end), '+--', LineWidth=2, MarkerSize=12);
+        plot(F_active, -FV_velocities(1:end), '+--', LineWidth=2, MarkerSize=12);
         legend('SIM - isovelocity timecourse', 'Data - isovelocity', 'Data - isovelocity timecourse (Baker 2021)', 'SIM isovelocity steady');
     else
         legend('data', 'Force-velocity timecourse');
