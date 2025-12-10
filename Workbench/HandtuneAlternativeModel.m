@@ -42,6 +42,14 @@ toc
 
 xlim([-inf inf ])
 
+%% Extend optim
+
+params0.RunSlack = true;
+params0.RunForceVelocity = true;
+params0.EvalFeatures = true;
+params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
+
+
 %% 
 figure(41);clf;
 out = outs(end);
@@ -292,10 +300,45 @@ metric = (fvfit(0)-FV_y(1))/FV_y(1);
 % construct parameter set to vary
 paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
 % paramNames = {'baseline_dummy', 'kstiff2','k_pas'};
-paramNames = {'baseline_dummy', 'PieceWiseStrainDepX__3','PieceWiseStrainDepX__4','PieceWiseStrainDepX__5','kstiff2','k_pas','ka','kah','kamh','dr2','k2','k1','PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__2','PieceWiseStrainDepParams__4','mu','kstiff1','kd','sigma1','sigma2','sigma_srd1','sigma_srd2','dr','dS','estiff','k_pas','gamma','kSE','ekSE'};
+paramNames = {'baseline_dummy', 'PieceWiseStrainDepX__2', 'PieceWiseStrainDepX__3','PieceWiseStrainDepX__4','PieceWiseStrainDepX__5','kstiff2','k_pas','ka','kah','kamh','dr2','k2','k1','PieceWiseStrainDepParams__2','PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__4','PieceWiseStrainDepParams__5','mu','kstiff1','kd','sigma1','sigma2','sigma_srd1','sigma_srd2','estiff','gamma','kSE','ekSE'};
 % construct feature set to evaluate
 % fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'SLslack|t0|0', 'Am|SLslack|', 'peak1_y|SLslack|0', 'peak1_y|v_restretch|0','peak1_dSL', 'peak2|v_restretch', 'vall_t|v_restretch|0.1', 'vall_y', 'vall2_dy|v_restretch|0', 'ovrsht_dy|_|0', 'steady'};
-% reduced set
+% Full set
+paramNames =  {'baseline_dummy', ... 
+'dr2', ... 
+'ekSE', ... 
+'estiff', ... 
+'gamma', ... 
+'k_pas', ... 
+'k1', ... 
+'k2', ... 
+'ka', ... 
+'kah', ... 
+'kamh', ... 
+'kd', ... 
+'ksr0', ... 
+'ksrd', ... 
+'ksrd2sr', ... 
+'ksr2srd', ... 
+'kmsrd', ... 
+'kmsr', ... 
+'kSE', ... 
+'kstiff1', ... 
+'kstiff2', ... 
+'MaxSlackNegativeForce', ... 
+'mu', ... 
+'PieceWiseStrainDepParams__2', ... 
+'PieceWiseStrainDepParams__3', ... 
+'PieceWiseStrainDepParams__4', ... 
+'PieceWiseStrainDepParams__5', ... 
+'PieceWiseStrainDepX__2', ... 
+'PieceWiseStrainDepX__3', ... 
+'PieceWiseStrainDepX__4', ... 
+'PieceWiseStrainDepX__5', ... 
+'sigma_srd1', ... 
+'sigma_srd2', ... 
+'sigma1', ... 
+'sigma2'};
 
 
 % simulate force-isovelocity
@@ -304,18 +347,19 @@ paramNames = {'baseline_dummy', 'PieceWiseStrainDepX__3','PieceWiseStrainDepX__4
 % params0.RunForceVelocity = false;
 % params0.RunSlack = false;
 % params0.RunForceLengthEstim = false;
-params0.EvalFeatures = false;
-params0.PlotEachSeparately = false;
+% params0.EvalFeatures = false;
+params0.PlotEachSeparately = true;
 
 % params0.RunForceVelocity = true;
 % params0.RunSlack = true;
-params0.MaxRunTime = 30;
+params0.MaxRunTime = 60;
 params0.baseline_dummy = 0;
 
 % params0.EvalFeatures = true;
 % params0.RunForceLengthEstim = true;
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
-fn = {'FV_f|FV_v'};
+fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
+% fn = {'FV_f|FV_v'};
 
 featureMatrixPlus = zeros(length(paramNames), length(fn));
 % params_base = params0;
@@ -329,8 +373,8 @@ for i_param = 1:length(paramNames)
         
         RunBakersExp;
         % % check the init
-        % [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
-        costs = E;
+        [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+        % costs = E;
         featureMatrixPlus(i_param, :) = costs;
         % savedFeats{i_param} = features_model;
         fprintf('Done \n');
@@ -344,26 +388,28 @@ end
 %% RUN THE OPTIM SCRIPT FOR LSQNON USING CUSTOM JACOBIAN
 
 % main_lsqnonlin_script.m
-
+ModelParamsFVOptimBaseline
 % 1. Setup
 paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
 params0.g = ones(1, length(paramNames));
 params0.mods = paramNames;
-params0.FV_velocities = -[0.5, 1, 2, 4];
-params0.RunSlack = false;
+params0.FV_velocities = -[0.5, 2, 3, 4];
+params0.RunSlack = true;
 params0.RunForceVelocity = true;
 % matchStructFields(params0, 'Run*', true)
 params0.MaxStrainArraySize = 40;
 params0.MaxRunTime = 30;
 params0.EvalFeatures = true;
 params0.BreakOnODEUnstable = true;
-params0.PlotEachSeparately = false;
+params0.PlotEachSeparately = true;
 
 tic
 RunBakersExp;
 toc
 %%
-[Residuals, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
+fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
+[Residuals, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+plotFeatures(features_data, features_model, [], fn)
 
 %%
 P0 = ones(1, length(paramNames)); 
@@ -404,7 +450,7 @@ fprintf('Minimum Total Cost (Sum of Squares): %.4f\n', Resnorm);
 figure(4);
 featureMatrixPlusN = featureMatrixPlus - featureMatrixPlus(1, :);
 
-[vals, paramPos] = sort(abs(featureMatrixPlusN), 1, "desc")
+[vals, paramPos] = sort(abs(sum(featureMatrixPlusN, 2)), 1, "desc")
 featureMatrixPlusNSorted = featureMatrixPlusN(paramPos, :)./featureMatrixPlusN(paramPos(1), :)*100;
 
 imagesc(featureMatrixPlusNSorted);
