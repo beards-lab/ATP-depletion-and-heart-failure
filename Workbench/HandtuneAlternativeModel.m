@@ -4,12 +4,13 @@ clf;
 LoadData;
 params0 = getParams();
 ModelParamsFVOptimSurro
+params0.UseA1AttachmentKernel = false;
 params0.RunForceVelocity = true;
 params0.RunForceVelocityTime = false;
 params0.BreakOnODEUnstable = false;
 params0.RunSlack = false;
 
-params0.FV_velocities = [0 -0.5 -2 -3];
+params0.FV_velocities = -[0.5 2 3 5];
 % params0.FV_velocities = [-0.5];
 params0.UseSuperRelaxed = true;
 params0.UseSuperRelaxedADP = true;
@@ -19,19 +20,31 @@ params0.kamh = 0.1*params0.kah;
 params0.ksr2srd = params0.kah;
 params0.ksrd2sr = params0.kamh;
 
-params0.ksr0 = 1;
-params0.kmsr = 0;
+params0.ksr0 = 10;
+params0.kmsr = 1;
 params0.kmsrd = 1;
-params0.ksrd = 0;
-params0.sigma_srd1 = 10
+params0.ksrd = 1;
+params0.sigma1 = 20;
+params0.sigma2 = 40;
+params0.sigma_srd1 = 20;
+params0.sigma_srd2 = 40;
+
+params0.PieceWiseStrainDepParams = [50 1.61509116782026 2.08654906258156 50 50 50 50];
+params0.PieceWiseStrainDepX = [0.1 0.01 0 -0.005 -0.0075 -0.01 -1];
+
 
 params0.justPlotStateTransitionsFlag = false;
+params0.A1AttachmentWidth = 3*params0.dS;
+params0.UseA1AttachmentKernel = false;
+tic
 RunBakersExp
+toc
 
 xlim([-inf inf ])
 
 %% 
 figure(41);clf;
+out = outs(end);
 StatesInTime
 
 %% plot the PWSD
@@ -58,17 +71,30 @@ out = outs(i)
 %% prepare optim
 paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1','PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__2','PieceWiseStrainDepParams__4','mu','kstiff1','kd'};
 paramNames = {'PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__4','PieceWiseStrainDepParams__5','PieceWiseStrainDepX__3','PieceWiseStrainDepX__4','PieceWiseStrainDepX__5'};
-params0.PieceWiseStrainDepParams__3 = params0.PieceWiseStrainDepParams(3);
-params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
-params0.PieceWiseStrainDepParams__5 = params0.PieceWiseStrainDepParams(5);
-params0.PieceWiseStrainDepX__3 = params0.PieceWiseStrainDepX(3);
-params0.PieceWiseStrainDepX__4 = params0.PieceWiseStrainDepX(4);
-params0.PieceWiseStrainDepX__5 = params0.PieceWiseStrainDepX(5);
+paramNames = {'dr2'                        ,
+'gamma'                      ,
+'estiff'                     ,
+'k2'                         ,
+'k_pas'                      ,
+'ekSE'                       ,
+'PieceWiseStrainDepParams__2',
+'kstiff2'                    ,
+'PieceWiseStrainDepX__4'     ,
+'PieceWiseStrainDepParams__4',
+'PieceWiseStrainDepParams__3',
+'ka'                         };
+% params0.PieceWiseStrainDepParams__3 = params0.PieceWiseStrainDepParams(3);
+% params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
+% params0.PieceWiseStrainDepParams__5 = params0.PieceWiseStrainDepParams(5);
+% params0.PieceWiseStrainDepX__3 = params0.PieceWiseStrainDepX(3);
+% params0.PieceWiseStrainDepX__4 = params0.PieceWiseStrainDepX(4);
+% params0.PieceWiseStrainDepX__5 = params0.PieceWiseStrainDepX(5);
 
 params0.mods = paramNames;
 params0.g = ones(1, length(paramNames));
 
-g0 = x;
+% g0 = x;
+g0 = params0.g;
 params0.PlotEachSeparately = false;
 params0.justPlotStateTransitionsFlag = false;
 params0.BreakOnODEUnstable = true;
@@ -76,7 +102,14 @@ params0.BreakOnODEUnstable = true;
 params0.MaxRunTime = 10;
 
 optimfun = @(g)evaluateBakersExp(g, params0, false);
-%% RUN optim
+%% RUN fminsearch optim
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+
+% optimfun = @(pw)evalSDP(params0, pw, pwsel, vel);
+% p = parpool('threads', 4);
+x = fminsearch(optimfun, g0, options)
+% writeParamsToMFile('ModelOptParams/ModelParamsFVOptimBaseline.m', params0, '', 'Optim of force velocity curve. Good but oscillating a bit.');
+%% RUN surrogate optim
 
 options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
 % p = parpool('threads', 4)
@@ -85,6 +118,17 @@ options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UsePa
 [x,fval,exitflag,output,trials] = surrogateopt(optimfun, g0*0.1,g0*10, options);
 save env
 % writeParamsToMFile('../ModelOptParams/ModelParamsFVOptimSRXTDSurro.m', params0, '', 'Optim of force velocity curve. Good but oscillating.');
+
+%% Test after optim
+clf;
+params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
+params0.mods
+params0.g = x;
+params0.PlotEachSeparately = true;
+RunBakersExp;
+
+out = outs(1);
+StatesInTime
 
 %% test
 LoadData
@@ -256,14 +300,14 @@ paramNames = {'baseline_dummy', 'PieceWiseStrainDepX__3','PieceWiseStrainDepX__4
 
 % simulate force-isovelocity
 % take only non-zero velocities with > 10 kPa
-params0.FV_velocities = -[0.5, 1, 3, 4];
-params0.RunForceVelocity = false;
-params0.RunSlack = false;
-params0.RunForceLengthEstim = false;
-params0.EvalFeatures = true;
-params0.PlotEachSeparately = true;
+% params0.FV_velocities = -[0.5, 1, 3, 4];
+% params0.RunForceVelocity = false;
+% params0.RunSlack = false;
+% params0.RunForceLengthEstim = false;
+params0.EvalFeatures = false;
+params0.PlotEachSeparately = false;
 
-params0.RunForceVelocity = true;
+% params0.RunForceVelocity = true;
 % params0.RunSlack = true;
 params0.MaxRunTime = 30;
 params0.baseline_dummy = 0;
@@ -285,9 +329,10 @@ for i_param = 1:length(paramNames)
         
         RunBakersExp;
         % % check the init
-        [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+        % [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+        costs = E;
         featureMatrixPlus(i_param, :) = costs;
-        savedFeats{i_param} = features_model;
+        % savedFeats{i_param} = features_model;
         fprintf('Done \n');
     catch e
         fprintf('failed. [%s] \n', e.message);
@@ -358,30 +403,36 @@ fprintf('Minimum Total Cost (Sum of Squares): %.4f\n', Resnorm);
 
 figure(4);
 featureMatrixPlusN = featureMatrixPlus - featureMatrixPlus(1, :);
-featureMatrixPlusN > 0
 
-imagesc(featureMatrixPlusN);
+[vals, paramPos] = sort(abs(featureMatrixPlusN), 1, "desc")
+featureMatrixPlusNSorted = featureMatrixPlusN(paramPos, :)./featureMatrixPlusN(paramPos(1), :)*100;
+
+imagesc(featureMatrixPlusNSorted);
 colorbar;
 axis ij tight;
 
 set(gca, 'XTick', 1:length(fn), ...
          'XTickLabel', fn, ...
          'YTick', 1:length(paramNames), ...
-         'YTickLabel', paramNames);
+         'YTickLabel', paramNames(paramPos), 'TickLabelInterpreter', 'none');
 
 xtickangle(45);
 title('Parameter Sensitivities');
 
 % Print numeric values in each cell
-for i = 1:size(featureMatrixPlusN,1)
-    for j = 1:size(featureMatrixPlusN,2)
-        text(j, i, sprintf('%.3g', featureMatrixPlusN(i,j)), ...
+for i = 1:size(featureMatrixPlusNSorted,1)
+    for j = 1:size(featureMatrixPlusNSorted,2)
+        text(j, i, sprintf('%.3g', featureMatrixPlusNSorted(i,j)), ...
             'HorizontalAlignment', 'center', ...
             'Color', 'w');
     end
 end
 
+paramNames(paramPos)'
+
 %%
+
+
 clf;
 plotFeatures(features_data, savedFeats{1}, [], fn);
 
@@ -392,12 +443,15 @@ params0.UseA1AttachmentKernel = true;
 params0.MaxStrainArraySize = 40;
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
+params0.justPlotStateTransitionsFlag = true;
 tic
 RunBakersExp; 
 toc
 StatesInTime;
 
 %%
+
+
 clf;
 pp = params.PieceWiseStrainDep;
 

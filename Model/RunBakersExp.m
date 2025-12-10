@@ -131,7 +131,7 @@ if params0.RunForceVelocity
     % E(1) = sum((F_active(params.EvalAtp,:) - Data_ATP(:,params.EvalAtp+1)').^2, 'all');
     E(1) = sum((F_active(params.EvalAtp,found)./Data_ATP(valid_idx,params.EvalAtp+1)' - 1).^2, 'all');
     % normalize by number of data points
-    E(1) = E(1)/size(Data_ATP, 1)/length(params.EvalAtp);
+    E(1) = E(1)/size(valid_idx, 2)/length(params.EvalAtp);
 %%    
     if params.EvalFeatures
         %%

@@ -6,6 +6,7 @@ end
 if limitNegative && any(g<0)% || ...
         %params0.kstiff1 < params0.kstiff1_n || params0.kstiff2 < params0.kstiff2_n
     Et = NaN;
+    warning(' g < 0! Skipping ...');
     return;
 end
 
@@ -42,6 +43,7 @@ catch e
         if ~isempty(e.cause)
             % Extract the cause message if present
             causeMessage = e.cause{end}.message;
+            warning(causeMessage);
             
             % Parse the error value from the cause message
             Et = 1e3 + str2double(causeMessage);

@@ -124,8 +124,11 @@ end
         'ShowArrayShiftWarnings', true, ...
         'LegacyStrainFlipping', false, ...
         'PieceWiseStrainDepParams', [1 1], ...
-        'PieceWiseStrainDepX', [-0.1 0.1]...
-        );
+        'PieceWiseStrainDepX', [-0.1 0.1],...
+        'UseA1AttachmentKernel', false,...
+        'OptimizeFVInit', true, ...
+        'EvalFeatures', false, ...
+        'MaxSpaceExtensionCount', Inf       );
 
 % , false, ...
 % , false, ...
@@ -371,22 +374,24 @@ end
     
 %% 6. Pre-calculate some stuff that can speed up the dxdt
     % Precompute kernel parameters
-    halfSpan = ceil(params.A1AttachmentWidth/params.dS);
-    jj = -halfSpan:halfSpan;       % integer offsets
-    sigma = params.A1AttachmentWidth/3;                  % Gaussian width
-    
-    params.A1AttachmentKernel = makeKernel(params.dS, params.A1AttachmentWidth, 'tri');
-    % Precompute *centered* Gaussian kernel (unnormalized)
-    K0 = exp(-( (jj*params.dS).^2 ) / (2*sigma^2));
-    K0 = max(0, 1 - abs(jj)*params.dS/params.A1AttachmentWidth);
-    
-    % Normalize so sum(K)*dS = 1
-    K0 = K0' / (sum(K0) * params.dS);
-    
-    % Save constants
-    params.cached.halfSpan = halfSpan;
-    params.cached.jj       = jj;
-    params.cached.K0       = K0;
+    if params.UseA1AttachmentKernel && params.A1AttachmentWidth > 0
+        halfSpan = ceil(params.A1AttachmentWidth/params.dS);
+        jj = -halfSpan:halfSpan;       % integer offsets
+        sigma = params.A1AttachmentWidth/3;                  % Gaussian width
+        
+        params.A1AttachmentKernel = makeKernel(params.dS, params.A1AttachmentWidth, 'tri');
+        % Precompute *centered* Gaussian kernel (unnormalized)
+        K0 = exp(-( (jj*params.dS).^2 ) / (2*sigma^2));
+        % K0 = max(0, 1 - abs(jj)*params.dS/params.A1AttachmentWidth);
+        
+        % Normalize so sum(K)*dS = 1
+        K0 = K0' / (sum(K0) * params.dS);
+        
+        % Save constants
+        params.cached.halfSpan = halfSpan;
+        params.cached.jj       = jj;
+        params.cached.K0       = K0;
+    end
 
 end
 
