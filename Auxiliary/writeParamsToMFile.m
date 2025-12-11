@@ -29,9 +29,14 @@ function writeParamsToMFile(filename, params, modNames, comment)
             fprintf("Skipping %s\r\n", nam);
             continue;     
         elseif length(par) == 1        
-            fprintf(fid, 'params0.%s = %g;\r\n', nam, par);
+            % fprintf("Writing %s\n", nam);
+            fprintf(fid, 'params0.%s = %g;\r\n', nam, par);            
         elseif ischar(par) && ~isempty(par)
+             % fprintf("Writing %s\n", nam);            
              fprintf(fid, "params0.%s = '%s';\r\n", nam, par);
+        elseif iscell(par)
+            % fprintf("Writing %s\n", nam);
+            fprintf(fid, "params0.%s = {'%s'};\r\n", nam, strjoin(params.fn, "', '")); 
         elseif any(size(par) > 1) ...
             && nam ~= "s" ...
             && nam ~= "g" ...
@@ -40,6 +45,7 @@ function writeParamsToMFile(filename, params, modNames, comment)
             && nam ~= "PU0" ...
             && all(size(par(:)) < 100) 
             % matrix
+            % fprintf("Writing %s\n", nam);
             par_s = mat2str(par);
             fprintf(fid, "params0.%s = %s;\r\n", nam, par_s); 
         else

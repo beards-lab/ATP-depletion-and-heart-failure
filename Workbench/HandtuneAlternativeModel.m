@@ -91,6 +91,38 @@ paramNames = {'dr2'                        ,
 'PieceWiseStrainDepParams__4',
 'PieceWiseStrainDepParams__3',
 'ka'                         };
+paramNames = {'estiff'                    , ...
+'dr2'                        , ...
+'ekSE'                       , ...
+'PieceWiseStrainDepParams__2', ...
+'kstiff2'                    , ...
+'PieceWiseStrainDepX__2'     , ...
+'kSE'                        , ...
+'kah'                        , ...
+'kstiff1'                    , ...
+'PieceWiseStrainDepX__4'     , ...
+'kmsrd'                      , ...
+'sigma_srd1'                 , ...
+'kd'                         , ...
+'ka'                         , ...
+'sigma1'                     , ...
+'PieceWiseStrainDepParams__3', ...
+'ksr0'                       , ...
+'kamh'                       , ...
+'PieceWiseStrainDepX__5'     , ...
+'sigma2'                     , ...
+'PieceWiseStrainDepParams__4'};
+
+paramNames = {'k_pas'                      ,...
+'gamma'                      ,...
+'sigma_srd1'                 ,...
+'PieceWiseStrainDepX__4'     ,...
+'ksrd'                       ,...
+'ksr0'                       ,...
+'k2'                         ,...
+'kmsrd'                      ,...
+'sigma1'                     ,      ...
+'PieceWiseStrainDepParams__5'};
 % params0.PieceWiseStrainDepParams__3 = params0.PieceWiseStrainDepParams(3);
 % params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
 % params0.PieceWiseStrainDepParams__5 = params0.PieceWiseStrainDepParams(5);
@@ -107,16 +139,19 @@ params0.PlotEachSeparately = false;
 params0.justPlotStateTransitionsFlag = false;
 params0.BreakOnODEUnstable = true;
 
-params0.MaxRunTime = 10;
+params0.MaxRunTime = 40;
+params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
 
-optimfun = @(g)evaluateBakersExp(g, params0, false);
+optimfun = @(g)sum(ResidualAndJacobian(g, params0, true));
 %% RUN fminsearch optim
-options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 1500);
+options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 15000);
 
 % optimfun = @(pw)evalSDP(params0, pw, pwsel, vel);
 % p = parpool('threads', 4);
 x = fminsearch(optimfun, g0, options)
+save env_fmin
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimBaseline.m', params0, '', 'Optim of force velocity curve. Good but oscillating a bit.');
+% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackBaseline.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
 %% RUN surrogate optim
 
 options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
@@ -129,14 +164,32 @@ save env
 
 %% Test after optim
 clf;
-params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
+% ModelOptParamsFeaturesOvernight
+
+% params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
 params0.mods
 params0.g = x;
 params0.PlotEachSeparately = true;
+tic
 RunBakersExp;
+toc
 
-out = outs(1);
+% out = outs(1);
+% StatesInTime
+plotFeatures
+
+%% 
+figure;
 StatesInTime
+
+%%
+
+params0.justPlotStateTransitionsFlag = false;
+figure;
+params0.RunForceVelocityTime = true;
+params0.RunForceVelocity = true;
+params0.RunSlack = false;
+RunBakersExp
 
 %% test
 LoadData
@@ -331,10 +384,12 @@ paramNames =  {'baseline_dummy', ...
 'PieceWiseStrainDepParams__3', ... 
 'PieceWiseStrainDepParams__4', ... 
 'PieceWiseStrainDepParams__5', ... 
+'PieceWiseStrainDepParams__6', ... 
 'PieceWiseStrainDepX__2', ... 
 'PieceWiseStrainDepX__3', ... 
 'PieceWiseStrainDepX__4', ... 
 'PieceWiseStrainDepX__5', ... 
+'PieceWiseStrainDepX__6', ... 
 'sigma_srd1', ... 
 'sigma_srd2', ... 
 'sigma1', ... 
@@ -360,23 +415,48 @@ params0.baseline_dummy = 0;
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
 % fn = {'FV_f|FV_v'};
+savedFeats = {};
 
-featureMatrixPlus = zeros(length(paramNames), length(fn));
+RunDeltaPlus = false;
+RunDeltaMinus = true;
+
+if RunDeltaMinus    
+    featureMatrixMinus = zeros(length(paramNames), length(fn));
+end
+if RunDeltaPlus
+    featureMatrixPlus = zeros(length(paramNames), length(fn));
+end
+
+delta = 0.01;
 % params_base = params0;
 for i_param = 1:length(paramNames)
     try
         fprintf('Running %s..', paramNames{i_param});
         params0.mods = paramNames(i_param);
-        params0.g = 1.01;
         
-        figure(333); clf;
-        
-        RunBakersExp;
-        % % check the init
-        [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
-        % costs = E;
-        featureMatrixPlus(i_param, :) = costs;
-        % savedFeats{i_param} = features_model;
+        if RunDeltaPlus
+            params0.g = 1 + delta;
+            fprintf('+...');
+            figure(333); clf;        
+            RunBakersExp;
+            % % check the init
+            [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+            % costs = E;
+            featureMatrixPlus(i_param, :) = costs;
+            savedFeats{i_param, 1} = features_model;
+        end
+        if RunDeltaMinus
+            params0.g = 1 - delta;
+            fprintf('-...');
+            figure(334); clf;        
+            RunBakersExp;
+            % % check the init
+            [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+            % costs = E;
+            featureMatrixMinus(i_param, :) = costs;
+            savedFeats{i_param, 2} = features_model;
+        end
+                
         fprintf('Done \n');
     catch e
         fprintf('failed. [%s] \n', e.message);

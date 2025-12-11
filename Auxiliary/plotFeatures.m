@@ -22,14 +22,14 @@ tiledlayout("flow");
 
 cost = evalFeatureCost(feats_data, feats_sim, fn);
 
-for i_feat = 1:size(fn, 2)
+for i_feat = 1:length(fn)
     nexttile();
 
     featnames = split(fn{i_feat}, '|');
     feat_y = featnames{1};
     N_feats = length(feats_data.(feat_y));
 
-    if length(featnames) == 1 || (length(featnames) >= 2 && featnames{2} == "_" || isnumeric(featnames{2}))
+    if length(featnames) == 1 || (length(featnames) >= 2 && featnames{2} == "_" || ~isnan(str2double(featnames{2})))
         fd_x = 1:N_feats;fs_x = 1:N_feats;fg_x = 1:N_feats;
         feat_x = '';
     else

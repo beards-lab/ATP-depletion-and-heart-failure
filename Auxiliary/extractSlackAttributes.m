@@ -78,7 +78,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         win = data_t >= velocity_segment(3) & data_t <= velocity_segment(4);
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
-        plot(t, y, '-|b', 'LineWidth', 1);
+        % plot(t, y, '-|b', 'LineWidth', 1);
         [peak1_y, peak1_t] = findpeaks(y, t, MinPeakDistance=0.01, MinPeakProminence=0.5);
         feats.v_restretch = velocity_segment(3, 2); 
         if ~isempty(peak1_y)
@@ -86,7 +86,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             feats.peak1_t = peak1_t(1) - t(1);
             feats.peak1_SL = SL(find(t >= peak1_t(1), 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
-            plot(peak1_t, peak1_y, '*', MarkerSize=ms);
+            % plot(peak1_t, peak1_y, '*', MarkerSize=ms);
         else
             feats.peak1_y = NaN;
             feats.peak1_t = NaN;
@@ -94,11 +94,11 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             feats.peak1_dSL = NaN;
         end
         feats.peak2 = y(end);
-        plot(t(end), feats.peak2, '*', MarkerSize=ms);
+        % plot(t(end), feats.peak2, '*', MarkerSize=ms);
         [vall_y, vall_t] = findpeaks(-y, t, MinPeakDistance=0.01, MinPeakProminence=2);
         feats.vall_t = vall_t - t(1);
         feats.vall_y = -vall_y;
-        plot(vall_t, -vall_y, '*', MarkerSize=ms);
+        % plot(vall_t, -vall_y, '*', MarkerSize=ms);
                 
         % steady state
         win = data_t >= velocity_segment(5) - 0.02 & data_t <= velocity_segment(5);
@@ -106,25 +106,25 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         t = t - t_seg;
         feats.steady = median(y);
         % plot(t, y, LineWidth=1.5);
-        plot([t(1) t(end)], [feats.steady feats.steady], LineWidth=3);
+        % plot([t(1) t(end)], [feats.steady feats.steady], LineWidth=3);
 
         % undershoot, overshoot and set - realtive to steady state
         win = data_t >= velocity_segment(4) & data_t <= velocity_segment(5);
         t = data_t(win); y = data_y(win);
         t = t - t_seg;
-        plot(t, y);
+        % plot(t, y);
         [u_v, u_i] = min(y);
         feats.vall2_dy = u_v - feats.steady;
         feats.vall2_t = t(u_i) - t(1);
         
-        plot(t(u_i), u_v, '*', MarkerSize=ms)
-        % plot(t, smoothdata(y, 1, "gaussian", 10))
+        % plot(t(u_i), u_v, '*', MarkerSize=ms)
+        % % plot(t, smoothdata(y, 1, "gaussian", 10))
         
         % smooth data from 
         [o_v, o_i] = max(smoothdata(y(u_i:end), 1, "gaussian", 10));
         feats.ovrsht_dy = o_v - feats.steady;
         feats.ovrsht_t = t(o_i+u_i-1);
-        plot(feats.ovrsht_t, o_v, '*', MarkerSize=ms)
+        % plot(feats.ovrsht_t, o_v, '*', MarkerSize=ms)
 
         if ~isempty(out)
             feats.XTOR = out.RTD(end);

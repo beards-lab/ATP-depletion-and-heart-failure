@@ -699,7 +699,7 @@ if params0.RunSlack
             features_data.XTOR = [10 10 10 10 10];
         end
         % figure(43);clf;hold on;
-        features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, true);
+        features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, false);
     end
     
 

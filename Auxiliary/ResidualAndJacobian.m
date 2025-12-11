@@ -1,9 +1,12 @@
 % ResidualAndJacobian.m
 % Returns the vector of feature costs (Residuals) and the Jacobian (Sensitivity S).
-function [Residuals, Jacobian] = ResidualAndJacobian(g, params0)
+function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
     % Use 'persistent' variables to store values between function calls
     persistent S_Cache call_count
     
+    if nargin < 3 
+        ignoreJac = false;
+    end
 
     params0.g = g;
     params0.EvalFeatures = true;
@@ -30,6 +33,11 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0)
         disp(e)
         Residuals = 1e3*ones(size(params0.fn));
         Jacobian = S_Cache;
+    end
+
+    if ignoreJac
+        Jacobian = [];
+        return;
     end
 
     
