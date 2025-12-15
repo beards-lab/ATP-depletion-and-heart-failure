@@ -401,6 +401,9 @@ if params0.RunSlack
     
     
     datastruct.velocitytable(1, 1) = -20;
+    PU0 = [];
+    par_velocitytable = [];
+    parple = [];
 
     % show the indexes
     % [(1:length(datastruct.velocitytable))' datastruct.velocitytable]
@@ -448,29 +451,64 @@ if params0.RunSlack
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) ...
                 | datatable(:, 1) > datastruct.velocitytable(18, 1) & datatable(:, 1) < datastruct.velocitytable(21, 1);            
         case 'AllButLast'
-    % all but the last
-    velocitytable = datastruct.velocitytable(1:19, :);
-    validZone = datatable(:, 1) > 1;
+            % all but the last
+            velocitytable = datastruct.velocitytable(1:19, :);
+            validZone = datatable(:, 1) > 1;
         case 'Last'
-    % only the last slack
-    velocitytable = datastruct.velocitytable(18:end, :);
-    validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(23, 1);
-    velocitytable(1, 1) = -2;
-    % validZone = datatable(:, 1) > 2;
+            % only the last slack
+            velocitytable = datastruct.velocitytable(18:end, :);
+            validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(23, 1);
+            velocitytable(1, 1) = -2;
+            % validZone = datatable(:, 1) > 2;
         case 'All'
-        % all
-        velocitytable = datastruct.velocitytable(1:end, :);
-        validZone = datatable(:, 1) > 1;
-        validZone = datatable(:, 1) > datastruct.velocitytable(2, 1);
+            % all
+            velocitytable = datastruct.velocitytable(1:end, :);
+            validZone = datatable(:, 1) > 1;
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1);
+        case 'AllPar'
+            % all, but run all in parallel
+            velocitytable = datastruct.velocitytable(1:end, :);
+            validZone = datatable(:, 1) > 1;
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1);
+            
+            % 1. precalculate the init to be reused
+            if isfield(params, 'PU0')
+                params = rmfield(params, 'PU0');
+            end        
+            % reset the PU0
+            % params = getParams(params, params.g, true);
+            params.Velocity = 0;
+            [~, out] = evaluateModel(modelFcn, [-10 velocitytable(3, 1)], params);
+            PU0 = out.PU(end, :);
+
+            wins = 3:4:(size(velocitytable, 1) -1);
+            % velocitytable(wins, :)
+            
+            % Preallocate cell array
+            par_velocitytable = cell(length(wins), 1);
+            
+            % Fill the cells
+            for k = 1:length(wins)
+                par_velocitytable{k} = velocitytable(wins(k):wins(k)+4, :);
+            end
+
+            if isempty(gcp('nocreate')) || params.justPlotStateTransitionsFlag
+                parple = [];
+            else
+                parple = gcp('nocreate');
+                % Launch asynchronous tasks
+                futures = cell(1, N);
+            end
+            
         case 'AllNoBump'
-    % all, but evaluate only force onset, not the restretch
-    velocitytable = datastruct.velocitytable(1:end, :);
-    validZone = datatable(:, 1) > 1;
-    validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) |...
-        datatable(:, 1) > datastruct.velocitytable(7, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(9, 1) |...
-        datatable(:, 1) > datastruct.velocitytable(11, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(13, 1) |...
-        datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(17, 1) |...
-        datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
+            % all, but evaluate only force onset, not the restretch
+            velocitytable = datastruct.velocitytable(1:end, :);
+            validZone = datatable(:, 1) > 1;
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) |...
+            datatable(:, 1) > datastruct.velocitytable(7, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(9, 1) |...
+            datatable(:, 1) > datastruct.velocitytable(11, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(13, 1) |...
+            datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(17, 1) |...
+            datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
         case 'ramp-up'
             velocitytable = [-5, 0;0, 1;.15,0;1,0];
             params.SL0 = 1.9;
@@ -502,28 +540,46 @@ if params0.RunSlack
             velocitytable = [velocitytable;velocitytable(end, 1) + ramphold*2, 0];
 
     end     
-    
-    params.Velocity = velocitytable(:, 2);
-    % params.datatable = datatable;
-
-    % plot(datatable(:, 1), datatable(:, 3), 'k', datatable(validZone, 1), datatable(validZone, 3), 'r|');
-    % error('hovna')
-
-    % params.SL0 = 2.2;
-    % params.Slim_l = 1.85;
-    % params.Slim_r = 2.2;
-    % params.LXBpivot = 2.2;
-    % params.dS = 0.0025;
-    
-    if isfield(params, 'PU0')
-        params = rmfield(params, 'PU0');
+%%
+    if isempty(par_velocitytable)
+        par_velocitytable = {velocitytable};
     end
-
-    % reset the PU0
-    params = getParams(params, params.g, true);
+    N = length(par_velocitytable);
     
-    % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
-    [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+    params = getParams(params, params.g, true);    
+
+    for i_par_chunk = 1:N
+
+        velocitytable = par_velocitytable{i_par_chunk};
+        params.Velocity = velocitytable(:, 2);
+        % reset the PU0
+        params.PU0 = PU0;
+    
+        
+    
+        % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+        % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+
+        if isempty(parple)
+            [F, out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+        else
+            % [F, out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+            % futures{i_par_chunk} = [F, out];
+            futures{i_par_chunk} = parfeval(parple, @evaluateModel, 2, modelFcn, velocitytable(:, 1), params);
+        end
+    end
+%%
+    if ~isempty(parple)
+        outs = cell(1, N);
+        for j = 1:N 
+            if ~isempty(futures{j})
+                % [~, out] = futures{j}; 
+                [~, out] = fetchOutputs(futures{j});                 
+                outs{j} = out;
+            end
+        end
+        out = mergeOutStructs([outs{:}]);
+    end
 
     % i_0 = find(datatable(:, 1) > 2.77, 1);
     % i_e = length(datatable(:, 1));
@@ -581,7 +637,7 @@ if params0.RunSlack
         ylabel('Force (rel.)','interpreter','latex','fontsize',16);
         set(gca,'fontsize',14);  box on;
         title('Slack');
-        xlim([velocitytable(2, 1)-0.02 velocitytable(end, 1)])
+        xlim([par_velocitytable{1}(2, 1)-0.02 velocitytable(end, 1)])
         yl = ylim;
         % plot(out.t, out.XB_TORs, '-')
         ylim(yl)
@@ -820,4 +876,86 @@ function mono = makeMonotonous(a)
     
     % % Filter the array based on the 'keep' logical indices
     % result = a(keep);
+end
+
+
+function merged = mergeOutStructs(outs, dim)
+%MERGEOUTSTRUCTS Concatenate arrays in a struct array field-by-field.
+%   merged = mergeOutStructs(outs, dim)
+%   outs: 1xN struct array, all elements share the same fields
+%   dim : concatenation dimension (default = 1)
+    dbg = 1;
+
+    if nargin < 2 || isempty(dim)
+        dim = 1; % default: stack along rows
+    end
+    if ~isstruct(outs)
+        error('Input must be a struct array.');
+    end
+    if isempty(outs)
+        merged = struct(); 
+        return;
+    end
+
+    % Ensure all structs share the same fields
+    baseFields = fieldnames(outs(1));
+    for i = 2:numel(outs)
+        if ~isequal(fieldnames(outs(i)), baseFields)
+            error('All structs must have identical field names.');
+        end
+    end
+
+    merged = struct();
+    for f = 1:numel(baseFields)
+        name = baseFields{f};
+        vals = {outs.(name)};  % collect values from each struct for this field
+
+        % Decide concatenation based on class of the first element
+        firstVal = vals{1};
+
+        if iscell(firstVal)
+            % For cell arrays: use bracket concatenation in the chosen dimension
+            % dim==1 → vertical [vals{:}]'; dim==2 → horizontal [vals{:}]
+            fprintf('Cell: %s \n', name);
+            if dim == 1
+                % Ensure column: wrap each cell array in a column if needed
+                merged.(name) = vertcat(vals{:});
+            else
+                merged.(name) = horzcat(vals{:});
+            end
+
+        elseif isnumeric(firstVal) || islogical(firstVal)
+            % Numeric/logical arrays: use cat(dim, ...)
+            try
+                fprintf('Numeric: %s \n', name);
+                merged.(name) = cat(dim, vals{:});
+            catch ME
+                % Fallback: try vertical then horizontal
+                try
+                    merged.(name) = vertcat(vals{:});
+                catch
+                    merged.(name) = horzcat(vals{:});
+                end
+            end
+
+        elseif isstring(firstVal) || ischar(firstVal)
+            % Strings/char arrays
+            if isstring(firstVal)
+                fprintf('String: %s \n', name);
+                merged.(name) = vertcat(vals{:});   % strings usually stack by rows
+            else
+                % for char, concatenate along dim if sizes permit
+                merged.(name) = cat(dim, vals{:});
+            end
+
+        elseif isstruct(firstVal)
+            % Generic fallback: put pieces in a cell and flatten
+            % merged.(name) = [vals{:}];
+            merged.(name) = firstVal;
+            fprintf('Skipping struct %s \n', name);
+            
+        else
+            warning('Field %s unknown while merging parallel chunks \n', name)
+        end
+    end
 end

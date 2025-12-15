@@ -352,7 +352,7 @@ end
     
     
     %% 5. Build the initialization
-    if ~isfield(params, 'PU0') || updateInit
+    if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit
         p0 = zeros(1, params.ss);
         U_SR = 0;
         U_SRD = 0;

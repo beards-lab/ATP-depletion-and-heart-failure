@@ -167,16 +167,24 @@ clf;
 % ModelOptParamsFeaturesOvernight
 
 % params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
-params0.mods
-params0.g = x;
+params0.mods = [];
+params0.g = [];
 params0.PlotEachSeparately = true;
+
+params0.RunForceVelocity = false;
+params0.RunSlack = true;
+params0.RunSlackSegments = 'AllPar';
+% params0.RunSlackSegments = 'All';
+params0.RunForceVelocityTime = false;
+params0.MaxRunTime = 60;
+% parpool('Threads', 5);
 tic
 RunBakersExp;
 toc
 
 % out = outs(1);
 % StatesInTime
-plotFeatures
+% plotFeatures
 
 %% 
 figure;
