@@ -294,7 +294,26 @@ end
     % params.PieceWiseStrainDepFun = @(x)pchip(pwsdX, pwsdP, x);   
     params.PieceWiseStrainDep = pchip(pwsdX, pwsdP);
 
+    if isfield(params, 'PieceWiseStrainDep2X') && isfield(params, 'PieceWiseStrainDep2Params') ...
+            && ~isempty(params.PieceWiseStrainDep2X) && ~isempty(params.PieceWiseStrainDep2Params) 
+        params.PieceWiseStrainDep2 = pchip(params.PieceWiseStrainDep2X, params.PieceWiseStrainDep2Params);
+    else
+        params.PieceWiseStrainDep2 = [];
+    end
 
+    if isfield(params, 'PieceWiseStrainDepR1DX') && isfield(params, 'PieceWiseStrainDepR1DParams') ...
+            && ~isempty(params.PieceWiseStrainDepR1DX) && ~isempty(params.PieceWiseStrainDepR1DParams) 
+        params.PieceWiseStrainDepR1D = pchip(params.PieceWiseStrainDepR1DX, params.PieceWiseStrainDepR1DParams);
+    else
+        params.PieceWiseStrainDepR1D = [];
+    end
+
+    if isfield(params, 'PieceWiseStrainDepR21X') && isfield(params, 'PieceWiseStrainDepR21Params') ...
+            && ~isempty(params.PieceWiseStrainDepR21X) && ~isempty(params.PieceWiseStrainDepR21Params) 
+        params.PieceWiseStrainDepR21 = pchip(params.PieceWiseStrainDepR21X, params.PieceWiseStrainDepR21Params);
+    else
+        params.PieceWiseStrainDepR21 = [];
+    end
     %% 4. SIMULATION PARAMETERS
     if params.UseCalculatedN
         % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);

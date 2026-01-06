@@ -140,8 +140,8 @@ if params0.RunForceVelocity
             features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,a+1)', features_data, FV_velocities);
         else
             % features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,a+1)', features_data, -[0.5, 1, 2, 3, 4, 5, 6, 7])
-            AllVelocities = -[0.5, 1, 2, 3, 4, 5, 6, 7];
-            AllForces = [51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
+            AllVelocities = -[0, 0.5, 1, 2, 3, 4, 5, 6, 7];
+            AllForces = [56.40, 51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
             vsel = find(ismember(AllVelocities, FV_velocities));
             features_data.FV_v = -AllVelocities(vsel)';
             features_data.FV_f = AllForces(vsel)';
@@ -545,13 +545,13 @@ if params0.RunSlack
         par_velocitytable = {velocitytable};
     end
     N = length(par_velocitytable);
-    
+    outs = cell(1, N);    
     params = getParams(params, params.g, true);    
 
     for i_par_chunk = 1:N
 
-        velocitytable = par_velocitytable{i_par_chunk};
-        params.Velocity = velocitytable(:, 2);
+        velocitytable_chunk = par_velocitytable{i_par_chunk};
+        params.Velocity = velocitytable_chunk(:, 2);
         % reset the PU0
         params.PU0 = PU0;
     
@@ -559,27 +559,26 @@ if params0.RunSlack
     
         % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
         % [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
-
         if isempty(parple)
-            [F, out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+            [F, out] = evaluateModel(modelFcn, velocitytable_chunk(:, 1), params);
+            outs{i_par_chunk} = out;
         else
             % [F, out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
             % futures{i_par_chunk} = [F, out];
-            futures{i_par_chunk} = parfeval(parple, @evaluateModel, 2, modelFcn, velocitytable(:, 1), params);
+            futures{i_par_chunk} = parfeval(parple, @evaluateModel, 2, modelFcn, velocitytable_chunk(:, 1), params);
         end
     end
 %%
     if ~isempty(parple)
-        outs = cell(1, N);
         for j = 1:N 
             if ~isempty(futures{j})
                 % [~, out] = futures{j}; 
                 [~, out] = fetchOutputs(futures{j});                 
                 outs{j} = out;
             end
-        end
-        out = mergeOutStructs([outs{:}]);
+        end        
     end
+    out = mergeOutStructs([outs{:}]);
 
     % i_0 = find(datatable(:, 1) > 2.77, 1);
     % i_e = length(datatable(:, 1));
@@ -916,7 +915,7 @@ function merged = mergeOutStructs(outs, dim)
         if iscell(firstVal)
             % For cell arrays: use bracket concatenation in the chosen dimension
             % dim==1 → vertical [vals{:}]'; dim==2 → horizontal [vals{:}]
-            fprintf('Cell: %s \n', name);
+            % fprintf('Cell: %s \n', name);
             if dim == 1
                 % Ensure column: wrap each cell array in a column if needed
                 merged.(name) = vertcat(vals{:});
@@ -927,7 +926,7 @@ function merged = mergeOutStructs(outs, dim)
         elseif isnumeric(firstVal) || islogical(firstVal)
             % Numeric/logical arrays: use cat(dim, ...)
             try
-                fprintf('Numeric: %s \n', name);
+                % fprintf('Numeric: %s \n', name);
                 merged.(name) = cat(dim, vals{:});
             catch ME
                 % Fallback: try vertical then horizontal
@@ -941,7 +940,7 @@ function merged = mergeOutStructs(outs, dim)
         elseif isstring(firstVal) || ischar(firstVal)
             % Strings/char arrays
             if isstring(firstVal)
-                fprintf('String: %s \n', name);
+                % fprintf('String: %s \n', name);
                 merged.(name) = vertcat(vals{:});   % strings usually stack by rows
             else
                 % for char, concatenate along dim if sizes permit
@@ -952,7 +951,7 @@ function merged = mergeOutStructs(outs, dim)
             % Generic fallback: put pieces in a cell and flatten
             % merged.(name) = [vals{:}];
             merged.(name) = firstVal;
-            fprintf('Skipping struct %s \n', name);
+            % fprintf('Skipping struct %s \n', name);
             
         else
             warning('Field %s unknown while merging parallel chunks \n', name)

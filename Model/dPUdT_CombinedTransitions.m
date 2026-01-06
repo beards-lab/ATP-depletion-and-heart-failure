@@ -214,12 +214,19 @@ if params.UsePieceWiseStrainDep
     % Monotonic cubic interpolation    
     if params.UseStrainDep4R1D
         R1D = params.kd*p1.*exp(-(s.^2) / (2*params.kd_sigma^2));
-    else
+    elseif isfield(params, 'PieceWiseStrainDepR1D') && ~isempty(params.PieceWiseStrainDepR1D)
+        R1D = params.kd*p1.*ppval(params.PieceWiseStrainDepR1D, s);
+    else        
         R1D = params.kd*p1;
     end
 
     R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
-    R21 = R12*0;    
+    
+    if isfield(params, 'PieceWiseStrainDepR21') && ~isempty(params.PieceWiseStrainDepR21)    
+        R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, s);
+    else
+        R21 = p2*0;    
+    end
     
     if isfield(params, 'A2_PieceWiseStrainDepX')
         error('Not implemented atm!');

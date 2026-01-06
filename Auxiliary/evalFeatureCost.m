@@ -4,6 +4,9 @@ function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn,
 % Last one can weight or disable its cost, e.g.
 % feature1|features2|0 - evaluates feature 1, but does not count becuase 0 weight
 
+% penalty for each NaN in the sim
+NaNCost = 10;
+
 if nargin < 4
     costExp = 1;
 end
@@ -31,7 +34,7 @@ for i_feat = 1:size(fn, 2)
 
     % cost(i_feat) = sum((fd/n_F - fs/n_F).^2);
     % cost(i_feat) = sum(abs(fd/n_F - fs/n_F));
-    cost(i_feat) = sum(abs(fd/n_F - fs/n_F).^costExp);
+    cost(i_feat) = nansum(abs(fd/n_F - fs/n_F).^costExp) + sum(isnan(fs)*NaNCost);
 
 end
 

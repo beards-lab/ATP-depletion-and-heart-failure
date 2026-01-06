@@ -5,7 +5,6 @@ myl = 1000;
 % ATTACHMENT - DETACHMENT
 nexttile; title('Hydrolyses and ATTACHMENT'); cla;hold on;
 plot([s(1), 0, s(end)], [RD1, RD1, RD1], '-', LineWidth=1.5);
-plot(s, R1D,'x-.', LineWidth=1.5);
 plot([s(1), 0, s(end)], [RTD,RTD, RTD], 'x-', LineWidth=1, MarkerSize=10);
 plot([s(1), 0, s(end)], [RDT,RDT, RDT], 'x-.', LineWidth=1, MarkerSize=10);
 
@@ -19,7 +18,9 @@ xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 
 nexttile; title('Attached states'); hold on;
-plot(s, R12, 'x-', s, R21, 'x-.');
+plot(s, R1D,'<-.', LineWidth=1.5);
+plot(s, R12, '>-', s, R21, '<-.');
+
 ylim([0, myl])
 xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');
@@ -29,13 +30,27 @@ xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 % ylim([0, myl])
 % xlim([s(1) s(end)])
 % xlabel('s (\mum)');ylabel('Transition rate (1/s)');
-legend('R12', 'R21')
 
 % nexttile; title('R2T'); hold on;
-plot(s, R2, 'x-');
+plot(s, R2, '>-');
 ylim([0, myl])
 xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');
+legend('R1D', 'R12', 'R21', 'R2','AutoUpdate','off');
+if isfield(params, 'PieceWiseStrainDepX') && ~isempty(params.PieceWiseStrainDepX)
+    plot(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, 'x', MarkerSize=14, LineWidth=2)
+end
+if isfield(params, 'PieceWiseStrainDep2X') && ~isempty(params.PieceWiseStrainDep2X)
+    plot(params.PieceWiseStrainDep2X - (params.dr2 - params.dr), params.k2*params.PieceWiseStrainDep2Params, 'x', MarkerSize=14, LineWidth=2)
+end
+if isfield(params, 'PieceWiseStrainDepR1DX') && ~isempty(params.PieceWiseStrainDepR1DParams)
+    plot(params.PieceWiseStrainDepR1DX , params.kd*params.PieceWiseStrainDepR1DParams, 'x', MarkerSize=14, LineWidth=2)
+end
+
+if isfield(params, 'PieceWiseStrainDepR21X') && ~isempty(params.PieceWiseStrainDepR21X)
+    plot(params.PieceWiseStrainDepR21X, params.k_1*params.PieceWiseStrainDepR21Params, 'x', MarkerSize=14, LineWidth=2)
+end
+
 
 nexttile; title('T2SR and SR2T'); hold on;
 plot(F_SR, RPT2SR, 'x-', F_SR, RSR2PT, '+-.', LineWidth=1.5, MarkerSize=10);

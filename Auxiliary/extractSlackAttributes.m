@@ -79,25 +79,75 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
         % plot(t, y, '-|b', 'LineWidth', 1);
-        [peak1_y, peak1_t] = findpeaks(y, t, MinPeakDistance=0.01, MinPeakProminence=0.5);
+        % 1. Detect Peaks
+        [peak1_y, peak1_t] = findpeaks(y, t, 'MinPeakDistance', 0.01, 'MinPeakProminence', 0.5);
         feats.v_restretch = velocity_segment(3, 2); 
+        
         if ~isempty(peak1_y)
+            % --- Peak Logic ---
+            % Use the first detected peak
+            p1_time_abs = peak1_t(1);
+            
             feats.peak1_y = peak1_y(1);
-            feats.peak1_t = peak1_t(1) - t(1);
-            feats.peak1_SL = SL(find(t >= peak1_t(1), 1));
+            feats.peak1_t = p1_time_abs - t(1);
+            
+            % Find SL at peak time
+            feats.peak1_SL = SL(find(t >= p1_time_abs, 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
-            % plot(peak1_t, peak1_y, '*', MarkerSize=ms);
+            % plot(peak1_t(1), peak1_y(1), '*', MarkerSize=ms);
+        
+            % --- Valley Logic (Min After Peak) ---
+            % Find indices strictly after the first peak
+            idx_after = t > p1_time_abs;
+            
+            if any(idx_after)
+                y_after = y(idx_after);
+                t_after = t(idx_after);
+                
+                % Calculate the minimum value in the segment after the peak
+                [min_val, min_idx] = min(y_after);
+                
+                feats.vall_y = min_val;
+                feats.vall_t = t_after(min_idx) - t(1); % Relative to start time
+            else
+                % Peak is at the very end of the signal; no valley possible
+                feats.vall_y = NaN;
+                feats.vall_t = NaN;
+            end
+        
         else
+            % --- No Peak Found ---
             feats.peak1_y = NaN;
             feats.peak1_t = NaN;
             feats.peak1_SL = NaN;
             feats.peak1_dSL = NaN;
+            
+            % If no peak, there is no "valley after peak"
+            feats.vall_y = NaN;
+            feats.vall_t = NaN;
         end
+
         feats.peak2 = y(end);
-        % plot(t(end), feats.peak2, '*', MarkerSize=ms);
-        [vall_y, vall_t] = findpeaks(-y, t, MinPeakDistance=0.01, MinPeakProminence=2);
-        feats.vall_t = vall_t - t(1);
-        feats.vall_y = -vall_y;
+% plot(t(end), feats.peak2, '*', MarkerSize=ms);
+        % [peak1_y, peak1_t] = findpeaks(y, t, MinPeakDistance=0.01, MinPeakProminence=0.5);
+        % feats.v_restretch = velocity_segment(3, 2); 
+        % if ~isempty(peak1_y)
+        %     feats.peak1_y = peak1_y(1);
+        %     feats.peak1_t = peak1_t(1) - t(1);
+        %     feats.peak1_SL = SL(find(t >= peak1_t(1), 1));
+        %     feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
+        %     % plot(peak1_t, peak1_y, '*', MarkerSize=ms);
+        % else
+        %     feats.peak1_y = NaN;
+        %     feats.peak1_t = NaN;
+        %     feats.peak1_SL = NaN;
+        %     feats.peak1_dSL = NaN;
+        % end
+        % feats.peak2 = y(end);
+        % % plot(t(end), feats.peak2, '*', MarkerSize=ms);
+        % [vall_y, vall_t] = findpeaks(-y, t, MinPeakDistance=0.01, MinPeakProminence=2);
+        % feats.vall_t = vall_t - t(1);
+        % feats.vall_y = -vall_y;
         % plot(vall_t, -vall_y, '*', MarkerSize=ms);
                 
         % steady state

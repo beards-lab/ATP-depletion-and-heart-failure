@@ -51,7 +51,7 @@ for i_feat = 1:length(fn)
         fg = NaN(size(1:N_feats));
     end
 
-    plot(fd_x, fd, 'o--', fs_x, fs, 'x--', fg_x, fg, '+--');
+    plot(fd_x, fd, 'o--', fs_x, fs, 'x-', fg_x, fg, '+--', LineWidth=1.5);
     if isempty(feat_x)
         title(sprintf('%s (%.3g)', feat_y, cost(i_feat)), Interpreter="none");
     else

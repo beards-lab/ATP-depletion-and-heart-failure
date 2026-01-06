@@ -123,35 +123,103 @@ paramNames = {'k_pas'                      ,...
 'kmsrd'                      ,...
 'sigma1'                     ,      ...
 'PieceWiseStrainDepParams__5'};
+
+paramNames = {
+ 'PieceWiseStrainDepX__2', ... 
+'PieceWiseStrainDepParams__2', ... 
+'PieceWiseStrainDepParams__3', ... 
+'PieceWiseStrainDep2X__2', ... 
+'PieceWiseStrainDep2X__4', ... 
+'PieceWiseStrainDep2Params__2', ... 
+'PieceWiseStrainDep2Params__3', ... 
+'PieceWiseStrainDepR1DX__2', ... 
+'PieceWiseStrainDepR1DX__3', ... 
+'PieceWiseStrainDepR1DParams__2', ... 
+'PieceWiseStrainDepR1DParams__3', ... 
+'PieceWiseStrainDepR21X__2', ... 
+'PieceWiseStrainDepR21X__3', ... 
+'PieceWiseStrainDepR21Params__2', ... 
+'PieceWiseStrainDepR21Params__3'};
+
+paramNames = {'kd'                            ,...
+'PieceWiseStrainDepX__2'        ,...
+'sigma_srd1'                    ,...
+'PieceWiseStrainDepR21Params__2',...
+'ksr2srd'                       ,...
+'k1'                            ,...
+'sigma_srd2'                    ,...
+'kstiff1'                       ,...
+'k2'                            ,...
+'gamma'                         ,...
+'PieceWiseStrainDep2Params__3'  ,...
+'PieceWiseStrainDepR1DX__3'     ,...
+'ksrd2sr'                       ,...
+'PieceWiseStrainDepR1DParams__3',...
+'sigma1'                        }
+
+paramNames = {'estiff'                       , ...}
+'kstiff2'                       , ...
+'ekSE'                          , ...
+'kah'                           , ...
+'PieceWiseStrainDep2X__2'       , ...
+'PieceWiseStrainDep2Params__3'  , ...
+'k2'                            , ...
+'L_thin'                        , ...
+'PieceWiseStrainDep2X__3'       , ...
+'PieceWiseStrainDep2Params__2'  , ...
+'ka'                            , ...
+'PieceWiseStrainDep2Params__4'  , ...
+'kSE'                           , ...
+'L_thick'                       , ...
+'gamma'                         , ...
+'kmsrd'                         , ...
+'k_pas'                         , ...
+'k_1'                           , ...
+'ksr2srd'                       , ...
+'kd'                            , ...
+'k1'                            , ...
+'PieceWiseStrainDepR21Params__2', ...
+'PieceWiseStrainDepParams__3'   , ...
+'L_hbare'                       , ...
+'kmsr'                          , ...
+'PieceWiseStrainDepParams__2'   , ...
+'ksrd2sr'                       , ...
+'sigma_srd1'                    , ...
+'sigma1'                        , ...
+'PieceWiseStrainDepX__2'        };
 % params0.PieceWiseStrainDepParams__3 = params0.PieceWiseStrainDepParams(3);
 % params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
 % params0.PieceWiseStrainDepParams__5 = params0.PieceWiseStrainDepParams(5);
 % params0.PieceWiseStrainDepX__3 = params0.PieceWiseStrainDepX(3);
 % params0.PieceWiseStrainDepX__4 = params0.PieceWiseStrainDepX(4);
 % params0.PieceWiseStrainDepX__5 = params0.PieceWiseStrainDepX(5);
-
+%%
 params0.mods = paramNames;
 params0.g = ones(1, length(paramNames));
 
 % g0 = x;
+params0.RunForceVelocity = true;
 g0 = params0.g;
 params0.PlotEachSeparately = false;
 params0.justPlotStateTransitionsFlag = false;
 params0.BreakOnODEUnstable = true;
 
 params0.MaxRunTime = 40;
-params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
+% params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
 
 optimfun = @(g)sum(ResidualAndJacobian(g, params0, true));
 %% RUN fminsearch optim
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 15000);
 
 % optimfun = @(pw)evalSDP(params0, pw, pwsel, vel);
-% p = parpool('threads', 4);
+% p = parpool('threads', 5);
 x = fminsearch(optimfun, g0, options)
-save env_fmin
+save env_fmin5
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimBaseline.m', params0, '', 'Optim of force velocity curve. Good but oscillating a bit.');
-% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackBaseline.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
+% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
+% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate_.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
+% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdateValley.m', params0, '', 'Optim of force velocity curve AND the slack. Take valley feat aboard, did not help much.');
+% writeParamsToMFile('ModelOptParams/ModelParamsFeats_FVSlackUpdateValley2.m', params0, '', 'Second round optim of force velocity curve AND the slack. Take valley feat aboard, did not help much.');
 %% RUN surrogate optim
 
 options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
@@ -163,25 +231,171 @@ save env
 % writeParamsToMFile('../ModelOptParams/ModelParamsFVOptimSRXTDSurro.m', params0, '', 'Optim of force velocity curve. Good but oscillating.');
 
 %% Test after optim
-clf;
+figure(802);clf;
+% params0bak = params0;
 % ModelOptParamsFeaturesOvernight
-
+% params0 = getParams(params0, x, false, true);
 % params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
-params0.mods = [];
-params0.g = [];
+% params0.mods = [];
+% params0.g = x;
 params0.PlotEachSeparately = true;
-
-params0.RunForceVelocity = false;
+% params0.PieceWiseStrainDep2Params = 
+% params0.PieceWiseStrainDep2X
+% params0.k2
+% params0.PieceWiseStrainDep2X = [0.1000  0.03  0.0108         0   -0.0055   -0.0080 -0.0100];
+% params0.PieceWiseStrainDep2Params   = [50.0000   2.5 1.1066    1.0383  50.6847   50.0000  50.0000];
+params0.RunForceVelocity = true;
 params0.RunSlack = true;
 params0.RunSlackSegments = 'AllPar';
 % params0.RunSlackSegments = 'All';
-params0.RunForceVelocityTime = false;
+% params0.RunForceVelocityTime = false;
 params0.MaxRunTime = 60;
 % parpool('Threads', 5);
+
+params0.kstiff1 = 733;
+
+params0.justPlotStateTransitionsFlag = false;
+tic
+RunBakersExp;
+toc
+%%
+figure(808);clf;
+plotFeatures(features_data, features_model, [], params0.fn);
+% sum(costs)
+sum(evalFeatureCost(features_data, features_model, params0.fn, 1))
+%% tradeoff visualization
+
+h = evalin('base', 'optim_history');
+corr_matrix = corr(h);
+figure(201);clf;
+imagesc(corr_matrix);
+colormap(redbluecmap)
+colorbar;
+caxis([-1 1]);
+title('Feature Correlation (Blue = Tradeoff, Red = Redundancy)');
+nFeat = numel(fn);
+
+xticks(1:nFeat);
+yticks(1:nFeat);
+xticklabels(fn);
+yticklabels(fn);
+
+xtickangle(45);
+set(gca,'TickLabelInterpreter','none');
+axis square;
+
+
+
+% Let's say Feature 1 (Peak Force) and Feature 4 (Relaxation Time) are the issue
+featA = h(:, 1); 
+featB = h(:, 4);
+
+figure(202);clf;
+scatter(featA, featB, 10, 'filled', 'MarkerFaceAlpha', 0.3);
+hold on;
+plot(0, 0, 'rp', 'MarkerSize', 15); % The "Origin" is the perfect experimental fit
+xlabel('Residual Feature A');
+ylabel('Residual Feature B');
+grid on;
+title('Tradeoff Frontier');
+
+%% 1. Load data from workspace
+clf;
+% 2. Identify the 4 "costliest" features (highest Mean Squared Error)
+mse_per_feature = mean(h.^2, 1);
+[~, sorted_idx] = sort(mse_per_feature, 'descend');
+top_4_idx = sorted_idx(1:4);
+
+h_top = h(:, top_4_idx);
+% feature_names = cellstr("Feature " + top_4_idx);
+feature_names = params0.fn(top_4_idx);
+
+% 3. Create the Scatter Plot Matrix
+figure('Color', 'w', 'Name', 'Pareto Tradeoff Matrix');
+[S, AX, BigAx, H, HAx] = plotmatrix(h_top);
+
+% 4. Formatting for clarity
+title(BigAx, 'Pareto Tradeoff Analysis (Top 4 Costly Features)');
+
+%% Add labels to the diagonal and adjust axes
+for i = 1:4
+    ylabel(AX(i,1), feature_names{i}, 'FontWeight', 'bold', Interpreter='none');
+    xlabel(AX(4,i), feature_names{i}, 'FontWeight', 'bold', Interpreter='none', Rotation=15);
+    
+    % Style the histograms on the diagonal
+    H(i).FaceColor = [0.2 0.5 0.8]; 
+    H(i).EdgeColor = 'w';
+    
+    for j = 1:4
+        % Add a red star at (0,0) - the target experimental fit
+        % grid(AX(i,j), 'on');
+        
+        % Color the dots by iteration (darker = later in the search)
+        % This helps see if the optimizer is "drifting" or "stuck"
+        if i ~= j
+            hold(AX(i,j), 'on');
+            % plot(AX(i,j), 0, 0, 'r.', 'MarkerSize', 12, 'LineWidth', 2);
+            % xlim()
+            % S(i,j).MarkerEdgeColor = 'none';
+            % S(i,j).MarkerFaceColor = 'k';
+            % S(i,j).MarkerFaceAlpha = 0.1; % Transparency helps see density
+        end
+    end
+end
+
+maxAbs = max(abs(h_top(:)));
+
+for i = 1:4
+    for j = 1:4
+        if i ~= j
+            xlim(AX(i,j), [0 maxAbs]);
+            ylim(AX(i,j), [0 maxAbs]);
+            hold(AX(i,j),'on');
+            plot(AX(i,j),0,0,'r.','MarkerSize',12,'LineWidth',2);
+        end
+    end
+end
+
+
+fprintf('Top 4 costly features identified: %s\n', strjoin(feature_names, ', '));
+%%
+
+% original
+params0.PieceWiseStrainDepX =      [0.1000     0.0107         0   -0.0052   -0.0080   -0.0100];
+params0.PieceWiseStrainDepParams = [50.0000    1.1554    2.1802   50.6847   50.0000   50.0000];
+% modified
+params0.PieceWiseStrainDepX =      [0.1000     0.0107         0   -0.0052   -1.0000];
+params0.PieceWiseStrainDepParams = [0.5          1.1554        2.1802   50    50.0000];
+
+% original
+params0.PieceWiseStrainDep2X =      [0.1000     0.0107         0   -0.0052   -0.0080   -0.0100];
+params0.PieceWiseStrainDep2Params = [50.0000    1.1554    2.1802   50.6847   50.0000   50.0000];
+% modified
+params0.PieceWiseStrainDep2X =      [0.1000     0.0107         0   -0.0052   -0.0080   -0.0100];
+params0.PieceWiseStrainDep2Params = [50.0000    1.1554    2.1802   50.6847   50.0000   50.0000];
+% params0.PieceWiseStrainDep2Params = [];
+
+
+params0.PieceWiseStrainDepR1DX = [-0.05 -0.005 0.005 0.05];
+params0.PieceWiseStrainDepR1DParams = [50 1 1 50];
+params0.kd = 10;
+
+params0.PieceWiseStrainDepR21X = [-0.05 -0.005 0.005 0.05];
+params0.PieceWiseStrainDepR21Params = [50 1 1 50];
+% params0.PieceWiseStrainDepR21Params = [];
+
+
+
+
 tic
 RunBakersExp;
 toc
 
+[costs, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn(1:end), 1);
+sum(costs)
+%% features_model_g = features_model;
+% plotFeatures(features_data, features_model, features_model_g, params0.fn(1:end))
+plotFeatures(features_data, features_model, [], params0.fn(1:end))
 % out = outs(1);
 % StatesInTime
 % plotFeatures
@@ -191,13 +405,36 @@ figure;
 StatesInTime
 
 %%
-
-params0.justPlotStateTransitionsFlag = false;
-figure;
-params0.RunForceVelocityTime = true;
+% savedParams = params0;
+params0.justPlotStateTransitionsFlag = true;
+figure(8483);clf;
+% params0.RunForceVelocityTime = false;
+% params0.FV_velocities = [-0.5000   -2.0000   -3.0000   -4.0000];
+% params0.FV_velocities = [0 -0.5000   -1 -2.0000   -3.0000   -4.0000 -5 -6];
+% params0.PieceWiseStrainDepParams__2 = 1.1554;
 params0.RunForceVelocity = true;
-params0.RunSlack = false;
+params0.RunSlack = true;
+params0.PlotEachSeparately = true;
+params0.mods = [];
+params0.g = [];
+% params0.k2 = 131.3860*1;
+params0.UseOverlapFactor = false;
+params0
+% params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y'};
+
+% params0.g(2) = 0;
+params0.RunSlackSegments = 'AllPar';
+tic
 RunBakersExp
+%%
+
+% features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, false);
+
+toc
+[costs, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn(1:end), 1);
+sum(costs)
+
+plotFeatures(features_data, features_model, [], params0.fn(1:end))
 
 %% test
 LoadData
@@ -356,6 +593,8 @@ legstr = [legstr, "Data 2021 ATP 2 mM points", sprintf("Fit: a=%.2f,b=%0.1f,c=%0
 legend(legstr);
 
 metric = (fvfit(0)-FV_y(1))/FV_y(1);
+%%
+params0 = getParams(params0, x, false, true);
 %% construct feature metric - test this!
 
 % construct parameter set to vary
@@ -403,7 +642,74 @@ paramNames =  {'baseline_dummy', ...
 'sigma1', ... 
 'sigma2'};
 
+paramNames = {'baseline_dummy', ... 
+ 'PieceWiseStrainDepX__2', ... 
+'PieceWiseStrainDepParams__2', ... 
+'PieceWiseStrainDepParams__3', ... 
+'PieceWiseStrainDep2X__2', ... 
+'PieceWiseStrainDep2X__4', ... 
+'PieceWiseStrainDep2Params__2', ... 
+'PieceWiseStrainDep2Params__3', ... 
+'PieceWiseStrainDepR1DX__2', ... 
+'PieceWiseStrainDepR1DX__3', ... 
+'PieceWiseStrainDepR1DParams__2', ... 
+'PieceWiseStrainDepR1DParams__3', ... 
+'PieceWiseStrainDepR21X__2', ... 
+'PieceWiseStrainDepR21X__3', ... 
+'PieceWiseStrainDepR21Params__2', ... 
+'PieceWiseStrainDepR21Params__3'};
 
+paramNames = {'baseline_dummy', ... 
+    'MaxSlackNegativeForce', ... 
+'PieceWiseStrainDep2Params__2', ... 
+'PieceWiseStrainDep2Params__3', ... 
+'PieceWiseStrainDep2Params__4', ... 
+'PieceWiseStrainDep2X__2', ... 
+'PieceWiseStrainDep2X__3', ... 
+'PieceWiseStrainDep2X__4', ... 
+'PieceWiseStrainDepParams__2', ... 
+'PieceWiseStrainDepParams__3', ... 
+'PieceWiseStrainDepR1DParams__2', ... 
+'PieceWiseStrainDepR1DParams__3', ... 
+'PieceWiseStrainDepR1DX__2', ... 
+'PieceWiseStrainDepR1DX__3', ... 
+'PieceWiseStrainDepR21Params__2', ... 
+'PieceWiseStrainDepR21Params__3', ...
+'PieceWiseStrainDepR21X__2', ... 
+'PieceWiseStrainDepR21X__3', ... 
+'PieceWiseStrainDepX__2', ... 
+'PieceWiseStrainDepX__3', ... 
+'dr2', ... 
+'ekSE', ... 
+'estiff', ... 
+'gamma', ... 
+'k1', ... 
+'k2', ... 
+'kSE', ... 
+'k_pas', ... 
+'ka', ... 
+'kah', ... 
+'kamh', ... 
+'kd', ... 
+'kmsr', ... 
+'kmsrd', ... 
+'ksr0', ... 
+'ksr2srd', ... 
+'ksrd', ... 
+'ksrd2sr', ... 
+'kstiff1', ... 
+'kstiff2', ... 
+'mu', ... 
+'sigma1', ... 
+'sigma2', ... 
+'sigma_srd1', ... 
+'sigma_srd2', ...
+'k_1',...
+'L_thick', ...
+'L_hbare',...
+'L_thin' };
+% paramNames = paramNames(selectedParamsForResim)
+% selectedParamsForResim = [1, 3, 4, 6, 7, 45];
 % simulate force-isovelocity
 % take only non-zero velocities with > 10 kPa
 % params0.FV_velocities = -[0.5, 1, 3, 4];
@@ -417,16 +723,21 @@ params0.PlotEachSeparately = true;
 % params0.RunSlack = true;
 params0.MaxRunTime = 60;
 params0.baseline_dummy = 0;
+params0 = getParams(params0, params0.g, false, true);
+params0.FV_velocities = -[0.5, 2, 3, 4];
+params0.PlotEachSeparately = false;
 
 % params0.EvalFeatures = true;
 % params0.RunForceLengthEstim = true;
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
+fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y'};
+
 % fn = {'FV_f|FV_v'};
 savedFeats = {};
 
-RunDeltaPlus = false;
-RunDeltaMinus = true;
+RunDeltaPlus = true;
+RunDeltaMinus = false;
 
 if RunDeltaMinus    
     featureMatrixMinus = zeros(length(paramNames), length(fn));
@@ -437,7 +748,10 @@ end
 
 delta = 0.01;
 % params_base = params0;
+tic
+% params0.
 for i_param = 1:length(paramNames)
+% for i_param = selectedParamsForResim
     try
         fprintf('Running %s..', paramNames{i_param});
         params0.mods = paramNames(i_param);
@@ -470,6 +784,8 @@ for i_param = 1:length(paramNames)
         fprintf('failed. [%s] \n', e.message);
     end
 end
+% save('SA_pwsd', "savedFeats", "featureMatrixMinus", "featureMatrixPlus");
+toc
 %%
 
 
@@ -478,9 +794,9 @@ end
 % main_lsqnonlin_script.m
 ModelParamsFVOptimBaseline
 % 1. Setup
-paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
-params0.g = ones(1, length(paramNames));
-params0.mods = paramNames;
+% paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
+% params0.g = ones(1, length(paramNames));
+% params0.mods = paramNames;
 params0.FV_velocities = -[0.5, 2, 3, 4];
 params0.RunSlack = true;
 params0.RunForceVelocity = true;
@@ -532,16 +848,39 @@ fprintf('Starting Decoupled lsqnonlin Optimization...\n');
 
 fprintf('\nOptimized Parameters: %s\n', mat2str(P_optimized, 4));
 fprintf('Minimum Total Cost (Sum of Squares): %.4f\n', Resnorm);
-%%
+%% Visualize the double-sided 
 
 
 figure(4);
-featureMatrixPlusN = featureMatrixPlus - featureMatrixPlus(1, :);
+featureMatrixPlusN = (featureMatrixPlus - featureMatrixPlus(1, :))./featureMatrixPlus(1, :)*100;
+featureMatrixMinusN = (featureMatrixMinus - featureMatrixMinus(1, :))./featureMatrixMinus(1, :)*100;
+if ~RunDeltaMinus
+    featureMatrixMinusN = featureMatrixPlusN;
+end
+if ~RunDeltaPlus
+    featureMatrixPlusN = featureMatrixMinusN;
+end
+%%
 
-[vals, paramPos] = sort(abs(sum(featureMatrixPlusN, 2)), 1, "desc")
-featureMatrixPlusNSorted = featureMatrixPlusN(paramPos, :)./featureMatrixPlusN(paramPos(1), :)*100;
+featureMatrixN = min(featureMatrixMinusN, featureMatrixPlusN);
 
-imagesc(featureMatrixPlusNSorted);
+paramCost = sum(featureMatrixN, 2);
+[vals, paramPos] = sort(abs(paramCost), 1, "desc");
+
+% cutoff too bads
+tooBadCost = 0;
+tooBad = featureMatrixN > tooBadCost;
+featureMatrixN(tooBad) = tooBadCost;
+
+% cutoff too good to be true
+tgtbtCost = -10;
+tgtbt = featureMatrixN < tgtbtCost;
+featureMatrixN(tgtbt) = tgtbtCost;
+
+% paramPos = 1:length(paramNames);
+featureMatrixNSorted = featureMatrixN(paramPos, :);%./featureMatrixPlusN(paramPos(1), :)*100;
+
+imagesc(featureMatrixNSorted);
 colorbar;
 axis ij tight;
 
@@ -554,11 +893,11 @@ xtickangle(45);
 title('Parameter Sensitivities');
 
 % Print numeric values in each cell
-for i = 1:size(featureMatrixPlusNSorted,1)
-    for j = 1:size(featureMatrixPlusNSorted,2)
-        text(j, i, sprintf('%.3g', featureMatrixPlusNSorted(i,j)), ...
+for i = 1:size(featureMatrixNSorted,1)
+    for j = 1:size(featureMatrixNSorted,2)
+        text(j, i, sprintf('%.3g', featureMatrixNSorted(i,j)), ...
             'HorizontalAlignment', 'center', ...
-            'Color', 'w');
+            'Color', 'k');
     end
 end
 
