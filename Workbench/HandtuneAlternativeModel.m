@@ -155,7 +155,7 @@ paramNames = {'kd'                            ,...
 'PieceWiseStrainDepR1DX__3'     ,...
 'ksrd2sr'                       ,...
 'PieceWiseStrainDepR1DParams__3',...
-'sigma1'                        }
+'sigma1'                        };
 
 paramNames = {'estiff'                       , ...}
 'kstiff2'                       , ...
@@ -187,6 +187,43 @@ paramNames = {'estiff'                       , ...}
 'sigma_srd1'                    , ...
 'sigma1'                        , ...
 'PieceWiseStrainDepX__2'        };
+
+paramNames = {'k2', 'xrate', 'estiff'                       , ...}
+'kstiff2'                       , ...
+'ekSE'                          , ...
+'kSE'                           , ...
+'PieceWiseStrainDep2X__2'       , ...
+'PieceWiseStrainDep2X__3'       , ...
+'PieceWiseStrainDepR21X__2', ...
+'PieceWiseStrainDepR21X__3', ...
+'PieceWiseStrainDepX__2'   , ...
+'PieceWiseStrainDepX__3'   , ...
+'PieceWiseStrainDepX__2'        };
+
+paramNames = {
+'kstiff2'                     ,
+'k2'                          ,
+'dr2'                         ,
+'ekSE'                        ,
+'kah'                         ,
+'estiff'                      ,
+'L_thin'                      ,
+'sigma_srd1'                  ,
+'PieceWiseStrainDep2X__6'     ,
+'kmsr'                        ,
+'PieceWiseStrainDep2Params__5',
+'k_pas'                       ,
+'PieceWiseStrainDepParams__4' ,
+'sigma_srd2'                  ,
+'kSE'                         ,
+'kstiff2_n',
+'kstiff1_n'
+};
+
+
+
+% params0.kstiff1_n = params0.kstiff1;
+% params0.kstiff2_n = params0.kstiff2;
 % params0.PieceWiseStrainDepParams__3 = params0.PieceWiseStrainDepParams(3);
 % params0.PieceWiseStrainDepParams__4 = params0.PieceWiseStrainDepParams(4);
 % params0.PieceWiseStrainDepParams__5 = params0.PieceWiseStrainDepParams(5);
@@ -194,6 +231,7 @@ paramNames = {'estiff'                       , ...}
 % params0.PieceWiseStrainDepX__4 = params0.PieceWiseStrainDepX(4);
 % params0.PieceWiseStrainDepX__5 = params0.PieceWiseStrainDepX(5);
 %%
+params0.xrate = 1;
 params0.mods = paramNames;
 params0.g = ones(1, length(paramNames));
 
@@ -208,33 +246,39 @@ params0.MaxRunTime = 40;
 % params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
 
 optimfun = @(g)sum(ResidualAndJacobian(g, params0, true));
+
 %% RUN fminsearch optim
 options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 0.1, 'PlotFcns', @optimplotfval, 'MaxIter', 15000);
 
 % optimfun = @(pw)evalSDP(params0, pw, pwsel, vel);
 % p = parpool('threads', 5);
+% history = [];
 x = fminsearch(optimfun, g0, options)
-save env_fmin5
+save env_fmin7
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimBaseline.m', params0, '', 'Optim of force velocity curve. Good but oscillating a bit.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate_.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdateValley.m', params0, '', 'Optim of force velocity curve AND the slack. Take valley feat aboard, did not help much.');
 % writeParamsToMFile('ModelOptParams/ModelParamsFeats_FVSlackUpdateValley2.m', params0, '', 'Second round optim of force velocity curve AND the slack. Take valley feat aboard, did not help much.');
+% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_ReasonableStartingPoint.m', params0, '', 'Based ona better estim for kSE');
+% writeParamsToMFile('../ModelOptParams/ModelParamsFeats_ReasonableStartingPointB.m', params0, '', 'Based ona better estim for kSE and piecewise nonlinear kstiff2');
 %% RUN surrogate optim
 
-options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
+options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60*8, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
 % p = parpool('threads', 4)
 % p = parpool('processes', 4)
 % delete(p)
 [x,fval,exitflag,output,trials] = surrogateopt(optimfun, g0*0.1,g0*10, options);
-save env
+save env_surro
 % writeParamsToMFile('../ModelOptParams/ModelParamsFVOptimSRXTDSurro.m', params0, '', 'Optim of force velocity curve. Good but oscillating.');
 
 %% Test after optim
 figure(802);clf;
+% params0.g = x;
 % params0bak = params0;
 % ModelOptParamsFeaturesOvernight
 % params0 = getParams(params0, x, false, true);
+params0.FV_velocities = -[0.5 2 3 4];
 % params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
 % params0.mods = [];
 % params0.g = x;
@@ -252,20 +296,49 @@ params0.RunSlackSegments = 'AllPar';
 params0.MaxRunTime = 60;
 % parpool('Threads', 5);
 
-params0.kstiff1 = 733;
+% params0.kstiff1 = 0.5*100*733;
+% params0.kstiff2 = 0.5*1e5;
+% params0.kSE = 833*3.7;
+% params0.PieceWiseStrainDepR1DParams = [0.0000    1.1474    1.5953   1500.0000 1500.0000];
+% params0.PieceWiseStrainDepR1DX = [-0.0500   -0.0050    0.0063    0.0200 0.05];
+% params0.PieceWiseStrainDepR21Params = [0.0000    10    10   0.0000];
+% params0.PieceWiseStrainDepR21X = [-0.0500   -0.0049    0.0062    0.0500] - 0.015;
+% params0.k2d = 1000;
+% params0.drmr = 0.01*0.8;
+% params0.k2 = 132*0.6;
+% params0.mu = 0.0019*1e3;
+% params0.mu = 0.0019*100*10;
+% params0.mu_neg = params0.mu*0.10;
+% params0.mu_neg = params0.mu;
+% params0.UseNegativeKstiff = true;
+% params0.kstiff2 = 8e4;
+% params0.kstiff1 = params0.kstiff2*0.2;
 
 params0.justPlotStateTransitionsFlag = false;
+params0.ghostLoad = '';
+params0.UseA2MechanicalRecocking = false;
+% params0.xrate = 1;
+% params0.kstiff1_n = params0.kstiff1*0.1;
+% params0.kstiff2_n = params0.kstiff2*0.1;
+
+% params0.PieceWiseStrainDep2X__1 = 0.1;
+
 tic
 RunBakersExp;
 toc
-%%
-figure(808);clf;
+
+% figure(808);clf;
+params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'restretchSlopeEnd'};
+params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+% params0.fn = {'restretchSlopeStart'};
 plotFeatures(features_data, features_model, [], params0.fn);
-% sum(costs)
+
 sum(evalFeatureCost(features_data, features_model, params0.fn, 1))
+
 %% tradeoff visualization
 
 h = evalin('base', 'optim_history');
+% h = optim_history(15:end, :);
 corr_matrix = corr(h);
 figure(201);clf;
 imagesc(corr_matrix);
@@ -317,7 +390,7 @@ figure('Color', 'w', 'Name', 'Pareto Tradeoff Matrix');
 % 4. Formatting for clarity
 title(BigAx, 'Pareto Tradeoff Analysis (Top 4 Costly Features)');
 
-%% Add labels to the diagonal and adjust axes
+% Add labels to the diagonal and adjust axes
 for i = 1:4
     ylabel(AX(i,1), feature_names{i}, 'FontWeight', 'bold', Interpreter='none');
     xlabel(AX(4,i), feature_names{i}, 'FontWeight', 'bold', Interpreter='none', Rotation=15);
@@ -358,6 +431,10 @@ end
 
 
 fprintf('Top 4 costly features identified: %s\n', strjoin(feature_names, ', '));
+%%
+figure(4004);clf;hold on;
+plot(datatable(:, 1), datatable(:, 3)/2,datatable(:, 1), datatable(:, 3)./datatable(:, 2), '|-')
+
 %%
 
 % original
@@ -596,7 +673,8 @@ metric = (fvfit(0)-FV_y(1))/FV_y(1);
 %%
 params0 = getParams(params0, x, false, true);
 %% construct feature metric - test this!
-
+% params0_bak = params0;
+% params0 = getParams(params0, params0.g, false, true);
 % construct parameter set to vary
 paramNames = {'kstiff2','k_pas','ka','kah','dr2','k2','k1'};
 % paramNames = {'baseline_dummy', 'kstiff2','k_pas'};
@@ -708,6 +786,10 @@ paramNames = {'baseline_dummy', ...
 'L_thick', ...
 'L_hbare',...
 'L_thin' };
+
+tp = tunableParams(params0);
+paramNames = fieldnames(tp);
+paramNames  = ['baseline_dummy'; paramNames];
 % paramNames = paramNames(selectedParamsForResim)
 % selectedParamsForResim = [1, 3, 4, 6, 7, 45];
 % simulate force-isovelocity
@@ -723,7 +805,7 @@ params0.PlotEachSeparately = true;
 % params0.RunSlack = true;
 params0.MaxRunTime = 60;
 params0.baseline_dummy = 0;
-params0 = getParams(params0, params0.g, false, true);
+% params0 = getParams(params0, params0.g, false, true);
 params0.FV_velocities = -[0.5, 2, 3, 4];
 params0.PlotEachSeparately = false;
 
@@ -733,11 +815,13 @@ fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
 fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y'};
 
+fn = params0.fn;
+
 % fn = {'FV_f|FV_v'};
 savedFeats = {};
 
 RunDeltaPlus = true;
-RunDeltaMinus = false;
+RunDeltaMinus = true;
 
 if RunDeltaMinus    
     featureMatrixMinus = zeros(length(paramNames), length(fn));
@@ -852,33 +936,43 @@ fprintf('Minimum Total Cost (Sum of Squares): %.4f\n', Resnorm);
 
 
 figure(4);
-featureMatrixPlusN = (featureMatrixPlus - featureMatrixPlus(1, :))./featureMatrixPlus(1, :)*100;
-featureMatrixMinusN = (featureMatrixMinus - featureMatrixMinus(1, :))./featureMatrixMinus(1, :)*100;
+featureMatrixPlusDiff = (featureMatrixPlus - featureMatrixPlus(1, :));
+featureMatrixMinusDiff = (featureMatrixMinus - featureMatrixMinus(1, :));
 if ~RunDeltaMinus
-    featureMatrixMinusN = featureMatrixPlusN;
+    featureMatrixMinusDiff   = featureMatrixPlusDiff;
 end
 if ~RunDeltaPlus
-    featureMatrixPlusN = featureMatrixMinusN;
+    featureMatrixPlusDiff = featureMatrixMinusDiff;
 end
+featureMatrixPlusDiff(featureMatrixPlus == 0) = nan;
+featureMatrixMinusDiff(featureMatrixMinus == 0) = nan;
+
+
+featureMatrixPlusN = featureMatrixPlusDiff./featureMatrixPlus(1, :)*100;
+featureMatrixMinusN = featureMatrixMinusDiff./featureMatrixMinus(1, :)*100;
 %%
 
-featureMatrixN = min(featureMatrixMinusN, featureMatrixPlusN);
+featureMatrixN = min(featureMatrixMinusDiff, featureMatrixPlusDiff);
 
 paramCost = sum(featureMatrixN, 2);
 [vals, paramPos] = sort(abs(paramCost), 1, "desc");
 
 % cutoff too bads
-tooBadCost = 0;
+tooBadCost = 1;
 tooBad = featureMatrixN > tooBadCost;
 featureMatrixN(tooBad) = tooBadCost;
 
 % cutoff too good to be true
-tgtbtCost = -10;
+tgtbtCost = -1;
 tgtbt = featureMatrixN < tgtbtCost;
 featureMatrixN(tgtbt) = tgtbtCost;
 
 % paramPos = 1:length(paramNames);
 featureMatrixNSorted = featureMatrixN(paramPos, :);%./featureMatrixPlusN(paramPos(1), :)*100;
+
+validRows = ~isnan(sum(featureMatrixNSorted, 2)) & sum((featureMatrixNSorted), 2) ~= 0;
+paramPos = paramPos(validRows);
+featureMatrixNSorted = featureMatrixNSorted(validRows, :);
 
 imagesc(featureMatrixNSorted);
 colorbar;
@@ -901,8 +995,87 @@ for i = 1:size(featureMatrixNSorted,1)
     end
 end
 
-paramNames(paramPos)'
+paramNames(paramPos(1:20))
 
+%% gemini udpated version
+
+posInfluential = 0.1; % how much do we consider worsening the fit an influential parameter
+
+% 1. Calculate the total cost for each direction (Row-based)
+sumMinus = sum(featureMatrixMinusDiff, 2);
+sumPlus  = sum(featureMatrixPlusDiff, 2);
+
+% 2. Determine the "Winner" for each row
+% This finds which direction has the lower total sum for the whole row
+[paramCost, bestDirIdx] = min([sumMinus, sumPlus], [], 2);
+
+% 3. Build the final matrix based on the winning direction for that row
+featureMatrixN = zeros(size(featureMatrixMinusN));
+for r = 1:size(featureMatrixMinusN, 1)
+    if bestDirIdx(r) == 1
+        featureMatrixN(r, :) = featureMatrixMinusN(r, :);
+    else
+        featureMatrixN(r, :) = featureMatrixPlusN(r, :);
+    end
+end
+
+% 3. Filter out NaNs or all-zero rows before sorting
+validMask = ~any(isnan(featureMatrixN), 2) & any(featureMatrixN ~= 0, 2);
+
+% 4. Sort based on the COST (Ascending usually makes sense for "lowest cost")
+% If you want highest sensitivity at the top, use 'descend' on abs(paramCost)
+[~, sortedIdx] = sort(paramCost.*(paramCost > 0)*posInfluential + abs(paramCost).*(paramCost < 0), 'descend');
+
+% Intersect sorting with validity
+paramPos = sortedIdx(validMask(sortedIdx));
+
+% 5. Apply sorting to the matrix and create labels
+featureMatrixNSorted = featureMatrixN(paramPos, :);
+newYLabels = cell(length(paramPos), 1);
+
+for k = 1:length(paramPos)
+    rowIdx = paramPos(k);
+    
+    if bestDirIdx(rowIdx) == 1
+        dirStr = '[-]';
+    else
+        dirStr = '[+]';
+    end
+    
+    % Construct label: Name [+/-] (TotalCost)
+    newYLabels{k} = sprintf('%s %s (%.3f)', ...
+        paramNames{rowIdx}, dirStr, paramCost(rowIdx));
+end
+
+% --- Visualization ---
+featureMatrixNSortedCO = featureMatrixNSorted;
+cutOffMax = 10;
+cutOffMin = -10;
+featureMatrixNSortedCO(featureMatrixNSorted > cutOffMax) = cutOffMax;
+featureMatrixNSortedCO(featureMatrixNSorted < cutOffMin) = cutOffMin;
+
+imagesc(featureMatrixNSortedCO);
+colorbar;
+colormap(turbo);
+axis ij tight;
+
+set(gca, 'XTick', 1:length(fn), ...
+         'XTickLabel', fn, ...
+         'YTick', 1:length(paramPos), ...
+         'YTickLabel', newYLabels, ...
+         'TickLabelInterpreter', 'none');
+
+xtickangle(45);
+title('Sorted Parameter Sensitivities');
+
+% Print numeric values in each cell
+for i = 1:size(featureMatrixNSorted,1)
+    for j = 1:size(featureMatrixNSorted,2)
+        text(j, i, sprintf('%.3g', featureMatrixNSorted(i,j)), ...
+            'HorizontalAlignment', 'center', ...
+            'Color', 'k');
+    end
+end
 %%
 
 

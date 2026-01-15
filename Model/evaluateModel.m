@@ -99,7 +99,7 @@ ticId = tic;
             LSE = y(2*ss + 4); % length of the serial stiffness
             value(4) = params.kSE*LSE - 1e-3;
             if t > 0
-                isterminal(4) = true;
+              isterminal(4) = true;
             else
                 % do not break before zero
                 isterminal(4) = false;
@@ -459,6 +459,7 @@ end
             out.RSR2SRD(i) = rates(13);
             out.RSRD2SR(i) = rates(14);
             out.RT2(i)  = rates(15);
+            out.R2D(i)  = rates(16);
         end
 
         % first moments invalid due to shifting in strain s        

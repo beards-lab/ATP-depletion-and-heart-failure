@@ -113,6 +113,7 @@ else
     p1_1 = dS*sum(s.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
     F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
+    F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);     
 end
 
 % non-hydrolized ATP in non-super relaxed state
@@ -160,7 +161,11 @@ if params.FudgeVmax && t > -1
 else
     Force = sign(LSE)*abs(max(params.MaxSlackNegativeForce, params.kSE*LSE)).^params.ekSE;
     % Force = params.kSE*LSE*(LSE >= 0) + params.kSEn*LSE*(LSE < 0);
-    velHS = (Force - F_total)/params.mu;
+    if (Force - F_total) > 0
+        velHS = (Force - F_total)/params.mu;    
+    else
+        velHS = (Force - F_total)/params.mu_neg;
+    end
     dLSEdt = vel - velHS;
 end
 
@@ -330,20 +335,6 @@ else
     dU_SR = -RSR2PT  + RPT2SR + RSRD2SR - RSR2SRD;
 end
 
-if params.justPlotStateTransitionsFlag    
-    plotStateTransitions;
-    error('Quitting after plotting states');
-end
-%% governing flows
-% PT - calculated as complement of sum of all probabilities
-% state 0: unattached, ATP-cocked
-
-dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS;
-% dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
-dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
-dp2 = + R12 - R21  - R2 - XB_Ripped + R3m ; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
-dp3 = - R3 + R3m + R2;
-
 if params.UseA2Reattaching
     [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) + params.dr, params.dS, params.ss);
     RT2 = params.k_2*PT;
@@ -355,6 +346,26 @@ if params.UseA2Reattaching
 else
     RT2 = 0;
 end
+
+if params.UseA2MechanicalRecocking
+    R2D = params.k2d*p2.*(s > params.drmr);
+else
+    R2D = 0;
+end
+
+if params.justPlotStateTransitionsFlag    
+    plotStateTransitions;
+    error('Quitting after plotting states');
+end
+%% governing flows
+% PT - calculated as complement of sum of all probabilities
+% state 0: unattached, ATP-cocked
+
+dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
+% dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
+dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
+dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp3 = - R3 + R3m + R2;
 
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
@@ -459,7 +470,7 @@ elseif Ns == 3
     outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT];
 end
 
-rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2];
+rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];
 
 if params.DryRun
     f = zeros(size(PU));

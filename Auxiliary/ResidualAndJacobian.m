@@ -35,7 +35,11 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
         Jacobian = S_Cache;
     end
 
-    history = [history; Residuals];
+    if isempty(history)
+        history = Residuals;
+    else
+        history = [history; Residuals];
+    end
     assignin('base', 'optim_history', history); % Send to workspace in real-time    
 
     if ignoreJac

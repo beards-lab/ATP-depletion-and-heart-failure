@@ -813,7 +813,9 @@ params0.RunForceVelocity = false;
 params0.RunSlack = true;
 params0.BreakOnODEUnstable = false;
 params0.MaxStrainArraySize = 60;
+tic
 RunBakersExp
+toc
 
 %%
 

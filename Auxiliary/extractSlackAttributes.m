@@ -79,6 +79,33 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
         % plot(t, y, '-|b', 'LineWidth', 1);
+        
+        
+        %% detect init slope stiffness
+        
+        rngStart = t > t(1) & t < t(1) + 1e-3;
+        % assert there are at least 3 datapoitns
+        rngStart(1:3) = true;
+        slpStart = polyfit(SL(rngStart), y(rngStart), 1);
+        feats.restretchSlopeStart = slpStart(1);
+        
+        rngEnd = t > t(end) - 1e-3 & t < t(end);
+        rngEnd(end-5:end-1) = true;
+        slpEnd = polyfit(SL(rngEnd), y(rngEnd), 1);
+        feats.restretchSlopeEnd = slpEnd(1);
+
+        if plotResults
+            nSlp = 100;
+            plot(SL, y, SL(rngStart), y(rngStart),'x', SL(rngEnd), y(rngEnd), 'x', ...
+                head(SL, nSlp), slpStart(1)*head(SL, nSlp)+slpStart(2), '-|', ...
+                tail(SL, nSlp), slpEnd(1)*tail(SL, nSlp)+slpEnd(2), '-|', 'LineWidth', 1);
+            xlabel('SL (um)');ylabel('Force (kPa)');
+        end
+
+        % feats.Sl_V_restretch = (SL(end)-SL(1))/(t(end)-t(1));
+        
+
+        %%
         % 1. Detect Peaks
         [peak1_y, peak1_t] = findpeaks(y, t, 'MinPeakDistance', 0.01, 'MinPeakProminence', 0.5);
         feats.v_restretch = velocity_segment(3, 2); 

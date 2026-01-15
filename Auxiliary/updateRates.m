@@ -10,11 +10,13 @@ params = rmfield(params, 'xrate');
 
 
 params.kah = params.kah*xr;
+params.kamh = params.kamh*xr;
+
 params.ka = params.ka*xr;
-% params.kd
+params.kd = params.kd*xr;
 
 params.k1 = params.k1*xr;
-% params.k_1
+params.k_1 = params.k_1*xr;
 
 params.k2 = params.k2*xr;
 
