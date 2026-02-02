@@ -67,6 +67,25 @@ if params.UseSuperRelaxedADP
 else
     P_SRD = 0;
 end
+
+% x_dash_n = 2.0;
+if params.UseMaxwellDashpot
+    x_dash = PU(Ns*ss+7); % current middle of the parallel visco-elasticity
+    % 3. Maxwell Force (State-Dependent)
+    F_Maxwell  = params.kSE_M * (SL - x_dash);
+    
+    % Update the internal dashpot state (Simple Euler or use your ODE solver)
+    % dx_dash/dt = (Spring_Force) / Viscosity
+    dx_dash_dt = F_Maxwell  / params.eta_M;
+
+else
+    x_dash = 0; F_Maxwell  = 0; dx_dash_dt = 0;
+end
+
+
+
+
+
 % Sarcomere geometry
 if params.UseOverlap
     L_thick = params.L_thick;% = 1.67; % Length of thick filament, um
@@ -169,7 +188,8 @@ else
     dLSEdt = vel - velHS;
 end
 
-Force = Force + params.mu2*vel;
+Force = Force + params.mu2*vel + F_Maxwell;
+
 %% TRANSITIONS
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
@@ -515,11 +535,11 @@ end
 
 
 if Ns == 2 
-    f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
-    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT];    
+    f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD;dx_dash_dt];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell];    
 elseif Ns == 3
-    f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD];
-    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT];
+    f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD; dx_dash_dt];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];

@@ -470,6 +470,7 @@ end
             out.p1_1(i) = outputs(7);
             out.p2_1(i) = outputs(8);
             out.PuATP(i) = outputs(9);
+            out.F_Maxwell(i) = outputs(10);
         elseif Ns == 3
             out.p1_0(i) = outputs(5);
             out.p2_0(i) = outputs(6);

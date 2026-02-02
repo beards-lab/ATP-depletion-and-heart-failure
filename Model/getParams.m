@@ -378,12 +378,13 @@ end
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0*params.rsl0;
+        x_dash = SL0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash];
 		end
 		
 		if params.UseSuperRelaxedADP

@@ -221,13 +221,14 @@ paramNames = {
 };
 
 paramNames = {
+'s_threshold_R',
+'slope',
 'dr2'                        , 
 'xrate'                      , 
 'k_pas'                      , 
 'kstiff2'                    , 
 'L_thick'                    , 
 'ka'                         , 
-'mu_neg'                     , 
 'k2'                         , 
 'sigma2'                     , 
 'L_thin'                     , 
@@ -241,7 +242,6 @@ paramNames = {
 'PieceWiseStrainDep2X__5'    , 
 'kstiff2_n'                  , 
 'PieceWiseStrainDepParams__4', 
-'mu'                         , 
 'k2d',
 'sigma1'                     
 }
@@ -255,7 +255,8 @@ paramNames = {
 % params0.PieceWiseStrainDepX__4 = params0.PieceWiseStrainDepX(4);
 % params0.PieceWiseStrainDepX__5 = params0.PieceWiseStrainDepX(5);
 %%
-params0.xrate = 1;
+% params0.xrate = 1;
+params0.mu_neg = params0.mu;
 params0.mods = paramNames;
 params0.g = ones(1, length(paramNames));
 
@@ -278,7 +279,7 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % p = parpool('threads', 5);
 % history = [];
 x = fminsearch(optimfun, g0, options)
-save env_fmin8
+save env_fmin9
 params0.g = x;
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimBaseline.m', params0, '', 'Optim of force velocity curve. Good but oscillating a bit.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
@@ -373,10 +374,19 @@ params0.d_actin = 5.5e-3; % 5.5 nm
 params0.s_threshold_L = 1000*1.0*5.5e-3;    
 params0.s_threshold_R = 1*1.5*5.5e-3;    
 params0.slope = 20*4*2e2;
-params0.xrate = 1;
+params0.xrate = 0.8;
 params0.kstiff1 = 16000;
-params0.RunSlackSegments = 'Last';
-%
+params0.RunSlackSegments = 'AllPar';
+
+
+% testing Maxwell dashpot;
+params0.kSE_M = 1000;
+params0.eta_M = 10;
+params0.UseMaxwellDashpot = true;
+params0.RunSlackSegments = 'First';
+params0.RunForceVelocity = false;
+
+
 tic
 RunBakersExp;
 toc
@@ -384,7 +394,7 @@ toc
 %% figure(808);clf;
 % params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'restretchSlopeEnd'};
 params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
-params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+% params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
 
 % params0.fn = {'restretchSlopeStart'};
 plotFeatures(features_data, features_model, [], params0.fn);
