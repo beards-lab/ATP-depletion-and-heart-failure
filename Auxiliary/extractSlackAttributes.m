@@ -9,6 +9,11 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
     if nargin < 7
         plotResults = false;
     end
+    if plotResults
+        figure(406);clf;hold on;
+        plot(data_t, data_y, '-b', 'LineWidth', 1);                
+    end
+
 
     feats = struct(); 
     if size(data_t, 1) < size(data_t, 2)
@@ -45,16 +50,15 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
     
-        y_exp = @(A, k, t0, x) max(0, A*(1-exp(-(x-t0)*k)));
+        y_exp = @(A, k, t0, A0,x) max(0, A0*0 + min(y) + A*(1-exp(-(x-t0)*k)));
         try
-            [ae be] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01], 'Lower', [10, 0.01, 0.0], 'Upper', [200 200 0.1]);
+            [ae be] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01, 0], 'Lower', [10, 0.01, 0.0, 0], 'Upper', [200 200 0.1, 100]);
             init_tail = [0:0.001:0.15];
             
             if plotResults
-                plot(t, y, '-|b', 'LineWidth', 1.2);                
-                plot(init_tail, ae(init_tail),'--', t, ae(t), LineWidth=2)
-                plot(ae.t0, 0, '*', LineWidth=2, MarkerSize=ms);
-                plot(t, y-ae(t),'-', LineWidth=1);
+                plot(init_tail + t_seg, ae(init_tail),'--', t+ t_seg, ae(t), LineWidth=2)
+                plot(ae.t0+ t_seg, 0, '*', LineWidth=2, MarkerSize=ms);
+                % plot(t+ t_seg, y-ae(t),'-', LineWidth=1);
             end
             
             feats.ktr = ae.k;
@@ -94,13 +98,13 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         slpEnd = polyfit(SL(rngEnd), y(rngEnd), 1);
         feats.restretchSlopeEnd = slpEnd(1);
 
-        if plotResults
-            nSlp = 100;
-            plot(SL, y, SL(rngStart), y(rngStart),'x', SL(rngEnd), y(rngEnd), 'x', ...
-                head(SL, nSlp), slpStart(1)*head(SL, nSlp)+slpStart(2), '-|', ...
-                tail(SL, nSlp), slpEnd(1)*tail(SL, nSlp)+slpEnd(2), '-|', 'LineWidth', 1);
-            xlabel('SL (um)');ylabel('Force (kPa)');
-        end
+        % if plotResults
+        %     nSlp = 100;
+        %     plot(SL, y, SL(rngStart), y(rngStart),'x', SL(rngEnd), y(rngEnd), 'x', ...
+        %         head(SL, nSlp), slpStart(1)*head(SL, nSlp)+slpStart(2), '-|', ...
+        %         tail(SL, nSlp), slpEnd(1)*tail(SL, nSlp)+slpEnd(2), '-|', 'LineWidth', 1);
+        %     xlabel('SL (um)');ylabel('Force (kPa)');
+        % end
 
         % feats.Sl_V_restretch = (SL(end)-SL(1))/(t(end)-t(1));
         
@@ -121,7 +125,10 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
             % Find SL at peak time
             feats.peak1_SL = SL(find(t >= p1_time_abs, 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
-            % plot(peak1_t(1), peak1_y(1), '*', MarkerSize=ms);
+            
+            if plotResults
+                plot(peak1_t(1) + t_seg, peak1_y(1), '*', MarkerSize=ms);
+            end
         
             % --- Valley Logic (Min After Peak) ---
             % Find indices strictly after the first peak
@@ -194,13 +201,13 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         feats.vall2_dy = u_v - feats.steady;
         feats.vall2_t = t(u_i) - t(1);
         
-        % plot(t(u_i), u_v, '*', MarkerSize=ms)
-        % % plot(t, smoothdata(y, 1, "gaussian", 10))
         
         % smooth data from 
         [o_v, o_i] = max(smoothdata(y(u_i:end), 1, "gaussian", 10));
         feats.ovrsht_dy = o_v - feats.steady;
         feats.ovrsht_t = t(o_i+u_i-1);
+        % plot(t(u_i), u_v, '*', MarkerSize=ms)
+        % % plot(t, smoothdata(y, 1, "gaussian", 10))
         % plot(feats.ovrsht_t, o_v, '*', MarkerSize=ms)
 
         if ~isempty(out)

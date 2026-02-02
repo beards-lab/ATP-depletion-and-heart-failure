@@ -17,6 +17,7 @@ UT2UD = out.RTD(i_pos);  % Previously d2t, then s12s2
 UD2A1 = out.RD1(i_pos);  % Previously t2a1, then s22a1
 A12A2 = out.R12(i_pos);
 A22UT = out.R2T(i_pos);  % Previously a22d, then a22s1
+A22UD = out.R2D(i_pos);
 
 % Define backward fluxes between states
 UT2ST = out.RPT2SR(i_pos);
@@ -46,14 +47,14 @@ plot(x, y, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 10);
 labels = {'UT', 'UD', 'A1', 'A2', 'ST', 'SD'};
 values = [out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos), out.SR(i_pos), out.SRD(i_pos)];
 % Mapping forward fluxes to their corresponding start and end indices
-forward_pairs = [1 2; 2 3; 3 4; 4 1; 1 5; 6 2;5 6];
+forward_pairs = [1 2; 2 3; 3 4; 4 1; 1 5; 6 2;5 6;4 2];
 
 % Mapping backward fluxes to their corresponding start and end indices
 backward_pairs = [2 1; 3 2; 4 3; 5 1; 2 6; 6 5; 1 4];
 
 % Assemble forward and backward fluxes into arrays
-forward_fluxes = [UT2UD, UD2A1, A12A2, A22UT, UT2ST, SD2UD, ST2SD];
-forward_rates = forward_fluxes./[out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos), out.PuATP(i_pos), out.SRD(i_pos), out.SR(i_pos)];
+forward_fluxes = [UT2UD, UD2A1, A12A2, A22UT, UT2ST, SD2UD, ST2SD, A22UD];
+forward_rates = forward_fluxes./[out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos), out.PuATP(i_pos), out.SRD(i_pos), out.SR(i_pos), out.p2_0(i_pos)];
 backward_fluxes = [UD2UT, A12UD, A22A1, ST2UT, UD2SD, SD2ST, UT2A2];
 backward_rates = backward_fluxes./[out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos),out.SR(i_pos),out.PuR(i_pos), out.SRD(i_pos),out.PuATP(i_pos)];
 

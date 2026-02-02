@@ -756,11 +756,90 @@ if params0.RunSlack
             features_data.XTOR = [10 10 10 10 10];
         end
         % figure(43);clf;hold on;
-        features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, false);
+        features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, params0.PlotFeatureFitting);
     end
     
 
 end
+
+%% MINIMAL STRETCH
+
+if isfield(params0, 'RunMinStretch') && params0.RunMinStretch
+
+fname = ['../data/PassiveCaSrc2/' '20241121' '/02_03_Fmax_stiff_ktr.txt'];
+fmaxdata = readtable(fname, ReadVariableNames=false);
+
+datatable = table2array([1 2.0 1].*fmaxdata(:, 1:3));    
+%
+    h = [2.5, 5, 7.5]*1e-3;
+    dt = 1e-3;
+    s = 5e-4;
+    
+    velocitytable = [
+    -2, 0, 0, 2.0;
+    s+ 0.1, h(1)/dt, 2*h(1)*dt, 2.0;
+    s+ 0.1 + dt, 0, 0, 2.0 + h(1)*2;
+    s+ 0.1+0.2, -h(1)/dt, -2*h(1)*dt, 2.0 + h(1)*2;
+    s+ 0.1+0.2+dt, 0, 0, 2.0;
+
+    s+ 0.5, h(2)/dt, 2*h(2)*dt, 2.0;
+    s+ 0.5 + dt, 0, 0, 2.0 + h(2)*2;
+    s+ 0.5+0.2, -h(2)/dt, -2*h(2)*dt, 2.0 + h(2)*2;
+    s+ 0.5+0.2+dt, 0, 0, 2.0;
+
+    s+ 0.9, h(3)/dt, 2*h(3)*dt, 3.0;
+    s+ 0.9 + dt, 0, 0, 2.0 + h(3)*2;
+    s+ 0.9+0.2, -h(3)/dt, -2*h(3)*dt, 2.0 + h(3)*2;
+    s+ 0.9+0.2+dt, 0, 0, 2.0;
+        
+    1.5, 0, 0, 2.0;
+    ];
+    
+    v = 250;
+    vt_ktr =[
+   -0.0146 ,-v
+   -0.0146 + 0.2/v         0
+   -0.0046   v
+   -0.0046 + 0.25/v         0
+   -0.0001, -v
+   -0.0001 + 0.05/v         0
+    1.0000         0    ];
+
+    velocitytable = [velocitytable ; [vt_ktr + [1.6,0],vt_ktr(:, 2)/2, vt_ktr(:, 1)*0]];
+
+    params = params0;
+
+    params.Velocity = velocitytable(:, 2);
+
+    params.SL0 = 2.0;
+    params.Slim_l = 1.9;
+    params.Slim_r = 2.0;   
+    params = getParams(params, params.g, true);
+    params.UseSuperRelaxed = false;
+    params.UseSuperRelaxedADP = false;
+    params.UseA2MechanicalRecocking = false;    
+
+    [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+%
+% clf;    hold on;
+%     plot(datatable(:, 1), datatable(:, 2),datatable(:, 1), datatable(:, 3)/datatable(1, 3), 'k');
+%     plot(out.t, out.SL, out.t, out.Force/out.Force(end), LineWidth=2);
+
+mask = out.t >= 0;
+
+% 2. Create the new table with the exact column names needed
+% new_table = table(out.t(mask)', out.SL(mask)', out.Force(mask)', ...
+%     'VariableNames', {'x_s_', 'x_Lo_', 'x_kPa_'});
+
+% 3. Append it to the fmaxdata cell array
+%% This adds it as the last element
+fmaxdataCurrent = {};
+fmaxdataCurrent{1} = datatable;
+fmaxdataCurrent{end+1} = [out.t(mask)', out.SL(mask)', out.Force(mask)'];
+ProcessFmaxData;
+% StatesInTime
+end
+
 %% FORCE VELOCITY RESIMULATION
 if params0.RunForceVelocityTime
 

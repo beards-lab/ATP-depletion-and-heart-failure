@@ -220,7 +220,31 @@ paramNames = {
 'kstiff1_n'
 };
 
-
+paramNames = {
+'dr2'                        , 
+'xrate'                      , 
+'k_pas'                      , 
+'kstiff2'                    , 
+'L_thick'                    , 
+'ka'                         , 
+'mu_neg'                     , 
+'k2'                         , 
+'sigma2'                     , 
+'L_thin'                     , 
+'kah'                        , 
+'ksr0'                       , 
+'kamh'                       , 
+'PieceWiseStrainDepR21X__1'  , 
+'k1'                         , 
+'kSE'                        , 
+'PieceWiseStrainDepX__4'     , 
+'PieceWiseStrainDep2X__5'    , 
+'kstiff2_n'                  , 
+'PieceWiseStrainDepParams__4', 
+'mu'                         , 
+'k2d',
+'sigma1'                     
+}
 
 % params0.kstiff1_n = params0.kstiff1;
 % params0.kstiff2_n = params0.kstiff2;
@@ -254,7 +278,8 @@ options = optimset('Display','iter', 'TolFun', 1e-3, 'Algorithm','sqp', 'TolX', 
 % p = parpool('threads', 5);
 % history = [];
 x = fminsearch(optimfun, g0, options)
-save env_fmin7
+save env_fmin8
+params0.g = x;
 % writeParamsToMFile('ModelOptParams/ModelParamsFVOptimBaseline.m', params0, '', 'Optim of force velocity curve. Good but oscillating a bit.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_FVSlackUpdate_.m', params0, '', 'Optim of force velocity curve AND the slack. Good starting vehicle.');
@@ -267,14 +292,16 @@ save env_fmin7
 options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60*8, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
 % p = parpool('threads', 4)
 % p = parpool('processes', 4)
-% delete(p)
+% delete(p
+
 [x,fval,exitflag,output,trials] = surrogateopt(optimfun, g0*0.1,g0*10, options);
 save env_surro
 % writeParamsToMFile('../ModelOptParams/ModelParamsFVOptimSRXTDSurro.m', params0, '', 'Optim of force velocity curve. Good but oscillating.');
-
+% writeParamsToMFile('../ModelOptParams/ModelParamsCorrBackwardProfiles.m', params0, '', 'Fixed the inverted backward rate strain sensitivity');
 %% Test after optim
 figure(802);clf;
 % params0.g = x;
+% 
 % params0bak = params0;
 % ModelOptParamsFeaturesOvernight
 % params0 = getParams(params0, x, false, true);
@@ -306,7 +333,7 @@ params0.MaxRunTime = 60;
 % params0.k2d = 1000;
 % params0.drmr = 0.01*0.8;
 % params0.k2 = 132*0.6;
-% params0.mu = 0.0019*1e3;
+% params0.mu = 0.0019;
 % params0.mu = 0.0019*100*10;
 % params0.mu_neg = params0.mu*0.10;
 % params0.mu_neg = params0.mu;
@@ -316,24 +343,56 @@ params0.MaxRunTime = 60;
 
 params0.justPlotStateTransitionsFlag = false;
 params0.ghostLoad = '';
-params0.UseA2MechanicalRecocking = false;
+% params0.UseA2MechanicalRecocking = true;
 % params0.xrate = 1;
 % params0.kstiff1_n = params0.kstiff1*0.1;
 % params0.kstiff2_n = params0.kstiff2*0.1;
-
+% params0.kstiff2_n = params0.kstiff2*10;
+% params0.kstiff2_n = 9.1413e+03;
+% params0.mu = 
 % params0.PieceWiseStrainDep2X__1 = 0.1;
 
+params0.UseA2MechanicalRecocking = false;
+params0.k2d = 10;
+params0.drmr = params0.dr;
+params0.ShowStatePlots = false;
+
+params0.RunForceVelocity = true;
+params0.RunSlack = true;
+params0.RunMinStretch = false;
+% params0.kSE = params0.kSE;
+
+params0.PlotFeatureFitting = false;
+params0.mu2 = 1e-9;
+params0.mu = 1.9;
+params0.ghostSave = '';
+% params0.ghostLoad = 'mu1';
+params0.ghostLoad = 'RA';
+params0.UseA2AttachmentShift = true;
+params0.d_actin = 5.5e-3; % 5.5 nm
+params0.s_threshold_L = 1000*1.0*5.5e-3;    
+params0.s_threshold_R = 1*1.5*5.5e-3;    
+params0.slope = 20*4*2e2;
+params0.xrate = 1;
+params0.kstiff1 = 16000;
+params0.RunSlackSegments = 'Last';
+%
 tic
 RunBakersExp;
 toc
 
-% figure(808);clf;
-params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'restretchSlopeEnd'};
+%% figure(808);clf;
+% params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'restretchSlopeEnd'};
 params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+
 % params0.fn = {'restretchSlopeStart'};
 plotFeatures(features_data, features_model, [], params0.fn);
 
 sum(evalFeatureCost(features_data, features_model, params0.fn, 1))
+
+%% 
+extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, struct(), out, true)
 
 %% tradeoff visualization
 
@@ -483,7 +542,7 @@ StatesInTime
 
 %%
 % savedParams = params0;
-params0.justPlotStateTransitionsFlag = true;
+params0.justPlotStateTransitionsFlag = false;
 figure(8483);clf;
 % params0.RunForceVelocityTime = false;
 % params0.FV_velocities = [-0.5000   -2.0000   -3.0000   -4.0000];
@@ -496,14 +555,20 @@ params0.mods = [];
 params0.g = [];
 % params0.k2 = 131.3860*1;
 params0.UseOverlapFactor = false;
-params0
+params0.kSE = 1e3*3.5;
+% params0
 % params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y'};
+params0.UseA2MechanicalRecocking = false;
+params0.k2d = 2000;
+params0.drmr = params0.dr;
+params0.mu_neg = params0.mu;
+
 
 % params0.g(2) = 0;
 params0.RunSlackSegments = 'AllPar';
 tic
 RunBakersExp
-%%
+%
 
 % features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, features_model, out, false);
 
@@ -511,7 +576,7 @@ toc
 [costs, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn(1:end), 1);
 sum(costs)
 
-plotFeatures(features_data, features_model, [], params0.fn(1:end))
+plotFeatures(features_data, features_model, [], params0.fn(1:end));
 
 %% test
 LoadData
@@ -811,9 +876,9 @@ params0.PlotEachSeparately = false;
 
 % params0.EvalFeatures = true;
 % params0.RunForceLengthEstim = true;
-fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
-fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
-fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y'};
+% fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'ovrsht_dy|_|0', 'steady', 'XTOR'};
+% fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1'};
+% fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y'};
 
 fn = params0.fn;
 
@@ -852,15 +917,20 @@ for i_param = 1:length(paramNames)
             savedFeats{i_param, 1} = features_model;
         end
         if RunDeltaMinus
-            params0.g = 1 - delta;
-            fprintf('-...');
-            figure(334); clf;        
-            RunBakersExp;
-            % % check the init
-            [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
-            % costs = E;
-            featureMatrixMinus(i_param, :) = costs;
-            savedFeats{i_param, 2} = features_model;
+            if all(featureMatrixPlus(i_param, :) == featureMatrixPlus(1, :)) 
+                % featureMatrixMinus(i_param, :) = costs;
+                fprintf('x...');
+            else
+                params0.g = 1 - delta;
+                fprintf('-...');
+                figure(334); clf;        
+                RunBakersExp;
+                % % check the init
+                [costs, weights, cost] = evalFeatureCost(features_data, features_model, fn, 1);
+                % costs = E;
+                featureMatrixMinus(i_param, :) = costs;
+                savedFeats{i_param, 2} = features_model;
+            end
         end
                 
         fprintf('Done \n');
@@ -869,6 +939,7 @@ for i_param = 1:length(paramNames)
     end
 end
 % save('SA_pwsd', "savedFeats", "featureMatrixMinus", "featureMatrixPlus");
+save env_SA
 toc
 %%
 
@@ -935,7 +1006,11 @@ fprintf('Minimum Total Cost (Sum of Squares): %.4f\n', Resnorm);
 %% Visualize the double-sided 
 
 
-figure(4);
+% figure(4);
+% same values, so did not run - indexes
+sameNotRun = (featureMatrixPlus  > 0 & featureMatrixMinus == 0);
+featureMatrixMinus(sameNotRun) = featureMatrixPlus(sameNotRun);
+
 featureMatrixPlusDiff = (featureMatrixPlus - featureMatrixPlus(1, :));
 featureMatrixMinusDiff = (featureMatrixMinus - featureMatrixMinus(1, :));
 if ~RunDeltaMinus

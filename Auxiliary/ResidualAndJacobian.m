@@ -28,7 +28,7 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
     try
         LoadData;
         RunBakersExp; % This is your costly model call!
-        [Residuals, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
+        [Residuals, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 2);
     catch e
         disp(e)
         Residuals = 1e3*ones(size(params0.fn));

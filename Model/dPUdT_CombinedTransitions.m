@@ -169,6 +169,7 @@ else
     dLSEdt = vel - velHS;
 end
 
+Force = Force + params.mu2*vel;
 %% TRANSITIONS
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
@@ -335,6 +336,57 @@ else
     dU_SR = -RSR2PT  + RPT2SR + RSRD2SR - RSR2SRD;
 end
 
+if params.UseA2AttachmentShift
+    
+    % AS_src = zeros(size(p2));
+    % AS_trg = zeros(size(p2));
+    % mask = (s < 0 & s > -params.dr);
+    % AS_src(mask) = abs(s(mask)) * (params.a2RAS / params.dr);
+    % trg = ((params.a2RAS / params.dr) - abs(s(mask)));
+    % AS_trg(mask) = trg/sum(trg)*sum(AS_src);
+
+
+    %% --- Parameters ---
+    sp2 = s;
+    % params.slope = 1000; % parametrized rate (s^-1/nm)
+    % params.d_actin = 5.5e-3; % 5.5 nm
+    % params.s_threshold = 5.5e-3;    
+    % p2: N x 1 probability array
+    % p0: scalar (or array) detached probability
+    % s: N x 1 strain vector (must be monotonically increasing)
+    
+    % 1. Calculate Hopping Rate and Mass Leaving
+    RA_K = max(0, params.slope/params.dr * (s - params.s_threshold_R)) + max(0, -params.slope/params.dr * (s + params.s_threshold_L));
+    % RA_K = params.slope/params.dr * max(0, abs(sp2) - params.s_threshold);
+    dp2_RAm = p2 .* RA_K;    
+    
+    % 2. Calculate Target Positions (Shifted toward center)
+    s_target = (s > params.s_threshold_R).*(s - params.d_actin) + (s < - params.s_threshold_L).*(s+params.d_actin);  
+    % s_target = sp2 - sign(sp2) .* params.d_actin;
+    
+    % 3. Find Indices using 'discretize'
+    % This tells us which bin each target_s falls into
+    L = discretize(s_target, s);
+    R = L + 1;
+    
+    % 4. Bound check (Essential for safety)
+    L = max(1, min(length(s)-1, L));
+    R = L + 1;
+            
+    % 5. Linear Interpolation Weights
+    dist = s(R) - s(L);
+    w_R = (s_target - sp2(L)) ./ dist;
+    w_L = 1 - w_R;
+    % 6. Accumulate into p2 (Vectorized)
+    % accumarray sums all mass falling into the same bin index
+    dp2_RAL = accumarray(L, dp2_RAm .* w_L, [length(s), 1]);
+    dp2_RAR = accumarray(R, dp2_RAm .* w_R, [length(s), 1]); 
+    % plot(s, p2*100, s, dp2_RAm, '--',s, dp2_RAR,  ':', s, dp2_RAL,  ':', s, dp2_RAR + dp2_RAL -dp2_RAm, '--', LineWidth=2)
+else
+    dp2_RAm = 0; dp2_RAL = 0; dp2_RAR = 0;
+end
+
+
 if params.UseA2Reattaching
     [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) + params.dr, params.dS, params.ss);
     RT2 = params.k_2*PT;
@@ -364,7 +416,7 @@ end
 dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
 % dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
-dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 dp3 = - R3 + R3m + R2;
 
 
@@ -480,7 +532,7 @@ if params.DryRun
 end
 
 %% breakpints
-if t> 0.01 && any(PD > 0)
+if t > 1.9 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 6678;

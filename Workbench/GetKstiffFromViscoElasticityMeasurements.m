@@ -13,8 +13,12 @@ for i_s1 = 1:length(S1)
     end
     fmaxdata{end+1} = readtable(fname);
 end
+
+
 %%
 figure(404);clf;
+
+datatable = table2array([1 2.0 1].*fmaxdata{2}(:, ["x_s_", "x_Lo_", "x_kPa_"]));
 
 for i_fm = 1:length(fmaxdata)
 
@@ -46,13 +50,14 @@ F_corrected = F;
 
     normf = fmaxdata{i_fm}.x_kPa_(end);
     normf = F_corrected(end);
+    normf = 1;
     nexttile(1);hold on;
     % plot(fmaxdata{i_fm}.x_s_, fmaxdata{i_fm}.x_kPa_/normf);
     plot(t, F_corrected/normf);
     nexttile(2);hold on;
-    plot(fmaxdata{i_fm}.x_s_, fmaxdata{i_fm}.x_Lo_*1);
+    % plot(fmaxdata{i_fm}.x_s_, fmaxdata{i_fm}.x_Lo_*2);
     % plot(fmaxdata{i_fm}.x_Lo_,fmaxdata{i_fm}.x_um_);
-    % plot(fmaxdata{i_fm}.x_s_, fmaxdata{i_fm}.x_um_);
+    plot(fmaxdata{i_fm}.x_s_, fmaxdata{i_fm}.x_um_);
 
 
 %% 1. Definice modelu: f(t) = 1 - A * exp(-k * t)
@@ -89,3 +94,8 @@ fprintf('Kvalita fitu (R^2): %.4f\n', err_fit(i_fm));
 % grid on;    
 
 end
+
+nexttile(1);legend;
+%%
+
+plot(fmaxdata{i_fm}.x_s_, [0;diff(fmaxdata{i_fm}.x_Lo_)]);

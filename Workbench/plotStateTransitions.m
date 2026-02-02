@@ -38,6 +38,9 @@ ylim([0, myl])
 xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 legend('R1D', 'R12', 'R21', 'R2','R2D','AutoUpdate','off');
+if length(dp2_RAm) > 1
+    plot(s, dp2_RAm./p2, '--',s, (dp2_RAL + dp2_RAR)./p2, ':', LineWidth=2);
+end
 if isfield(params, 'PieceWiseStrainDepX') && ~isempty(params.PieceWiseStrainDepX)
     plot(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, 'x', MarkerSize=14, LineWidth=2)
 end

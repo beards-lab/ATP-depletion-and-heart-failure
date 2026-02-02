@@ -5,8 +5,55 @@ t_init = out.t(round(end/2));
 
 figure(10);clf;
 % params = getParams(params);
+nexttile(1);
 plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR , '-', out.t, out.SRD, '-', LineWidth=1.5)
-legend('P1','P2','PuATP','PuR', 'SRT', 'SRD')
+legend('P1','P2','PuATP','PuR', 'SRT', 'SRD');
+
+nexttile(2); cla; hold on;
+
+% 3. Create the legend with your specific labels
+labels = {'RSR2PT', 'RSRD2PD', 'RTD', 'RD1', 'R12', 'R2T', 'RSR2SRD', ...
+          'R2D', 'RPT2SR', 'RPD2SRD', 'RDT', 'R1D', 'R21', 'RT2'};
+
+% 1. Define what you want to see by default
+enableList = {'RSRD2PD', 'RTD', 'RD1', 'R2D'}; 
+
+% 2. Plot and capture handles
+% We capture handles in two groups to preserve your LineWidth/Style logic
+h1 = plot(out.t, out.RSR2PT, ...
+    out.t, out.RSRD2PD, ...
+    out.t, out.RTD, ...
+    out.t, out.RD1, ...
+    out.t, out.R12, ...
+    out.t, out.R2T, ...
+    out.t, out.RSR2SRD, ...    
+    out.t, out.R2D, 'LineWidth', 2);
+
+set(gca, 'colororderindex', 1);
+
+h2 = plot(out.t, out.RPT2SR, ':', ...
+    out.t, out.RPD2SRD, ':', ...
+    out.t, out.RDT, ':', ...
+    out.t, out.R1D, ':', ...
+    out.t, out.R21, ':', ...
+    out.t, out.RT2, ':', 'LineWidth', 2);
+
+% Combine all handles into one vector
+h = [h1; h2];
+
+lgd = legend(labels);
+
+% 4. Selective Disable: Hide lines not in the enableList
+for i = 1:length(h)
+    if ~any(strcmp(labels{i}, enableList))
+        h(i).Visible = 'off';
+    end
+end
+
+% 5. Enable the toggle event
+lgd.ItemHitFcn = @(src, event) toggle_visibility(src, event);
+
+%%
 fig = figure(11);
 clf;
 % makeplot([], [], out, params);
@@ -160,4 +207,12 @@ end
 function rescalePlot(event)
     g = gca;
     ylim('auto');
+end
+
+function toggle_visibility(A, event)
+    if strcmp(event.Peer.Visible, 'on')
+        event.Peer.Visible = 'off';
+    else
+        event.Peer.Visible = 'on';
+    end
 end
