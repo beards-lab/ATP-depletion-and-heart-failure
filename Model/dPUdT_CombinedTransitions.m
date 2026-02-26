@@ -552,7 +552,7 @@ if params.DryRun
 end
 
 %% breakpints
-if t > 1.9 % && any(PD > 0)
+if t > 1.81 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 6678;

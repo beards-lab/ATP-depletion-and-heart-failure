@@ -288,6 +288,9 @@ params0.g = x;
 % writeParamsToMFile('ModelOptParams/ModelParamsFeats_FVSlackUpdateValley2.m', params0, '', 'Second round optim of force velocity curve AND the slack. Take valley feat aboard, did not help much.');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_ReasonableStartingPoint.m', params0, '', 'Based ona better estim for kSE');
 % writeParamsToMFile('../ModelOptParams/ModelParamsFeats_ReasonableStartingPointB.m', params0, '', 'Based ona better estim for kSE and piecewise nonlinear kstiff2');
+%%
+params0.PlotEachSeparately = true;
+sum(ResidualAndJacobian(x, params0, true))
 %% RUN surrogate optim
 
 options = optimoptions('surrogateopt','Display','iter', 'MaxTime', 60*60*8, 'UseParallel',false, 'PlotFcn', 'surrogateoptplot', 'InitialPoints', g0, MaxFunctionEvaluations=600);
@@ -306,7 +309,7 @@ figure(802);clf;
 % params0bak = params0;
 % ModelOptParamsFeaturesOvernight
 % params0 = getParams(params0, x, false, true);
-params0.FV_velocities = -[0.5 2 3 4];
+params0.FV_velocities = -[0 0.5 1 2 3 4];
 % params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
 % params0.mods = [];
 % params0.g = x;
@@ -358,7 +361,7 @@ params0.k2d = 10;
 params0.drmr = params0.dr;
 params0.ShowStatePlots = false;
 
-params0.RunForceVelocity = true;
+params0.RunForceVelocity = false;
 params0.RunSlack = true;
 params0.RunMinStretch = false;
 % params0.kSE = params0.kSE;
@@ -374,23 +377,33 @@ params0.d_actin = 5.5e-3; % 5.5 nm
 params0.s_threshold_L = 1000*1.0*5.5e-3;    
 params0.s_threshold_R = 1*1.5*5.5e-3;    
 params0.slope = 20*4*2e2;
-params0.xrate = 0.8;
+params0.xrate = 0.28;
 params0.kstiff1 = 16000;
-params0.RunSlackSegments = 'AllPar';
+params0.RunSlackSegments = 'All';
 
+params0.kstiff1 = 16000;
+params0.kstiff1_n = 1600/10;
+params0.kstiff2 = 80000;
+params0.kstiff2_n = 8000/10;
 
 % testing Maxwell dashpot;
-params0.kSE_M = 1000;
-params0.eta_M = 10;
-params0.UseMaxwellDashpot = true;
-params0.RunSlackSegments = 'First';
-params0.RunForceVelocity = false;
+params0.kSE_M = 100;
+params0.eta_M = .1;
+params0.UseMaxwellDashpot = false;
+% params0.RunSlackSegments = 'AllPa';
+params0.RunForceVelocity = true;
+params0.mu_neg = 1.9/3;
+params0.mu = 1.9/3;
+params0.k_pas = 88/2;
 
-
+% %%
+% clf;
+%% params0.UseMaxwellDashpot = false;
 tic
 RunBakersExp;
+% nexttile(1); plot(out.t, out.F_Maxwell)
 toc
-
+% writeParamsToMFile('ModelOptParams/ModelParamsSlackKtrOpt.m', params0, '', ['Slightly better after opt. Manual fit to slack features']);
 %% figure(808);clf;
 % params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'restretchSlopeEnd'};
 params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
@@ -1175,6 +1188,7 @@ params0.MaxStrainArraySize = 40;
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
 params0.justPlotStateTransitionsFlag = true;
+params0.UseMaxwellDashpot = false;   
 tic
 RunBakersExp; 
 toc
