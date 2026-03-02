@@ -270,6 +270,9 @@ end
         params.g = [];
     end
 
+    %% Resolve linked parameters AFTER THE 
+    params = resolveParams(params);
+    
     %% 2. Reconstruct arrays: params.arr_2 = 3 -> params.arr(2) = 3
     paramsfn = fieldnames(params);
     for i = 1:length(paramsfn)

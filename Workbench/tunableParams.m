@@ -128,7 +128,8 @@ excludeParams = {
 'PieceWiseStrainDepR21X__3'     ,
 'PieceWiseStrainDepR21Params__2',
 'PieceWiseStrainDepR21Params__3',
-'vmax'    
+'vmax',
+'UseMaxwellDashpot'
 };
 
 % Initialize the output struct

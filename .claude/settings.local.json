@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(matlab:*)",
+      "Bash(\"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe\":*)",
+      "Bash(ls:*)",
+      "Bash(do grep:*)"
+    ]
+  }
+}
