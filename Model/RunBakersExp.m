@@ -238,7 +238,7 @@ if params0.RunKtr
     % params.UseSlack = true;
     % params.PlotFullscreen = true;
     % params.LXBpivot = 2.0;
-    params = getParams(params, params.g, true, true);
+    params = getParams(params, params.g, true);
 
     % params.UseTitinModel = false;
 
@@ -336,7 +336,7 @@ if params0.RunStairs
     % params.WindowsOverflowStepCount
     % params.N = 30;
     % update params with new N and Slims
-    params = getParams(params, params.g, true, true);
+    params = getParams(params, params.g, true);
 
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
@@ -546,7 +546,7 @@ if params0.RunSlack
     end
     N = length(par_velocitytable);
     outs = cell(1, N);    
-    params = getParams(params, params.g, true, true);    
+    params = getParams(params, params.g, true);    
 
     for i_par_chunk = 1:N
 
@@ -1039,3 +1039,4 @@ function merged = mergeOutStructs(outs, dim)
         end
     end
 end
+

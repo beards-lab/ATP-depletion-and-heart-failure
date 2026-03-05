@@ -36,3 +36,11 @@ LoadData;
 
 % Run the experiment scripts
 RunBakersExp;
+
+params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+% params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+
+% params0.fn = {'restretchSlopeStart'};
+plotFeatures(features_data, features_model, [], params0.fn);
+
+totalCost = sum(evalFeatureCost(features_data, features_model, params0.fn, 1));
