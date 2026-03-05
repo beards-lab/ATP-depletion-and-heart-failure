@@ -10,6 +10,10 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
 
     params0.g = g;
     params0.EvalFeatures = true;
+    params0.PlotEachSeparately = false;
+    params0.BreakOnODEUnstable = true;
+    params0.MaxRunTime = 60;
+    params0.FV_velocities = -[0.5, 1, 3, 4];
     
     assert(length(params0.g) == length(params0.mods), "The params and g, woe");
 
@@ -58,25 +62,29 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
 
         S = zeros(N, M);
         G_base = g;
-        
-        try
-            % Perform Finite Differences for M parameters (M model calls)
-            for j = 1:M
-                G_perturbed = G_base;
-                G_perturbed(j) = G_base(j) + delta;
-                
-                params0.g = G_perturbed;
-                
-                % IMPORTANT: Utilize your knowledge of known zero-dependencies here
+
+        featureNames = cellfun(@(s) strtok(s, '|'), params0.fn, 'UniformOutput', false);
+        features_model0Vals = cellfun(@(n) sum(features_model.(n)), featureNames);
+
+        % Perform Finite Differences for M parameters (M model calls)
+        for i_jac = 1:M
+            G_perturbed = G_base;
+            G_perturbed(i_jac) = G_base(i_jac) + delta;
+
+            params0.g = G_perturbed;
+
+            % IMPORTANT: Utilize your knowledge of known zero-dependencies here
+            try
+                disp(i_jac)
                 RunBakersExp; % This is your costly model call!
-                [Residuals_pert, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
-    
-                S(:, j) = (Residuals - Residuals_pert) / delta;
+                % [Residuals_pert, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
+                features_modelVals = cellfun(@(n) sum(features_model.(n)), featureNames);
+                S(:, i_jac) = (features_modelVals - features_model0Vals) / delta;
+            catch e
+                disp(e)
+                % Residuals = [1000];
+                % Jacobian = S_Cache;
             end
-        catch e
-            disp(e)
-            % Residuals = [1000];
-            Jacobian = S_Cache;
         end
         
         S_Cache = S;

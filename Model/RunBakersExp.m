@@ -16,7 +16,7 @@ if params0.RunForceVelocity
     t_ss = [0 0.1];
     t_sl0 = [0 0.1];
 
-    % params = getParams(params);
+    params = getParams(params, params.g, true, true);
     params.UseForceOnsetShift = false;
     F_active = [];
     clear outs;
@@ -238,7 +238,7 @@ if params0.RunKtr
     % params.UseSlack = true;
     % params.PlotFullscreen = true;
     % params.LXBpivot = 2.0;
-    params = getParams(params, params.g, true);
+    params = getParams(params, params.g, true, true);
 
     % params.UseTitinModel = false;
 
@@ -336,7 +336,7 @@ if params0.RunStairs
     % params.WindowsOverflowStepCount
     % params.N = 30;
     % update params with new N and Slims
-    params = getParams(params, params.g, true);
+    params = getParams(params, params.g, true, true);
 
     [F out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
@@ -546,7 +546,7 @@ if params0.RunSlack
     end
     N = length(par_velocitytable);
     outs = cell(1, N);    
-    params = getParams(params, params.g, true);    
+    params = getParams(params, params.g, true, true);    
 
     for i_par_chunk = 1:N
 
