@@ -26,7 +26,10 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
     
     % --- Configuration ---
     UPDATE_FREQUENCY = 5; % Only recalculate S_Cache every 5 iterations
-    delta = 1e-3;       % Finite difference step size
+    % IMPORTANT: delta must be >> sqrt(ODE_RelTol) to be above numerical noise.
+    % ODE RelTol = 1e-2, so noise floor is ~1e-2. delta=1e-3 was BELOW noise (bug!).
+    % Using 5e-2 (5% parameter change) safely above the noise floor.
+    delta = 5e-2;
 
     % --- Part 1: COSTLY MODEL RUN (Always required for residuals) ---
     try
@@ -64,7 +67,9 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
         G_base = g;
 
         featureNames = cellfun(@(s) strtok(s, '|'), params0.fn, 'UniformOutput', false);
-        features_model0Vals = cellfun(@(n) sum(features_model.(n)), featureNames);
+        % Use mean() not sum() — features are vectors (one per slack velocity)
+        % sum() inflates magnitude by nVelocities; mean() gives consistent scale
+        features_model0Vals = cellfun(@(n) mean(features_model.(n)), featureNames);
 
         % Perform Finite Differences for M parameters (M model calls)
         for i_jac = 1:M
@@ -78,7 +83,7 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
                 disp(i_jac)
                 RunBakersExp; % This is your costly model call!
                 % [Residuals_pert, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
-                features_modelVals = cellfun(@(n) sum(features_model.(n)), featureNames);
+                features_modelVals = cellfun(@(n) mean(features_model.(n)), featureNames);
                 S(:, i_jac) = (features_modelVals - features_model0Vals) / delta;
             catch e
                 disp(e)
