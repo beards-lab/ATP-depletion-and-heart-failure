@@ -132,7 +132,7 @@ else
     p1_1 = dS*sum(s.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
     F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
-    F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);     
+    % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);     
 end
 
 % non-hydrolized ATP in non-super relaxed state
@@ -194,7 +194,7 @@ Force = Force + params.mu2*vel + F_Maxwell;
 % plotStateTransitionsFlag = true;
 if params.justPlotStateTransitionsFlag
     % s = s - (s(end) - s(1))/2; 
-    s = (-0.05:0.001:0.05)';
+    s = (-0.02:0.001:0.02)';
     F_total = linspace(-50, 80, 8);
     F_passive = linspace(-5, 10, 8);
     p1 = ones(size(s));
@@ -238,32 +238,32 @@ if params.UsePieceWiseStrainDep
     % end
 
     % Monotonic cubic interpolation    
-    if params.UseStrainDep4R1D
-        R1D = params.kd*p1.*exp(-(s.^2) / (2*params.kd_sigma^2));
-    elseif isfield(params, 'PieceWiseStrainDepR1D') && ~isempty(params.PieceWiseStrainDepR1D)
+    % if params.UseStrainDep4R1D
+    %     R1D = params.kd*p1.*exp(-(s.^2) / (2*params.kd_sigma^2));
+    % elseif isfield(params, 'PieceWiseStrainDepR1D') && ~isempty(params.PieceWiseStrainDepR1D)
         R1D = params.kd*p1.*ppval(params.PieceWiseStrainDepR1D, s);
-    else        
-        R1D = params.kd*p1;
-    end
+    % else        
+    %     R1D = params.kd*p1;
+    % end
 
     R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
     
-    if isfield(params, 'PieceWiseStrainDepR21') && ~isempty(params.PieceWiseStrainDepR21)    
+    % if isfield(params, 'PieceWiseStrainDepR21') && ~isempty(params.PieceWiseStrainDepR21)    
         R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, s);
-    else
-        R21 = p2*0;    
-    end
+    % else
+    %     R21 = p2*0;    
+    % end
     
-    if isfield(params, 'A2_PieceWiseStrainDepX')
-        error('Not implemented atm!');
-        f2 = @(x)pchip(params.A2_PieceWiseStrainDepX, params.A2_PieceWiseStrainDepParams, x);
+    % if isfield(params, 'A2_PieceWiseStrainDepX')
+    %     error('Not implemented atm!');
+    %     f2 = @(x)pchip(params.A2_PieceWiseStrainDepX, params.A2_PieceWiseStrainDepParams, x);
     % else
         % f2 = f;
-    elseif isfield(params, 'PieceWiseStrainDep2')
+    % elseif isfield(params, 'PieceWiseStrainDep2')
         R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
-    else
-        R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep, s + params.dr2 - params.dr);
-    end
+    % else
+    %     R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep, s + params.dr2 - params.dr);
+    % end
     % plot(params.PieceWiseStrainDepX,params.PieceWiseStrainDepParams, 'o', s, f(s), 'x-', s, f(s+ params.dr2 - params.dr), '--')
 
 elseif params.UseUniformTransitionFunc
@@ -552,7 +552,7 @@ if params.DryRun
 end
 
 %% breakpints
-if t > 1.81 % && any(PD > 0)
+if t > 2.765 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 6678;

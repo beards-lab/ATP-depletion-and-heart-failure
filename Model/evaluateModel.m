@@ -11,7 +11,8 @@ PU0 = params.PU0;
 out = [];
 ss = params.ss;
 
-params = updateRates(params);
+% commented out - the rates get updated in the getParams now
+% params = updateRates(params);
 
 % inactive switches
 

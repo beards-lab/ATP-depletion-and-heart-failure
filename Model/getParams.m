@@ -237,6 +237,9 @@ end
     
     params = fillInDefaults(params, params0);
 
+    %% scale the rates if needed
+    params = updateRates(params);
+
     
     %% 1. Apply MODIFIERS for optimization
     if updateModifiers
