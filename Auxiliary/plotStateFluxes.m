@@ -31,6 +31,8 @@ UT2A2 = out.RT2(i_pos);
 % Define flux between SD and ST
 SD2ST = out.RSRD2SR(i_pos);
 
+
+
 % Define the maximal flux
 if nargin < 3
     max_flux = 50;
@@ -45,7 +47,16 @@ plot(x, y, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 10);
 
 % Add state labels
 labels = {'UT', 'UD', 'A1', 'A2', 'ST', 'SD'};
-values = [out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos), out.SR(i_pos), out.SRD(i_pos)];
+% values = [out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos), out.SR(i_pos), out.SRD(i_pos)];
+%% define diffs
+states = [out.PuATP; out.PuR; out.p1_0; out.p2_0; out.SR; out.SRD]';
+diffs = diff(states)./diff(out.t)';
+
+values = states(i_pos, :);
+dvdts = diffs(i_pos, :);
+%%
+
+
 % Mapping forward fluxes to their corresponding start and end indices
 forward_pairs = [1 2; 2 3; 3 4; 4 1; 1 5; 6 2;5 6;4 2];
 
@@ -58,8 +69,8 @@ forward_rates = forward_fluxes./[out.PuATP(i_pos), out.PuR(i_pos), out.p1_0(i_po
 backward_fluxes = [UD2UT, A12UD, A22A1, ST2UT, UD2SD, SD2ST, UT2A2];
 backward_rates = backward_fluxes./[out.PuR(i_pos), out.p1_0(i_pos), out.p2_0(i_pos),out.SR(i_pos),out.PuR(i_pos), out.SRD(i_pos),out.PuATP(i_pos)];
 
-labels = cellfun(@(s, v) sprintf('%s (%.0f%%)', s, v*100), ...
-                 labels, num2cell(values), 'UniformOutput', false);
+labels = cellfun(@(s, v, dv) sprintf('%s (%.0f%%)\n  [%.0f/s]', s, v*100, dv*100), ...
+                 labels, num2cell(values), num2cell(dvdts), 'UniformOutput', false);
 
 % x_offsets = [0.1, -0.1, -0.1, 0.1, 0.1, -0.1];
 y_offsets = [0.1, 0.1, 0.1, 0.1, -0.1, -0.1];

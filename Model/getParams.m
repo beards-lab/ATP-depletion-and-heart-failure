@@ -96,7 +96,14 @@ end
         'UseForceOnsetShift', false, ...
         'L_thick', 1.67, ... % Length of thick filament, um
         'L_hbare', 0.10,... % Length of bare region of thick filament, um
-        'L_thin', 1.20, ... % Length of thin filament, um        
+        'L_thin', 1.20, ... % Length of thin filament, um
+        'UseLatticeSpacing', false, ... % Lattice spacing correction on attachment rate
+        'd10_ref', 37e-3, ...          % Reference (1,0) lattice spacing [um] (37 nm, Irving 2017)
+        'SL_ref_lattice', 2.0, ...     % SL at which d10_ref was measured [um]
+        'R_thick', 8e-3, ...           % Thick filament radius [um] (8 nm)
+        'R_thin', 4e-3, ...            % Thin filament radius [um] (4 nm)
+        'd_optimal', 25e-3, ...        % Optimal surface-to-surface distance [um] (= d10_ref - R_thick - R_thin)
+        'sigma_lattice', 3e-3, ...     % Gaussian width for lattice factor [um] (3 nm, ~thermal fluctuation amplitude)
         'Lsc0', 1.51, .... % minimal sarcomere length for passive
         'gamma', 1, ... % passive exponent
         'FudgeVmax', false, ...

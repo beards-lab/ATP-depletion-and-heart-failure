@@ -102,6 +102,16 @@ else
     N_overlap = 1;
 end
 
+% Lattice spacing correction on attachment rate
+% Wider lattice (shorter SL) reduces attachment; narrower lattice (longer SL) saturates at 1
+if params.UseLatticeSpacing
+    d10 = params.d10_ref * sqrt(params.SL_ref_lattice / SL);
+    d_surface = d10 - params.R_thick - params.R_thin;
+    excess = max(0, d_surface - params.d_optimal); % only penalize when lattice is wider than optimal
+    f_lattice = exp(-(excess^2) / (2 * params.sigma_lattice^2));
+else
+    f_lattice = 1;
+end
 
 % strain - above the myosin heads is zero. 
 % Negative - shorter, Positive - longer
@@ -215,7 +225,7 @@ g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 RTD = g2*params.kah*PT;
 RDT = g2*params.kamh*PD;
 
-RD1 = params.ka*PD*N_overlap; % to loosely attachemnt state
+RD1 = params.ka*PD*N_overlap*f_lattice; % to loosely attachment state
 
 if params.UsePassiveForSR
     F_SR = F_passive;
@@ -536,23 +546,23 @@ end
 
 if Ns == 2 
     f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD;dx_dash_dt];
-    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell];    
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell, f_lattice];
 elseif Ns == 3
     f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD; dx_dash_dt];
-    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell, f_lattice];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];
 
 if params.DryRun
     f = zeros(size(PU));
-    outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1];
+    outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1];
     rates = zeros(1, 13);
     return;
 end
 
 %% breakpints
-if t > 2.765 % && any(PD > 0)
+if t > 2.0 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 6678;

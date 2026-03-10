@@ -472,6 +472,7 @@ end
             out.p2_1(i) = outputs(8);
             out.PuATP(i) = outputs(9);
             out.F_Maxwell(i) = outputs(10);
+            out.f_lattice(i) = outputs(11);
         elseif Ns == 3
             out.p1_0(i) = outputs(5);
             out.p2_0(i) = outputs(6);
@@ -480,6 +481,8 @@ end
             out.p2_1(i) = outputs(9);
             out.p3_1(i) = outputs(10);
             out.PuATP(i) = outputs(11);
+            out.F_Maxwell(i) = outputs(12);
+            out.f_lattice(i) = outputs(13);
         end
         
         
