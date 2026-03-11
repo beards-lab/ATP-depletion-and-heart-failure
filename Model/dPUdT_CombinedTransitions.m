@@ -396,8 +396,12 @@ if params.UseA2AttachmentShift
     
     % 3. Find Indices using 'discretize'
     % This tells us which bin each target_s falls into
+    try
     L = discretize(s_target, s);
     R = L + 1;
+    catch e
+        disp(e)
+    end
     
     % 4. Bound check (Essential for safety)
     L = max(1, min(length(s)-1, L));
@@ -492,7 +496,7 @@ try
             w = max(0,1 - dist/Ax);
             att(jj) = w;
         end
-        att_norm = att/sum(att)/dS;
+        att_norm = att/max(1, sum(att))/dS;
         dp1 = dp1 + att_norm .* f_sat * RD1;
     end
 catch e
@@ -542,7 +546,7 @@ if params.DryRun
 end
 
 %% breakpints
-if t > 2.0 % && any(PD > 0)
+if any(isnan(f)) || t > 0.9 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 6678;

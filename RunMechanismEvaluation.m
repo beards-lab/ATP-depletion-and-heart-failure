@@ -13,7 +13,7 @@ plot(SL, f_lattice)
 
 %%
 
-if isempty(gcp('nocreate'))
+if false && isempty(gcp('nocreate'))
     p = parpool('threads', 5);
 end
 figure(102);clf;
@@ -46,6 +46,8 @@ params0.PieceWiseStrainDepR1DParams = [5000, 5000, 10.147, 1, 1.595, 50, 50]*4;
 % params0.PieceWiseStrainDep2Params = [50.0000   50.0000   50.6847    1 1         0.5    2.9058   50.0000];
 
 params0.dr2 = "=dr";
+params0.dS = 0.0006;
+params0.MaxStrainArraySize = 40;
 
 params0.PieceWiseStrainDepR21X = [1 -1];
 params0.PieceWiseStrainDepR21Params = [0 0];
@@ -56,7 +58,7 @@ params0.PieceWiseStrainDep2Params = [50.0000  20.9058 2.9058    0.9402    1.0383
 
 
 params0.RunSlackSegments = 'Last';
-params0.RunSlackSegments = 'AllPar';
+% params0.RunSlackSegments = 'AllPar';
 RunBakersExp;
 
 %%
@@ -82,7 +84,7 @@ params0.L_thin = 1.15;
 % === Action 3: Replace negative stiffness asymmetry with fast negative-strain detachment ===
 params0.UseNegativeKstiff = 0; % Disable unphysical asymmetry
 
-params0.kstiff2 = 40000;
+params0.kstiff2 = 15000;
 params0.kstiff1 = "=kstiff2";
 params0.MaxSlackNegativeForce =-1;
 params0.kSE = 2000;
@@ -96,7 +98,7 @@ params0.kSE = 2000;
 % params0.PieceWiseStrainDepR1DParams = [50.0000    10.1474   1.5953   50.0000];
 
 
-params0.ka = 67*2;
+params0.ka = 67*2*2;
 params0.kd = 9.55*2;
 params0.k1 = 270*2;
 params0.k2 = 133;
@@ -136,21 +138,21 @@ params0.PlotFullscreen = 0;
 params0.RunSlackSegments = 'AllPar';
 params0.RunSlackSegments = 'Last';
 % params0.RunSlackSegments = 'stairs-down';
-params0.RunSlack = true;
+params0.RunSlack = false;
 params0.FV_velocities = -[0, 0.5, 1, 3, 4];
 params0.RunForceVelocity = true;
 
 params0.ghostSave = 'oj';
 params0.ghostLoad = 'oj';
 params0.xrate = 1;
-params0.justPlotStateTransitionsFlag = true;
+% params0.justPlotStateTransitionsFlag = true;
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
 
 params0.UseA2AttachmentShift = false;
 params0.BreakOnODEUnstable = false;
 
-params0.dS = 0.002;
+params0.dS = 0.0006;
 params0.MaxStrainArraySize = 40;
 params0.UseLatticeSpacing = false;
 

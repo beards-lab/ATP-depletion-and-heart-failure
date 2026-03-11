@@ -13,10 +13,10 @@ end
 
 if params0.RunForceVelocity
     params = params0;
-    t_ss = [0 0.1];
+    t_ss = [0 1];
     t_sl0 = [0 0.1];
 
-    params = getParams(params, params.g, true, true);
+    %  params = getParams(params, params.g, true, true);
     params.UseForceOnsetShift = false;
     F_active = [];
     clear outs;
@@ -56,8 +56,7 @@ if params0.RunForceVelocity
                 params.Slim_r = 2.0 + params.A1AttachmentWidth + params.dS;
                 params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
                 
-                % params = getParams(params);
-                
+                % params = getParams(params);                
                 if isempty(parple)
                     [F_active(a, j) out] = evaluateModel(modelFcn, t_ss, params);
                     outs(j) = out;
@@ -84,6 +83,7 @@ if params0.RunForceVelocity
                     params.Velocity = 0;
                     [~, out] = evaluateModel(modelFcn, t_ss, params);
                     params.PU0 = out.PU(end, :);
+                    params.LXBpivot = out.params.LXBpivot;
                     % toc
                 end
                 params.Velocity = FV_velocities(j);
@@ -94,7 +94,7 @@ if params0.RunForceVelocity
                     % params.Velocity = vel(j);
                     [F_active(a, j) out] = evaluateModel(modelFcn, t_sl0/abs(FV_velocities(j)), params);                        
                     % toc
-                    % F_active
+                    % F_active 
                     outs(j) = out;
                     % StatesInTime
                 else

@@ -337,19 +337,26 @@ end
         % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
         % params.LXBpivot = params.SL0;
         % params.LXBpivot = params.Slim_l + (params.Slim_r - params.Slim_l)/2;
-        params.LXBpivot = params.SL0; 
+        
+        % this causes triubles for reinitializations
+        % params.LXBpivot = params.SL0; 
+        LXBpivot = params.SL0;
 
         % we have 2 half-sarcomeres, so the step is double
-        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - params.LXBpivot;        
+        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - LXBpivot;        
         if params.MaxStrainArraySize < length(SL_strain)
-            % half-sarcomere strain limit - ready for contraction
-            if abs(params.Slim_r - params.LXBpivot) > abs(params.Slim_l - params.LXBpivot)
-                % its closer to slim_r - lets cut off the Slim_l
-                SL_strain = SL_strain (1:params.MaxStrainArraySize);                    
-            else
-                % pivot closer to slim_l - lets cut off the slim_r
-                SL_strain = SL_strain(end-params.MaxStrainArraySize+1:end);            
-            end
+            % SL_strain = -LXBpivot/2:params.dS:params.MaxStrainArraySize/2;
+            SL_strain = ((-(params.MaxStrainArraySize-1)/2 : (params.MaxStrainArraySize-1)/2)) * params.dS*2;
+
+
+            % % half-sarcomere strain limit - ready for contraction
+            % if abs(params.Slim_r - LXBpivot) > abs(params.Slim_l - LXBpivot)
+            %     % its closer to slim_r - lets cut off the Slim_l
+            %     SL_strain = SL_strain (1:params.MaxStrainArraySize);                    
+            % else
+            %     % pivot closer to slim_l - lets cut off the slim_r
+            %     SL_strain = SL_strain(end-params.MaxStrainArraySize+1:end);            
+            % end
         end
         
         if params.LegacyStrainFlipping
@@ -363,10 +370,9 @@ end
         params.ss = length(params.s);
 
 
-        LSE = 0;
-        s = params.s' + (-(params.SL0 - LSE) + params.LXBpivot)/2;
-        % s = params.s' - (-(SL - LSE) + params.LXBpivot)/2;
-        s = flipud(-s);
+        % LSE = 0;
+        % s = params.s' + (-(params.SL0 - LSE) + params.LXBpivot)/2;
+        % s = flipud(-s);
     else
     
         % refresh these
@@ -390,12 +396,15 @@ end
     
     %% 5. Build the initialization
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit
+        % only during init - otherwise keep it
+
         p0 = zeros(1, params.ss);
         U_SR = 0;
         U_SRD = 0;
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0*params.rsl0;
+        params.LXBpivot = SL0;
         x_dash = SL0;
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
