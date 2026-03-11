@@ -455,75 +455,45 @@ dp3 = - R3 + R3m + R2;
 try
     % if params.A1AttachmentWidth <= dS
     Ax = params.A1AttachmentWidth;
+    % Vernier / target zone modulation of attachment (per-bin or velocity-based)
+    f_sat = ones(size(p1)); % default: no modulation
+    if params.UseTargetZoneSaturation
+        p_occ = (p1 + p2 + p3) * dS; % fraction of heads attached at each bin [-]
+        f_sat = max(0, 1 - p_occ / params.max_attached_per_bin);
+    elseif params.UseVernierVelocity
+        v_hs = abs(velHS);
+        f_sat_scalar = 1 + params.alpha_vernier * v_hs / (v_hs + params.v_ref_vernier);
+        f_sat = f_sat_scalar * ones(size(p1));
+    end
+
     if params.UseA1AttachmentKernel
-        % s_0 = 1 + round(-s(1)/dS, 6); % strain position in space at 0
-        % s_i0 = round(s_0);
-        % if s_i0 > 0 && s_i0 <= length(s)
-        %     halfSpan = ceil(Ax / dS);    % in bins
-        % 
-        %     x = (-halfSpan:halfSpan) * dS + s(s_i0);
-        %     % jj = floor(max(1,s_i0-halfSpan)):ceil(min(length(dp1), s_i0+halfSpan));
-        %     jj = (-halfSpan:halfSpan);
-        %     x = jj*dS + s(s_i0);
-        %     sigma = Ax/3;
-        %     K = exp(-(x.^2)/(2*sigma^2));
-        %     K = K/sum(K);
-        %     K_vp = jj + s_i0 >= 1 & jj + s_i0 <= length(dp1); % Kernel valid positions in bounds
-        %     s_pos = jj(K_vp) + s_i0;
-        %     dp1(s_pos) = dp1(s_pos) + (RD1/dS)*K(K_vp)';
-        % else
-        %     warning([num2str(t) ' : Strain array is not around 0!']);
-        % end
         % Find nearest grid index of zero
-        s_i0 = 1 + floor(-s(1)/dS);   % much cheaper than round(x,6)    
-        if s_i0 > params.cached.halfSpan && s_i0 <= length(dp1)-params.cached.halfSpan    
-            % Valid positions (no clipping)
-            s_pos = s_i0 +  params.cached.jj;    
-            % Apply kernel mass - dS already divided in K0
-            dp1(s_pos) = dp1(s_pos) + (RD1) * params.cached.K0;    
+        s_i0 = 1 + floor(-s(1)/dS);
+        if s_i0 > params.cached.halfSpan && s_i0 <= length(dp1)-params.cached.halfSpan
+            s_pos = s_i0 + params.cached.jj;
+            dp1(s_pos) = dp1(s_pos) + (RD1) * params.cached.K0 .* f_sat(s_pos);
         else
-            % Need boundary handling
-            s_pos = s_i0 +  params.cached.jj;
-            % Logical mask for valid indices
+            s_pos = s_i0 + params.cached.jj;
             vp = s_pos >= 1 & s_pos <= length(dp1);
-            % Apply kernel mass - dS already divided in K0    
-            dp1(s_pos(vp)) = dp1(s_pos(vp)) + (RD1) * params.cached.K0(vp);
+            dp1(s_pos(vp)) = dp1(s_pos(vp)) + (RD1) * params.cached.K0(vp) .* f_sat(s_pos(vp));
         end
 
-    elseif Ax == 0    
+    elseif Ax == 0
             [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), dS, ss);
-            dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS); % attachment
-            dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS); % attachment
-            % dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS)*(F_passive/10); % attachment
-            % dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS)*(F_passive/10); % attachment
+            dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS)*f_sat(s_i0);
+            dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS)*f_sat(s_i1);
     else
-        % inputs: dp1, RD1, dS, Ax, x0
-        % grid indices: assume s_j = j*dS
-        % [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), params.dS, params.ss);% nearest left grid index
-        % x_center = 0; % strain position in space at 0;
-        
-        % lets get that earlier in the code
-        s_0 = 1 + round(-s(1)/dS, 6); % strain position in space at 0
-        
-        %% choose kernel support in indices
-        halfspan = ceil(Ax/dS); 
+        s_0 = 1 + round(-s(1)/dS, 6);
+        halfspan = ceil(Ax/dS);
         att = zeros(size(dp1));
         for jj = floor(max(1,s_0-halfspan)):ceil(min(length(dp1), s_0+halfspan))
-            % jj = max(1, min(length(dp1), jj));
             xj = s(jj);
-            dist = abs(xj - 0.0); % distance from 0
-            % if dist <= Ax
-            w = max(0,1 - dist/Ax);   % triangular weight
-                % w = 1;
-                % dp1(jj) = dp1(jj) + (RD1/dS) * w*dS/Ax;        
+            dist = abs(xj - 0.0);
+            w = max(0,1 - dist/Ax);
             att(jj) = w;
         end
-        % if isempty(jj)
-        %     % warning('%f: Strain array is not around 0!', t);
-        %     disp([num2str(t) ' : Strain array is not around 0!']);
-        % end
-        %%
-        dp1 = dp1 + att/sum(att)*RD1/dS;
+        att_norm = att/sum(att)/dS;
+        dp1 = dp1 + att_norm .* f_sat * RD1;
     end
 catch e
     
@@ -544,19 +514,29 @@ if params.UseA2Popping
 end
 
 
-if Ns == 2 
+% Scalar f_saturation for output: value at attachment point (s≈0)
+if params.UseTargetZoneSaturation
+    s_i0_out = max(1, min(ss, 1 + floor(-s(1)/dS)));
+    f_saturation = f_sat(s_i0_out);
+elseif params.UseVernierVelocity
+    f_saturation = f_sat_scalar;
+else
+    f_saturation = 1;
+end
+
+if Ns == 2
     f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD;dx_dash_dt];
-    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell, f_lattice];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell, f_lattice, f_saturation];
 elseif Ns == 3
     f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD; dx_dash_dt];
-    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell, f_lattice];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell, f_lattice, f_saturation];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];
 
 if params.DryRun
     f = zeros(size(PU));
-    outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1];
+    outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1];
     rates = zeros(1, 13);
     return;
 end

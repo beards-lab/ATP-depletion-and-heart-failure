@@ -473,6 +473,7 @@ end
             out.PuATP(i) = outputs(9);
             out.F_Maxwell(i) = outputs(10);
             out.f_lattice(i) = outputs(11);
+            out.f_saturation(i) = outputs(12);
         elseif Ns == 3
             out.p1_0(i) = outputs(5);
             out.p2_0(i) = outputs(6);
@@ -483,6 +484,7 @@ end
             out.PuATP(i) = outputs(11);
             out.F_Maxwell(i) = outputs(12);
             out.f_lattice(i) = outputs(13);
+            out.f_saturation(i) = outputs(14);
         end
         
         

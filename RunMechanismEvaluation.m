@@ -16,14 +16,53 @@ plot(SL, f_lattice)
 if isempty(gcp('nocreate'))
     p = parpool('threads', 5);
 end
-figure(101);clf;
+figure(102);clf;
 
 % 1. Load base parameters
 addpath('ModelOptParams');
 addpath('Model');
 addpath('Auxiliary');
+clear params0;
 ModelParamsSlackKtrOpt;
 
+params0.xrate = 1;
+
+
+params0.kstiff2 = 70000;
+params0.kstiff2_n = "=kstiff2/5";
+
+params0.kstiff1 = "=kstiff2";
+params0.kstiff1_n = "=kstiff2/5";
+params0.justPlotStateTransitionsFlag = false;
+
+params0.PieceWiseStrainDepR1DX = [-0.05, -0.015, -0.005, 0, 0.008, 0.01, 0.05] + -2e-3;
+params0.PieceWiseStrainDepR1DParams = [5000, 5000, 10.147, 1, 1.595, 50, 50]*4; 
+% 
+% params0.PieceWiseStrainDepX =        [0.1000   0.0079 0.0015         0   -0.0050   -1.0000];
+% params0.PieceWiseStrainDepParams =   [50    50    2.8824 2.8824   58.8001   50.0000];
+% 
+% % R2
+% params0.PieceWiseStrainDep2X = [-0.01   -0.0105   -0.0085   -0.0055 -0.004  -0.000    0.0233    0.1];
+% params0.PieceWiseStrainDep2Params = [50.0000   50.0000   50.6847    1 1         0.5    2.9058   50.0000];
+
+params0.dr2 = "=dr";
+
+params0.PieceWiseStrainDepR21X = [1 -1];
+params0.PieceWiseStrainDepR21Params = [0 0];
+
+
+params0.PieceWiseStrainDep2X = [0.1000    0.02  0.015   0.0127         0   -0.0080   -0.0100 -1];
+params0.PieceWiseStrainDep2Params = [50.0000  20.9058 2.9058    0.9402    1.0383   2.0000   20.0000 50];
+
+
+params0.RunSlackSegments = 'Last';
+params0.RunSlackSegments = 'AllPar';
+RunBakersExp;
+
+%%
+clear params0;
+clf;
+ModelParamsSlackKtrOpt;
 
 
 % === Action 1: Activate correct passive force exponent ===
@@ -61,9 +100,13 @@ params0.ka = 67*2;
 params0.kd = 9.55*2;
 params0.k1 = 270*2;
 params0.k2 = 133;
-params0.kah = 30*2;
+params0.kah = 30*1.5;
 
 params0.A1AttachmentWidth = 0.004;
+params0.UseTargetZoneSaturation = false;
+params0.max_attached_per_bin =0.05;
+% StatesInTime
+
 
 % R1D
 params0.PieceWiseStrainDepR1DX = [-0.05, -0.015, -0.001, 0, 0.006, 0.05] + 0e-3;
@@ -78,7 +121,7 @@ params0.PieceWiseStrainDepParams = 1*[10.0000   10.8001    2.8824    1.1554    0
 
 % R2
 params0.PieceWiseStrainDep2X = [-0.01   -0.0105   -0.0085   -0.0055 -0.004  -0.000    0.0233    0.1];
-params0.PieceWiseStrainDep2Params = [50.0000   50.0000   50.6847    1 1         1    2.9058   50.0000];
+params0.PieceWiseStrainDep2Params = [50.0000   50.0000   50.6847    1 1         0.5    2.9058   50.0000];
 
 % R21
 % params0.PieceWiseStrainDepR21X = [-0.0580   -0.0049    0.0062    0.0500];
@@ -91,24 +134,25 @@ params0.PieceWiseStrainDepR21Params = [1 1];
 params0.PlotEachSeparately = 1;
 params0.PlotFullscreen = 0;
 params0.RunSlackSegments = 'AllPar';
-params0.RunSlackSegments = 'FirstAndLastExtended';
-params0.RunSlack = true;
+params0.RunSlackSegments = 'Last';
 % params0.RunSlackSegments = 'stairs-down';
+params0.RunSlack = true;
+params0.FV_velocities = -[0, 0.5, 1, 3, 4];
+params0.RunForceVelocity = true;
+
 params0.ghostSave = 'oj';
 params0.ghostLoad = 'oj';
 params0.xrate = 1;
-% params0.justPlotStateTransitionsFlag = true;
-params0.FV_velocities = -[0, 0.5, 1, 3, 4];
-params0.RunForceVelocity = true;
-params0.UseSuperRelaxed = true;
-params0.UseSuperRelaxedADP = true;
+params0.justPlotStateTransitionsFlag = true;
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = false;
 
 params0.UseA2AttachmentShift = false;
 params0.BreakOnODEUnstable = false;
 
-params0.dS = 0.001;
+params0.dS = 0.002;
 params0.MaxStrainArraySize = 40;
-params0.UseLatticeSpacing = true;
+params0.UseLatticeSpacing = false;
 
 params0.sigma_lattice = 0.0006;
 
@@ -124,10 +168,11 @@ toc
 %%
 params0.fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
 params0.RunForceVelocity = false;
-params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
-params0.fn = {'FV_f|FV_v'};
+% params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
+% params0.fn = {'FV_f|FV_v'};
 % params0.fn = {'restretchSlopeStart'};
-plotFeatures(features_data, features_model, [], params0.fn);
+plotFeatures(features_data, features_model, features_model_old, params0.fn);
+% features_model_old = features_model;
 
 totalCost = sum(evalFeatureCost(features_data, features_model, params0.fn, 1))
 
