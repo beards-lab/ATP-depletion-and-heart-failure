@@ -1,4 +1,18 @@
 function plotRates(out)
+% PLOTRATES  Plot cross-bridge transition fluxes over time.
+%
+%   PLOTRATES(OUT) generates a single plot of all major forward and backward
+%   transition fluxes from an evaluateModel output struct OUT.
+%
+%   Fluxes plotted (solid = forward, dashed = backward):
+%     Attachment (UD->A1), Ratcheting (A1->A2), Unattachment (A2->UT)
+%     Hydrolysis (UT->UD), SR_T (SRX<->DRX), SR_D (SRX-ADP<->DRX-ADP)
+%
+%   Input:
+%     OUT - output struct from evaluateModel; must contain rate fields
+%           RSR2PT, RSRD2PD, RTD, RD1, R12, R2T, RPT2SR, RPD2SRD, R1D, R21, RSRD2SR
+%
+%   See also: evaluateModel, plotStateFluxes
 
 t = out.t;
 %% Define forward fluxes between states

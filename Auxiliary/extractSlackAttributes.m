@@ -1,4 +1,31 @@
 function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, features, out, plotResults)
+% EXTRACTSLACKATTRIBUTES  Extract force/SL features from a slack-release protocol.
+%
+%   FEATURES = EXTRACTSLACKATTRIBUTES(DATA_T, DATA_Y, DATA_SL, VELOCITYTABLE,
+%                                      FEATURES, OUT, PLOTRESULTS)
+%   Segments the slack-release time series by velocity table entries, fits
+%   exponential recovery curves, and extracts timing/amplitude features.
+%
+%   Inputs:
+%     DATA_T        - time vector (s)
+%     DATA_Y        - force vector (kPa)
+%     DATA_SL       - sarcomere length vector (um)
+%     VELOCITYTABLE - Nx2 matrix [time, velocity]; rows with velocity<0 mark
+%                     the start of each slack-release segment
+%     FEATURES      - struct to accumulate results into (optional, default [])
+%     OUT           - evaluateModel output struct (optional)
+%     PLOTRESULTS   - if true, plot intermediate fits (default false)
+%
+%   Outputs:
+%     FEATURES - struct with extracted features (peak force, timing, ktr, SL, etc.)
+%
+%   See also: fitSlackForceOnset, fitRecovery, evaluateModel
+
+% Named constants
+FORCE_THRESHOLD_KPA   = 10;    % minimum force (kPa) to include in active-phase window
+PEAK_MIN_DISTANCE_S   = 0.01;  % minimum time between detected peaks (s)
+PEAK_MIN_PROMINENCE   = 0.5;   % minimum peak prominence for findpeaks (kPa)
+MARKER_SIZE           = 12;    % plot marker size
 
     if nargin < 5
         features = [];
@@ -28,8 +55,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
     % each set starts with negative velocity
     segments = find(velocitytable(:, 2) < 0)';
 
-    % marker size
-    ms = 12;
+    ms = MARKER_SIZE;
 
     for i_seg =  1:length(segments)
         if segments(i_seg) + 4 > length(velocitytable)
@@ -45,8 +71,8 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         win = data_t > velocity_segment(2) & data_t < velocity_segment(3);
         t = data_t(win); y = data_y(win);
 
-        % cut off at 10kPa
-        win = data_t > velocity_segment(2) & data_t < velocity_segment(3) & data_y > 10; % & data_t < t_seg + 0.048;
+        % cut off below FORCE_THRESHOLD_KPA (excludes near-zero force data)
+        win = data_t > velocity_segment(2) & data_t < velocity_segment(3) & data_y > FORCE_THRESHOLD_KPA; % & data_t < t_seg + 0.048;
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
     
@@ -111,7 +137,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
 
         %%
         % 1. Detect Peaks
-        [peak1_y, peak1_t] = findpeaks(y, t, 'MinPeakDistance', 0.01, 'MinPeakProminence', 0.5);
+        [peak1_y, peak1_t] = findpeaks(y, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
         feats.v_restretch = velocity_segment(3, 2); 
         
         if ~isempty(peak1_y)
@@ -162,28 +188,7 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
         end
 
         feats.peak2 = y(end);
-% plot(t(end), feats.peak2, '*', MarkerSize=ms);
-        % [peak1_y, peak1_t] = findpeaks(y, t, MinPeakDistance=0.01, MinPeakProminence=0.5);
-        % feats.v_restretch = velocity_segment(3, 2); 
-        % if ~isempty(peak1_y)
-        %     feats.peak1_y = peak1_y(1);
-        %     feats.peak1_t = peak1_t(1) - t(1);
-        %     feats.peak1_SL = SL(find(t >= peak1_t(1), 1));
-        %     feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
-        %     % plot(peak1_t, peak1_y, '*', MarkerSize=ms);
-        % else
-        %     feats.peak1_y = NaN;
-        %     feats.peak1_t = NaN;
-        %     feats.peak1_SL = NaN;
-        %     feats.peak1_dSL = NaN;
-        % end
-        % feats.peak2 = y(end);
-        % % plot(t(end), feats.peak2, '*', MarkerSize=ms);
-        % [vall_y, vall_t] = findpeaks(-y, t, MinPeakDistance=0.01, MinPeakProminence=2);
-        % feats.vall_t = vall_t - t(1);
-        % feats.vall_y = -vall_y;
-        % plot(vall_t, -vall_y, '*', MarkerSize=ms);
-                
+
         % steady state
         win = data_t >= velocity_segment(5) - 0.02 & data_t <= velocity_segment(5);
         t = data_t(win); y = data_y(win);

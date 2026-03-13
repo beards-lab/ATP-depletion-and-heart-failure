@@ -1,21 +1,20 @@
 function E = calcSensitivities(g, params, g0, g_names, drawPlots)
 E0 = evaluateBakersExp(g, params);
-delta = 0.1; % 10% difference
+DELTA_FRACTION = 0.1;  % one-at-a-time perturbation size (10% of nominal value)
 % clear E;
 for k = 1:length(g)
     disp(num2str(k) + ": " + g_names{k} + '...')
     g_s = g;
-    g_s(k) = g(k)*(1 - delta);
+    g_s(k) = g(k)*(1 - DELTA_FRACTION);
     tic
     E(k, 1) = evaluateBakersExp(g_s, params);
     toc
-%     g_s(k) = g0(k)
-%     E(k, 2) = evaluateProblem(fcn, g_s, false, evalParts);;
 
-% ignore right
+% NOTE: right-side (+DELTA_FRACTION) perturbation is disabled to halve compute cost.
+% Enable this block if two-sided (central) finite differences are needed.
 if false
     E(k, 2) = E0;
-    g_s(k) = g(k)*(1 + delta);
+    g_s(k) = g(k)*(1 + DELTA_FRACTION);
     E(k, 3) = evaluateBakersExp(g_s, params);
 end
 

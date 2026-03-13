@@ -27,16 +27,36 @@ for i_feat = 1:length(fn)
 
     featnames = split(fn{i_feat}, '|');
     feat_y = featnames{1};
+
+    % Check whether both structs have the required field(s).
+    feat_x = '';
+    if length(featnames) >= 2 && featnames{2} ~= "_" && isnan(str2double(featnames{2}))
+        feat_x = featnames{2};
+    end
+    missing_y = ~isfield(feats_data, feat_y) || ~isfield(feats_sim, feat_y);
+    missing_x = ~isempty(feat_x) && (~isfield(feats_data, feat_x) || ~isfield(feats_sim, feat_x));
+
+    if missing_y || missing_x
+        % Feature absent — render an empty tile so the layout stays intact.
+        axis off;
+        if isempty(feat_x)
+            caption = sprintf('%s\n(missing — cost %.3g)', feat_y, cost(i_feat));
+        else
+            caption = sprintf('%s vs %s\n(missing — cost %.3g)', feat_y, feat_x, cost(i_feat));
+        end
+        text(0.5, 0.5, caption, 'Units', 'normalized', 'HorizontalAlignment', 'center', ...
+            'VerticalAlignment', 'middle', 'Interpreter', 'none', 'Color', [0.6 0.6 0.6]);
+        continue;
+    end
+
     N_feats = length(feats_data.(feat_y));
 
-    if length(featnames) == 1 || (length(featnames) >= 2 && featnames{2} == "_" || ~isnan(str2double(featnames{2})))
-        fd_x = 1:N_feats;fs_x = 1:N_feats;fg_x = 1:N_feats;
-        feat_x = '';
+    if isempty(feat_x)
+        fd_x = 1:N_feats; fs_x = 1:N_feats; fg_x = 1:N_feats;
     else
-        feat_x = featnames{2};
         fd_x = [feats_data.(feat_x)];
         fs_x = [feats_sim.(feat_x)];
-        if exist("feats_ghost", "var") && ~isempty(feats_ghost)
+        if ~isempty(feats_ghost) && isfield(feats_ghost, feat_x)
             fg_x = [feats_ghost.(feat_x)];
         else
             fg_x = NaN(size(1:N_feats));
@@ -45,7 +65,7 @@ for i_feat = 1:length(fn)
 
     fd = [feats_data.(feat_y)];
     fs = [feats_sim.(feat_y)];
-    if exist("feats_ghost", "var") && ~isempty(feats_ghost)
+    if ~isempty(feats_ghost) && isfield(feats_ghost, feat_y)
         fg = [feats_ghost.(feat_y)];
     else
         fg = NaN(size(1:N_feats));

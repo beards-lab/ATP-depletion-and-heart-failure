@@ -63,6 +63,7 @@ RunBakersExp  % script in Model/, uses params0 from workspace
 ## Directory Structure
 
 - **`Model/`** — core model functions:
+  - `Driver.m` — minimal entry point; canonical "how to run the model" example
   - `getParams.m` — central parameter management; call this to build/update any params struct
   - `evaluateModel.m` — runs the ODE integrator for one experimental condition
   - `RunBakersExp.m` — script that evaluates all experimental challenges (FV, Ktr, slack, stairs) and computes total error `E`
@@ -74,7 +75,11 @@ RunBakersExp  % script in Model/, uses params0 from workspace
   - `RunOptim.m`, `RunOptimLakes.m` — optimization entry points
   - `HandtuneAlternativeModel.m` — manual parameter tuning workflow
   - `tunableParams.m` — lists which params are eligible for optimization
-  - `ModelParamsInitNiceSlack_prescribedSR.m` (and variants) — complete param snapshots saved as scripts
+  - `DriverSimple.m`, `DriverSimple_Beard2022.m`, etc. — variant entry-point scripts (playground)
+- **`params/`** — saved parameter snapshots (complete `params0` structs as scripts):
+  - `ModelParamsInitNiceSlack_prescribedSR.m` (in `Workbench/`) and variants
+  - `ModelParamsInitNiceSlack_prescribedSrxD.m`, `ModelParamsInitNiceSlack_prescribedSR_var2.m`
+  - `ModelOptParamsFeaturesOvernight.m` — generated snapshot from overnight optimization
 - **`Auxiliary/`** — utility functions:
   - `animateStateProbabilities.m`, `plotStateFluxes.m`, `StatesInTime.m` — visualization
   - `calcSensitivities.m` — one-at-a-time parameter sensitivity analysis
@@ -83,7 +88,7 @@ RunBakersExp  % script in Model/, uses params0 from workspace
   - `updateRates.m` — scales all turnover rates by a single `xrate` multiplier
   - `writeParamsToMFile.m` — serializes a params struct to a `.m` file
 - **`data/`** — experimental `.txt` data files (ATP concentrations, slack, Ktr, force-velocity)
-- **`Thrash/`** — obsolete/experimental code; do not modify
+- **`Thrash/`** — deleted (was obsolete/experimental code with no active references)
 - **`Docs/`** — presentations and model description documents
 
 ## Architecture: Parameter System

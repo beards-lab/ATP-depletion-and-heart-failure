@@ -1,12 +1,51 @@
 function [f, outputs, rates] = dPUdT_CombinedTransitions(t,PU,params)
-% ODE function for the d/dt operator for the cross-bridge model of half-sarcomere.
-%  first 2N-1 entries of PU represent p1(s,t)
-%  second 2N-1 entries represent p2(s,t)
-%  third-last entry is U_NR, the fraction of myosin heads in not-relaxed state
-% then second last NP and last SL 
+% DPUDT_COMBINEDTRANSITIONS  ODE right-hand side for the cardiac cross-bridge model.
+%
+%   [F, OUTPUTS, RATES] = DPUDT_COMBINEDTRANSITIONS(T, PU, PARAMS) computes
+%   the time derivatives of the state vector PU at time T given model
+%   parameters PARAMS. Intended for use with ode15s via evaluateModel.
+%
+%   State vector layout:
+%     PU = [p1(1..ss), p2(1..ss), [p3(1..ss),] P_SR, NP, SL, LSE, PD, [P_SRD,] [x_dash]]
+%     where ss = params.ss is the number of strain bins.
+%     p1, p2, [p3] — strain-discretized cross-bridge state probability distributions
+%     P_SR          — super-relaxed (SRX) fraction
+%     NP            — nucleotide phosphate (ADP·Pi) fraction
+%     SL            — sarcomere length (um)
+%     LSE           — serial elastic element length (um)
+%     PD            — super-relaxed ADP state fraction (if UseSuperRelaxedADP)
+%     P_SRD         — optional SRX-ADP state
+%     x_dash        — Maxwell dashpot position (if UseMaxwellDashpot)
+%
+%   Inputs:
+%     T       - current time (s)
+%     PU      - state vector (see layout above)
+%     PARAMS  - parameter struct from getParams; must include Vums (velocity, um/s)
+%
+%   Outputs:
+%     F       - dPU/dt, time derivatives (same length as PU)
+%     OUTPUTS - scalar diagnostics: [Force, F_active, F_passive, N_overlap,
+%                 p1_0, p2_0, [p3_0,] p1_1, p2_1, [p3_1,] PT, F_Maxwell,
+%                 f_lattice, f_saturation]
+%     RATES   - transition rate scalars for post-processing
+%
+%   Behavior is controlled by boolean flags in PARAMS (UseOverlap,
+%   UseSuperRelaxed, UseSerialStiffness, UseA1AttachmentKernel, etc.).
+%
+%   See also: evaluateModel, getParams
 
 vel = params.Vums;
 
+% TODO: profile computational bottlenecks before optimizing.
+%   Run: profile on; RunBakersExp; profile viewer
+%   Candidate hotspot: overlap/lattice factor recomputed on every ODE RHS call.
+%   (SL changes continuously so true precomputation is not straightforward.)
+
+% Named constants
+MAX_RATE = 1e4;  % clamp for strain-dependent transition rates — prevents numerical blow-up during stiff phases
+POP_RATE = 1e6;  % large rate used to forcibly drain cross-bridge state (UseA2Popping)
+
+%% Unpack state vector
 % Decompose State Variables from PU vector
 ss = params.ss; % space size (length of the s for each of p1-p3)
 dS = params.dS; % step size
@@ -86,6 +125,7 @@ end
 
 
 
+%% Overlap, lattice spacing, and filament geometry corrections
 % Sarcomere geometry
 if params.UseOverlap
     L_thick = params.L_thick;% = 1.67; % Length of thick filament, um
@@ -124,8 +164,9 @@ else
     s = params.s - (-(SL - LSE) + params.LXBpivot)/2;
 end
 
+%% Force calculation
 % sum of all probabilities
-p1_0 = dS*sum(p1); 
+p1_0 = dS*sum(p1);
 p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
 p3_0 = dS*sum(p3);
 p3_1 = dS*sum((s+params.drp3).*p3);
@@ -213,7 +254,7 @@ if params.justPlotStateTransitionsFlag
     PD = 1;PT = 1;P_SR = 1;P_SRD = 1;
 end
 
-%%
+%% Transition rates
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
 % MgATP = params.MgATP;
@@ -279,7 +320,7 @@ if params.UsePieceWiseStrainDep
 elseif params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
     % dPUdT_TransitionRates;
-    sd = @(kx, alphaL, alphaR, dr,eL, eR) min(1e4, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
+    sd = @(kx, alphaL, alphaR, dr,eL, eR) min(MAX_RATE, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
     R1D = p1.*sd(params.kd, params.alpha0_L, params.alpha0_R, params.dr0, 2, 2);
     
     R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2, 2); % P1 to P2
@@ -289,24 +330,24 @@ elseif params.UseUniformTransitionFunc
 else 
     % s_b = s;
     % s = s*( max(-1, -Force))
-    strainDep = @(alpha, dr) min(1e4, exp((alpha*(s+dr)).^params.StrainExp));																		
+    strainDep = @(alpha, dr) min(MAX_RATE, exp((alpha*(s+dr)).^params.StrainExp));																		
 
     R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
     R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
 
     if params.UseWDetachment
         R2 = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
-        R2 = min(1e4, R2.*p2);
+        R2 = min(MAX_RATE, R2.*p2);
     else
         if params.UseNegativeForceRip
             f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
             R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
         + strainDep(params.alpha0_R, params.dr0).*(s> 0))*f(F_SR, 2, 3); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant           
-            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
+            kL = min(MAX_RATE, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
          else
            R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
         + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant            
-            kL = min(1e4, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);           
+            kL = min(MAX_RATE, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
         end
         kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
         R2 = p2.*(params.k2 + kL + kR);
@@ -325,7 +366,7 @@ if params.UseStrictDetachmentAt > 0
     R1D(strictArea) = p1(strictArea)*(10000);
 end
 
-%% Super relaxed transitions
+%% Super-relaxed (SRX/DRX) dynamics
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
     RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
@@ -367,55 +408,30 @@ else
 end
 
 if params.UseA2AttachmentShift
-    
-    % AS_src = zeros(size(p2));
-    % AS_trg = zeros(size(p2));
-    % mask = (s < 0 & s > -params.dr);
-    % AS_src(mask) = abs(s(mask)) * (params.a2RAS / params.dr);
-    % trg = ((params.a2RAS / params.dr) - abs(s(mask)));
-    % AS_trg(mask) = trg/sum(trg)*sum(AS_src);
 
+    % A2 hopping: strained p2 heads hop to neighboring actin site (d_actin apart)
+    slope_over_dr = params.slope / params.dr;
 
-    %% --- Parameters ---
-    sp2 = s;
-    % params.slope = 1000; % parametrized rate (s^-1/nm)
-    % params.d_actin = 5.5e-3; % 5.5 nm
-    % params.s_threshold = 5.5e-3;    
-    % p2: N x 1 probability array
-    % p0: scalar (or array) detached probability
-    % s: N x 1 strain vector (must be monotonically increasing)
-    
-    % 1. Calculate Hopping Rate and Mass Leaving
-    RA_K = max(0, params.slope/params.dr * (s - params.s_threshold_R)) + max(0, -params.slope/params.dr * (s + params.s_threshold_L));
-    % RA_K = params.slope/params.dr * max(0, abs(sp2) - params.s_threshold);
-    dp2_RAm = p2 .* RA_K;    
-    
-    % 2. Calculate Target Positions (Shifted toward center)
-    s_target = (s > params.s_threshold_R).*(s - params.d_actin) + (s < - params.s_threshold_L).*(s+params.d_actin);  
-    % s_target = sp2 - sign(sp2) .* params.d_actin;
-    
-    % 3. Find Indices using 'discretize'
-    % This tells us which bin each target_s falls into
-    try
-    L = discretize(s_target, s);
+    % 1. Hopping rate: ramps up beyond threshold strain
+    RA_K = max(0, slope_over_dr * (s - params.s_threshold_R)) ...
+         + max(0, -slope_over_dr * (s + params.s_threshold_L));
+    dp2_RAm = p2 .* RA_K;
+
+    % 2. Target positions (shifted toward center by one actin monomer)
+    s_target = (s > params.s_threshold_R) .* (s - params.d_actin) ...
+             + (s < -params.s_threshold_L) .* (s + params.d_actin);
+
+    % 3. Bin indices via arithmetic (uniform grid, replaces discretize)
+    L = max(1, min(ss-1, 1 + floor((s_target - s(1)) / dS)));
     R = L + 1;
-    catch e
-        disp(e)
-    end
-    
-    % 4. Bound check (Essential for safety)
-    L = max(1, min(length(s)-1, L));
-    R = L + 1;
-            
-    % 5. Linear Interpolation Weights
-    dist = s(R) - s(L);
-    w_R = (s_target - sp2(L)) ./ dist;
+
+    % 4. Linear interpolation weights
+    w_R = (s_target - s(L)) ./ (s(R) - s(L));
     w_L = 1 - w_R;
-    % 6. Accumulate into p2 (Vectorized)
-    % accumarray sums all mass falling into the same bin index
-    dp2_RAL = accumarray(L, dp2_RAm .* w_L, [length(s), 1]);
-    dp2_RAR = accumarray(R, dp2_RAm .* w_R, [length(s), 1]); 
-    % plot(s, p2*100, s, dp2_RAm, '--',s, dp2_RAR,  ':', s, dp2_RAL,  ':', s, dp2_RAR + dp2_RAL -dp2_RAm, '--', LineWidth=2)
+
+    % 5. Accumulate hopping mass into target bins
+    dp2_RAL = accumarray(L, dp2_RAm .* w_L, [ss, 1]);
+    dp2_RAR = accumarray(R, dp2_RAm .* w_R, [ss, 1]);
 else
     dp2_RAm = 0; dp2_RAL = 0; dp2_RAR = 0;
 end
@@ -512,7 +528,7 @@ if params.UseA2Popping
     % ignoring at this level
     % all probabilities are auto shifted to UT
     if any(s_pop==1) && t > 0
-        dp2(s_pop) = -p2(s_pop)*1e6;
+        dp2(s_pop) = -p2(s_pop)*POP_RATE;
         % dp1(s_pop) = -p1(s_pop)*1e6;
     end
 end
@@ -528,6 +544,7 @@ else
     f_saturation = 1;
 end
 
+%% Assemble ODE derivatives and outputs
 if Ns == 2
     f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD;dx_dash_dt];
     outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell, f_lattice, f_saturation];
@@ -546,7 +563,7 @@ if params.DryRun
 end
 
 %% breakpints
-if any(isnan(f)) || t > 0.9 % && any(PD > 0)
+if any(isnan(f)) || t > 2.92 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
     numberofthebeast = 6678;

@@ -1,10 +1,36 @@
 function [Force, out] = evaluateModel(fcn, T, params)
-% params: model parameter structure (required)s
-% default: params = struct('Pi;, 0,'MgADP', 0, 'velocity', -1);
-% opts: optional simulation options, otherwise reverting to default
-% default: opts = struct('N', 50, 'Slim', 0.05, 'PlotProbsOnFig', 0, 'ValuesInTime', 0);
-% T must be a vector [start end] TODO remove correction for velocity at this point
-% if Velocity in params needs to be vector too
+% EVALUATEMODEL  Integrate the cross-bridge ODE for one experimental condition.
+%
+%   [FORCE, OUT] = EVALUATEMODEL(FCN, T, PARAMS) solves the ODE defined by
+%   FCN over the time vector T using ode15s and collects all outputs.
+%
+%   T may be a 2-element vector [t_start t_end], or a longer vector where
+%   each consecutive pair [T(i), T(i+1)] defines one velocity segment.
+%   The sarcomere shortening velocity (params.Vums) is updated per-segment.
+%
+%   The integrator uses dynamic strain-grid extension (movingWindow event
+%   function) to shift the probability arrays left/right when the pivot
+%   approaches the strain grid boundary.
+%
+%   Inputs:
+%     FCN    - ODE function handle, e.g. @dPUdT_CombinedTransitions
+%     T      - Time vector [t0, t1, ..., tN] in seconds. Each interval is
+%              one constant-velocity segment.
+%     PARAMS - Parameter struct from getParams. Must include:
+%                Vums       — sarcomere shortening velocity (um/s; scalar or
+%                             vector matching segments in T)
+%                g          — modifier vector (may be empty [])
+%                PU0, ss    — set by getParams
+%
+%   Outputs:
+%     FORCE  - Time vector of total force (kPa) at each output time point
+%     OUT    - Struct with time-series outputs:
+%                t, PU, Force, FXB, FXBPassive, SL, LSE, SR, SRD, NR, NP
+%                p1_0..p3_1, v, OV, RTD..R2T, RSR2PT..RSRD2SR
+%                LXBPivot, Vxb, f_lattice, f_saturation
+%                params — copy of params struct for reproducibility
+%
+%   See also: getParams, dPUdT_CombinedTransitions, animateStateProbabilities
 
 params = getParams(params, params.g,false, true); % update the init vectors
 PU0 = params.PU0;

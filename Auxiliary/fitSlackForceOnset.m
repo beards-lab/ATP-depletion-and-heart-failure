@@ -1,4 +1,32 @@
-function [cost_dt cost_ktr] = fitSlackForceOnset(datatable, velocitytable,t, SL, Force, plotData)
+function [cost_dt cost_ktr] = fitSlackForceOnset(datatable, velocitytable, t, SL, Force, plotData)
+% FITSLACKFORCEONSET  Fit slack-release onset timing and ktr to Baker lab protocol.
+%
+%   [COST_DT, COST_KTR] = FITSLACKFORCEONSET(DATATABLE, VELOCITYTABLE, T, SL, FORCE, PLOTDATA)
+%   extracts slack-release timing and rate-of-tension-redevelopment (ktr)
+%   from the model output, compares against hardcoded Baker lab reference
+%   values, and returns squared-error costs.
+%
+%   Inputs:
+%     DATATABLE     - experimental data [t, SL, Force] columns
+%     VELOCITYTABLE - velocity protocol table [time, velocity]
+%     T, SL, FORCE  - model output time, sarcomere length, and force vectors
+%     PLOTDATA      - if true, plot comparison of model vs. data
+%
+%   Outputs:
+%     COST_DT   - sum of squared errors on onset timing (s)
+%     COST_KTR  - sum of squared errors on tension redevelopment rate (1/s)
+%
+%   Note: VELOCITY_ROW_INDICES and ZONE_BOUNDS_MS are hardcoded to the
+%   specific Baker lab 5-velocity slack protocol. Update these if the
+%   experimental protocol changes.
+%
+%   See also: fitRecovery, extractSlackAttributes
+
+% Baker lab slack protocol: 5 release velocities.
+% Row indices in velocitytable where each velocity's drop begins:
+VELOCITY_ROW_INDICES = [3, 7, 11, 15, 19];
+% Time windows [start_ms, end_ms] for fitting ktr in each velocity zone:
+ZONE_BOUNDS_MS = [1162, 1209; 1464, 1519; 1816, 1889; 2268.5, 2359.5; 2766.5, 2900];
 
 % modeldatatable = [out.t; out.SL; out.Force]';
 plotData_fit = plotData;
@@ -8,9 +36,9 @@ plotData_fit = false;
 
 modeldatatable = [t; SL; Force]';
 
-dropstart = velocitytable([3, 7, 11, 15, 19], 1);
+dropstart = velocitytable(VELOCITY_ROW_INDICES, 1);
 
-zones = [1162, 1209;1464 1519;1816 1889;2268.5 2359.5;2766.5 2900];
+zones = ZONE_BOUNDS_MS;
 zones1 = zones(:, 1);
 for z1i = 1:length(zones1)
     z1u(z1i) = find(t > dropstart(z1i) + 0.002 & t < zones(z1i, 2)/1000 & Force > 1e-3, 1, 'first');    

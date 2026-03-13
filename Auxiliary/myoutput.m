@@ -1,5 +1,21 @@
-function stop = myoutput(gr,optimvalues,state)
-    stop = false;    
+function stop = myoutput(gr, optimvalues, state)
+% MYOUTPUT  Output function for fminsearch/fmincon: plots fit every 10 iterations.
+%
+%   STOP = MYOUTPUT(GR, OPTIMVALUES, STATE) is called by MATLAB optimizers
+%   after each iteration. Every 10 iterations it re-runs evaluateProblem
+%   with the current modifiers GR and displays the results.
+%
+%   Inputs:
+%     GR          - current modifier vector (passed directly to evaluateProblem)
+%     OPTIMVALUES - struct provided by the optimizer (fields: iteration, fval, etc.)
+%     STATE       - 'init', 'iter', or 'done'
+%
+%   Output:
+%     STOP - always false (does not interrupt the optimization)
+%
+%   See also: evaluateProblem, fminsearch
+
+    stop = false;
     if ~isequal(state,'iter') || mod(optimvalues.iteration, 10) > 0
         return;
     end

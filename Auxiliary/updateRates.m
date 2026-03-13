@@ -1,5 +1,20 @@
 function params = updateRates(params)
-% update turnover rates at once
+% UPDATERATES  Scale all cross-bridge turnover rates by a single multiplier.
+%
+%   PARAMS = UPDATERATES(PARAMS) checks for the field PARAMS.XRATE. If
+%   present, it multiplies all kinetic rate constants (kah, kamh, ka, kd,
+%   k1, k_1, k2) by PARAMS.XRATE, then removes the field so the scaling
+%   is not applied again on subsequent calls.
+%
+%   If PARAMS.XRATE is absent, the function returns PARAMS unchanged.
+%
+%   This is called automatically by getParams (Step 2) and should not
+%   normally be called directly.
+%
+%   Input / Output:
+%     PARAMS - parameter struct; modified in-place if xrate is set
+%
+%   See also: getParams
 
 if ~isfield(params, 'xrate')
     return;

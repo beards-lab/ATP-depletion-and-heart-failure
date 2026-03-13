@@ -1,8 +1,39 @@
 function params = getParams(params, g, updateInit, updateModifiers)
-% Updated from
-% https://github.com/beards-lab/Cardiac-Crossbridge-Explicit-Space-Discretization
-% Beard, Daniel A., et al. "Reduced cardiac muscle power with low ATP simulating heart failure." Biophysical Journal 121.17 (2022): 3213-3223.
-% https://www.sciencedirect.com/science/article/pii/S0006349522006026
+% GETPARAMS  Build or update the model parameter struct.
+%
+%   PARAMS = GETPARAMS(PARAMS, G, UPDATEINIT, UPDATEMODIFIERS) is the single
+%   source of truth for all model parameters. It performs four steps:
+%     1. Fill any missing fields from hard-coded defaults.
+%     2. Apply multiplicative modifiers G to the fields listed in PARAMS.MODS.
+%     3. Resolve linked fields whose value is a string starting with '=' by
+%        evaluating it as a MATLAB expression (see resolveParams).
+%        Example: params.kamh = '=0.1*kah'  => kamh = 0.1 * kah
+%     4. Reconstruct array fields from fieldname__index notation, compute
+%        the strain grid PARAMS.S, and initialize the state vector PARAMS.PU0.
+%
+%   Inputs:
+%     PARAMS         - Existing params struct to update, or [] / omitted to
+%                      start from defaults.
+%     G              - Modifier vector (optional). When non-empty, G(i)
+%                      multiplies the field named PARAMS.MODS{i}. May be
+%                      empty [] to apply no modifiers.
+%     UPDATEINIT     - If true (default), recompute PU0 and strain grid.
+%                      Pass false to skip reinitialisation (e.g. when only
+%                      rate constants need refreshing).
+%     UPDATEMODIFIERS- If true, re-apply G to the current field values.
+%                      Default false (applied once at construction time).
+%
+%   Outputs:
+%     PARAMS  - Complete parameter struct ready to pass to evaluateModel.
+%
+%   Important: always call GETPARAMS again after changing SL0 — it affects
+%   the strain grid and the initial state vector PU0.
+%
+%   Reference: Beard et al. 2022, Biophysical Journal 121.17
+%   https://www.sciencedirect.com/science/article/pii/S0006349522006026
+%   Adapted from: https://github.com/beards-lab/Cardiac-Crossbridge-Explicit-Space-Discretization
+%
+%   See also: evaluateModel, resolveParams, dPUdT_CombinedTransitions
 if nargin == 0 || isempty(params)
     params = struct();
 end
@@ -17,6 +48,13 @@ end
 
 if nargin < 4
     updateModifiers = false;
+end
+
+%% Input validation
+% g may be empty (no modifiers applied); only validate size when non-empty
+if ~isempty(g) && isfield(params, 'mods') && ~isempty(params.mods) && numel(g) ~= numel(params.mods)
+    warning('getParams: g has %d elements but params.mods has %d entries — must match when non-empty', ...
+        numel(g), numel(params.mods));
 end
 
 %% Build default params0
@@ -140,6 +178,7 @@ end
         'UseA1AttachmentKernel', false,...
         'OptimizeFVInit', true, ...
         'EvalFeatures', false, ...
+        'recalculateDataFeats', false, ...
         'MaxSpaceExtensionCount', Inf       );
 
 % , false, ...
@@ -245,15 +284,15 @@ end
     params0.dr2_L = 0;
     params0.dr2_R = 0.01;
             
-    %% Fill in the missing input params
-    
+    %% Step 1: Fill missing fields from defaults
+
     params = fillInDefaults(params, params0);
 
-    %% scale the rates if needed
+    %% Step 2: Scale rates (if params.xrate is set, multiplies all turnover rates)
     params = updateRates(params);
 
-    
-    %% 1. Apply MODIFIERS for optimization
+
+    %% Step 3: Apply multiplicative modifiers G for optimization
     if updateModifiers
         %     mods = {'kstiff1', 'kstiff2'};
         for i = 1:length(params.mods)
@@ -285,10 +324,10 @@ end
         params.g = [];
     end
 
-    %% Resolve linked parameters AFTER THE 
+    %% Step 4: Resolve linked parameters (fields starting with '=')
     params = resolveParams(params);
-    
-    %% 2. Reconstruct arrays: params.arr_2 = 3 -> params.arr(2) = 3
+
+    %% Step 5: Reconstruct arrays: fields like params.arr__2 = 3 -> params.arr(2) = 3
     paramsfn = fieldnames(params);
     for i = 1:length(paramsfn)
         if ~contains(paramsfn{i}, '__')
@@ -305,7 +344,7 @@ end
         end
     end
 
-    %% 3. prep the functions
+    %% Step 6: Build piecewise strain-dependent rate interpolants
     pwsdX = params.PieceWiseStrainDepX;
     pwsdP = params.PieceWiseStrainDepParams;
 
@@ -332,7 +371,11 @@ end
     else
         params.PieceWiseStrainDepR21 = [];
     end
-    %% 4. SIMULATION PARAMETERS
+    %% Step 7: Compute strain grid (params.s) from Slim_l, Slim_r, dS, SL0
+    % Warn if SL0 is outside the physiological sarcomere length range
+    if isfield(params, 'SL0') && (params.SL0 < 1.4 || params.SL0 > 3.0)
+        warning('getParams: SL0=%.2f um is outside physiological range [1.4, 3.0]', params.SL0);
+    end
     if params.UseCalculatedN
         % params.N = ceil((params.Slim_r - params.Slim_l)/params.dS/2);
         % params.LXBpivot = params.SL0;
@@ -394,7 +437,7 @@ end
     end
     
     
-    %% 5. Build the initialization
+    %% Step 8: Initialize state vector PU0
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit
         % only during init - otherwise keep it
 
@@ -419,7 +462,7 @@ end
         end
     end
     
-%% 6. Pre-calculate some stuff that can speed up the dxdt
+%% Step 9: Precompute attachment kernel (Gaussian/triangular, for UseA1AttachmentKernel)
     % Precompute kernel parameters
     if params.UseA1AttachmentKernel && params.A1AttachmentWidth > 0
         halfSpan = ceil(params.A1AttachmentWidth/params.dS);

@@ -1,7 +1,23 @@
 function params = resolveParams(params0)
-% RESOLVEPARAMS Resolves linked fields marked with '=' prefix.
-%   Fields like "=a*10" are evaluated with other fields as local variables.
-%   Regular strings (no '=' prefix) and numeric values are passed through.
+% RESOLVEPARAMS  Evaluate linked parameter expressions marked with '=' prefix.
+%
+%   PARAMS = RESOLVEPARAMS(PARAMS0) scans all fields of PARAMS0. Fields
+%   whose value is a string starting with '=' are evaluated as MATLAB
+%   expressions, with all numeric fields of PARAMS0 in scope.
+%   All other fields are passed through unchanged.
+%
+%   Example:
+%     p.kah  = 80;
+%     p.kamh = '=0.1*kah';   % will become 8.0
+%     p = resolveParams(p);   % p.kamh == 8.0
+%
+%   Inputs:
+%     PARAMS0 - parameter struct (may contain '=...' string fields)
+%
+%   Outputs:
+%     PARAMS  - same struct with '=' fields replaced by evaluated values
+%
+%   See also: getParams
 
 params = params0;
 fields = fieldnames(params0);
