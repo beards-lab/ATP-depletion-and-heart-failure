@@ -111,6 +111,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             params.Velocity = 0;
             [~, out_init] = evaluateModel(modelFcn, [-10 velocitytable(3, 1)], params);
             PU0 = out_init.PU(end, :);
+            LXBpivot0 = out_init.params.LXBpivot;   % capture pivot after init run
 
             wins = 3:4:(size(velocitytable, 1) - 1);
 
@@ -174,6 +175,9 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
     N = length(par_velocitytable);
     outs = cell(1, N);
     params = getParams(params, params.g, true);
+    if exist('LXBpivot0', 'var')            % only set for AllPar branch
+        params.LXBpivot = LXBpivot0;        % restore pivot from end of init sim
+    end
 
     for i_par_chunk = 1:N
         velocitytable_chunk = par_velocitytable{i_par_chunk};
