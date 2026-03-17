@@ -90,6 +90,12 @@ end
         'MatchTimeSegments', true, ... % interpolate for exactly given last time point
         'ReduceSpace', false, ... % use only half- to no- of the discretized space
         'UseSerialStiffness', true, ... % serial stiffness used with dashpot viscosity
+        'UseViscoelasticSE', false, ... % Kelvin-Voigt dashpot in parallel with kSE spring (one-sided: only active during restretch vel>0)
+        'UseDynamicPassive', false, ... % velocity-proportional titin viscoelastic force during restretch
+        'UseCatchBond', false, ...      % reduce R1D+R2 detachment during rapid stretch (catch bond / force enhancement)
+        'UseCatchBondR1DOnly', false, ... % catch bond on R1D only (not R2) — preserves valley timing; test of p1-burst hypothesis
+        'CatchBondStrainMax', inf, ...    % upper strain limit for R2 catch bond — bridges above this detach normally (slip region)
+        'UseStretchActivation', false, ... % boost ka during rapid restretch (stretch-activated attachment)
         'UseSlack', true, ... % Enable XB slacking
         'UseKtrProtocol', true, ... % reproduce the protocol for acquiring Ktr
         'PlotEachSeparately', true , ... % show each plot on separate figure
@@ -274,6 +280,10 @@ end
     params0.mu = 1e-3; % viscosity
     params0.kSE = 500;
     params0.ekSE = 1;
+    params0.c_SE_visc = 0;    % Kelvin-Voigt SE dashpot coefficient (0 = pure spring)
+    params0.c_titin_visc = 0; % titin viscoelastic force coefficient: F += c_titin_visc * max(0,vel)
+    params0.k_catch_bond = 0; % catch bond: detachment suppression factor during stretch
+    params0.k_SA = 0;         % stretch activation: ka multiplier per unit velocity
 
     % passive force coeff
     params0.k_pas = 200; % From Kim Salla et al.

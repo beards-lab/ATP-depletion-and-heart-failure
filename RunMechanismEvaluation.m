@@ -4,6 +4,7 @@
 % Generates params0, applies the listed mechanism changes, and evaluates the model.
 
 %% Test lattice spacing
+params = getParams();
 SL = 1.8:0.01:2.4;
 d10 = params.d10_ref .* sqrt(params.SL_ref_lattice ./ SL);
 d_surface = d10 - params.R_thick - params.R_thin;
@@ -138,9 +139,18 @@ params0.sigma_lattice = 0.0006;
 LoadData;
 
 % Run the experiment scripts
+% writeParamsToMFile('params/ModelParamsInitManualLastSlack.m', params0);
 tic
 RunBakersExp;
 toc
+
+%%
+nonrepeating = makeMonotonous(out_slack.t);
+Fi = interp1(out_slack.t(nonrepeating), out_slack.Force(nonrepeating), out_slack.datatable(:, 1));
+Error = out_slack.datatable(:, 3) - Fi;
+figure(200); clf;
+plot(out_slack.datatable(:, 1), Error, 'r-', 'LineWidth', 1.5);
+xlabel('t (s)'); ylabel('Error (data - model)'); title('Slack force error'); grid on;
 % ylim([-20, 100]);
 % return
 %%
@@ -150,11 +160,12 @@ params0.RunForceVelocity = false;
 % params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
 % params0.fn = {'FV_f|FV_v'};
 % params0.fn = {'restretchSlopeStart'};
-plotFeatures(features_data, features_model, features_model_old, params0.fn);
+plotFeatures(features_data, features_model, [], params0.fn);
 % features_model_old = features_model;
 
 totalCost = sum(evalFeatureCost(features_data, features_model, params0.fn, 1))
 
+return % thats it for now
 %% frank -starling investigation??
 steps = [0 2 3.5, 5, 7];
 % SL_Steps = interp1(out.t, out.SL, steps, 'nearest');

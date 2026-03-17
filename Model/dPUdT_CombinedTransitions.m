@@ -211,6 +211,13 @@ if params.UseTitinInterpolation
         min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
 end
 
+% H2: Dynamic passive — titin viscoelasticity during rapid restretch.
+% Titin is stiffer at high stretch rates; after slack it re-engages with a
+% transient force proportional to restretch velocity.
+if params.UseDynamicPassive && vel > 0
+    F_passive = F_passive + params.c_titin_visc * vel;
+end
+
 % default
 F_total = F_active + F_passive;
 
@@ -218,25 +225,36 @@ F_total = F_active + F_passive;
 
 
 if params.FudgeVmax && t > -1
+    Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
     if params.kSE*LSE >= 0
-        Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
         velHS = (Force - F_total)/params.mu;
     else
         Force = params.MaxSlackNegativeForce;
-        % velHS = -(818*exp(-17*(SL - LSE)) + 22);
         velHS = -(params.FudgeA*SL^2 +params.FudgeB*SL + params.FudgeC);
-        % velHS = -params.vmax;
     end
     dLSEdt = vel - velHS;
 else
     Force = sign(LSE)*abs(max(params.MaxSlackNegativeForce, params.kSE*LSE)).^params.ekSE;
     % Force = params.kSE*LSE*(LSE >= 0) + params.kSEn*LSE*(LSE < 0);
-    if (Force - F_total) > 0
-        velHS = (Force - F_total)/params.mu;    
+    if params.UseViscoelasticSE && vel > 0
+        % Kelvin-Voigt SE: F_SE = kSE*LSE + c_SE*dLSEdt
+        % Implicit solve: (mu + c_SE)*dLSEdt = mu*vel + F_total - Force
+        % → dLSEdt = (mu*vel + F_total - Force) / (mu + c_SE)
+        % Effect: SE resists rapid extension → more restretch strain reaches cross-bridges.
+        % Inactive at vel≤0 so steady-state and slack phases are unaffected.
+        if (Force - F_total) > 0
+            dLSEdt = (params.mu     * vel + F_total - Force) / (params.mu     + params.c_SE_visc);
+        else
+            dLSEdt = (params.mu_neg * vel + F_total - Force) / (params.mu_neg + params.c_SE_visc);
+        end
     else
-        velHS = (Force - F_total)/params.mu_neg;
+        if (Force - F_total) > 0
+            velHS = (Force - F_total)/params.mu;
+        else
+            velHS = (Force - F_total)/params.mu_neg;
+        end
+        dLSEdt = vel - velHS;
     end
-    dLSEdt = vel - velHS;
 end
 
 Force = Force + params.mu2*vel + F_Maxwell;
@@ -266,7 +284,13 @@ g1 = 1; g2 = 1; f1 = 0; f2 = 1;
 RTD = g2*params.kah*PT;
 RDT = g2*params.kamh*PD;
 
-RD1 = params.ka*PD*N_overlap*f_lattice; % to loosely attachment state
+% H4: Stretch activation — boost ka during rapid restretch.
+if params.UseStretchActivation && vel > 0
+    ka_eff = params.ka * (1 + params.k_SA * vel);
+else
+    ka_eff = params.ka;
+end
+RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
 
 if params.UsePassiveForSR
     F_SR = F_passive;
@@ -364,6 +388,22 @@ if params.UseStrictDetachmentAt > 0
     strictArea = s > params.UseStrictDetachmentAt | s < -params.UseStrictDetachmentAt;
     R2(strictArea) = p2(strictArea)*(10000);
     R1D(strictArea) = p1(strictArea)*(10000);
+end
+
+% H3: Catch bonds — during rapid restretch, reduce detachment rates.
+% Physiological basis: actomyosin bonds strengthen under rapid stretch
+% (catch bond behaviour), producing the initial force spike. As velocity
+% drops the catch effect disappears, bridges detach → valley, then
+% reattachment → second peak.
+if params.UseCatchBond && vel > 0
+    catch_factor = max(0, 1 - params.k_catch_bond * vel);
+    R1D = R1D * catch_factor;
+    if ~params.UseCatchBondR1DOnly
+        % Strain-limited catch: apply R2 suppression only below CatchBondStrainMax.
+        % At high strain (slip region) bridges detach normally — fixes first-peak dSL timing.
+        catch_mask = s <= params.CatchBondStrainMax;
+        R2(catch_mask)  = R2(catch_mask)  * catch_factor;
+    end
 end
 
 %% Super-relaxed (SRX/DRX) dynamics

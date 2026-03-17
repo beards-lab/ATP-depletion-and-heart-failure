@@ -201,6 +201,8 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         end
     end
     out_slack = mergeOutStructs([outs{:}]);
+    out_slack.datatable  = datatable(validZone, :);
+    % out_slack.validZone  = validZone;
 
     %% Cost function
     nonrepeating = makeMonotonous(out_slack.t);
