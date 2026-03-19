@@ -135,6 +135,14 @@ params0.UseLatticeSpacing = false;
 
 params0.sigma_lattice = 0.0006;
 
+% test the nonlinear kstiff - no effect
+params0.UseCatchBond = false;
+% params0.UseNegativeKstiff = true;
+% params0.kstiff1 = 15000;
+% params0.kstiff1_n = 15000*0.1;
+% params0.kstiff2 = 15000;
+% params0.kstiff2_n = 15000*0.1;
+
 % Load requisite data variables (e.g. ATP_c)
 LoadData;
 

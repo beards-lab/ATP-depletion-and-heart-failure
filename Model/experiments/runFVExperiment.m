@@ -1,4 +1,4 @@
-function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, ATP_c, FV_velocities, Data_ATP)
+function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, ATP_c, Data_ATP)
 %RUNFVEXPERIMENT Run the force-velocity protocol and return error + outputs.
 %
 %   [E_fv, outs, features_model] = runFVExperiment(params0, ATP_c, FV_velocities, Data_ATP)
@@ -41,9 +41,7 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
         params = rmfield(params, 'PU0');
     end
 
-    if isfield(params, 'FV_velocities')
-        FV_velocities = params.FV_velocities;
-    end
+    FV_velocities = params.FV_velocities;
 
     % this is disabled ATM
     % for a = params.EvalAtp
