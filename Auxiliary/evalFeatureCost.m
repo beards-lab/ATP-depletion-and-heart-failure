@@ -39,7 +39,7 @@ function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn,
 
 % Penalty applied per NaN in simulation output.
 % Set large enough to dominate a typical normalized residual (O(0.1)).
-NAN_COST = 10;
+NAN_COST = 1;
 
 % Penalty when a requested feature is absent (experiment not run or not extracted).
 % Chosen to be large relative to NAN_COST so missing experiments are clearly
@@ -47,7 +47,7 @@ NAN_COST = 10;
 MISSING_FEATURE_COST = 100;
 
 if nargin < 4
-    costExp = 1;
+    costExp = 2;
 end
 for i_feat = 1:size(fn, 2)
 

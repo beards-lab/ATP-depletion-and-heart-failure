@@ -103,7 +103,7 @@ params0 = p_opt;
 RunBakersExp;
 % [~,~,features_model,features_data] = runSlackExperiment(p_opt);
 
-c_new = evalFeatureCost(features_data, features_model, fn_target, 1);
+c_new = evalFeatureCost(features_data, features_model, fn_target, 2);
 optstate.total_evals = optstate.total_evals + MAX_EVALS;
 optstate.costs = c_new;
 
@@ -124,8 +124,9 @@ fprintf('  s=0.006:  %.3f (g=%.3f)\n', p_res.PieceWiseStrainDep2Params(7),  g_ne
 fprintf('  s=0.010:  %.3f (g=%.3f)\n', p_res.PieceWiseStrainDep2Params(8),  g_new(strcmp(mods,'PieceWiseStrainDep2Params__8')));
 fprintf('  s=0.023:  %.3f (g=%.3f)\n', p_res.PieceWiseStrainDep2Params(9),  g_new(strcmp(mods,'PieceWiseStrainDep2Params__9')));
 fprintf('  kstiff2 = %.0f  c_SE_visc = %.2f\n', p_res.kstiff2, p_res.c_SE_visc);
-%
-figure(233);plotFeatures(features_data, features_model, [], fn_target)
+%%
+fn = {'FV_f|FV_v', 'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart'};
+figure(233);plotFeatures(features_data, features_model, [], fn)
 
 %% Save
 optstate.g_opt      = g_new;
