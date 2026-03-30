@@ -4,7 +4,12 @@
       "Bash(matlab:*)",
       "Bash(\"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe\":*)",
       "Bash(ls:*)",
-      "Bash(do grep:*)"
+      "Bash(do grep:*)",
+      "mcp__matlab__run_matlab_file",
+      "Read(//mnt/c/home/git/TitinViscoelasticity/DataProcessing/**)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:www.nature.com)",
+      "WebFetch(domain:elifesciences.org)"
     ]
   }
 }

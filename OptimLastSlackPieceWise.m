@@ -17,7 +17,9 @@
 %
 % Run interactively in MATLAB (not -batch) so you see live fminsearch output.
 
+STATE_FILE    = 'OptimLastSlackPieceWise_state.mat';
 STATE_FILE    = 'OptimLastSlackPieceWise_stateTimeCourse.mat';
+STATE_FILE    = 'OptimLastSlackPieceWise_stateTimeCourseAll.mat';
 EVALS_PER_BLOCK = 50;   % fminsearch evals per group per iteration
 MAX_CYCLES    = 10;     % max full-group cycles before stopping
 CONV_TOL      = 0.02;   % min cost improvement to continue a cycle
@@ -75,14 +77,15 @@ n_groups = numel(groups);
 %% ── Shared model setup ────────────────────────────────────────────────────
 clear params0;
 params0 = getParams();
-ModelOptParamsLastSlack_PieceWiseFunc;   % loads fully-applied params (mods={})
+% ModelOptParamsLastSlack_PieceWiseFunc;   % loads fully-applied params (mods={})
 % ModelOptParams_PerPartesAdAstra
+ModelOptParams_SlackFeaturesMultiOpt
 LoadData;
 
 % Override for optimization run
 params0.RunSlackSegments    = 'AllPar';
-
 params0.RunForceVelocity    = true;
+
 params0.RunForceLengthEstim = false;
 params0.PlotEachSeparately  = false;
 params0.ShowResidualPlots   = false;
@@ -93,12 +96,16 @@ params0.BreakOnODEUnstable  = false;
 params0.fn                  = fn_target;
 params0.BreakOnODEUnstable = true;
 
+
 % Enable lattice spacing (key SL-dependence mechanism)
 params0.UseLatticeSpacing   = true;
 % d10_ref=0.037 µm and sigma_lattice=0.0006 µm are starting values from params file.
 % Group D will tune these.
 % RunBakersExp
 
+params0.RunForceVelocity = false;
+% params0.RunSlackSegments = 'Fourth';
+params0.EvalFeatures = false;
 %% ── State initialisation ──────────────────────────────────────────────────
 if exist(STATE_FILE, 'file')
     load(STATE_FILE, 'state');
@@ -117,26 +124,39 @@ end
 
 %% ── Evaluate baseline ─────────────────────────────────────────────────────
 % if state.best_cost == Inf
+    p = params0;
     params0.mods = state.all_params;
     params0.g    = state.g_best;
-    
+    % params0.RunForceVelocity = false;
+    % params0.RunSlackSegments = 'Fourth';
+    % params0.RunSlackSegments = 'AllPar';
     % [~, ~, features_model, features_data] = runSlackExperiment(params0);
     params0.PlotEachSeparately = true;
+    params0.EvalFeatures = true;
+
+    % params0.ghostSave = 'Fourth-preOp';
+    params0.ghostLoad = 'Fourth-preOp';
+
     RunBakersExp;
     c0 = evalFeatureCost(features_data, features_model, fn_target);
     plotFeatures(features_data, features_model, [], fn_target);
-    E
-    state.best_cost  = sum(c0);
-    state.costs_hist = c0;
+    % state.best_cost  = sum(c0);
+    % state.costs_hist = c0;
+
+    % state.best_cost  = E(1);
+    % state.costs_hist = E(1);
+    E(1)
+    
     fprintf('Baseline cost: %.4f\n', state.best_cost);
     printFeatures(fn_target, c0);
+    params0 = p;
     % save(STATE_FILE, 'state');
 % end
 
 %% ── Main optimisation loop ────────────────────────────────────────────────
 opts = optimset('Display','iter','TolFun',1e-4, ...
                 'MaxIter', EVALS_PER_BLOCK, ...
-                'MaxFunEvals', EVALS_PER_BLOCK);
+                'MaxFunEvals', EVALS_PER_BLOCK,'PlotFcns','optimplotfval');
 
 for cycle = state.cycle + 1 : MAX_CYCLES
 
@@ -172,10 +192,12 @@ for cycle = state.cycle + 1 : MAX_CYCLES
             c = evalFeatureCost(features_data, features_model, fn_target);                        
             % [~, ~, fm, fd] = runSlackExperiment(params0);
             % c = evalFeatureCost(fd, fm, fn_target, 1);
-            new_cost = sum(c);
+            % new_cost = sum(c);
+            new_cost = E(1);
         catch
             new_cost = state.best_cost;  % reject on ODE failure
-            c = state.costs_hist(end,:);
+            % c = state.costs_hist(end,:);
+            E = state.costs_hist(end,:);
         end
 
         cycle_costs(gi) = new_cost;
@@ -199,7 +221,7 @@ for cycle = state.cycle + 1 : MAX_CYCLES
     params0.g    = state.g_best;
     [~, ~, fmc, fdc] = runSlackExperiment(params0);
     cc = evalFeatureCost(fdc, fmc, fn_target, 1);
-    state.costs_hist = [state.costs_hist; cc];
+    % state.costs_hist = [state.costs_hist; cc];
 
     fprintf('\nEnd of cycle %d — best cost = %.4f\n', cycle, state.best_cost);
     printFeatures(fn_target, cc);
@@ -221,7 +243,8 @@ fprintf('\nOptimised g values:\n');
 printBestG(state.all_params, state.g_best, groups);
 
 fprintf('\nWrite to params file with writeParamsToMFile.\n');
-writeParamsToMFile('ModelOptParams_SlackFeaturesMultiOpt', params0)
+% writeParamsToMFile('ModelOptParams_SlackFeaturesMultiOpt', params0)
+% writeParamsToMFile('ModelOptParams_SlackTimebaseMultiOpt', params0)
 %% ── Local functions ───────────────────────────────────────────────────────
 function E = block_cost(g_grp, grp_idx, g_full, all_params, params0, fn_target)
     g = g_full;
@@ -233,8 +256,9 @@ function E = block_cost(g_grp, grp_idx, g_full, all_params, params0, fn_target)
         LoadData;
         params0.PlotEachSeparately = false;
         RunBakersExp;
-        c0 = evalFeatureCost(features_data, features_model, fn_target);
-        E = sum(c0);
+        % c0 = evalFeatureCost(features_data, features_model, fn_target);
+        % E = sum(c0);
+        E = E(1);
     catch ee
         E = 1e6;
     end
