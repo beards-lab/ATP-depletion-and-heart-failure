@@ -16,7 +16,7 @@ labels = cell(n, 1);
 %   t2: start of gradual L step-up in 72-73s
 %   t3: big L drop in 74-75s (may not exist in all files)
 
-data = struct('t', {}, 'F', {}, 'L', {}, 'anchors', {}, 't_shifted', {}, 'F_shifted', {}, 'L_shifted', {});
+data = struct('t', {}, 'F', {}, 'L', {}, 'anchors', {}, 't_shifted', {}, 'F_shifted', {}, 'L_shifted', {}, 'HiResOffset', {});
 for i = 1:n
     fpath = fullfile(S(i).folder, S(i).name);
     M = readmatrix(fpath, 'NumHeaderLines', 4);
@@ -136,7 +136,7 @@ for k = 1:length(highResFiles)
     L_hi = L_hi(ok);
     F_hi = F_hi(ok);
     
-    % figure(k);clf; nexttile(1);ax1 = plot(t_hi, F_hi);ax2 = nexttile(2);plot(t_hi, L_hi);title(highResFiles(k).name);linkaxes([ax1 ax2], 'x');
+    % figure(1);clf; nexttile(1);ax1 = plot(t_hi, F_hi);ax2 = nexttile(2);plot(t_hi, L_hi);title(highResFiles(k).name);linkaxes([ax1 ax2], 'x');
     
     
     % Find correct Log file by explicit name pairing
@@ -159,7 +159,7 @@ for k = 1:length(highResFiles)
         
         % Determine burst type and corresponding log time window
         if contains(name_hi, 'slack')
-            t_win = [73, 78];  % slack L-drop happens ~74s (high-force)
+            t_win = [74.5, 78.5];  % only the HIGH-force slack event (second one)
             burst_type = 'slack';
         elseif contains(name_hi, 'stiff') || contains(name_hi, 'ktr')
             t_win = [70, 76];  % ktr L-drop happens ~72s
@@ -202,22 +202,22 @@ for k = 1:length(highResFiles)
         fprintf('  Mapped %-30s -> %-30s | type: %-7s | offset: %.2fs | range: [%.1f, %.1f]s\n', ...
             name_hi, S(i).name, burst_type, time_offset, min(t_hi_aligned), max(t_hi_aligned));
         
-        % % --- Diagnostic plot: show alignment quality ---
-        % figure(100+k); clf;
-        % subplot(2,1,1); hold on;
-        % plot(data(i).t_shifted_orig, data(i).L_shifted_orig, 'b', 'LineWidth', 2);
-        % plot(t_hi_aligned, L_hi, 'r', 'LineWidth', 1);
-        % legend('Log (original)', ['Hi-res: ' name_hi], 'Interpreter', 'none');
-        % ylabel('L'); title(['Alignment: ' name_hi ' -> ' S(i).name ' (' burst_type ')'], 'Interpreter', 'none');
-        % xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
-        % xlim(t_win + [-2, 2]);
-        % 
-        % subplot(2,1,2); hold on;
-        % plot(data(i).t_shifted_orig, data(i).F_shifted_orig, 'b', 'LineWidth', 2);
-        % plot(t_hi_aligned, F_hi, 'r', 'LineWidth', 1);
-        % ylabel('F'); xlabel('Time (s)');
-        % xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
-        % xlim(t_win + [-2, 2]);
+        % --- Diagnostic plot: show alignment quality ---
+        figure(100+k); clf;
+        subplot(2,1,1); hold on;
+        plot(data(i).t_shifted_orig, data(i).L_shifted_orig, 'b', 'LineWidth', 2);
+        plot(t_hi_aligned, L_hi, 'r', 'LineWidth', 1);
+        legend('Log (original)', ['Hi-res: ' name_hi], 'Interpreter', 'none');
+        ylabel('L'); title(['Alignment: ' name_hi ' -> ' S(i).name ' (' burst_type ')'], 'Interpreter', 'none');
+        xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
+        xlim(t_win + [-2, 2]);
+
+        subplot(2,1,2); hold on;
+        plot(data(i).t_shifted_orig, data(i).F_shifted_orig, 'b', 'LineWidth', 2);
+        plot(t_hi_aligned, F_hi, 'r', 'LineWidth', 1);
+        ylabel('F'); xlabel('Time (s)');
+        xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
+        xlim(t_win + [-2, 2]);
         
         
         % Record the injection range and name
@@ -244,9 +244,107 @@ for k = 1:length(highResFiles)
         data(i).t_shifted = new_t;
         data(i).L_shifted = new_L;
         data(i).F_shifted = new_F;
+
+        data(i).HiResOffset = [data(i).HiResOffset; time_offset];
+
     else
         fprintf('  Could not find explicit mapping for %s\n', name_hi);
     end
+end
+
+%% Repeat Alignment pass with High-Res data (Fine Alignment)
+fprintf('\nPerforming fine-alignment on merged data using xcorr boundaries...\n');
+
+% last one is the reference
+refIdx = n;
+dt_grid   = 0.0005; % 0.5ms interpolation grid
+max_shift = 0.020;  % ±20ms search range
+shifts = (-max_shift : dt_grid : max_shift)';
+
+for i = 1:n
+    if i == refIdx; continue; end
+
+    dts = [0,0,0];
+    for jj = 1:length(hi_res_ranges{i})
+        hr = hi_res_ranges{i}{jj};
+
+        i_ref_win = data(refIdx).t_shifted >= hr.t_start & data(refIdx).t_shifted <= hr.t_end;
+        i_hr_win  = data(i).t_shifted     >= hr.t_start & data(i).t_shifted     <= hr.t_end;
+
+        if ~any(i_ref_win) || ~any(i_hr_win)
+            fprintf('  i=%d jj=%d: no data in window [%.2f, %.2f], skipping\n', i, jj, hr.t_start, hr.t_end);
+            continue;
+        end
+
+        t_ref = data(refIdx).t_shifted(i_ref_win);
+        L_ref = data(refIdx).L_shifted(i_ref_win);
+        t_cur = data(i).t_shifted(i_hr_win);
+        L_cur = data(i).L_shifted(i_hr_win);
+
+        % Interpolate reference onto uniform grid
+        t_grid = (min(t_ref) : dt_grid : max(t_ref))';
+        L_ref_g = interp1(t_ref, L_ref, t_grid, 'linear', 'extrap');
+
+        % Grid search: shift cur by each candidate, measure MSE on overlap
+        mse = nan(size(shifts));
+        for k = 1:length(shifts)
+            L_cur_sh = interp1(t_cur, L_cur, t_grid + shifts(k), 'linear', NaN);
+            valid = ~isnan(L_cur_sh);
+            if sum(valid) < 10; continue; end
+            mse(k) = mean((L_ref_g(valid) - L_cur_sh(valid)).^2);
+        end
+
+        [~, best_k] = min(mse);
+        dts(jj) = shifts(best_k);
+        fprintf('  i=%d jj=%d [%.2f-%.2f s]: best shift = %.4f s (MSE=%.3e)\n', ...
+            i, jj, hr.t_start, hr.t_end, dts(jj), mse(best_k));
+
+        data(i).t_fineShifted = data(i).t_shifted;
+        data(i).t_fineShifted(i_hr_win) = data(i).t_shifted(i_hr_win) - dts(jj);
+
+        % Diagnostic: before/after overlay
+        figure(200+i*10+jj); clf;
+        subplot(2,1,1); hold on;
+        plot(t_ref, L_ref, 'k', 'DisplayName', 'ref');
+        plot(t_cur, L_cur, 'r', 'DisplayName', sprintf('cur (before, i=%d)', i));
+        plot(data(i).t_fineShifted(i_hr_win), L_cur, 'b--', 'DisplayName', 'cur (after)');
+        legend; ylabel('L (Lo)'); title(sprintf('Fine alignment i=%d jj=%d', i, jj));
+        subplot(2,1,2);
+        plot(shifts, mse); xlabel('shift (s)'); ylabel('MSE'); xline(dts(jj), 'r--');
+
+        % i_data_win = data(i).t_shifted >= hr.t_start & data(i).t_shifted <= hr.t_end;
+        % i_shift_win = data(i).t_shifted >= hr.t_start + dts(jj) & data(i).t_shifted <= hr.t_end + dts(jj);
+        % datanew_t(i_shift_win) = data(i).t_shifted(i_data_win);
+
+    end
+    
+    fprintf('  %s fine shifts: ktr=%.3fs, stairs=%.3fs, slack=%.3fs\n', S(i).name, dts(1), dts(2), dts(3));
+    % 
+    % % Apply standard piecewise shift with these high-res offsets
+    % t_new = data(i).t_shifted;
+    % 
+    % mid1 = 71.5;
+    % mid2 = 73.8;
+    % 
+    % seg1 = t_new >= 65 & t_new < mid1;
+    % t_new(seg1) = t_new(seg1) + dts(1);
+    % 
+    % seg2 = t_new >= mid1 & t_new < mid2;
+    % t_new(seg2) = t_new(seg2) + dts(2);
+    % 
+    % seg3 = t_new >= mid2;
+    % t_new(seg3) = t_new(seg3) + dts(3);
+    % 
+    % % Same safety cleanup as initial coarse piecewise shift
+    % [t_new, iu] = unique(t_new, 'stable');
+    % F_new = data(i).F_shifted(iu);
+    % L_new = data(i).L_shifted(iu);
+    % 
+    % ok = [true; diff(t_new) > 0];
+    % 
+    % data(i).t_shifted = t_new(ok);
+    % data(i).F_shifted = F_new(ok);
+    % data(i).L_shifted = L_new(ok);
 end
 
 %% Save Merged Output Files
