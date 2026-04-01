@@ -262,6 +262,9 @@ max_shift = 0.020;  % ±20ms search range
 shifts = (-max_shift : dt_grid : max_shift)';
 
 for i = 1:n
+    data(i).t_fineShifted = data(i).t_shifted;
+    data(i).L_fineShifted = data(i).L_shifted;
+    data(i).F_fineShifted = data(i).F_shifted;
     if i == refIdx; continue; end
 
     dts = [0,0,0];
@@ -299,19 +302,28 @@ for i = 1:n
         fprintf('  i=%d jj=%d [%.2f-%.2f s]: best shift = %.4f s (MSE=%.3e)\n', ...
             i, jj, hr.t_start, hr.t_end, dts(jj), mse(best_k));
 
-        data(i).t_fineShifted = data(i).t_shifted;
-        data(i).t_fineShifted(i_hr_win) = data(i).t_shifted(i_hr_win) - dts(jj);
+        t_fineShifted = data(i).t_shifted;
+        t_fineShifted(i_hr_win) = data(i).t_shifted(i_hr_win) - dts(jj);
+        % Ensure strict monotonicity
+        [t_fineShifted, iu] = unique(t_fineShifted, 'stable');
+        ok = [true; diff(t_fineShifted) > 0];      
+        F_fineShifted = data(i).F_shifted(iu);
+        L_fineShifted = data(i).L_shifted(iu);
+        data(i).t_fineShifted = t_fineShifted(ok);
+        data(i).F_fineShifted = F_fineShifted(ok);
+        data(i).L_fineShifted = L_fineShifted(ok);
 
         % Diagnostic: before/after overlay
         figure(200+i*10+jj); clf;
         subplot(2,1,1); hold on;
         plot(t_ref, L_ref, 'k', 'DisplayName', 'ref');
         plot(t_cur, L_cur, 'r', 'DisplayName', sprintf('cur (before, i=%d)', i));
-        plot(data(i).t_fineShifted(i_hr_win), L_cur, 'b--', 'DisplayName', 'cur (after)');
+        plot(data(i).t_fineShifted(i_hr_win), data(i).L_fineShifted(i_hr_win), 'b--', 'DisplayName', 'cur (after)');
         legend; ylabel('L (Lo)'); title(sprintf('Fine alignment i=%d jj=%d', i, jj));
         subplot(2,1,2);
         plot(shifts, mse); xlabel('shift (s)'); ylabel('MSE'); xline(dts(jj), 'r--');
 
+       
         % i_data_win = data(i).t_shifted >= hr.t_start & data(i).t_shifted <= hr.t_end;
         % i_shift_win = data(i).t_shifted >= hr.t_start + dts(jj) & data(i).t_shifted <= hr.t_end + dts(jj);
         % datanew_t(i_shift_win) = data(i).t_shifted(i_data_win);
@@ -319,6 +331,15 @@ for i = 1:n
     end
     
     fprintf('  %s fine shifts: ktr=%.3fs, stairs=%.3fs, slack=%.3fs\n', S(i).name, dts(1), dts(2), dts(3));
+    figure(1001); clf;
+    ax1 = subplot(2,1,1); hold on;
+    plot(data(i).t_fineShifted, data(i).F_fineShifted, DisplayName=sprintf('Fine alignment i=%d', i));
+    legend; ylabel('F'); title('Fine alignment ALL');
+    ax2 = subplot(2,1,2);
+    plot(data(i).t_fineShifted, data(i).L_fineShifted);
+    xlabel('shift (s)'); ylabel('L');
+    linkaxes([ax1 ax2], 'x');
+    
     % 
     % % Apply standard piecewise shift with these high-res offsets
     % t_new = data(i).t_shifted;
