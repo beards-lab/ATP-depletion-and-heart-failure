@@ -261,11 +261,15 @@ dt_grid   = 0.0005; % 0.5ms interpolation grid
 max_shift = 0.020;  % ±20ms search range
 shifts = (-max_shift : dt_grid : max_shift)';
 
+plotAll = true;
+if plotAll
+    figure(1001); clf;
+end
 for i = 1:n
     data(i).t_fineShifted = data(i).t_shifted;
     data(i).L_fineShifted = data(i).L_shifted;
     data(i).F_fineShifted = data(i).F_shifted;
-    if i == refIdx; continue; end
+    % if i == refIdx; continue; end
 
     dts = [0,0,0];
     for jj = 1:length(hi_res_ranges{i})
@@ -302,26 +306,21 @@ for i = 1:n
         fprintf('  i=%d jj=%d [%.2f-%.2f s]: best shift = %.4f s (MSE=%.3e)\n', ...
             i, jj, hr.t_start, hr.t_end, dts(jj), mse(best_k));
 
-        t_fineShifted = data(i).t_shifted;
-        t_fineShifted(i_hr_win) = data(i).t_shifted(i_hr_win) - dts(jj);
-        % Ensure strict monotonicity
-        [t_fineShifted, iu] = unique(t_fineShifted, 'stable');
-        ok = [true; diff(t_fineShifted) > 0];      
-        F_fineShifted = data(i).F_shifted(iu);
-        L_fineShifted = data(i).L_shifted(iu);
-        data(i).t_fineShifted = t_fineShifted(ok);
-        data(i).F_fineShifted = F_fineShifted(ok);
-        data(i).L_fineShifted = L_fineShifted(ok);
-
+        
+        data(i).t_fineShifted(i_hr_win) = data(i).t_fineShifted(i_hr_win) - dts(jj);
+        
         % Diagnostic: before/after overlay
+        if plotAll
         figure(200+i*10+jj); clf;
         subplot(2,1,1); hold on;
         plot(t_ref, L_ref, 'k', 'DisplayName', 'ref');
         plot(t_cur, L_cur, 'r', 'DisplayName', sprintf('cur (before, i=%d)', i));
-        plot(data(i).t_fineShifted(i_hr_win), data(i).L_fineShifted(i_hr_win), 'b--', 'DisplayName', 'cur (after)');
+        % plot(data(i).t_fineShifted(i_hr_win), data(i).L_fineShifted(i_hr_win), 'b--', 'DisplayName', 'cur (after)');
+        plot(data(i).t_fineShifted, data(i).L_fineShifted, 'b--', 'DisplayName', 'cur (after)');
         legend; ylabel('L (Lo)'); title(sprintf('Fine alignment i=%d jj=%d', i, jj));
         subplot(2,1,2);
         plot(shifts, mse); xlabel('shift (s)'); ylabel('MSE'); xline(dts(jj), 'r--');
+        end
 
        
         % i_data_win = data(i).t_shifted >= hr.t_start & data(i).t_shifted <= hr.t_end;
@@ -329,16 +328,27 @@ for i = 1:n
         % datanew_t(i_shift_win) = data(i).t_shifted(i_data_win);
 
     end
-    
-    fprintf('  %s fine shifts: ktr=%.3fs, stairs=%.3fs, slack=%.3fs\n', S(i).name, dts(1), dts(2), dts(3));
-    figure(1001); clf;
-    ax1 = subplot(2,1,1); hold on;
-    plot(data(i).t_fineShifted, data(i).F_fineShifted, DisplayName=sprintf('Fine alignment i=%d', i));
-    legend; ylabel('F'); title('Fine alignment ALL');
-    ax2 = subplot(2,1,2);
-    plot(data(i).t_fineShifted, data(i).L_fineShifted);
-    xlabel('shift (s)'); ylabel('L');
-    linkaxes([ax1 ax2], 'x');
+
+    % Ensure strict monotonicity
+    [t_fineShifted, iu] = unique(data(i).t_fineShifted, 'stable');
+    ok = [true; diff(t_fineShifted) > 0];      
+    F_fineShifted = data(i).F_shifted(iu);
+    L_fineShifted = data(i).L_shifted(iu);
+    data(i).t_fineShifted = t_fineShifted(ok);
+    data(i).F_fineShifted = F_fineShifted(ok);
+    data(i).L_fineShifted = L_fineShifted(ok);
+
+    if plotAll
+        fprintf('  %s fine shifts: ktr=%.3fs, stairs=%.3fs, slack=%.3fs\n', S(i).name, dts(1), dts(2), dts(3));
+        figure(1001); 
+        ax1 = subplot(2,1,1); hold on;
+        plot(data(i).t_fineShifted, data(i).F_fineShifted, DisplayName=sprintf('Fine alignment i=%d', i));
+        legend; ylabel('F'); title('Fine alignment ALL');
+        ax2 = subplot(2,1,2);hold on;
+        plot(data(i).t_fineShifted, data(i).L_fineShifted);
+        xlabel('shift (s)'); ylabel('L');
+        linkaxes([ax1 ax2], 'x');
+    end
     
     % 
     % % Apply standard piecewise shift with these high-res offsets
@@ -375,7 +385,7 @@ for i = 1:n
     outName = fullfile(dataDir, outNameRaw);
     
     % Format: [Time(s), L, F]
-    outData = [data(i).t_shifted, data(i).L_shifted, data(i).F_shifted];
+    outData = [data(i).t_fineShifted, data(i).L_fineShifted, data(i).F_fineShifted];
     
     try
         writematrix(outData, outName, 'Delimiter', '\t');
@@ -390,17 +400,18 @@ figure(101);clf;
 for i = 1:n
     figure(101);
     ax1_1 = nexttile(1);hold on;
-    plot(data(i).t_shifted, data(i).F_shifted, 'LineWidth', 1);
+    plot(data(i).t_fineShifted, data(i).F_fineShifted, 'LineWidth', 1);
     
     ax1_2 = nexttile(2);hold on;
-    plot(data(i).t_shifted, data(i).L_shifted, 'LineWidth', 1);
+    plot(data(i).t_fineShifted, data(i).L_fineShifted, 'LineWidth', 1);
+    linkaxes([ax1_1 ax1_2], 'x');
     
     
     figure(i+10); clf;
     
     ax1 = subplot(2,1,1); hold on;
     % Plot merged trace (thin gray)
-    plot(ax1, data(i).t_shifted, data(i).F_shifted, 'Color', [0.7 0.7 0.7], 'LineWidth', 1);
+    plot(ax1, data(i).t_fineShifted, data(i).F_fineShifted, 'Color', [0.7 0.7 0.7], 'LineWidth', 1);
     % Plot FULL original log on top (thick colored) — always visible
     plot(ax1, data(i).t_shifted_orig, data(i).F_shifted_orig, 'Color', colors(i,:), 'LineWidth', 2);
     ylabel(ax1, 'Force (kPa)');
@@ -411,7 +422,7 @@ for i = 1:n
     
     ax2 = subplot(2,1,2); hold on;
     % Plot merged trace (thin gray)
-    plot(ax2, data(i).t_shifted, data(i).L_shifted, 'Color', [0.7 0.7 0.7], 'LineWidth', 1);
+    plot(ax2, data(i).t_fineShifted, data(i).L_fineShifted, 'Color', [0.7 0.7 0.7], 'LineWidth', 1);
     % Plot FULL original log on top (thick colored)
     plot(ax2, data(i).t_shifted_orig, data(i).L_shifted_orig, 'Color', colors(i,:), 'LineWidth', 2);
     ylabel(ax2, 'Length (Lo)');
@@ -435,16 +446,81 @@ for i = 1:n
     legend(ax2, {'Merged (with Hi-Res)', 'Original Log'}, 'Location', 'best');
     linkaxes([ax1 ax2], 'x');
 end
-linkaxes([ax1_1 ax1_2], 'x');
+
 %% compensate for run-down
+
 figure(297);clf;
 r828 = 80.09/71;
 ax1 = nexttile(1);hold on;
-plot(data(2).t_shifted, data(2).F_shifted, 'LineWidth', 1);
-plot(data(3).t_shifted, data(3).F_shifted, 'LineWidth', 1);
-plot(data(4).t_shifted, data(4).F_shifted*r828, 'LineWidth', 1);
+t_ref = data(2).t_shifted;
+F_ref = data(2).F_shifted;
+L_ref = data(2).L_shifted;
+% run-down data
+F_rd = interp1(data(4).t_shifted, data(4).F_shifted, t_ref);
+F_pas = interp1(data(5).t_shifted, data(5).F_shifted, t_ref);
+F_rdact = F_rd - F_pas;
+F_refact = F_ref - F_pas;
+
+L0 = 1.0;
+k  = -0.8;   % SL slope: increase until high-SL portion of corrected trace aligns with F_refact
+r0 = (68)/(56);
+F_rdact_comp = scaleRundown(F_rdact, L_ref, r0, L0, k);
+
+% plot(t_ref, F_refact, t_ref, F_rdact*r0, t_ref, F_rdact_comp,'LineWidth', 1);
+plot(t_ref, F_refact + F_pas, t_ref, F_rdact_comp + F_pas,'LineWidth', 1);
+xlim([66.6300   78.5624])
+nansum(F_rdact_comp - F_refact)
+% plot(t_ref, F_refact, t_ref, F_rdact)
+% F_rdact
+%% rundown corrig
+t = data(3).t_shifted;
+F = data(3).F_shifted;
+L = data(3).L_shifted;
+zones = [71.5, 72.4;77.4, 78.4];
+% at 2.0
+mask = any(t >= zones(:,1)' & t <= zones(:,2)', 2);
+p1 = polyfit(t(mask), F(mask), 1);
+
+% at 2.2
+L_smooth = movmean(L, 20, 'omitnan');
+falling = find(diff(L_smooth >= 1.1) == -1) + 1;  % first sample below threshold
+t_drops = t(falling);
+mask = false(size(t));
+for i = 1:numel(t_drops)
+    mask = mask | (t >= t_drops(i) - 0.15 & t < t_drops(i));
+end
+p2 = polyfit(t(mask), F(mask), 1);
+clf;
+plot(t, F, t(mask), F(mask), t, polyval(p1, t), t, polyval(p2, t), linewidth = 1)
+
+%%
+
+%%
+% plot(data(4).t_shifted, data(4).F_shifted*r828, 'LineWidth', 1);
 
 ax2 = nexttile(2);hold on;
 plot(data(2).t_shifted, data(2).L_shifted, 'LineWidth', 1);
 plot(data(3).t_shifted, data(3).L_shifted, 'LineWidth', 1);
-linkaxes([ax1 ax2], 'x');
+
+% -------------------------------------------------------------------------
+function F_corrected = scaleRundown(F_rdact, L_ref, r0, L0, k, f0)
+% scaleRundown  Scale run-down active force with SL-dependent compensation.
+%
+%   F_corrected = scaleRundown(F_rdact, L_ref, r0, L0, k)
+%
+%   Inputs:
+%     F_rdact - run-down active force vector (same length as L_ref)
+%     L_ref   - sarcomere length vector (same time axis as F_rdact)
+%     r0      - base scale factor at pivot length L0 (e.g. 75/66)
+%     L0      - pivot sarcomere length (e.g. mean(L_ref))
+%     k       - SL slope [1/length_unit]: positive = more compensation at higher SL
+%
+%   The scale factor varies linearly with SL:
+%     scale(L) = r0 + k*(L - L0)
+%
+%   Start with k=0 to recover flat-ratio behaviour, then increase k until
+%   the corrected trace aligns with the reference active force.
+
+    scale = r0 + k .* (L_ref - L0);
+    F_corrected = (F_rdact) .* scale;
+end
