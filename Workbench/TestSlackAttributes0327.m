@@ -74,56 +74,101 @@ SLdiff_B_um  = feats_B.SLdiff  * LO_REF_UM;
 SLslack_C_um = feats_C.SLslack * LO_REF_UM;
 SLdiff_C_um  = feats_C.SLdiff  * LO_REF_UM;
 
-%% ── Comparison figure ───────────────────────────────────────────────────
+%% ── Universal comparison figure & table ─────────────────────────────────
 clr_A = [0.00, 0.45, 0.70];   % blue  – Baker
 clr_B = [0.84, 0.10, 0.11];   % red   – 03/27
 clr_C = [0.47, 0.67, 0.19];   % green – 04/03
+datasets = { feats_A, feats_B, feats_C };
+labels   = { 'Baker', '03/27', '04/03' };
+colors   = { clr_A,   clr_B,   clr_C  };
+markers  = { 'o',     's',     '^'    };
 
-seg_A = 1:numel(feats_A.ktr);
-seg_B = 1:numel(feats_B.ktr);
-seg_C = 1:numel(feats_C.ktr);
+% Lo->um fields: B and C are in Lo, A is already in um
+lo_fields = {'SLslack', 'SLdiff'};
+
+% Collect all field names present in any dataset
+all_fields = fieldnames(feats_A);
+for di = 2:numel(datasets)
+    fn = fieldnames(datasets{di});
+    all_fields = union(all_fields, fn, 'stable');
+end
+
+% Separate plottable (numeric, non-empty) from non-plottable fields
+plot_fields = {};
+for k = 1:numel(all_fields)
+    fname = all_fields{k};
+    for di = 1:numel(datasets)
+        if isfield(datasets{di}, fname)
+            v = datasets{di}.(fname);
+            if isnumeric(v) && ~isempty(v)
+                plot_fields{end+1} = fname; %#ok<SAGROW>
+                break;
+            end
+        end
+    end
+end
+
+% Auto-size figure grid
+ncols = ceil(sqrt(numel(plot_fields)));
+nrows = ceil(numel(plot_fields) / ncols);
 
 figure(403); clf;
-set(gcf, 'Name', 'Feature comparison: Baker vs 03/27 vs 04/03', 'Units', 'centimeters', 'Position', [2 2 24 20]);
-tl = tiledlayout(3, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+set(gcf, 'Name', 'Feature comparison: Baker vs 03/27 vs 04/03', 'Units', 'centimeters', ...
+    'Position', [2 2 ncols*8 nrows*6]);
+tl = tiledlayout(nrows, ncols, 'TileSpacing', 'compact', 'Padding', 'compact');
 title(tl, 'Slack feature comparison — Baker 8mM vs 03/27/2026 vs 04/03/2026');
 
-specs = { ...
-    feats_A.ktr,          feats_B.ktr,          feats_C.ktr,          '1/s',   'ktr'; ...
-    feats_A.A,            feats_B.A,            feats_C.A,            'kPa',   'A (fit amplitude)'; ...
-    feats_A.t0*1000,      feats_B.t0*1000,      feats_C.t0*1000,      'ms',    't_0 (onset delay)'; ...
-    feats_A.SLslack,      SLslack_B_um,         SLslack_C_um,         'µm',    'SL_{slack}'; ...
-    feats_A.SLdiff,       SLdiff_B_um,          SLdiff_C_um,          'µm',    'SL_{diff}'; ...
-    feats_A.peak1_y,      feats_B.peak1_y,      feats_C.peak1_y,      'kPa',   'Peak 1 force'; ...
-    feats_A.peak1_t*1000, feats_B.peak1_t*1000, feats_C.peak1_t*1000, 'ms',    'Peak 1 time'; ...
-    feats_A.vall2_dy,     feats_B.vall2_dy,     feats_C.vall2_dy,     'kPa',   'Valley 2 \Deltaforce'; ...
-    feats_A.v_restretch,  feats_B.v_restretch,  feats_C.v_restretch,  'units', 'v_{restretch}'; ...
-};
-
-for ii = 1:size(specs,1)
+for ii = 1:numel(plot_fields)
+    fname = plot_fields{ii};
     ax = nexttile(ii); hold on;
-    plot(ax, seg_A, specs{ii,1}, 'o-', 'Color', clr_A, 'LineWidth', 1.5, 'MarkerFaceColor', clr_A, 'DisplayName', 'Baker');
-    plot(ax, seg_B, specs{ii,2}, 's-', 'Color', clr_B, 'LineWidth', 1.5, 'MarkerFaceColor', clr_B, 'DisplayName', '03/27');
-    plot(ax, seg_C, specs{ii,3}, '^-', 'Color', clr_C, 'LineWidth', 1.5, 'MarkerFaceColor', clr_C, 'DisplayName', '04/03');
-    ylabel(ax, specs{ii,4}); title(ax, specs{ii,5}); box(ax, 'on');
-    xticks(ax, 1:max([numel(seg_A), numel(seg_B), numel(seg_C)])); xlabel(ax, 'Segment');
+    for di = 1:numel(datasets)
+        if ~isfield(datasets{di}, fname); continue; end
+        v = datasets{di}.(fname);
+        if ~isnumeric(v) || isempty(v); continue; end
+        % Apply Lo->um scaling for B and C on SL fields
+        if di > 1 && ismember(fname, lo_fields)
+            v = v * LO_REF_UM;
+        end
+        segs = 1:numel(v);
+        plot(ax, segs, v, [markers{di} '-'], 'Color', colors{di}, ...
+            'LineWidth', 1.5, 'MarkerFaceColor', colors{di}, 'DisplayName', labels{di});
+    end
+    title(ax, strrep(fname, '_', '\_')); box(ax, 'on');
+    xlabel(ax, 'Segment');
+    if ismember(fname, lo_fields); ylabel(ax, 'µm'); end
     if ii == 1; legend(ax, 'Location', 'best', 'FontSize', 7); end
 end
 
-%% ── Print table ─────────────────────────────────────────────────────────
-fprintf('\n%s\n', repmat('-', 1, 100));
-fprintf('%-22s  %-26s  %-26s  %s\n', 'Feature', 'Baker (segs 1-4)', '03/27 (segs 1-4)', '04/03 (segs 1-4)');
-fprintf('%s\n', repmat('-', 1, 100));
+%% ── Print table (all fields) ────────────────────────────────────────────
+COL = 28;
+sep = repmat('-', 1, 22 + (COL+2)*numel(datasets) + 2);
+fprintf('\n%s\n', sep);
+fprintf('%-22s', 'Feature');
+for di = 1:numel(datasets); fprintf('  %-*s', COL, labels{di}); end
+fprintf('\n%s\n', sep);
 
-compare_fields = {'ktr','A','t0','Am','SLslack','SLdiff','peak1_y','peak1_t','vall2_dy','v_restretch'};
-for k = 1:numel(compare_fields)
-    fname = compare_fields{k};
-    vA = feats_A.(fname);
-    vB = feats_B.(fname);
-    vC = feats_C.(fname);
-    suffix = '';
-    if strcmp(fname,'SLslack'); vB = SLslack_B_um; vC = SLslack_C_um; suffix = ' [Lo->um]'; end
-    if strcmp(fname,'SLdiff');  vB = SLdiff_B_um;  vC = SLdiff_C_um;  suffix = ' [Lo->um]'; end
-    fprintf('%-22s  %-26s  %-26s  %s%s\n', fname, mat2str(round(vA,4,'significant')), mat2str(round(vB,4,'significant')), mat2str(round(vC,4,'significant')), suffix);
+for k = 1:numel(all_fields)
+    fname = all_fields{k};
+    fprintf('%-22s', fname);
+    for di = 1:numel(datasets)
+        if ~isfield(datasets{di}, fname)
+            fprintf('  %-*s', COL, '—');
+            continue;
+        end
+        v = datasets{di}.(fname);
+        if ischar(v) || isstring(v)
+            fprintf('  %-*s', COL, v);
+        elseif isnumeric(v) && ~isempty(v)
+            if di > 1 && ismember(fname, lo_fields)
+                v = v * LO_REF_UM;
+            end
+            s = mat2str(round(v, 4, 'significant'));
+            fprintf('  %-*s', COL, s);
+        else
+            fprintf('  %-*s', COL, '[]');
+        end
+    end
+    if ismember(fname, lo_fields); fprintf('  [Lo->um]'); end
+    fprintf('\n');
 end
-fprintf('%s\n', repmat('-', 1, 100));
+fprintf('%s\n', sep);

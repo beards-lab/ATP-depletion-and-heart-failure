@@ -76,30 +76,61 @@ MARKER_SIZE           = 12;    % plot marker size
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
     
-        y_exp = @(A, k, t0, A0,x) max(0, A0*0 + min(y) + A*(1-exp(-(x-t0)*k)));
+        F0 = min(y);
+        init_tail = 0:0.001:0.15;
+
+        % ── Single-exponential fit ────────────────────────────────────────
+        y_exp = @(A, k, t0, A0, x) max(0, A0*0 + F0 + A*(1-exp(-(x-t0)*k)));
         try
-            [ae be] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01, 0], 'Lower', [10, 0.01, 0.0, 0], 'Upper', [200 200 0.1, 100]);
-            init_tail = [0:0.001:0.15];
-            
+            [ae, ~] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01, 0], 'Lower', [10, 0.01, 0.0, 0], 'Upper', [200 200 0.1, 100]);
+
             if plotResults
-                plot(init_tail + t_seg, ae(init_tail),'--', t+ t_seg, ae(t), LineWidth=2)
-                plot(ae.t0+ t_seg, 0, '*', LineWidth=2, MarkerSize=ms);
-                % plot(t+ t_seg, y-ae(t),'-', LineWidth=1);
+                plot(init_tail + t_seg, ae(init_tail), '--', t + t_seg, ae(t), 'LineWidth', 2);
+                plot(ae.t0 + t_seg, 0, '*', 'LineWidth', 2, 'MarkerSize', ms);
             end
-            
-            feats.ktr = ae.k;
-            feats.A = ae.A + min(y);
-            feats.t0 = ae.t0;
-            feats.Am = y(end);
+
+            feats.ktr    = ae.k;
+            feats.A      = ae.A + F0;
+            feats.t0     = ae.t0;
+            feats.Am     = y(end);
             feats.SLslack = SL(end);
-            feats.SLdiff = max(data_SL) - SL(end);
-        catch e
-            feats.ktr = NaN;
-            feats.A = NaN;
-            feats.t0 = NaN;
-            feats.Am = NaN;
+            feats.SLdiff  = max(data_SL) - SL(end);
+        catch
+            feats.ktr     = NaN;
+            feats.A       = NaN;
+            feats.t0      = NaN;
+            feats.Am      = NaN;
             feats.SLslack = NaN;
-            feats.SLdiff = NaN;            
+            feats.SLdiff  = NaN;
+        end
+
+        % ── Double-exponential fit ────────────────────────────────────────
+        % F0 + A1*(1-exp(-k1*(x-t0))) + A2*(1-exp(-k2*(x-t0)))
+        % k1 <= k2 enforced post-hoc by sorting; shared onset t0.
+        y_exp2 = @(A1, k1, A2, k2, t0, x) F0 + A1*(1-exp(-k1*max(0, x-t0))) + A2*(1-exp(-k2*max(0, x-t0)));
+        try
+            [ae2, ~] = fit(t, y, y_exp2, ...
+                'StartPoint', [60,  15, 40, 100, 0.01], ...
+                'Lower',      [ 0, 0.1,  0, 0.1,  0  ], ...
+                'Upper',      [200, 200, 200, 500, 0.1]);
+
+            % Sort so _s = slow (smaller k), _f = fast (larger k)
+            if ae2.k1 <= ae2.k2
+                feats.ktr2_s = ae2.k1;  feats.A2_s = ae2.A1;
+                feats.ktr2_f = ae2.k2;  feats.A2_f = ae2.A2;
+            else
+                feats.ktr2_s = ae2.k2;  feats.A2_s = ae2.A2;
+                feats.ktr2_f = ae2.k1;  feats.A2_f = ae2.A1;
+            end
+            feats.t0_2 = ae2.t0;
+
+            if plotResults
+                plot(init_tail + t_seg, ae2(init_tail), ':', 'LineWidth', 2, 'Color', [0.85 0.33 0.10]);
+            end
+        catch
+            feats.ktr2_s = NaN;  feats.A2_s = NaN;
+            feats.ktr2_f = NaN;  feats.A2_f = NaN;
+            feats.t0_2   = NaN;
         end
 
 
