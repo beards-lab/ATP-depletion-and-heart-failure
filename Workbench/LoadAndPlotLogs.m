@@ -2,6 +2,16 @@
 close all; clear; clc;
 
 dataDir = '../data/03 27 2026 M/';
+fpath = [dataDir '02_Merged_8mM_Active.txt'];
+fpath = [dataDir '06_Merged_8mM_Active_PNB_Mava.txt'];
+data_ref = readmatrix(fpath, 'NumHeaderLines', 4);
+
+
+% dataset 1
+% dataDir = '../data/03 27 2026 M/';
+
+% dataset 2
+dataDir = '../data/04 03 2026 F/';
 S = dir([dataDir '*Log_*.txt']);
 [~, idx] = sort({S.name});
 S = S(idx);
@@ -100,10 +110,11 @@ for i = 1:n
     data(i).F_shifted = F_i(ok);
     data(i).L_shifted = L_i(ok);
 
-    % ax1 = nexttile(1);hold on;plot(data(i).t_shifted, data(i).F_shifted);
-    % ax2 = nexttile(2);hold on;plot(data(i).t_shifted, data(i).L_shifted);
-    % linkaxes([ax1 ax2], 'x');
+    ax1 = nexttile(1);hold on;plot(data(i).t_shifted, data(i).F_shifted);
+    ax2 = nexttile(2);hold on;plot(data(i).t_shifted, data(i).L_shifted);
+    
 end
+linkaxes([ax1 ax2], 'x');
 
 %% Process High-Sampled Files and Merge
 allFiles = dir([dataDir '*.txt']);
@@ -136,7 +147,7 @@ for k = 1:length(highResFiles)
     L_hi = L_hi(ok);
     F_hi = F_hi(ok);
     
-    % figure(1);clf; nexttile(1);ax1 = plot(t_hi, F_hi);ax2 = nexttile(2);plot(t_hi, L_hi);title(highResFiles(k).name);linkaxes([ax1 ax2], 'x');
+    figure(1);clf; nexttile(1);ax1 = plot(t_hi, F_hi);ax2 = nexttile(2);plot(t_hi, L_hi);title(highResFiles(k).name);linkaxes([ax1 ax2], 'x');
     
     
     % Find correct Log file by explicit name pairing
@@ -162,10 +173,10 @@ for k = 1:length(highResFiles)
             t_win = [74.5, 78.5];  % only the HIGH-force slack event (second one)
             burst_type = 'slack';
         elseif contains(name_hi, 'stiff') || contains(name_hi, 'ktr')
-            t_win = [70, 76];  % ktr L-drop happens ~72s
+            t_win = [69, 73];  % ktr L-drop happens ~72s
             burst_type = 'ktr';
         elseif contains(name_hi, 'stretch')
-            t_win = [72, 78];  % stretch L-drop happens ~74s
+            t_win = [72, 74];  % stretch L-drop happens ~74s
             burst_type = 'stretch';
         else
             fprintf('  Unknown burst type for %s, skipping.\n', name_hi);
@@ -261,7 +272,7 @@ dt_grid   = 0.0005; % 0.5ms interpolation grid
 max_shift = 0.020;  % ±20ms search range
 shifts = (-max_shift : dt_grid : max_shift)';
 
-plotAll = false;
+plotAll = true;
 if plotAll
     figure(1001); clf;
 end

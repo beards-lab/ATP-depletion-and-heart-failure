@@ -1,6 +1,14 @@
 % CreateProtocolVelocityTable.m
 dataDir = '../data/03 27 2026 M/';
 fpath = [dataDir '06_Merged_8mM_Active_PNB_Mava.txt'];
+outPath = '../data/protocol_03_27_2026_velocitytable.mat';
+
+% set #02
+% dataDir = '../data/04 03 2026 F/';
+% fpath = [dataDir '04_Merged_8mM_Active_PNB_Mava.txt'];
+% outPath = '../data/protocol_04_03_2026_velocitytable.mat';
+
+
 M = readmatrix(fpath);
 
 % We only want t >= 0
@@ -39,8 +47,8 @@ dsf = 20; % downsample factor
 datatable = [downsample(t, dsf), downsample(L, dsf), downsample(F, dsf)];
 
 % Save it
-outPath = '../data/protocol_03_27_2026_velocitytable.mat';
-% save(outPath, 'velocitytable', 'datatable');
+
+save(outPath, 'velocitytable', 'datatable');
 fprintf('Saved new velocitytable (%dx4) and datatable (%dx3) to %s\n', ...
         size(velocitytable,1), size(datatable,1), outPath);
 
