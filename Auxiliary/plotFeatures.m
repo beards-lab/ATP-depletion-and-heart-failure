@@ -1,13 +1,23 @@
 function cost = plotFeatures(feats_data, feats_sim, feats_ghost, fn)
-%% plots the features
-% To build the sample fn, go:
-%   fn = fieldnames(feats_sim);
-%   quoted = cellfun(@(s) ['''' s ''''], fn, 'UniformOutput', false);
-%   fprintf('fn = {%s};\n', strjoin(quoted, ', '));
-% a sample fn
-% fn = {'ktr', 'A', 't0', 'SLslack', 'v_restretch', 'peak1_y', 'peak1_t', 'peak1_SL', 'peak1_dSL', 'peak2', 'vall_t', 'vall_y', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'ovrsht_t', 'steady'};
-% X-Y plots: this plots A as a function of SLslack
-% fn = {'A|SLslack'}
+%% PLOTFEATURES  Plot data vs simulation features (backward-compatible wrapper).
+%
+%   Wrapper around PLOTMULTIPLEFEATURES for the classic 3-dataset case:
+%   data (blue o), simulation (red x), ghost (grey +).
+%
+%   COST = PLOTFEATURES(FEATS_DATA, FEATS_SIM, FEATS_GHOST, FN)
+%
+%   To build the sample fn, go:
+%     fn = fieldnames(feats_sim);
+%     quoted = cellfun(@(s) ['''' s ''''], fn, 'UniformOutput', false);
+%     fprintf('fn = {%s};\n', strjoin(quoted, ', '));
+%   A sample fn:
+%     fn = {'ktr','A','t0','SLslack','v_restretch','peak1_y','peak1_t', ...
+%           'peak1_SL','peak1_dSL','peak2','vall_t','vall_y','vall2_dy', ...
+%           'vall2_t','ovrsht_dy','ovrsht_t','steady'};
+%   X-Y plots: plots A as a function of SLslack
+%     fn = {'A|SLslack'}
+%
+%   See also: plotMultipleFeatures, evalFeatureCost
 
 if nargin < 3
     feats_ghost = [];
@@ -16,72 +26,23 @@ elseif nargin < 4
     fn = fieldnames(feats_data);
 end
 
-figure(80085);clf; 
-tiledlayout("flow");
-% N_feats = size(feats_data, 2);
+% Build the multi-dataset inputs
+feats_cell = {feats_data, feats_sim};
+labels     = {'data', 'sim'};
+colors     = [0.00 0.45 0.70; 0.84 0.10 0.11];
+markers    = {'o', 'x'};
 
-cost = evalFeatureCost(feats_data, feats_sim, fn);
-
-for i_feat = 1:length(fn)
-    nexttile();
-
-    featnames = split(fn{i_feat}, '|');
-    feat_y = featnames{1};
-
-    % Check whether both structs have the required field(s).
-    feat_x = '';
-    if length(featnames) >= 2 && featnames{2} ~= "_" && isnan(str2double(featnames{2}))
-        feat_x = featnames{2};
-    end
-    missing_y = ~isfield(feats_data, feat_y) || ~isfield(feats_sim, feat_y);
-    missing_x = ~isempty(feat_x) && (~isfield(feats_data, feat_x) || ~isfield(feats_sim, feat_x));
-
-    if missing_y || missing_x
-        % Feature absent — render an empty tile so the layout stays intact.
-        axis off;
-        if isempty(feat_x)
-            caption = sprintf('%s\n(missing — cost %.3g)', feat_y, cost(i_feat));
-        else
-            caption = sprintf('%s vs %s\n(missing — cost %.3g)', feat_y, feat_x, cost(i_feat));
-        end
-        text(0.5, 0.5, caption, 'Units', 'normalized', 'HorizontalAlignment', 'center', ...
-            'VerticalAlignment', 'middle', 'Interpreter', 'none', 'Color', [0.6 0.6 0.6]);
-        continue;
-    end
-
-    N_feats = length(feats_data.(feat_y));
-
-    if isempty(feat_x)
-        fd_x = 1:N_feats; fs_x = 1:N_feats; fg_x = 1:N_feats;
-    else
-        fd_x = [feats_data.(feat_x)];
-        fs_x = [feats_sim.(feat_x)];
-        if ~isempty(feats_ghost) && isfield(feats_ghost, feat_x)
-            fg_x = [feats_ghost.(feat_x)];
-        else
-            fg_x = NaN(size(1:N_feats));
-        end
-    end
-
-    fd = [feats_data.(feat_y)];
-    fs = [feats_sim.(feat_y)];
-    if ~isempty(feats_ghost) && isfield(feats_ghost, feat_y)
-        fg = [feats_ghost.(feat_y)];
-    else
-        fg = NaN(size(1:N_feats));
-    end
-
-    plot(fd_x, fd, 'o--', fs_x, fs, 'x-', fg_x, fg, '+--', LineWidth=1.5);
-    if isempty(feat_x)
-        title(sprintf('%s (%.3g)', feat_y, cost(i_feat)), Interpreter="none");
-    else
-        title(sprintf('%s vs %s (%.3g)', feat_y, feat_x, cost(i_feat)), Interpreter="none");
-    end
+if ~isempty(feats_ghost)
+    feats_cell{end+1} = feats_ghost;
+    labels{end+1}     = 'ghost';
+    colors(end+1, :)  = [0.50 0.50 0.50];
+    markers{end+1}    = '+';
 end
 
-% dt vs dSL with extrapolation
-% nexttile; plot([feats_data.t0], [feats_data.SLslack]-2.2);ylim([-inf, 0]);title("dt vs dSL");hold on;
-% t = (-1:0.1:3)*1e-3;plot(t, -16*t - 0.125);
-% nexttile; plot(diff([feats_data.SLslack]-2.2)./diff([feats_data.t0]));ylim([-inf, 0]);title("dt vs dSL (um/s)")
+figure(80085); clf;
+plotMultipleFeatures(feats_cell, labels, colors, markers, fn);
+
+% Cost is data-vs-sim only (unchanged semantics)
+cost = evalFeatureCost(feats_data, feats_sim, fn);
 
 end

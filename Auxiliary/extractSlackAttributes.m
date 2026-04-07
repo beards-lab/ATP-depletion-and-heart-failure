@@ -37,7 +37,10 @@ MARKER_SIZE           = 12;    % plot marker size
         plotResults = false;
     end
     if plotResults
-        figure(406);clf;hold on;
+        if ~isempty(get(gcf, 'Children'))
+            figure(406);clf;
+        end
+        hold on;
         plot(data_t, data_y, '-b', 'LineWidth', 1);                
     end
 
@@ -104,37 +107,6 @@ MARKER_SIZE           = 12;    % plot marker size
             feats.SLdiff  = NaN;
         end
 
-        % ── Double-exponential fit ────────────────────────────────────────
-        % F0 + A1*(1-exp(-k1*(x-t0))) + A2*(1-exp(-k2*(x-t0)))
-        % k1 <= k2 enforced post-hoc by sorting; shared onset t0.
-        y_exp2 = @(A1, k1, A2, k2, t0, x) F0 + A1*(1-exp(-k1*max(0, x-t0))) + A2*(1-exp(-k2*max(0, x-t0)));
-        try
-            [ae2, ~] = fit(t, y, y_exp2, ...
-                'StartPoint', [60,  15, 40, 100, 0.01], ...
-                'Lower',      [ 0, 0.1,  0, 0.1,  0  ], ...
-                'Upper',      [200, 200, 200, 500, 0.1]);
-
-            % Sort so _s = slow (smaller k), _f = fast (larger k)
-            if ae2.k1 <= ae2.k2
-                feats.ktr2_s = ae2.k1;  feats.A2_s = ae2.A1;
-                feats.ktr2_f = ae2.k2;  feats.A2_f = ae2.A2;
-            else
-                feats.ktr2_s = ae2.k2;  feats.A2_s = ae2.A2;
-                feats.ktr2_f = ae2.k1;  feats.A2_f = ae2.A1;
-            end
-            feats.t0_2 = ae2.t0;
-
-            if plotResults
-                plot(init_tail + t_seg, ae2(init_tail), ':', 'LineWidth', 2, 'Color', [0.85 0.33 0.10]);
-            end
-        catch
-            feats.ktr2_s = NaN;  feats.A2_s = NaN;
-            feats.ktr2_f = NaN;  feats.A2_f = NaN;
-            feats.t0_2   = NaN;
-        end
-
-
-    
         % peaks and valley
         win = data_t >= velocity_segment(3) & data_t <= velocity_segment(4);
         t = data_t(win); y = data_y(win); SL = data_SL(win);
