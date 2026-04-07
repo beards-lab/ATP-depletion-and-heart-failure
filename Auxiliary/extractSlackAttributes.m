@@ -53,7 +53,7 @@ MARKER_SIZE           = 12;    % plot marker size
         data_SL = data_SL';
     end
     % each set starts with negative velocity
-    segments = find(velocitytable(:, 2) < 0)';
+    segments = find(velocitytable(:, 2) < -1)';
 
     ms = MARKER_SIZE;
 
@@ -88,7 +88,7 @@ MARKER_SIZE           = 12;    % plot marker size
             end
             
             feats.ktr = ae.k;
-            feats.A = ae.A;
+            feats.A = ae.A + min(y);
             feats.t0 = ae.t0;
             feats.Am = y(end);
             feats.SLslack = SL(end);

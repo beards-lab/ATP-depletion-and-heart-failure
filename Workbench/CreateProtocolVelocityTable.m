@@ -7,11 +7,12 @@ M = readmatrix(fpath);
 idx0 = find(M(:,1) >= -0.1, 1);
 t = M(idx0:end, 1);
 L = M(idx0:end, 2);
+clf;ax1 = nexttile(1);plot(t, L); ax2 = nexttile(2);plot(t(2:end), diff(L)); linkaxes([ax1 ax2], 'x')
 
 F = M(idx0:end, 3);
 
 % Ramer-Douglas-Peucker line simplification to find turning points
-epsilon = 0.001; % 0.1% length tolerance
+epsilon = 0.001; % 0.2% length tolerance
 keep = rdp(t, L, epsilon);
 
 t_vt = t(keep);
@@ -39,7 +40,7 @@ datatable = [downsample(t, dsf), downsample(L, dsf), downsample(F, dsf)];
 
 % Save it
 outPath = '../data/protocol_03_27_2026_velocitytable.mat';
-save(outPath, 'velocitytable', 'datatable');
+% save(outPath, 'velocitytable', 'datatable');
 fprintf('Saved new velocitytable (%dx4) and datatable (%dx3) to %s\n', ...
         size(velocitytable,1), size(datatable,1), outPath);
 
