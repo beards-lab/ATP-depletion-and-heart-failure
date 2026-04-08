@@ -1,4 +1,21 @@
-%% Handtune alternative model, based on mant-ATP knowledge
+%% HandtuneAlternativeModel.m — Interactive parameter tuning workflow.
+%
+%   Loads a parameter set, sets active protocols, and calls RunBakersExp
+%   in a loop so you can interactively adjust params0 fields and see the
+%   result immediately.  Intended for exploratory tuning before launching
+%   a formal optimisation run.
+%
+%   Usage pattern:
+%     1. Run once to load data and set up params0.
+%     2. Adjust any params0 field in the Command Window or this script.
+%     3. Re-run RunBakersExp (the last section) to see the updated fit.
+%
+%   Key flags controlled here:
+%     params0.RunForceVelocity   — include FV protocol cost
+%     params0.RunSlack           — include slack-restretch protocol cost
+%     params0.EvalFeatures       — use feature-based (vs time-domain) cost
+%
+%   See also: RunOptim, RunOptimLakes, evaluateProblem, getParams.
 
 clf;
 LoadData;

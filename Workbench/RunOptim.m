@@ -1,4 +1,16 @@
-%% set g0//
+%% RunOptim.m — Launch fminsearch optimisation of model parameters.
+%
+%   Sets the initial modifier vector g and calls evaluateProblem to compute
+%   total weighted feature cost across all active experimental protocols.
+%   Requires params0 to be set up in the workspace first (e.g. run a
+%   ModelParams*.m script or HandtuneAlternativeModel.m).
+%
+%   The optimised g vector is saved to gopt.csv.  Load with:
+%     g = readmatrix('gopt.csv');
+%
+%   See also: RunOptimLakes, tunableParams, evaluateProblem, getParams.
+
+%% set g0
 % clear
 load g0;
 g = g0;

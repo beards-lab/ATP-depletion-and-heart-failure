@@ -172,8 +172,26 @@ end
 %% Section 5 — Step perturbation extraction
 %% ══════════════════════════════════════════════════════════════════════════
 
-mdl_step = fittype('Fss + A*(r*exp(-k1*x) - (1-r)*exp(-k2*x))', ...
-    'coeff', {'Fss','A','r','k1','k2'}, 'independent', 'x');
+% ── Step perturbation model: decoupled 2-exponential ─────────────────────
+%   F(t) = Fss + A1*exp(-k1*t) + A2*exp(-k2*t)
+%
+%   Rationale: the classic coupled form  Fss + A*(r*exp(-k1*t) - (1-r)*exp(-k2*t))
+%   suffers a strong k1-k2 tradeoff — the optimiser can trade rate against
+%   amplitude freely.  Decoupling amplitudes and bounding each from the data
+%   fixes this:
+%
+%     A1  = "decay"  amplitude  → bounded by  (max(F) – Fss_est)  for step-up
+%                                             (min(F) – Fss_est)  for step-down
+%     A2  = "undershoot" amplitude (opposite sign to A1 if any overshoot present)
+%                                → bounded by  (min(F) – Fss_est)  for step-up
+%                                             (max(F) – Fss_est)  for step-down
+%     k1  = fast rate  (k1 > k2 enforced by lower/upper bounds)
+%     k2  = slow rate
+%
+%   Both rates are constrained independently of the amplitudes, eliminating
+%   the k1/k2 swap ambiguity present in the r-parameterisation.
+mdl_step = fittype('Fss + A1*exp(-k1*x) + A2*exp(-k2*x)', ...
+    'coeff', {'Fss','A1','A2','k1','k2'}, 'independent', 'x');
 
 for di = 1:numel(DS)
     if ~isfield(DS(di), 'data_step') || isempty(DS(di).data_step); continue; end
@@ -188,11 +206,11 @@ for di = 1:numel(DS)
     fprintf('  Found %d step pairs\n', nPairs);
 
     sf.label   = DS(di).label;
-    sf.k1_up   = nan(1, nPairs);  sf.k2_up  = nan(1, nPairs);
-    sf.k1_dwn  = nan(1, nPairs);  sf.k2_dwn = nan(1, nPairs);
-    sf.A_up    = nan(1, nPairs);  sf.r_up   = nan(1, nPairs);
-    sf.A_dwn   = nan(1, nPairs);  sf.r_dwn  = nan(1, nPairs);
-    sf.Fss_up  = nan(1, nPairs);  sf.Fss_dwn= nan(1, nPairs);
+    sf.k1_up   = nan(1, nPairs);  sf.k2_up   = nan(1, nPairs);
+    sf.k1_dwn  = nan(1, nPairs);  sf.k2_dwn  = nan(1, nPairs);
+    sf.A1_up   = nan(1, nPairs);  sf.A2_up   = nan(1, nPairs);
+    sf.A1_dwn  = nan(1, nPairs);  sf.A2_dwn  = nan(1, nPairs);
+    sf.Fss_up  = nan(1, nPairs);  sf.Fss_dwn = nan(1, nPairs);
     sf.dL      = nan(1, nPairs);
 
     clr = DS(di).color;
@@ -212,17 +230,22 @@ for di = 1:numel(DS)
         L_after  = L_um(find(t >= step_ups(s,2), 1));
         sf.dL(s) = (L_after - L_before) / DS(di).Lo_ref_um;  % store in Lo
 
-        % Step-up fit
-        t0_up = t(find(msk_up, 1));
-        tf_up = t(msk_up) - t0_up;  Ff_up = F(msk_up);  Fmed = median(Ff_up);
+        % ── Step-up fit ───────────────────────────────────────────────────
+        % A1 > 0: fast decay from peak down to Fss.  Bounded by (max-Fss_est).
+        % A2 ≤ 0: slow undershoot below Fss (if present). Bounded by (min-Fss_est).
+        t0_up   = t(find(msk_up, 1));
+        tf_up   = t(msk_up) - t0_up;  Ff_up = F(msk_up);
+        Fss_est = median(Ff_up(max(1, end-round(0.2*numel(Ff_up))):end));
+        A1_est  = max(Ff_up) - Fss_est;          % decay amplitude (> 0)
+        A2_est  = min(Ff_up) - Fss_est;          % undershoot amplitude (≤ 0)
         fu = [];
         try
             fu = fit(tf_up, Ff_up, mdl_step, ...
-                'StartPoint', [Fmed, abs(Ff_up(1)-Fmed), 0.8, 500, 50], ...
-                'Lower',      [Fmed*0.5, 0,   0.5,  10,   1], ...
-                'Upper',      [Fmed*2,  500,  1,  3000, 500]);
+                'StartPoint', [Fss_est,  A1_est,          A2_est,         300, 30], ...
+                'Lower',      [Fss_est*0.7, 0,            min(A2_est*1.5, -1e-3), 50,  1], ...
+                'Upper',      [Fss_est*1.3, A1_est*2,     0,              3000, 200]);
             sf.Fss_up(s) = fu.Fss; sf.k1_up(s) = fu.k1; sf.k2_up(s) = fu.k2;
-            sf.A_up(s) = fu.A; sf.r_up(s) = fu.r;
+            sf.A1_up(s) = fu.A1;   sf.A2_up(s) = fu.A2;
         catch ME
             fprintf('  [WARN] step-up s=%d: %s\n', s, ME.message);
         end
@@ -236,17 +259,22 @@ for di = 1:numel(DS)
         end
         xlabel(ax, 't (s)'); ylabel(ax, 'F (kPa)'); box(ax, 'on');
 
-        % Step-down fit
-        t0_dwn = t(find(msk_dwn, 1));
-        tf_dwn = t(msk_dwn) - t0_dwn;  Ff_dwn = F(msk_dwn);  Fmed = median(Ff_dwn);
+        % ── Step-down fit ─────────────────────────────────────────────────
+        % A1 < 0: fast drop below Fss.  Bounded by (min-Fss_est).
+        % A2 ≥ 0: slow recovery/overshoot above Fss (if present). Bounded by (max-Fss_est).
+        t0_dwn  = t(find(msk_dwn, 1));
+        tf_dwn  = t(msk_dwn) - t0_dwn;  Ff_dwn = F(msk_dwn);
+        Fss_est = median(Ff_dwn(max(1, end-round(0.2*numel(Ff_dwn))):end));
+        A1_est  = min(Ff_dwn) - Fss_est;         % drop amplitude (< 0)
+        A2_est  = max(Ff_dwn) - Fss_est;         % overshoot amplitude (≥ 0)
         fd = [];
         try
             fd = fit(tf_dwn, Ff_dwn, mdl_step, ...
-                'StartPoint', [Fmed, -abs(Ff_dwn(1)-Fmed), 0.8, 500, 50], ...
-                'Lower',      [Fmed*0.5, -500, 0.5,  10,   1], ...
-                'Upper',      [Fmed*2,      0,   1, 3000, 500]);
+                'StartPoint', [Fss_est,  A1_est,          A2_est,         300, 30], ...
+                'Lower',      [Fss_est*0.7, A1_est*1.5,   0,              50,  1], ...
+                'Upper',      [Fss_est*1.3, 0,             max(A2_est*1.5, 1e-3), 3000, 200]);
             sf.Fss_dwn(s) = fd.Fss; sf.k1_dwn(s) = fd.k1; sf.k2_dwn(s) = fd.k2;
-            sf.A_dwn(s) = fd.A; sf.r_dwn(s) = fd.r;
+            sf.A1_dwn(s) = fd.A1;   sf.A2_dwn(s) = fd.A2;
         catch ME
             fprintf('  [WARN] step-down s=%d: %s\n', s, ME.message);
         end
@@ -267,8 +295,23 @@ end
 %% Section 6 — Staircase extraction
 %% ══════════════════════════════════════════════════════════════════════════
 
-mdl_stair = fittype('Fss + A*(r*exp(-k1*x) - (1-r)*exp(-k2*x))', ...
-    'coeff', {'Fss','A','r','k1','k2'}, 'independent', 'x');
+% ── Staircase model: decoupled 2-exponential (same rationale as step) ────
+%   F(t) = Fss + A1*exp(-k1*t) + A2*exp(-k2*t)
+%
+%   After each shortening step force is at a minimum and recovers to Fss.
+%   A1 < 0: fast recovery component (k1 large, dominant).
+%   A2 ≥ 0: slow overshoot component (k2 small), may be ~0 for monotone data.
+%   Bounds are data-derived (min/max of the recovery window) to prevent
+%   the k1/k2 tradeoff seen in the r-parameterisation.
+%
+%   TODO: staircase 2-exp fits are unreliable when the recovery window is
+%   short (< 50 ms) or when the signal has significant noise.  Possible
+%   improvements:
+%     - Use single-exp fallback when A2 is near zero
+%     - Jointly fit across all staircase steps (shared k1, k2; free Fss, A)
+%     - Increase window duration in vt_stair descriptor
+mdl_stair = fittype('Fss + A1*exp(-k1*x) + A2*exp(-k2*x)', ...
+    'coeff', {'Fss','A1','A2','k1','k2'}, 'independent', 'x');
 
 for di = 1:numel(DS)
     if ~isfield(DS(di), 'data_stair') || isempty(DS(di).data_stair); continue; end
@@ -289,8 +332,8 @@ for di = 1:numel(DS)
     sf.Fss     = nan(1, nStairs);
     sf.k1      = nan(1, nStairs);
     sf.k2      = nan(1, nStairs);
-    sf.A       = nan(1, nStairs);
-    sf.r       = nan(1, nStairs);
+    sf.A1      = nan(1, nStairs);
+    sf.A2      = nan(1, nStairs);
     sf.dL      = nan(1, nStairs);
     sf.L_after = nan(1, nStairs);
 
@@ -341,18 +384,22 @@ for di = 1:numel(DS)
         t_ds = arrayfun(@(k) mean(t_raw((k-1)*ds_factor+1:k*ds_factor)), 1:n_bins)';
         F_ds = arrayfun(@(k) mean(F_raw((k-1)*ds_factor+1:k*ds_factor)), 1:n_bins)';
         tf = t_ds - t_ds(1);
+        % Data-derived amplitude bounds:
+        % A1 < 0: fast recovery component (force rises from min → Fss, so A1 is negative)
+        % A2 ≥ 0: slow overshoot component (may be ~0 for monotone recovery)
         Fss_est = mean(F_ds(max(1,end-round(0.2*n_bins)):end));
-        A0 = (max(F_ds) - min(F_ds)) / 2;
+        A1_est  = min(F_ds) - Fss_est;   % initial drop below Fss (< 0)
+        A2_est  = max(F_ds) - Fss_est;   % overshoot above Fss (≥ 0, often ~0)
 
         plot(ax, tf, F_ds, 'k.', 'MarkerSize', 4);
         f0 = [];
         try
             f0 = fit(tf, F_ds, mdl_stair, ...
-                'StartPoint', [Fss_est, abs(A0),        0.8, 100, 10], ...
-                'Lower',      [Fss_est*0.7, 0,          0.5,  10, 10], ...
-                'Upper',      [Fss_est*1.05, abs(A0)*5, 1,   500, 40]);
+                'StartPoint', [Fss_est,  A1_est,         A2_est,      100, 10], ...
+                'Lower',      [Fss_est*0.7, A1_est*1.5,  0,            20,  1], ...
+                'Upper',      [Fss_est*1.1, 0,           max(A2_est*2, 1), 800, 50]);
             sf.Fss(s) = f0.Fss; sf.k1(s) = f0.k1; sf.k2(s) = f0.k2;
-            sf.A(s) = f0.A;     sf.r(s)  = f0.r;
+            sf.A1(s) = f0.A1;   sf.A2(s) = f0.A2;
             fprintf('  Stair %d: Fss=%.1f k1=%.0f k2=%.0f\n', s, f0.Fss, f0.k1, f0.k2);
         catch ME
             fprintf('  [WARN] stair s=%d: %s\n', s, ME.message);
@@ -397,7 +444,7 @@ end
 % Step perturbation
 [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'stepFeats');
 if ~isempty(fc)
-    fn_step = {'k1_up','k2_up','k1_dwn','k2_dwn','A_up','r_up','A_dwn','r_dwn','dL'};
+    fn_step = {'k1_up','k2_up','k1_dwn','k2_dwn','A1_up','A2_up','A1_dwn','A2_dwn','dL'};
     figure(430); clf;
     set(gcf, 'Name', 'Step perturbation comparison', 'Units', 'centimeters', 'Position', [2 2 28 18]);
     sgtitle('Step perturbation features', 'Interpreter', 'none');
@@ -407,7 +454,7 @@ end
 % Staircase
 [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'stairFeats');
 if ~isempty(fc)
-    fn_stair = {'k1','k2','Fss','A','r','dL','L_after'};
+    fn_stair = {'k1','k2','Fss','A1','A2','dL','L_after'};
     figure(440); clf;
     set(gcf, 'Name', 'Staircase comparison', 'Units', 'centimeters', 'Position', [2 2 28 18]);
     sgtitle('Staircase features', 'Interpreter', 'none');
@@ -425,8 +472,8 @@ feat_names  = {'Slack', 'KTR', 'Step perturbation', 'Staircase'};
 feat_fields = {
     {},   ...  % slack: auto-discover (no contamination issue)
     {'ktr','df','rmse'}, ...
-    {'k1_up','k2_up','k1_dwn','k2_dwn','A_up','r_up','A_dwn','r_dwn','Fss_up','Fss_dwn','dL'}, ...
-    {'k1','k2','Fss','A','r','dL','L_after'} ...
+    {'k1_up','k2_up','k1_dwn','k2_dwn','A1_up','A2_up','A1_dwn','A2_dwn','Fss_up','Fss_dwn','dL'}, ...
+    {'k1','k2','Fss','A1','A2','dL','L_after'} ...
 };
 
 for ft = 1:numel(feat_types)
