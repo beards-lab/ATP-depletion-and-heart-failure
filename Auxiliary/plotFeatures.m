@@ -39,10 +39,14 @@ if ~isempty(feats_ghost)
     markers{end+1}    = '+';
 end
 
-figure(80085); clf;
-plotMultipleFeatures(feats_cell, labels, colors, markers, fn);
+% Compute per-feature costs (data vs sim only) and build a lookup map for
+% display in tile titles.  Missing or NaN features get their penalty values
+% from evalFeatureCost (≥ 100 → shown as "[miss]").
+[cost, ~, cost_raw] = evalFeatureCost(feats_data, feats_sim, fn);
+% cost_raw is the unweighted per-feature error; cost is the weighted total
+cmap = containers.Map(fn, num2cell(cost_raw));
 
-% Cost is data-vs-sim only (unchanged semantics)
-cost = evalFeatureCost(feats_data, feats_sim, fn);
+figure(80085); clf;
+plotMultipleFeatures(feats_cell, labels, colors, markers, fn, [], [], cmap);
 
 end

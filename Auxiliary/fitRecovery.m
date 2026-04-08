@@ -36,8 +36,10 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         
         if isempty(fixed_df)
             y_exp = @(df, ktr, s, x)df*(1-exp(-(x-s)*ktr));
+            df0 = 50;
         else
             y_exp = @(df, ktr, s, x)fixed_df(z)*(1-exp(-(x-s)*ktr)) + 0*df;
+            df0 = fixed_df;
         end
 
         [ae be] = fit(timebase_exp, datatable(z1, 3)- zeroTreshold, y_exp, 'StartPoint', [50, 2, bt/1000]);
@@ -45,7 +47,7 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         df(z) = ae.df; % difference in force
         del(z) = ae.s; % delay time [s]
         E(z) = be.rmse;
-        SL(z) = datatable(i1, 2);
+        SL(z) = mean(datatable(z1, 2));
         
         timebase_exp = (-(bt+15)/1000:0.01:0.3);
 

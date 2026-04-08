@@ -26,7 +26,7 @@ DS(1).matFile    = '../data/bakers_slack8mM_all.mat';
 DS(1).Lo_ref_um  = 1.0;        % SL already in µm
 DS(1).ATP        = 8;
 DS(1).color      = [0.00 0.45 0.70];
-DS(1).marker     = 'o';
+DS(1).marker     = 'o';   % 8 mM
 DS(1).lineStyle  = '-';
 DS(1).fillMarker = true;
 DS(1).data_slack = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
@@ -38,7 +38,7 @@ DS(2).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 DS(2).Lo_ref_um  = 2.0;
 DS(2).ATP        = 8;
 DS(2).color      = [0.84 0.10 0.11];
-DS(2).marker     = 's';
+DS(2).marker     = 'o';   % 8 mM
 DS(2).lineStyle  = '-';
 DS(2).fillMarker = true;
 DS(2).data_slack = [74.0 77.5];
@@ -54,7 +54,7 @@ DS(3).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 DS(3).Lo_ref_um  = 2.0;
 DS(3).ATP        = 2;
 DS(3).color      = [0.84 0.10 0.11];
-DS(3).marker     = 'd';
+DS(3).marker     = 's';   % 2 mM
 DS(3).lineStyle  = '--';
 DS(3).fillMarker = false;
 DS(3).data_slack = [74.0 77.5];
@@ -70,7 +70,7 @@ DS(4).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
 DS(4).Lo_ref_um  = 2.0;
 DS(4).ATP        = 8;
 DS(4).color      = [0.47 0.67 0.19];
-DS(4).marker     = '^';
+DS(4).marker     = 'o';   % 8 mM
 DS(4).lineStyle  = '-';
 DS(4).fillMarker = true;
 DS(4).data_slack = [74.0 78.0];
@@ -86,7 +86,7 @@ DS(5).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
 DS(5).Lo_ref_um  = 2.0;
 DS(5).ATP        = 2;
 DS(5).color      = [0.47 0.67 0.19];
-DS(5).marker     = 'v';
+DS(5).marker     = 's';   % 2 mM
 DS(5).lineStyle  = '--';
 DS(5).fillMarker = false;
 DS(5).data_slack = [74.0 78.0];
@@ -151,9 +151,11 @@ for di = 1:numel(DS)
     % subplot(1, numel(DS), di); hold on;
     title(DS(di).label, 'Interpreter', 'none');
     try
-        [~, ktr_val, df_val, ~, E_val] = fitRecovery(datatable_fr, zone_ms, 0, [], true);
+        [~, ktr_val, df_val, ~, E_val, SL_val] = fitRecovery(datatable_fr, zone_ms, 0, [], true);
         xlim([t_ktr_start - 0.05 t_ktr_start + 0.3]);
         DS(di).ktrFeats.ktr  = ktr_val;
+        DS(di).ktrFeats.SL  = SL_val;
+
         DS(di).ktrFeats.df   = df_val;
         DS(di).ktrFeats.rmse = E_val;
         fprintf('  ktr = %.1f s⁻¹, df = %.1f kPa, rmse = %.2f\n', ktr_val, df_val, E_val);
@@ -423,7 +425,11 @@ end
 % Slack features
 [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'slackFeats');
 if ~isempty(fc)
-    fn_slack = fieldnames(fc{1});
+    % fn_slack = fieldnames(fc{1});
+    % customized
+    fn_slack = {'ktr|SLslack', 'A', 't0', 'restretchSlopeStart', 'restretchSlopeEnd', 'peak1_y', 'peak1_t', ...
+        'peak1_dSL', 'vall_y', 'vall_t', 'peak2', 'steady', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'ovrsht_t'}
+    % Dropped: 'SLslack', 'SLdiff', 'v_restretch', 'peak1_SL', 'XTOR', 'A|Am' 
     figure(403); clf;
     set(gcf, 'Name', 'Slack feature comparison', 'Units', 'centimeters', 'Position', [2 2 32 24]);
     title_str = ['Slack features — ' strjoin(lbls, ' vs ')];
@@ -431,17 +437,31 @@ if ~isempty(fc)
     plotMultipleFeatures(fc, lbls, clrs, mkrs, fn_slack, lsts, fills);
 end
 
-% KTR
-[fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'ktrFeats');
-if ~isempty(fc)
-    fn_ktr = fieldnames(fc{1});
+%% KTR — overlay ktr-experiment points onto tile 1 of fig 403 (ktr vs SLslack)
+    % Each dataset contributes one point: ktr from the restretch experiment
+    % at its measured SL.  Use '*' marker (distinct from slack-series markers)
+    % with the same per-dataset color so the source is visually clear.
+[fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'slackFeats');
+[fc_ktr, lbls_ktr, clrs_ktr, mkrs_ktr, lsts_ktr, fills_ktr] = collectDS(DS, 'ktrFeats');
+if ~isempty(fc) && ~isempty(fc_ktr)
+    fn_slack = {'ktr|SLslack'};
     figure(420); clf;
-    set(gcf, 'Name', 'KTR comparison', 'Units', 'centimeters', 'Position', [2 2 20 8]);
-    sgtitle('KTR features', 'Interpreter', 'none');
-    plotMultipleFeatures(fc, lbls, clrs, mkrs, fn_ktr, lsts, fills);
+    set(gcf, 'Name', 'Slack + ktr feature comparison', 'Units', 'centimeters', 'Position', [2 2 32 24]);
+    title_str = ['Slack + ktr features — ' strjoin(lbls, ' vs ')];
+    sgtitle(title_str, 'Interpreter', 'none');
+    plotMultipleFeatures(fc, lbls, clrs, mkrs, fn_slack, lsts, fills);
+
+
+    nexttile(1); hold on;
+    for di = 1:numel(fc_ktr)
+        kf = fc_ktr{di};
+        if isnan(kf.ktr); continue; end
+        plot(kf.SL, kf.ktr, mkrs{di}, 'Color', clrs_ktr(di, :), 'MarkerFaceColor', clrs_ktr(di, :),'MarkerSize', 8, ...
+            'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']);
+    end
 end
 
-% Step perturbation
+%% Step perturbation
 [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'stepFeats');
 if ~isempty(fc)
     fn_step = {'k1_up','k2_up','k1_dwn','k2_dwn','A1_up','A2_up','A1_dwn','A2_dwn','dL'};
@@ -451,10 +471,11 @@ if ~isempty(fc)
     plotMultipleFeatures(fc, lbls, clrs, mkrs, fn_step, lsts, fills);
 end
 
-% Staircase
+%% Staircase
 [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'stairFeats');
 if ~isempty(fc)
-    fn_stair = {'k1','k2','Fss','A1','A2','dL','L_after'};
+    fn_stair = {'k1|L_after','k2|L_after','Fss|L_after','A1|L_after','A2|L_after'};
+    % ,'dL','L_after'
     figure(440); clf;
     set(gcf, 'Name', 'Staircase comparison', 'Units', 'centimeters', 'Position', [2 2 28 18]);
     sgtitle('Staircase features', 'Interpreter', 'none');

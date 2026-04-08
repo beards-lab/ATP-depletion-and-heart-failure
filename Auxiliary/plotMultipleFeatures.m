@@ -1,8 +1,9 @@
-function plotMultipleFeatures(feats_cell, labels, colors, markers, fn, lineStyles, fillMarkers)
+function plotMultipleFeatures(feats_cell, labels, colors, markers, fn, lineStyles, fillMarkers, costMap)
 %% PLOTMULTIPLEFEATURES  Plot one tile per feature, one series per dataset.
 %
 %   PLOTMULTIPLEFEATURES(FEATS_CELL, LABELS, COLORS, MARKERS, FN)
 %   PLOTMULTIPLEFEATURES(FEATS_CELL, LABELS, COLORS, MARKERS, FN, LINESTYLES, FILLMARKERS)
+%   PLOTMULTIPLEFEATURES(FEATS_CELL, LABELS, COLORS, MARKERS, FN, LINESTYLES, FILLMARKERS, COSTMAP)
 %
 %   Inputs:
 %     FEATS_CELL   - 1×N cell array of feature structs (one per dataset)
@@ -15,6 +16,10 @@ function plotMultipleFeatures(feats_cell, labels, colors, markers, fn, lineStyle
 %     LINESTYLES   - 1×N cell array of line style strings (default: all '-')
 %     FILLMARKERS  - 1×N logical array; true = filled marker, false = empty
 %                    (default: all true)
+%     COSTMAP      - containers.Map from fn entry → scalar cost; when provided,
+%                    each tile title shows the cost in brackets, e.g. "ktr [0.34]".
+%                    Values ≥ 100 are shown as "[miss]" (missing feature penalty).
+%                    Pass [] or omit to suppress cost display.
 %
 %   Each tile shows one feature vs segment index (or vs another feature
 %   when using the 'y|x' syntax).  Datasets missing a requested field are
@@ -24,6 +29,9 @@ function plotMultipleFeatures(feats_cell, labels, colors, markers, fn, lineStyle
 
 nDS = numel(feats_cell);
 
+if nargin < 8
+    costMap = [];
+end
 if nargin < 6 || isempty(lineStyles)
     lineStyles = repmat({'-'}, 1, nDS);
 end
@@ -87,11 +95,24 @@ for i_feat = 1:numel(fn)
         continue;
     end
 
+    % Build cost suffix when a costMap was provided
+    cost_str = '';
+    if ~isempty(costMap) && isa(costMap, 'containers.Map') && isKey(costMap, fn{i_feat})
+        c = costMap(fn{i_feat});
+        if c >= 100
+            cost_str = ' [miss]';
+        elseif isnan(c)
+            cost_str = ' [nan]';
+        else
+            cost_str = sprintf(' [%.2f]', c);
+        end
+    end
+
     if isempty(feat_x)
-        title(strrep(fn{i_feat}, '_', '\_'), 'Interpreter', 'none');
+        title([strrep(fn{i_feat}, '_', '\_') cost_str], 'Interpreter', 'none');
         xlabel('Segment');
     else
-        title(sprintf('%s vs %s', feat_y, feat_x), 'Interpreter', 'none');
+        title(sprintf('%s vs %s%s', feat_y, feat_x, cost_str), 'Interpreter', 'none');
         xlabel(strrep(feat_x, '_', '\_'), 'Interpreter', 'none');
     end
     ylabel(strrep(feat_y, '_', '\_'), 'Interpreter', 'none');
