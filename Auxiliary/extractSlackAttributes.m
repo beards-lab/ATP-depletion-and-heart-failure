@@ -1,8 +1,8 @@
-function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, features, out, plotResults)
+function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, features, out, plotResults, useSmoothing)
 % EXTRACTSLACKATTRIBUTES  Extract force/SL features from a slack-release protocol.
 %
 %   FEATURES = EXTRACTSLACKATTRIBUTES(DATA_T, DATA_Y, DATA_SL, VELOCITYTABLE,
-%                                      FEATURES, OUT, PLOTRESULTS)
+%                                      FEATURES, OUT, PLOTRESULTS, USESMOOTHING)
 %   Segments the slack-release time series by velocity table entries, fits
 %   exponential recovery curves, and extracts timing/amplitude features.
 %
@@ -15,6 +15,10 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
 %     FEATURES      - struct to accumulate results into (optional, default [])
 %     OUT           - evaluateModel output struct (optional)
 %     PLOTRESULTS   - if true, plot intermediate fits (default false)
+%     USESMOOTHING  - true to apply Gaussian smoothing before peak/valley
+%                     detection (default false — appropriate for simulation
+%                     output which is already smooth; set true for noisy
+%                     experimental data).
 %
 %   Outputs:
 %     FEATURES - struct with extracted features (peak force, timing, ktr, SL, etc.)
@@ -36,12 +40,21 @@ MARKER_SIZE           = 12;    % plot marker size
     if nargin < 7
         plotResults = false;
     end
+    if nargin < 8 || isempty(useSmoothing)
+        useSmoothing = false;
+    end
+    % Smoothing window in samples — estimated so that 1 window ≈ 5 ms,
+    % which is enough to suppress high-frequency noise without distorting
+    % the ~10 ms peak timescale.
+    SMOOTH_WIN_S = 0.001;   % 1 ms
     if plotResults
         if ~isempty(get(gcf, 'Children'))
-            figure(406);clf;
+            figure(406); clf;
         end
         hold on;
-        plot(data_t, data_y, '-b', 'LineWidth', 1);                
+        plot(data_t, data_y, 'Color', [0.7 0.7 0.7], 'LineWidth', 1);
+        xlabel('Time (s)'); ylabel('Force (kPa)'); box on;
+        title('Slack feature extraction');
     end
 
 
@@ -107,36 +120,48 @@ MARKER_SIZE           = 12;    % plot marker size
             feats.ktr_rmse = NaN;
         end
 
-        % ── Fit 2: cosine-damped exponential ─────────────────────────────
-        % F(τ) = F0 + A·(1 − exp(−k·τ)·cos(ω·τ)),  τ = max(t−t0, 0)
-        %   ω = 0  →  reduces exactly to single exponential (Fit 1)
-        %   ω > 0  →  cos flips sign → overshoot above A+F0
-        %   Overshoot peak at τ* = (π − atan(k/ω))/ω; fraction computed numerically.
-        y_cos = @(A, k, omega, t0, x) F0 + A .* (1 - exp(-k .* max(x - t0, 0)) .* cos(omega .* max(x - t0, 0)));
+        % ── Fit 2: additive underdamped sinusoid ─────────────────────────
+        % F(τ) = F0 + A·(1−exp(−k·τ)) + B·exp(−gam·τ)·sin(ω·τ)
+        %   τ = max(t−t0, 0);  F(0)=F0, F(∞)=F0+A ✓
+        %   B≥0: overshoot first (sin>0), then diminishing oscillations
+        %   gam independent of k → oscillations can persist many cycles (gam ≪ k)
+        %   To disable oscillation: set B lower bound to upper bound (both 0).
+        if ~isnan(feats.ktr)
+            sp_A = feats.A - F0;  sp_k = feats.ktr;  sp_t0 = feats.t0;
+        else
+            sp_A = max(y) - F0;   sp_k = 50;          sp_t0 = 0.01;
+        end
+        y_osc = @(A, k, B, gam, omega, t0, x) ...
+            F0 + A .* (1 - exp(-k .* max(x - t0, 0))) ...
+            + B .* exp(-gam .* max(x - t0, 0)) .* sin(omega .* max(x - t0, 0));
         try
-            [ac, gof_c] = fit(t, y, y_cos, ...
-                'StartPoint', [max(y) - F0, 50, 10, 0.01], ...
-                'Lower',      [10, 0.01, 0,   0.0 ], ...
-                'Upper',      [200, 500, 300, 0.1  ]);
+            [ao, gof_o] = fit(t, y, y_osc, ...
+                'StartPoint', [sp_A,  sp_k,  10,  sp_k/5, 20,  sp_t0], ...
+                'Lower',      [10,    0.01,  0,   0.1,    1,   0.0  ], ...
+                'Upper',      [200,   500,   100, 500,    300, 0.1  ]);
 
             if plotResults
-                plot(init_tail + t_seg, ac(init_tail), '--', t + t_seg, ac(t), 'LineWidth', 1.5);
+                plot(init_tail + t_seg, ao(init_tail), '--', t + t_seg, ao(t), 'LineWidth', 1.5);
             end
 
-            feats.ktr2_k     = ac.k;
-            feats.ktr2_A     = ac.A + F0;
-            feats.ktr2_omega = ac.omega;
-            feats.ktr2_rmse  = gof_c.rmse;
-            % Overshoot fraction above steady state (as fraction of amplitude A)
-            if ac.omega > 0.5
-                tau_peak = (pi - atan(ac.k / ac.omega)) / ac.omega;
-                feats.ktr2_overshoot = exp(-ac.k * tau_peak) * ac.omega / sqrt(ac.k^2 + ac.omega^2);
+            feats.ktr2_k     = ao.k;
+            feats.ktr2_A     = ao.A + F0;
+            feats.ktr2_B     = ao.B;
+            feats.ktr2_gam   = ao.gam;
+            feats.ktr2_omega = ao.omega;
+            feats.ktr2_rmse  = gof_o.rmse;
+            % Amplitude of first oscillation peak above recovery curve
+            if ao.B > 0.5 && ao.omega > 0.5
+                tau_peak = atan(ao.omega / ao.gam) / ao.omega;
+                feats.ktr2_overshoot = ao.B * exp(-ao.gam * tau_peak) * ao.omega / sqrt(ao.gam^2 + ao.omega^2);
             else
                 feats.ktr2_overshoot = 0;
             end
         catch
             feats.ktr2_k        = NaN;
             feats.ktr2_A        = NaN;
+            feats.ktr2_B        = NaN;
+            feats.ktr2_gam      = NaN;
             feats.ktr2_omega    = NaN;
             feats.ktr2_rmse     = NaN;
             feats.ktr2_overshoot = NaN;
@@ -160,102 +185,110 @@ MARKER_SIZE           = 12;    % plot marker size
         rngStart(1:3) = true;
         slpStart = polyfit(SL(rngStart), y(rngStart), 1);
         feats.restretchSlopeStart = slpStart(1);
-        
+
         rngEnd = t > t(end) - 1e-3 & t < t(end);
         rngEnd(end-5:end-1) = true;
         slpEnd = polyfit(SL(rngEnd), y(rngEnd), 1);
         feats.restretchSlopeEnd = slpEnd(1);
 
-        % if plotResults
-        %     nSlp = 100;
-        %     plot(SL, y, SL(rngStart), y(rngStart),'x', SL(rngEnd), y(rngEnd), 'x', ...
-        %         head(SL, nSlp), slpStart(1)*head(SL, nSlp)+slpStart(2), '-|', ...
-        %         tail(SL, nSlp), slpEnd(1)*tail(SL, nSlp)+slpEnd(2), '-|', 'LineWidth', 1);
-        %     xlabel('SL (um)');ylabel('Force (kPa)');
-        % end
+        if plotResults
+            % Fitted slope lines evaluated at the SL points used, shown in time domain
+            plot(t(rngStart) + t_seg, slpStart(1)*SL(rngStart) + slpStart(2), 'g-', 'LineWidth', 2.5);
+            plot(t(rngEnd)   + t_seg, slpEnd(1)  *SL(rngEnd)   + slpEnd(2),   'm-', 'LineWidth', 2.5);
+        end
 
         % feats.Sl_V_restretch = (SL(end)-SL(1))/(t(end)-t(1));
         
 
-        %%
-        % 1. Detect Peaks
-        [peak1_y, peak1_t] = findpeaks(y, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
-        feats.v_restretch = velocity_segment(3, 2); 
-        
+        % 1. Detect Peaks — optionally smooth before findpeaks
+        feats.v_restretch = velocity_segment(3, 2);
+        if useSmoothing
+            smooth_win = max(3, round(SMOOTH_WIN_S / median(diff(t))));
+            y_sm = smoothdata(y, 'gaussian', smooth_win);
+        else
+            y_sm = y;
+        end
+        [peak1_y, peak1_t] = findpeaks(y_sm, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
+
         if ~isempty(peak1_y)
-            % --- Peak Logic ---
-            % Use the first detected peak
             p1_time_abs = peak1_t(1);
-            
-            feats.peak1_y = peak1_y(1);
-            feats.peak1_t = p1_time_abs - t(1);
-            
-            % Find SL at peak time
-            feats.peak1_SL = SL(find(t >= p1_time_abs, 1));
+
+            feats.peak1_y   = peak1_y(1);
+            feats.peak1_t   = p1_time_abs - t(1);
+            feats.peak1_SL  = SL(find(t >= p1_time_abs, 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
-            
-            if plotResults
-                plot(peak1_t(1) + t_seg, peak1_y(1), '*', MarkerSize=ms);
+
+            if plotResults                
+                plot(t + t_seg, y_sm, 'k-');
+                plot(p1_time_abs + t_seg, peak1_y(1), 'b^', 'MarkerSize', ms, 'LineWidth', 2);
             end
-        
-            % --- Valley Logic (Min After Peak) ---
-            % Find indices strictly after the first peak
+
+            % Valley: min after peak on (possibly smoothed) signal
             idx_after = t > p1_time_abs;
-            
             if any(idx_after)
-                y_after = y(idx_after);
+                [min_val, min_idx_rel] = min(y_sm(idx_after));
                 t_after = t(idx_after);
-                
-                % Calculate the minimum value in the segment after the peak
-                [min_val, min_idx] = min(y_after);
-                
                 feats.vall_y = min_val;
-                feats.vall_t = t_after(min_idx) - t(1); % Relative to start time
+                feats.vall_t = t_after(min_idx_rel) - t(1);
+                if plotResults
+                    plot(t_after(min_idx_rel) + t_seg, min_val, 'bv', 'MarkerSize', ms, 'LineWidth', 2);
+                end
             else
-                % Peak is at the very end of the signal; no valley possible
                 feats.vall_y = NaN;
                 feats.vall_t = NaN;
             end
-        
+
         else
-            % --- No Peak Found ---
-            feats.peak1_y = NaN;
-            feats.peak1_t = NaN;
-            feats.peak1_SL = NaN;
+            feats.peak1_y   = NaN;
+            feats.peak1_t   = NaN;
+            feats.peak1_SL  = NaN;
             feats.peak1_dSL = NaN;
-            
-            % If no peak, there is no "valley after peak"
-            feats.vall_y = NaN;
-            feats.vall_t = NaN;
+            feats.vall_y    = NaN;
+            feats.vall_t    = NaN;
         end
 
         feats.peak2 = y(end);
+        if plotResults
+            plot(t(end) + t_seg, y(end), 'b>', 'MarkerSize', ms, 'LineWidth', 2);
+        end
 
         % steady state
         win = data_t >= velocity_segment(5) - 0.02 & data_t <= velocity_segment(5);
         t = data_t(win); y = data_y(win);
         t = t - t_seg;
-        feats.steady = median(y);
-        % plot(t, y, LineWidth=1.5);
-        % plot([t(1) t(end)], [feats.steady feats.steady], LineWidth=3);
+        if isempty(y)
+            feats.steady = NaN;
+        else
+            feats.steady = median(y);
+            if plotResults
+                plot([t(1) + t_seg, t(end) + t_seg], [feats.steady, feats.steady], 'k--', 'LineWidth', 2);
+            end
+        end
 
-        % undershoot, overshoot and set - realtive to steady state
+        % undershoot, overshoot - relative to steady state
         win = data_t >= velocity_segment(4) & data_t <= velocity_segment(5);
         t = data_t(win); y = data_y(win);
         t = t - t_seg;
-        % plot(t, y);
-        [u_v, u_i] = min(y);
+        if useSmoothing
+            smooth_win2 = max(3, round(SMOOTH_WIN_S / median(diff(t))));
+            y_sm2 = smoothdata(y, 'gaussian', smooth_win2);
+        else
+            y_sm2 = y;
+        end
+        [u_v, u_i] = min(y_sm2);
         feats.vall2_dy = u_v - feats.steady;
-        feats.vall2_t = t(u_i) - t(1);
-        
-        
-        % smooth data from 
-        [o_v, o_i] = max(smoothdata(y(u_i:end), 1, "gaussian", 10));
+        feats.vall2_t  = t(u_i) - t(1);
+        if plotResults
+            plot(t + t_seg, y_sm2, 'k-');
+            plot(t(u_i) + t_seg, u_v, 'rv', 'MarkerSize', ms, 'LineWidth', 2);
+        end
+
+        [o_v, o_i] = max(y_sm2(u_i:end));
         feats.ovrsht_dy = o_v - feats.steady;
-        feats.ovrsht_t = t(o_i+u_i-1);
-        % plot(t(u_i), u_v, '*', MarkerSize=ms)
-        % % plot(t, smoothdata(y, 1, "gaussian", 10))
-        % plot(feats.ovrsht_t, o_v, '*', MarkerSize=ms)
+        feats.ovrsht_t  = t(o_i + u_i - 1);
+        if plotResults
+            plot(feats.ovrsht_t + t_seg, o_v, 'r^', 'MarkerSize', ms, 'LineWidth', 2);
+        end
 
         if ~isempty(out)
             feats.XTOR = out.RTD(end);
@@ -263,6 +296,7 @@ MARKER_SIZE           = 12;    % plot marker size
             % default "goal"
             feats.XTOR = 10;
         end
+
         
     
         % get rid of empty, substitute with NaN instead    

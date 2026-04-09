@@ -1,4 +1,4 @@
-function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zeroTreshold, fixed_df, plotData)
+function [dSLpc, ktr, df, del, E, SL, x0lin, ktr2] = fitRecovery(datatable, zones, zeroTreshold, fixed_df, plotData)
 
 
     if nargin < 4
@@ -43,11 +43,37 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         end
 
         [ae be] = fit(timebase_exp, datatable(z1, 3)- zeroTreshold, y_exp, 'StartPoint', [50, 2, bt/1000]);
-        ktr(z) = ae.ktr; 
+        ktr(z) = ae.ktr;
         df(z) = ae.df; % difference in force
         del(z) = ae.s; % delay time [s]
         E(z) = be.rmse;
         SL(z) = mean(datatable(z1, 2));
+
+        % ── Fit 2: underdamped sinusoid ──────────────────────────────────
+        % F(τ) = df*(1−exp(−k·τ)) + B·exp(−gam·τ)·sin(ω·τ), τ=max(t−s,0)
+        %   Same recovery rate k, independent oscillation damping gam.
+        %   B=0 degrades to single exponential.
+        F0_ktr = zeroTreshold;
+        y_osc = @(df2, k, B, gam, omega, s, x) ...
+            df2 .* (1 - exp(-k .* max(x - s, 0))) ...
+            + B .* exp(-gam .* max(x - s, 0)) .* sin(omega .* max(x - s, 0));
+        try
+            [ao, ~] = fit(timebase_exp, datatable(z1, 3) - F0_ktr, y_osc, ...
+                'StartPoint', [ae.df,  ae.ktr, 5,    ae.ktr/5, 20,   ae.s ], ...
+                'Lower',      [10,     0.01,   0,    0.1,      1,    0.0  ], ...
+                'Upper',      [200,    500,    100,  500,      300,  0.1  ]);
+            ktr2(z).k    = ao.k;
+            ktr2(z).df   = ao.df2;
+            ktr2(z).B    = ao.B;
+            ktr2(z).gam  = ao.gam;
+            ktr2(z).omega = ao.omega;
+        catch
+            ktr2(z).k    = NaN;
+            ktr2(z).df   = NaN;
+            ktr2(z).B    = NaN;
+            ktr2(z).gam  = NaN;
+            ktr2(z).omega = NaN;
+        end
         
         timebase_exp = (-(bt+15)/1000:0.01:0.3);
 
@@ -62,7 +88,12 @@ function [dSLpc, ktr, df, del, E, SL, x0lin] = fitRecovery(datatable, zones, zer
         timebase_lin = (-10/1000:0.01:0.05); % extending the timebase
 
         if plotData
-            plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '--', 'Linewidth', 2);
+            plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '-', 'Linewidth', 1.5);
+            if ~isnan(ktr2(z).k)
+                y_osc_plot = @(x) ktr2(z).df .* (1 - exp(-ktr2(z).k .* max(x - ae.s, 0))) ...
+                    + ktr2(z).B .* exp(-ktr2(z).gam .* max(x - ae.s, 0)) .* sin(ktr2(z).omega .* max(x - ae.s, 0));
+                plot(timebase_exp + to, ao(timebase_exp), '--', 'Linewidth', 1.5);
+            end
             ci = get(gca,'ColorOrderIndex');
             set(gca,'ColorOrderIndex', max(ci-2, 1));
             plot(datatable(zlin, 1), datatable(zlin, 3), 'o', timebase_lin + datatable(zlin(1), 1), y_line(al.k, al.x0, timebase_lin), ':', 'Linewidth', 2);

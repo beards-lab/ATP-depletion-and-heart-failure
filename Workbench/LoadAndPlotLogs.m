@@ -467,9 +467,9 @@ t_ref = data(2).t_fineShifted;
 F_ref = data(2).F_fineShifted;
 L_ref = data(2).L_fineShifted;
 % run-down data
-F_rd = interp1(data(4).t_fineShifted, data(4).F_fineShifted, t_ref);
-L_rd = interp1(data(5).t_fineShifted, data(5).L_fineShifted, t_ref);
-F_pas = interp1(data(5).t_fineShifted, data(5).F_fineShifted, t_ref);
+F_rd = interp1(data(3).t_fineShifted, data(3).F_fineShifted, t_ref);
+L_rd = interp1(data(4).t_fineShifted, data(4).L_fineShifted, t_ref);
+F_pas = interp1(data(4).t_fineShifted, data(4).F_fineShifted, t_ref);
 F_rdact = F_rd - F_pas;
 F_refact = F_ref - F_pas;
 
@@ -491,9 +491,9 @@ legend('First', 'Third rescaled with f(L)');
 % plot(t_ref, F_refact, t_ref, F_rdact)
 % F_rdact
 %% rundown corrig
-t = data(3).t_shifted;
-F = data(3).F_shifted;
-L = data(3).L_shifted;
+t = data(2).t_shifted;
+F = data(2).F_shifted;
+L = data(2).L_shifted;
 zones = [71.5, 72.4;77.4, 78.4];
 % at 2.0
 mask = any(t >= zones(:,1)' & t <= zones(:,2)', 2);

@@ -144,7 +144,7 @@ for di = 1:numel(DS)
     set(gcf, 'Name', [DS(di).label ' – slack fits'], ...
         'Units', 'centimeters', 'Position', [1 1 20 12]);
     DS(di).slackFeats = extractSlackAttributes( ...
-        t(win), F(win), L_um(win), vt, struct(), [], true);
+        t(win), F(win), L_um(win), vt, struct(), [], true, true);  % useSmoothing=true for experimental data
     rmsed = DS(di).slackFeats.ktr_rmse - DS(di).slackFeats.ktr2_rmse;
     if any(rmsed < 0)
         warning('Single exponential RMSE is better!', di);
