@@ -29,71 +29,95 @@ DS(1).color      = [0.00 0.45 0.70];
 DS(1).marker     = 'o';   % 8 mM
 DS(1).lineStyle  = '-';
 DS(1).fillMarker = true;
-DS(1).data_slack = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
+DS(1).data_slack  = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
+% ktr from separate experiment file; VT has no segmentation so ktr_tstart
+% gives the restretch-end time directly (offset −100 ms was applied in
+% LoadBakersExp → restretch end lands at t ≈ 0 s).
+DS(1).ktr_matFile = '../data/bakers_ktr_8.mat';
+DS(1).ktr_tstart  = 0.0;   % s — recovery begins here
+
+% ── Baker 2mM  (slack from .mat; ktr from raw txt — no processed .mat exists)
+% Raw ktr txt: t in ms, L in Lo (×2.0 → µm), 4 header lines.
+% Restretch ends at ~96 ms raw → with −100 ms offset: t_ktr_start ≈ −0.004 s ≈ 0 s.
+DS(2).label          = 'Baker 2mM';
+DS(2).matFile        = '../data/bakers_slack2mM.mat';
+DS(2).Lo_ref_um      = 1.0;        % SL already in µm in the .mat
+DS(2).ATP            = 2;
+DS(2).color          = [0.00 0.45 0.70];
+DS(2).marker         = 's';   % 2 mM
+DS(2).lineStyle      = '--';
+DS(2).fillMarker     = false;
+DS(2).data_slack     = [1.0 3.1];
+DS(2).ktr_txtFile    = '../data/2 mM ATP ktr.txt';
+DS(2).ktr_header_lines = 4;   % ASI format: 4 text header lines
+DS(2).ktr_t_scale    = 1e-3;  % ms → s
+DS(2).ktr_t_offset   = -0.1;  % −100 ms offset applied in LoadBakersExp
+DS(2).ktr_Lo_ref_um  = 2.0;   % raw txt L is in Lo; ML = 2.0 µm
+DS(2).ktr_tstart     = 0.0;   % s — restretch ends near t = 0 after offset
 
 % ── 03/27 8mM
-DS(2).label      = '03/27 8mM';
-DS(2).dataFile   = '../data/03 27 2026 M/02_Merged_8mM_Active.txt';
-DS(2).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-DS(2).Lo_ref_um  = 2.0;
-DS(2).ATP        = 8;
-DS(2).color      = [0.84 0.10 0.11];
-DS(2).marker     = 'o';   % 8 mM
-DS(2).lineStyle  = '-';
-DS(2).fillMarker = true;
-DS(2).data_slack = [74.0 77.5];
-DS(2).vt_slack   = [74.4 Inf];
-DS(2).data_ktr   = [70.8 71.5];
-DS(2).data_step  = [69.2 70.5];
-DS(2).data_stair = [72.4 73.2];
-
-% ── 03/27 2mM  (dashed line, empty markers)
-DS(3).label      = '03/27 2mM';
-DS(3).dataFile   = '../data/03 27 2026 M/03_Merged_2mM_Active.txt';
+DS(3).label      = '03/27 8mM';
+DS(3).dataFile   = '../data/03 27 2026 M/02_Merged_8mM_Active.txt';
 DS(3).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 DS(3).Lo_ref_um  = 2.0;
-DS(3).ATP        = 2;
+DS(3).ATP        = 8;
 DS(3).color      = [0.84 0.10 0.11];
-DS(3).marker     = 's';   % 2 mM
-DS(3).lineStyle  = '--';
-DS(3).fillMarker = false;
+DS(3).marker     = 'o';   % 8 mM
+DS(3).lineStyle  = '-';
+DS(3).fillMarker = true;
 DS(3).data_slack = [74.0 77.5];
 DS(3).vt_slack   = [74.4 Inf];
 DS(3).data_ktr   = [70.8 71.5];
 DS(3).data_step  = [69.2 70.5];
 DS(3).data_stair = [72.4 73.2];
 
-% ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
-DS(4).label      = '04/03 8mM';
-DS(4).dataFile   = '../data/04 03 2026 F/02_Merged_8mM_Active.txt';
-DS(4).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+% ── 03/27 2mM  (dashed line, empty markers)
+DS(4).label      = '03/27 2mM';
+DS(4).dataFile   = '../data/03 27 2026 M/03_Merged_2mM_Active.txt';
+DS(4).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 DS(4).Lo_ref_um  = 2.0;
-DS(4).ATP        = 8;
-DS(4).color      = [0.47 0.67 0.19];
-DS(4).marker     = 'o';   % 8 mM
-DS(4).lineStyle  = '-';
-DS(4).fillMarker = true;
-DS(4).data_slack = [74.0 78.0];
-DS(4).vt_slack   = [74.8 Inf];
+DS(4).ATP        = 2;
+DS(4).color      = [0.84 0.10 0.11];
+DS(4).marker     = 's';   % 2 mM
+DS(4).lineStyle  = '--';
+DS(4).fillMarker = false;
+DS(4).data_slack = [74.0 77.5];
+DS(4).vt_slack   = [74.4 Inf];
 DS(4).data_ktr   = [70.8 71.5];
 DS(4).data_step  = [69.2 70.5];
 DS(4).data_stair = [72.4 73.2];
 
-% ── 04/03 2mM  (dashed line, empty markers)
-DS(5).label      = '04/03 2mM';
-DS(5).dataFile   = '../data/04 03 2026 F/03_Merged_2mM_Active.txt';
+% ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
+DS(5).label      = '04/03 8mM';
+DS(5).dataFile   = '../data/04 03 2026 F/02_Merged_8mM_Active.txt';
 DS(5).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
 DS(5).Lo_ref_um  = 2.0;
-DS(5).ATP        = 2;
+DS(5).ATP        = 8;
 DS(5).color      = [0.47 0.67 0.19];
-DS(5).marker     = 's';   % 2 mM
-DS(5).lineStyle  = '--';
-DS(5).fillMarker = false;
+DS(5).marker     = 'o';   % 8 mM
+DS(5).lineStyle  = '-';
+DS(5).fillMarker = true;
 DS(5).data_slack = [74.0 78.0];
 DS(5).vt_slack   = [74.8 Inf];
 DS(5).data_ktr   = [70.8 71.5];
 DS(5).data_step  = [69.2 70.5];
 DS(5).data_stair = [72.4 73.2];
+
+% ── 04/03 2mM  (dashed line, empty markers)
+DS(6).label      = '04/03 2mM';
+DS(6).dataFile   = '../data/04 03 2026 F/03_Merged_2mM_Active.txt';
+DS(6).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+DS(6).Lo_ref_um  = 2.0;
+DS(6).ATP        = 2;
+DS(6).color      = [0.47 0.67 0.19];
+DS(6).marker     = 's';   % 2 mM
+DS(6).lineStyle  = '--';
+DS(6).fillMarker = false;
+DS(6).data_slack = [74.0 78.0];
+DS(6).vt_slack   = [74.8 Inf];
+DS(6).data_ktr   = [70.8 71.5];
+DS(6).data_step  = [69.2 70.5];
+DS(6).data_stair = [72.4 73.2];
 
 %% ══════════════════════════════════════════════════════════════════════════
 %% Section 3 — Slack feature extraction
@@ -121,7 +145,12 @@ for di = 1:numel(DS)
         'Units', 'centimeters', 'Position', [1 1 20 12]);
     DS(di).slackFeats = extractSlackAttributes( ...
         t(win), F(win), L_um(win), vt, struct(), [], true);
-    title([DS(di).label ' – slack fits']);
+    rmsed = DS(di).slackFeats.ktr_rmse - DS(di).slackFeats.ktr2_rmse;
+    if any(rmsed < 0)
+        warning('Single exponential RMSE is better!', di);
+    end
+    title([DS(di).label ' – slack fits ']);
+    fprintf('RMSE is better by %f\n' , sum(rmsed));
 end
 
 %% ══════════════════════════════════════════════════════════════════════════
@@ -129,20 +158,39 @@ end
 %% ══════════════════════════════════════════════════════════════════════════
 figure(420); clf;hold on;
 for di = 1:numel(DS)
-    if ~isfield(DS(di), 'data_ktr') || isempty(DS(di).data_ktr); continue; end
+    has_ktr_mat = isfield(DS(di), 'ktr_matFile') && ~isempty(DS(di).ktr_matFile);
+    has_ktr_txt = isfield(DS(di), 'ktr_txtFile') && ~isempty(DS(di).ktr_txtFile);
+    has_ktr_win = isfield(DS(di), 'data_ktr')    && ~isempty(DS(di).data_ktr);
+    if ~has_ktr_mat && ~has_ktr_txt && ~has_ktr_win; continue; end
 
     fprintf('=== KTR: %s ===\n', DS(di).label);
-    [t, F, L_um, vt_full] = loadDataset(DS(di));
-    datatable_fr = [t, L_um, F];
 
-    rng = DS(di).data_ktr;
-    % The restretch end is the last big positive velocity segment before rng(2)
-    ktr_segs = findVtSegments(vt_full, rng(1), rng(2), +1, 10, 0);
-    if isempty(ktr_segs)
-        fprintf('  [WARN] no ktr restretch found in vt for %s\n', DS(di).label);
-        continue;
+    if has_ktr_mat
+        % Baker 8mM-style: processed .mat, L already in µm, t already in s.
+        s = load(DS(di).ktr_matFile, 'datatable');
+        M = s.datatable;
+        datatable_fr = [M(:,1), M(:,2) * DS(di).Lo_ref_um, M(:,3)];
+        t_ktr_start  = DS(di).ktr_tstart;
+    elseif has_ktr_txt
+        % Baker 2mM-style: raw ASI txt, t in ms, L in Lo. Convert and offset.
+        M = readmatrix(DS(di).ktr_txtFile, 'NumHeaderLines', DS(di).ktr_header_lines);
+        t_s  = M(:,1) * DS(di).ktr_t_scale + DS(di).ktr_t_offset;
+        L_um = M(:,2) * DS(di).ktr_Lo_ref_um;
+        datatable_fr = [t_s, L_um, M(:,3)];
+        t_ktr_start  = DS(di).ktr_tstart;
+    else
+        % Protocol file: find restretch end via velocity table.
+        [t, F, L_um, vt_full] = loadDataset(DS(di));
+        datatable_fr = [t, L_um, F];
+        rng = DS(di).data_ktr;
+        % The restretch end is the last big positive velocity segment before rng(2)
+        ktr_segs = findVtSegments(vt_full, rng(1), rng(2), +1, 10, 0);
+        if isempty(ktr_segs)
+            fprintf('  [WARN] no ktr restretch found in vt for %s\n', DS(di).label);
+            continue;
+        end
+        t_ktr_start = ktr_segs(end, 2);  % end of restretch = start of recovery
     end
-    t_ktr_start = ktr_segs(end, 2);  % end of restretch = start of recovery
 
     zone_ms = [(t_ktr_start * 1000) + 10, (t_ktr_start * 1000) + 300];
 
@@ -162,6 +210,7 @@ for di = 1:numel(DS)
     catch ME
         fprintf('  [WARN] fit failed: %s\n', ME.message);
         DS(di).ktrFeats.ktr  = NaN;
+        DS(di).ktrFeats.SL   = NaN;
         DS(di).ktrFeats.df   = NaN;
         DS(di).ktrFeats.rmse = NaN;
     end
@@ -427,7 +476,7 @@ end
 if ~isempty(fc)
     % fn_slack = fieldnames(fc{1});
     % customized
-    fn_slack = {'ktr|SLslack', 'A', 't0', 'restretchSlopeStart', 'restretchSlopeEnd', 'peak1_y', 'peak1_t', ...
+    fn_slack = {'ktr|SLslack', 'ktr2_k|SLslack','ktr2_A|SLslack', 'A|SLslack', 'ktr2_omega', 't0', 'restretchSlopeStart', 'restretchSlopeEnd', 'peak1_y', 'peak1_t', ...
         'peak1_dSL', 'vall_y', 'vall_t', 'peak2', 'steady', 'vall2_dy', 'vall2_t', 'ovrsht_dy', 'ovrsht_t'}
     % Dropped: 'SLslack', 'SLdiff', 'v_restretch', 'peak1_SL', 'XTOR', 'A|Am' 
     figure(403); clf;

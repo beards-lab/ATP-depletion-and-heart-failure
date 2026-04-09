@@ -82,30 +82,69 @@ MARKER_SIZE           = 12;    % plot marker size
         F0 = min(y);
         init_tail = 0:0.001:0.15;
 
-        % ── Single-exponential fit ────────────────────────────────────────
-        y_exp = @(A, k, t0, A0, x) max(0, A0*0 + F0 + A*(1-exp(-(x-t0)*k)));
+        % ── Fit 1: single exponential (original) ─────────────────────────
+        % F(τ) = F0 + A·(1 − exp(−k·τ)),  τ = max(t−t0, 0)
+        y_exp = @(A, k, t0, x) F0 + A .* (1 - exp(-k .* max(x - t0, 0)));
         try
-            [ae, ~] = fit(t, y, y_exp, 'StartPoint', [100, 50, 0.01, 0], 'Lower', [10, 0.01, 0.0, 0], 'Upper', [200 200 0.1, 100]);
+            [ae, gof_e] = fit(t, y, y_exp, ...
+                'StartPoint', [100, 50, 0.01], ...
+                'Lower',      [10,  0.01, 0.0], ...
+                'Upper',      [200, 500,  0.1 ]);
 
             if plotResults
-                plot(init_tail + t_seg, ae(init_tail), '--', t + t_seg, ae(t), 'LineWidth', 2);
-                plot(ae.t0 + t_seg, 0, '*', 'LineWidth', 2, 'MarkerSize', ms);
+                plot(init_tail + t_seg, ae(init_tail), '-', t + t_seg, ae(t), 'LineWidth', 1.5);
+                plot(ae.t0 + t_seg, F0, '*', 'LineWidth', 2, 'MarkerSize', ms);
             end
 
-            feats.ktr    = ae.k;
-            feats.A      = ae.A + F0;
-            feats.t0     = ae.t0;
-            feats.Am     = y(end);
-            feats.SLslack = SL(end);
-            feats.SLdiff  = max(data_SL) - SL(end);
+            feats.ktr     = ae.k;
+            feats.A       = ae.A + F0;
+            feats.t0      = ae.t0;
+            feats.ktr_rmse = gof_e.rmse;
         catch
-            feats.ktr     = NaN;
-            feats.A       = NaN;
-            feats.t0      = NaN;
-            feats.Am      = NaN;
-            feats.SLslack = NaN;
-            feats.SLdiff  = NaN;
+            feats.ktr      = NaN;
+            feats.A        = NaN;
+            feats.t0       = NaN;
+            feats.ktr_rmse = NaN;
         end
+
+        % ── Fit 2: cosine-damped exponential ─────────────────────────────
+        % F(τ) = F0 + A·(1 − exp(−k·τ)·cos(ω·τ)),  τ = max(t−t0, 0)
+        %   ω = 0  →  reduces exactly to single exponential (Fit 1)
+        %   ω > 0  →  cos flips sign → overshoot above A+F0
+        %   Overshoot peak at τ* = (π − atan(k/ω))/ω; fraction computed numerically.
+        y_cos = @(A, k, omega, t0, x) F0 + A .* (1 - exp(-k .* max(x - t0, 0)) .* cos(omega .* max(x - t0, 0)));
+        try
+            [ac, gof_c] = fit(t, y, y_cos, ...
+                'StartPoint', [max(y) - F0, 50, 10, 0.01], ...
+                'Lower',      [10, 0.01, 0,   0.0 ], ...
+                'Upper',      [200, 500, 300, 0.1  ]);
+
+            if plotResults
+                plot(init_tail + t_seg, ac(init_tail), '--', t + t_seg, ac(t), 'LineWidth', 1.5);
+            end
+
+            feats.ktr2_k     = ac.k;
+            feats.ktr2_A     = ac.A + F0;
+            feats.ktr2_omega = ac.omega;
+            feats.ktr2_rmse  = gof_c.rmse;
+            % Overshoot fraction above steady state (as fraction of amplitude A)
+            if ac.omega > 0.5
+                tau_peak = (pi - atan(ac.k / ac.omega)) / ac.omega;
+                feats.ktr2_overshoot = exp(-ac.k * tau_peak) * ac.omega / sqrt(ac.k^2 + ac.omega^2);
+            else
+                feats.ktr2_overshoot = 0;
+            end
+        catch
+            feats.ktr2_k        = NaN;
+            feats.ktr2_A        = NaN;
+            feats.ktr2_omega    = NaN;
+            feats.ktr2_rmse     = NaN;
+            feats.ktr2_overshoot = NaN;
+        end
+
+        feats.Am      = y(end);
+        feats.SLslack = SL(end);
+        feats.SLdiff  = max(data_SL) - SL(end);
 
         % peaks and valley
         win = data_t >= velocity_segment(3) & data_t <= velocity_segment(4);
