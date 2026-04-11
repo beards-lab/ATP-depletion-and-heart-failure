@@ -1,5 +1,6 @@
 %% Load and plot all Log_*.txt files from a data directory
 close all; clear; clc;
+rewriteData = false;
 
 dataDir = '../data/03 27 2026 M/';
 fpath = [dataDir '02_Merged_8mM_Active.txt'];
@@ -8,10 +9,10 @@ data_ref = readmatrix(fpath, 'NumHeaderLines', 4);
 
 
 % dataset 1
-% dataDir = '../data/03 27 2026 M/';
+dataDir = '../data/03 27 2026 M/';
 
 % dataset 2
-dataDir = '../data/04 03 2026 F/';
+% dataDir = '../data/04 03 2026 F/';
 S = dir([dataDir '*Log_*.txt']);
 [~, idx] = sort({S.name});
 S = S(idx);
@@ -399,8 +400,12 @@ for i = 1:n
     outData = [data(i).t_fineShifted, data(i).L_fineShifted, data(i).F_fineShifted];
     
     try
-        writematrix(outData, outName, 'Delimiter', '\t');
-        fprintf('  Saved %s\n', outNameRaw);
+        if rewriteData
+            writematrix(outData, outName, 'Delimiter', '\t');
+            fprintf('  Saved %s\n', outNameRaw);
+        else
+            fprintf('  Skipping writing %s due to rewriteData = false \n', outNameRaw);
+        end
     catch ME
         fprintf('  Failed to save %s: %s\n', outNameRaw, ME.message);
     end

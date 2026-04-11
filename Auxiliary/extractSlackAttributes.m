@@ -68,6 +68,19 @@ MARKER_SIZE           = 12;    % plot marker size
     if size(data_SL, 1) < size(data_SL, 2)
         data_SL = data_SL';
     end
+
+    % Resample to 1 kHz if input is undersampled — ensures consistent
+    % smoothing window sizes and peak detection behaviour regardless of
+    % acquisition rate.
+    TARGET_FS = 1000;  % Hz
+    actual_fs = 1 / median(diff(data_t));
+    if actual_fs < TARGET_FS * 0.99
+        t_rs    = (data_t(1) : 1/TARGET_FS : data_t(end))';
+        data_y  = interp1(data_t, data_y,  t_rs, 'linear');
+        data_SL = interp1(data_t, data_SL, t_rs, 'linear');
+        data_t  = t_rs;
+    end
+
     % each set starts with negative velocity
     segments = find(velocitytable(:, 2) < -1)';
 
@@ -181,6 +194,7 @@ MARKER_SIZE           = 12;    % plot marker size
         %% detect init slope stiffness
         
         rngStart = t > t(1) & t < t(1) + 1e-3;
+        
         % assert there are at least 3 datapoitns
         rngStart(1:3) = true;
         slpStart = polyfit(SL(rngStart), y(rngStart), 1);

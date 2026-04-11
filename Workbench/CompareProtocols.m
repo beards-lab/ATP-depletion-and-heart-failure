@@ -18,106 +18,149 @@ addpath(genpath('..'));
 %% Section 1 — Dataset descriptor array
 %% ══════════════════════════════════════════════════════════════════════════
 
-DS = struct();
+DSC = {};  % cell array — comment out / reorder any block freely
 
 % ── Baker 8mM  (slack only; datatable+velocitytable in .mat)
-DS(1).label      = 'Baker 8mM';
-DS(1).matFile    = '../data/bakers_slack8mM_all.mat';
-DS(1).Lo_ref_um  = 1.0;        % SL already in µm
-DS(1).ATP        = 8;
-DS(1).color      = [0.00 0.45 0.70];
-DS(1).marker     = 'o';   % 8 mM
-DS(1).lineStyle  = '-';
-DS(1).fillMarker = true;
-DS(1).data_slack  = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
-% ktr from separate experiment file; VT has no segmentation so ktr_tstart
-% gives the restretch-end time directly (offset −100 ms was applied in
-% LoadBakersExp → restretch end lands at t ≈ 0 s).
-DS(1).ktr_matFile = '../data/bakers_ktr_8.mat';
-DS(1).ktr_tstart  = 0.0;   % s — recovery begins here
+d = struct();
+d.label      = 'Baker 8mM';
+d.matFile    = '../data/bakers_slack8mM_all.mat';
+d.Lo_ref_um  = 1.0;        % SL already in µm
+d.ATP        = 8;
+d.color      = [0.00 0.45 0.70];
+d.marker     = 'o';   % 8 mM
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack  = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
+d.ktr_matFile = '../data/bakers_ktr_8.mat';
+d.ktr_tstart  = 0.0;   % s — recovery begins here
+DSC{end+1} = d;
 
 % ── Baker 2mM  (slack from .mat; ktr from raw txt — no processed .mat exists)
 % Raw ktr txt: t in ms, L in Lo (×2.0 → µm), 4 header lines.
-% Restretch ends at ~96 ms raw → with −100 ms offset: t_ktr_start ≈ −0.004 s ≈ 0 s.
-DS(2).label          = 'Baker 2mM';
-DS(2).matFile        = '../data/bakers_slack2mM.mat';
-DS(2).Lo_ref_um      = 1.0;        % SL already in µm in the .mat
-DS(2).ATP            = 2;
-DS(2).color          = [0.00 0.45 0.70];
-DS(2).marker         = 's';   % 2 mM
-DS(2).lineStyle      = '--';
-DS(2).fillMarker     = false;
-DS(2).data_slack     = [1.0 3.1];
-DS(2).ktr_txtFile    = '../data/2 mM ATP ktr.txt';
-DS(2).ktr_header_lines = 4;   % ASI format: 4 text header lines
-DS(2).ktr_t_scale    = 1e-3;  % ms → s
-DS(2).ktr_t_offset   = -0.1;  % −100 ms offset applied in LoadBakersExp
-DS(2).ktr_Lo_ref_um  = 2.0;   % raw txt L is in Lo; ML = 2.0 µm
-DS(2).ktr_tstart     = 0.0;   % s — restretch ends near t = 0 after offset
+% Restretch ends at ~96 ms raw → with −100 ms offset: t_ktr_start ≈ 0 s.
+d = struct();
+d.label          = 'Baker 2mM';
+d.matFile        = '../data/bakers_slack2mM.mat';
+d.Lo_ref_um      = 1.0;        % SL already in µm in the .mat
+d.ATP            = 2;
+d.color          = [0.00 0.45 0.70];
+d.marker         = 's';   % 2 mM
+d.lineStyle      = '--';
+d.fillMarker     = false;
+d.data_slack     = [1.0 3.1];
+d.ktr_txtFile    = '../data/2 mM ATP ktr.txt';
+d.ktr_header_lines = 4;   % ASI format: 4 text header lines
+d.ktr_t_scale    = 1e-3;  % ms → s
+d.ktr_t_offset   = -0.1;  % −100 ms offset applied in LoadBakersExp
+d.ktr_Lo_ref_um  = 2.0;   % raw txt L is in Lo; ML = 2.0 µm
+d.ktr_tstart     = 0.0;   % s — restretch ends near t = 0 after offset
+DSC{end+1} = d;
 
 % ── 03/27 8mM
-DS(3).label      = '03/27 8mM';
-DS(3).dataFile   = '../data/03 27 2026 M/02_Merged_8mM_Active.txt';
-DS(3).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-DS(3).Lo_ref_um  = 2.0;
-DS(3).ATP        = 8;
-DS(3).color      = [0.84 0.10 0.11];
-DS(3).marker     = 'o';   % 8 mM
-DS(3).lineStyle  = '-';
-DS(3).fillMarker = true;
-DS(3).data_slack = [74.0 77.5];
-DS(3).vt_slack   = [74.4 Inf];
-DS(3).data_ktr   = [70.8 71.5];
-DS(3).data_step  = [69.2 70.5];
-DS(3).data_stair = [72.4 73.2];
+d = struct();
+d.label      = '03/27 8mM';
+d.dataFile   = '../data/03 27 2026 M/02_Merged_8mM_Active.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.color      = [0.84 0.10 0.11];
+d.marker     = 'o';   % 8 mM
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+d.data_step  = [69.2 70.5];
+d.data_stair = [72.4 73.2];
+DSC{end+1} = d;
 
-% ── 03/27 2mM  (dashed line, empty markers)
-DS(4).label      = '03/27 2mM';
-DS(4).dataFile   = '../data/03 27 2026 M/03_Merged_2mM_Active.txt';
-DS(4).vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-DS(4).Lo_ref_um  = 2.0;
-DS(4).ATP        = 2;
-DS(4).color      = [0.84 0.10 0.11];
-DS(4).marker     = 's';   % 2 mM
-DS(4).lineStyle  = '--';
-DS(4).fillMarker = false;
-DS(4).data_slack = [74.0 77.5];
-DS(4).vt_slack   = [74.4 Inf];
-DS(4).data_ktr   = [70.8 71.5];
-DS(4).data_step  = [69.2 70.5];
-DS(4).data_stair = [72.4 73.2];
+% ── 03/27 2mM
+d = struct();
+d.label      = '03/27 2mM';
+d.dataFile   = '../data/03 27 2026 M/03_Merged_2mM_Active.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 2;
+d.color      = [0.84 0.10 0.11];
+d.marker     = 's';   % 2 mM
+d.lineStyle  = '--';
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+d.data_step  = [69.2 70.5];
+d.data_stair = [72.4 73.2];
+DSC{end+1} = d;
+
+% ── 03/27 8mM repeat
+d = struct();
+d.label      = '03/27 8mM repeat';
+d.dataFile   = '../data/03 27 2026 M/04_Merged_8mM_Active_repeat.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 2;
+d.color      = [0.10 0.84 0.11];
+d.marker     = 'p';
+d.lineStyle  = '-';
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+d.data_step  = [69.2 70.5];
+d.data_stair = [72.4 73.2];
+DSC{end+1} = d;
 
 % ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
-DS(5).label      = '04/03 8mM';
-DS(5).dataFile   = '../data/04 03 2026 F/02_Merged_8mM_Active.txt';
-DS(5).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
-DS(5).Lo_ref_um  = 2.0;
-DS(5).ATP        = 8;
-DS(5).color      = [0.47 0.67 0.19];
-DS(5).marker     = 'o';   % 8 mM
-DS(5).lineStyle  = '-';
-DS(5).fillMarker = true;
-DS(5).data_slack = [74.0 78.0];
-DS(5).vt_slack   = [74.8 Inf];
-DS(5).data_ktr   = [70.8 71.5];
-DS(5).data_step  = [69.2 70.5];
-DS(5).data_stair = [72.4 73.2];
+d = struct();
+d.label      = '04/03 8mM';
+d.dataFile   = '../data/04 03 2026 F/02_Merged_8mM_Active.txt';
+d.vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.color      = [0.47 0.67 0.19];
+d.marker     = 'o';   % 8 mM
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack = [74.0 78.0];
+d.vt_slack   = [74.8 Inf];
+d.data_ktr   = [70.8 71.5];
+d.data_step  = [69.2 70.5];
+d.data_stair = [72.4 73.2];
+DSC{end+1} = d;
 
-% ── 04/03 2mM  (dashed line, empty markers)
-DS(6).label      = '04/03 2mM';
-DS(6).dataFile   = '../data/04 03 2026 F/03_Merged_2mM_Active.txt';
-DS(6).vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
-DS(6).Lo_ref_um  = 2.0;
-DS(6).ATP        = 2;
-DS(6).color      = [0.47 0.67 0.19];
-DS(6).marker     = 's';   % 2 mM
-DS(6).lineStyle  = '--';
-DS(6).fillMarker = false;
-DS(6).data_slack = [74.0 78.0];
-DS(6).vt_slack   = [74.8 Inf];
-DS(6).data_ktr   = [70.8 71.5];
-DS(6).data_step  = [69.2 70.5];
-DS(6).data_stair = [72.4 73.2];
+% ── 04/03 2mM
+d = struct();
+d.label      = '04/03 2mM';
+d.dataFile   = '../data/04 03 2026 F/03_Merged_2mM_Active.txt';
+d.vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 2;
+d.color      = [0.47 0.67 0.19];
+d.marker     = 's';   % 2 mM
+d.lineStyle  = '--';
+d.fillMarker = false;
+d.data_slack = [74.0 78.0];
+d.vt_slack   = [74.8 Inf];
+d.data_ktr   = [70.8 71.5];
+d.data_step  = [69.2 70.5];
+d.data_stair = [72.4 73.2];
+DSC{end+1} = d;
+
+% Unify fields across all structs so we can build a struct array.
+% Each DSC entry may have different fields — collect the superset,
+% fill missing ones with [], then concatenate.
+allFields = {};
+for k = 1:numel(DSC)
+    allFields = union(allFields, fieldnames(DSC{k})', 'stable');
+end
+allFields = allFields(:);  % column vector — matches fieldnames() orientation
+for k = 1:numel(DSC)
+    for fi = 1:numel(allFields)
+        if ~isfield(DSC{k}, allFields{fi}); DSC{k}.(allFields{fi}) = []; end
+    end
+    DSC{k} = orderfields(DSC{k}, allFields);
+end
+DS = [DSC{:}];
 
 %% ══════════════════════════════════════════════════════════════════════════
 %% Section 3 — Slack feature extraction
@@ -192,20 +235,28 @@ for di = 1:numel(DS)
         t_ktr_start = ktr_segs(end, 2);  % end of restretch = start of recovery
     end
 
-    zone_ms = [(t_ktr_start * 1000) + 10, (t_ktr_start * 1000) + 300];
+    zone_ms = [(t_ktr_start * 1000) + 10, (t_ktr_start * 1000) + 500];
 
     
     nexttile();
     % subplot(1, numel(DS), di); hold on;
     title(DS(di).label, 'Interpreter', 'none');
     try
-        [~, ktr_val, df_val, ~, E_val, SL_val] = fitRecovery(datatable_fr, zone_ms, 0, [], true);
+        [~, ktr_val, df_val, ~, E_val, SL_val, ~, ktr2] = fitRecovery(datatable_fr, zone_ms, 0, [], true);
         xlim([t_ktr_start - 0.05 t_ktr_start + 0.3]);
         DS(di).ktrFeats.ktr  = ktr_val;
         DS(di).ktrFeats.SL  = SL_val;
 
         DS(di).ktrFeats.df   = df_val;
         DS(di).ktrFeats.rmse = E_val;
+
+DS(di).ktrFeats.k     = ktr2.k    ;
+DS(di).ktrFeats.df    = ktr2.df   ;
+DS(di).ktrFeats.B     = ktr2.B    ;
+DS(di).ktrFeats.gam   = ktr2.gam  ;
+DS(di).ktrFeats.omega = ktr2.omega;
+DS(di).ktrFeats.rmse  = ktr2.rmse ;
+
         fprintf('  ktr = %.1f s⁻¹, df = %.1f kPa, rmse = %.2f\n', ktr_val, df_val, E_val);
     catch ME
         fprintf('  [WARN] fit failed: %s\n', ME.message);
@@ -493,7 +544,8 @@ end
 [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, 'slackFeats');
 [fc_ktr, lbls_ktr, clrs_ktr, mkrs_ktr, lsts_ktr, fills_ktr] = collectDS(DS, 'ktrFeats');
 if ~isempty(fc) && ~isempty(fc_ktr)
-    fn_slack = {'ktr|SLslack'};
+
+    fn_slack = {'ktr|SLslack', };
     figure(420); clf;
     set(gcf, 'Name', 'Slack + ktr feature comparison', 'Units', 'centimeters', 'Position', [2 2 32 24]);
     title_str = ['Slack + ktr features — ' strjoin(lbls, ' vs ')];
@@ -501,12 +553,31 @@ if ~isempty(fc) && ~isempty(fc_ktr)
     plotMultipleFeatures(fc, lbls, clrs, mkrs, fn_slack, lsts, fills);
 
 
-    nexttile(1); hold on;
     for di = 1:numel(fc_ktr)
         kf = fc_ktr{di};
         if isnan(kf.ktr); continue; end
+        nexttile(1); hold on;
         plot(kf.SL, kf.ktr, mkrs{di}, 'Color', clrs_ktr(di, :), 'MarkerFaceColor', clrs_ktr(di, :),'MarkerSize', 8, ...
             'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']);
+        
+        nexttile(2);hold on;title('k with osc (filled) vs ktr (open)')
+        plot(di, kf.k, mkrs{di}, 'Color', clrs_ktr(di, :), 'MarkerFaceColor', clrs_ktr(di, :),'MarkerSize', 8, ...
+            'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']); 
+        plot(di, kf.ktr, mkrs{di}, 'Color', clrs_ktr(di, :) ,'MarkerSize', 8, ...
+            'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']); 
+                        
+        nexttile(3);hold on;title('B');
+        plot(di, kf.B, mkrs{di}, 'Color', clrs_ktr(di, :), 'MarkerFaceColor', clrs_ktr(di, :),'MarkerSize', 8, ...
+            'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']);
+
+        nexttile(4);hold on;title('gamma')
+        plot(di, kf.gam, mkrs{di}, 'Color', clrs_ktr(di, :), 'MarkerFaceColor', clrs_ktr(di, :),'MarkerSize', 8, ...
+            'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']);
+        
+        nexttile(5);hold on;title('omega')
+        plot(di, kf.omega, mkrs{di}, 'Color', clrs_ktr(di, :), 'MarkerFaceColor', clrs_ktr(di, :),'MarkerSize', 8, ...
+            'LineWidth', 2, 'DisplayName', [lbls_ktr{di} ' (ktr exp)']);
+        
     end
 end
 

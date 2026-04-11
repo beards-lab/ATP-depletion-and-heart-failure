@@ -42,7 +42,7 @@ function [dSLpc, ktr, df, del, E, SL, x0lin, ktr2] = fitRecovery(datatable, zone
             df0 = fixed_df;
         end
 
-        [ae be] = fit(timebase_exp, datatable(z1, 3)- zeroTreshold, y_exp, 'StartPoint', [50, 2, bt/1000]);
+        [ae be] = fit(timebase_exp, datatable(z1, 3)- zeroTreshold, y_exp, 'StartPoint', [50, 20, 0]);
         ktr(z) = ae.ktr;
         df(z) = ae.df; % difference in force
         del(z) = ae.s; % delay time [s]
@@ -51,30 +51,43 @@ function [dSLpc, ktr, df, del, E, SL, x0lin, ktr2] = fitRecovery(datatable, zone
 
         % ── Fit 2: underdamped sinusoid ──────────────────────────────────
         % F(τ) = df*(1−exp(−k·τ)) + B·exp(−gam·τ)·sin(ω·τ), τ=max(t−s,0)
-        %   Same recovery rate k, independent oscillation damping gam.
-        %   B=0 degrades to single exponential.
-        F0_ktr = zeroTreshold;
+        %   B starts at 0 — oscillation added only if it improves the fit.
+        %   Accepted only when RMSE improves by >10% over single-exp.
+
         y_osc = @(df2, k, B, gam, omega, s, x) ...
-            df2 .* (1 - exp(-k .* max(x - s, 0))) ...
-            + B .* exp(-gam .* max(x - s, 0)) .* sin(omega .* max(x - s, 0));
+            df2 .* (1 - exp(-k .* (x - s))) ...
+            + B .* exp(-gam .* (x - s)) .* sin(omega .*(x - s));
         try
-            [ao, ~] = fit(timebase_exp, datatable(z1, 3) - F0_ktr, y_osc, ...
-                'StartPoint', [ae.df,  ae.ktr, 5,    ae.ktr/5, 20,   ae.s ], ...
-                'Lower',      [10,     0.01,   0,    0.1,      1,    0.0  ], ...
+            [ao, gof_o] = fit(timebase_exp, datatable(z1, 3) - zeroTreshold, y_osc, ...
+                'StartPoint', [ae.df,  ae.ktr, 0,    ae.ktr/5, 20,   ae.s ], ...
+                'Lower',      [10,     0.01,   -100,    0.1,      1,    -0.1  ], ...
                 'Upper',      [200,    500,    100,  500,      300,  0.1  ]);
-            ktr2(z).k    = ao.k;
-            ktr2(z).df   = ao.df2;
-            ktr2(z).B    = ao.B;
-            ktr2(z).gam  = ao.gam;
-            ktr2(z).omega = ao.omega;
+            % gof_o.rmse - be.rmse
+            ae.df - ao.df2
+            if true || gof_o.rmse < be.rmse * 0.9   % accept only if >10% RMSE improvement
+                ktr2(z).k     = ao.k;
+                ktr2(z).df    = ao.df2;
+                ktr2(z).B     = ao.B;
+                ktr2(z).gam   = ao.gam;
+                ktr2(z).omega = ao.omega;
+                ktr2(z).rmse  = gof_o.rmse;
+            else
+                ktr2(z).k    = NaN;  % not better than single-exp
+                ktr2(z).df   = NaN;
+                ktr2(z).B    = NaN;
+                ktr2(z).gam  = NaN;
+                ktr2(z).omega = NaN;
+                ktr2(z).rmse = NaN;
+            end
         catch
             ktr2(z).k    = NaN;
             ktr2(z).df   = NaN;
             ktr2(z).B    = NaN;
             ktr2(z).gam  = NaN;
             ktr2(z).omega = NaN;
+            ktr2(z).rmse = NaN;
         end
-        
+
         timebase_exp = (-(bt+15)/1000:0.01:0.3);
 
         
@@ -90,9 +103,9 @@ function [dSLpc, ktr, df, del, E, SL, x0lin, ktr2] = fitRecovery(datatable, zone
         if plotData
             plot(datatable(z1, 1), datatable(z1, 3), 'x', timebase_exp + to, y_exp(ae.df, ae.ktr, ae.s, timebase_exp), '-', 'Linewidth', 1.5);
             if ~isnan(ktr2(z).k)
-                y_osc_plot = @(x) ktr2(z).df .* (1 - exp(-ktr2(z).k .* max(x - ae.s, 0))) ...
-                    + ktr2(z).B .* exp(-ktr2(z).gam .* max(x - ae.s, 0)) .* sin(ktr2(z).omega .* max(x - ae.s, 0));
-                plot(timebase_exp + to, ao(timebase_exp), '--', 'Linewidth', 1.5);
+                y_osc_vals = ktr2(z).df .* (1 - exp(-ktr2(z).k .* max(timebase_exp - ae.s, 0))) ...
+                    + ktr2(z).B .* exp(-ktr2(z).gam .* max(timebase_exp - ae.s, 0)) .* sin(ktr2(z).omega .* max(timebase_exp - ae.s, 0));
+                plot(timebase_exp + to, y_osc_vals, '--', 'Linewidth', 1.5);
             end
             ci = get(gca,'ColorOrderIndex');
             set(gca,'ColorOrderIndex', max(ci-2, 1));
