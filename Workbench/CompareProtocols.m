@@ -20,41 +20,41 @@ addpath(genpath('..'));
 
 DSC = {};  % cell array — comment out / reorder any block freely
 
-% ── Baker 8mM  (slack only; datatable+velocitytable in .mat)
-d = struct();
-d.label      = 'Baker 8mM';
-d.matFile    = '../data/bakers_slack8mM_all.mat';
-d.Lo_ref_um  = 1.0;        % SL already in µm
-d.ATP        = 8;
-d.color      = [0.00 0.45 0.70];
-d.marker     = 'o';   % 8 mM
-d.lineStyle  = '-';
-d.fillMarker = true;
-d.data_slack  = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
-d.ktr_matFile = '../data/bakers_ktr_8.mat';
-d.ktr_tstart  = 0.0;   % s — recovery begins here
-DSC{end+1} = d;
-
-% ── Baker 2mM  (slack from .mat; ktr from raw txt — no processed .mat exists)
-% Raw ktr txt: t in ms, L in Lo (×2.0 → µm), 4 header lines.
-% Restretch ends at ~96 ms raw → with −100 ms offset: t_ktr_start ≈ 0 s.
-d = struct();
-d.label          = 'Baker 2mM';
-d.matFile        = '../data/bakers_slack2mM.mat';
-d.Lo_ref_um      = 1.0;        % SL already in µm in the .mat
-d.ATP            = 2;
-d.color          = [0.00 0.45 0.70];
-d.marker         = 's';   % 2 mM
-d.lineStyle      = '--';
-d.fillMarker     = false;
-d.data_slack     = [1.0 3.1];
-d.ktr_txtFile    = '../data/2 mM ATP ktr.txt';
-d.ktr_header_lines = 4;   % ASI format: 4 text header lines
-d.ktr_t_scale    = 1e-3;  % ms → s
-d.ktr_t_offset   = -0.1;  % −100 ms offset applied in LoadBakersExp
-d.ktr_Lo_ref_um  = 2.0;   % raw txt L is in Lo; ML = 2.0 µm
-d.ktr_tstart     = 0.0;   % s — restretch ends near t = 0 after offset
-DSC{end+1} = d;
+% % ── Baker 8mM  (slack only; datatable+velocitytable in .mat)
+% d = struct();
+% d.label      = 'Baker 8mM';
+% d.matFile    = '../data/bakers_slack8mM_all.mat';
+% d.Lo_ref_um  = 1.0;        % SL already in µm
+% d.ATP        = 8;
+% d.color      = [0.00 0.45 0.70];
+% d.marker     = 'o';   % 8 mM
+% d.lineStyle  = '-';
+% d.fillMarker = true;
+% d.data_slack  = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
+% d.ktr_matFile = '../data/bakers_ktr_8.mat';
+% d.ktr_tstart  = 0.0;   % s — recovery begins here
+% DSC{end+1} = d;
+% 
+% % ── Baker 2mM  (slack from .mat; ktr from raw txt — no processed .mat exists)
+% % Raw ktr txt: t in ms, L in Lo (×2.0 → µm), 4 header lines.
+% % Restretch ends at ~96 ms raw → with −100 ms offset: t_ktr_start ≈ 0 s.
+% d = struct();
+% d.label          = 'Baker 2mM';
+% d.matFile        = '../data/bakers_slack2mM.mat';
+% d.Lo_ref_um      = 1.0;        % SL already in µm in the .mat
+% d.ATP            = 2;
+% d.color          = [0.00 0.45 0.70];
+% d.marker         = 's';   % 2 mM
+% d.lineStyle      = '--';
+% d.fillMarker     = false;
+% d.data_slack     = [1.0 3.1];
+% d.ktr_txtFile    = '../data/2 mM ATP ktr.txt';
+% d.ktr_header_lines = 4;   % ASI format: 4 text header lines
+% d.ktr_t_scale    = 1e-3;  % ms → s
+% d.ktr_t_offset   = -0.1;  % −100 ms offset applied in LoadBakersExp
+% d.ktr_Lo_ref_um  = 2.0;   % raw txt L is in Lo; ML = 2.0 µm
+% d.ktr_tstart     = 0.0;   % s — restretch ends near t = 0 after offset
+% DSC{end+1} = d;
 
 % ── 03/27 8mM
 d = struct();
@@ -74,23 +74,23 @@ d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
-% ── 03/27 2mM
-d = struct();
-d.label      = '03/27 2mM';
-d.dataFile   = '../data/03 27 2026 M/03_Merged_2mM_Active.txt';
-d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-d.Lo_ref_um  = 2.0;
-d.ATP        = 2;
-d.color      = [0.84 0.10 0.11];
-d.marker     = 's';   % 2 mM
-d.lineStyle  = '--';
-d.fillMarker = false;
-d.data_slack = [74.0 77.5];
-d.vt_slack   = [74.4 Inf];
-d.data_ktr   = [70.8 71.5];
-d.data_step  = [69.2 70.5];
-d.data_stair = [72.4 73.2];
-DSC{end+1} = d;
+% % ── 03/27 2mM
+% d = struct();
+% d.label      = '03/27 2mM';
+% d.dataFile   = '../data/03 27 2026 M/03_Merged_2mM_Active.txt';
+% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+% d.Lo_ref_um  = 2.0;
+% d.ATP        = 2;
+% d.color      = [0.84 0.10 0.11];
+% d.marker     = 's';   % 2 mM
+% d.lineStyle  = '--';
+% d.fillMarker = false;
+% d.data_slack = [74.0 77.5];
+% d.vt_slack   = [74.4 Inf];
+% d.data_ktr   = [70.8 71.5];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
+% DSC{end+1} = d;
 
 % ── 03/27 8mM repeat
 d = struct();
@@ -110,41 +110,96 @@ d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
-% ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
+
+% ── 03/27 8mM repeat - rundown compensation Model 1
 d = struct();
-d.label      = '04/03 8mM';
-d.dataFile   = '../data/04 03 2026 F/02_Merged_8mM_Active.txt';
-d.vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+d.label      = '03/27 8mM repeat model 1';
+d.dataFile   = '../data/03 27 2026 M/Merged_RunDownCorrection_Model1.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 d.Lo_ref_um  = 2.0;
-d.ATP        = 8;
-d.color      = [0.47 0.67 0.19];
-d.marker     = 'o';   % 8 mM
+d.ATP        = 2;
+d.color      = [0.00 0.45 0.70];
+d.marker     = '<';
 d.lineStyle  = '-';
-d.fillMarker = true;
-d.data_slack = [74.0 78.0];
-d.vt_slack   = [74.8 Inf];
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
 d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
-% ── 04/03 2mM
+% ── 03/27 8mM repeat - rundown compensation Model 2
 d = struct();
-d.label      = '04/03 2mM';
-d.dataFile   = '../data/04 03 2026 F/03_Merged_2mM_Active.txt';
-d.vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+d.label      = '03/27 8mM repeat model 2';
+d.dataFile   = '../data/03 27 2026 M/Merged_RunDownCorrection_Model2.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 d.Lo_ref_um  = 2.0;
 d.ATP        = 2;
 d.color      = [0.47 0.67 0.19];
-d.marker     = 's';   % 2 mM
-d.lineStyle  = '--';
+d.marker     = '^';
+d.lineStyle  = '-';
 d.fillMarker = false;
-d.data_slack = [74.0 78.0];
-d.vt_slack   = [74.8 Inf];
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
 d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
+
+% ── 03/27 8mM repeat - rundown compensation Model 3
+d = struct();
+d.label      = '03/27 8mM repeat model 3';
+d.dataFile   = '../data/03 27 2026 M/Merged_RunDownCorrection_Model3.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 2;
+d.color      = [0.19 0.47 0.67];
+d.marker     = '>';
+d.lineStyle  = '-';
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+d.data_step  = [69.2 70.5];
+d.data_stair = [72.4 73.2];
+DSC{end+1} = d;
+
+% % ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
+% d = struct();
+% d.label      = '04/03 8mM';
+% d.dataFile   = '../data/04 03 2026 F/02_Merged_8mM_Active.txt';
+% d.vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+% d.Lo_ref_um  = 2.0;
+% d.ATP        = 8;
+% d.color      = [0.47 0.67 0.19];
+% d.marker     = 'o';   % 8 mM
+% d.lineStyle  = '-';
+% d.fillMarker = true;
+% d.data_slack = [74.0 78.0];
+% d.vt_slack   = [74.8 Inf];
+% d.data_ktr   = [70.8 71.5];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
+% DSC{end+1} = d;
+% 
+% % ── 04/03 2mM
+% d = struct();
+% d.label      = '04/03 2mM';
+% d.dataFile   = '../data/04 03 2026 F/03_Merged_2mM_Active.txt';
+% d.vtFile     = '../data/protocol_04_03_2026_velocitytable.mat';
+% d.Lo_ref_um  = 2.0;
+% d.ATP        = 2;
+% d.color      = [0.47 0.67 0.19];
+% d.marker     = 's';   % 2 mM
+% d.lineStyle  = '--';
+% d.fillMarker = false;
+% d.data_slack = [74.0 78.0];
+% d.vt_slack   = [74.8 Inf];
+% d.data_ktr   = [70.8 71.5];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
+% DSC{end+1} = d;
 
 % Unify fields across all structs so we can build a struct array.
 % Each DSC entry may have different fields — collect the superset,

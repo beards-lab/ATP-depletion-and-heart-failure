@@ -1,6 +1,7 @@
 %% Load and plot all Log_*.txt files from a data directory
 close all; clear; clc;
 rewriteData = false;
+plotAll = false;
 
 dataDir = '../data/03 27 2026 M/';
 fpath = [dataDir '02_Merged_8mM_Active.txt'];
@@ -110,12 +111,14 @@ for i = 1:n
     data(i).t_shifted = t_shifted(ok);
     data(i).F_shifted = F_i(ok);
     data(i).L_shifted = L_i(ok);
+    if plotAll
+        ax1 = nexttile(1);hold on;plot(data(i).t_shifted, data(i).F_shifted);
+        ax2 = nexttile(2);hold on;plot(data(i).t_shifted, data(i).L_shifted);
+        linkaxes([ax1 ax2], 'x');
+    end
 
-    ax1 = nexttile(1);hold on;plot(data(i).t_shifted, data(i).F_shifted);
-    ax2 = nexttile(2);hold on;plot(data(i).t_shifted, data(i).L_shifted);
-    
 end
-linkaxes([ax1 ax2], 'x');
+
 
 %% Process High-Sampled Files and Merge
 allFiles = dir([dataDir '*.txt']);
@@ -147,9 +150,10 @@ for k = 1:length(highResFiles)
     t_hi = t_hi(ok);
     L_hi = L_hi(ok);
     F_hi = F_hi(ok);
-    
-    figure(1);clf; nexttile(1);ax1 = plot(t_hi, F_hi);ax2 = nexttile(2);plot(t_hi, L_hi);title(highResFiles(k).name);linkaxes([ax1 ax2], 'x');
-    
+
+    if plotAll
+        % figure(1);clf; nexttile(1);ax1 = plot(t_hi, F_hi);ax2 = nexttile(2);plot(t_hi, L_hi);title(highResFiles(k).name);linkaxes([ax1 ax2], 'x');
+    end
     
     % Find correct Log file by explicit name pairing
     name_hi = highResFiles(k).name;
@@ -214,22 +218,24 @@ for k = 1:length(highResFiles)
         fprintf('  Mapped %-30s -> %-30s | type: %-7s | offset: %.2fs | range: [%.1f, %.1f]s\n', ...
             name_hi, S(i).name, burst_type, time_offset, min(t_hi_aligned), max(t_hi_aligned));
         
+        if plotAll
         % --- Diagnostic plot: show alignment quality ---
-        figure(100+k); clf;
-        subplot(2,1,1); hold on;
-        plot(data(i).t_shifted_orig, data(i).L_shifted_orig, 'b', 'LineWidth', 2);
-        plot(t_hi_aligned, L_hi, 'r', 'LineWidth', 1);
-        legend('Log (original)', ['Hi-res: ' name_hi], 'Interpreter', 'none');
-        ylabel('L'); title(['Alignment: ' name_hi ' -> ' S(i).name ' (' burst_type ')'], 'Interpreter', 'none');
-        xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
-        xlim(t_win + [-2, 2]);
-
-        subplot(2,1,2); hold on;
-        plot(data(i).t_shifted_orig, data(i).F_shifted_orig, 'b', 'LineWidth', 2);
-        plot(t_hi_aligned, F_hi, 'r', 'LineWidth', 1);
-        ylabel('F'); xlabel('Time (s)');
-        xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
-        xlim(t_win + [-2, 2]);
+            figure(100+k); clf;
+            subplot(2,1,1); hold on;
+            plot(data(i).t_shifted_orig, data(i).L_shifted_orig, 'b', 'LineWidth', 2);
+            plot(t_hi_aligned, L_hi, 'r', 'LineWidth', 1);
+            legend('Log (original)', ['Hi-res: ' name_hi], 'Interpreter', 'none');
+            ylabel('L'); title(['Alignment: ' name_hi ' -> ' S(i).name ' (' burst_type ')'], 'Interpreter', 'none');
+            xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
+            xlim(t_win + [-2, 2]);
+    
+            subplot(2,1,2); hold on;
+            plot(data(i).t_shifted_orig, data(i).F_shifted_orig, 'b', 'LineWidth', 2);
+            plot(t_hi_aligned, F_hi, 'r', 'LineWidth', 1);
+            ylabel('F'); xlabel('Time (s)');
+            xline(min(t_hi_aligned), '--r'); xline(max(t_hi_aligned), '--r');
+            xlim(t_win + [-2, 2]);
+        end
         
         
         % Record the injection range and name
@@ -350,8 +356,8 @@ for i = 1:n
     data(i).F_fineShifted = F_fineShifted(ok);
     data(i).L_fineShifted = L_fineShifted(ok);
 
-    if plotAll
-        fprintf('  %s fine shifts: ktr=%.3fs, stairs=%.3fs, slack=%.3fs\n', S(i).name, dts(1), dts(2), dts(3));
+    fprintf('  %s fine shifts: ktr=%.3fs, stairs=%.3fs, slack=%.3fs\n', S(i).name, dts(1), dts(2), dts(3));
+    if plotAll        
         figure(1001); 
         ax1 = subplot(2,1,1); hold on;
         plot(data(i).t_fineShifted, data(i).F_fineShifted, DisplayName=sprintf('Fine alignment i=%d', i));
@@ -411,6 +417,8 @@ for i = 1:n
     end
 end
 
+save(fullfile(dataDir, 'AllDataMerged'), 'data');
+
 %% Plot Merged Traces vs Original Logs
 figure(101);clf;
 for i = 1:n
@@ -463,18 +471,28 @@ for i = 1:n
     linkaxes([ax1 ax2], 'x');
 end
 
+return
+%% graveyeard below
+
 %% compensate for run-down
 
-figure(297);clf;
-r828 = 80.09/71;
-ax1 = nexttile(1);hold on;
-t_ref = data(2).t_fineShifted;
-F_ref = data(2).F_fineShifted;
-L_ref = data(2).L_fineShifted;
+
+refData = data(2);
+t_ref = refData.t_fineShifted;
+F_ref = refData.F_fineShifted;
+L_ref = refData.L_fineShifted;
+t_ref = refData.t_shifted_orig;
+F_ref = refData.F_shifted_orig;
+L_ref = refData.L_shifted_orig;
+
+
 % run-down data
-F_rd = interp1(data(3).t_fineShifted, data(3).F_fineShifted, t_ref);
-L_rd = interp1(data(4).t_fineShifted, data(4).L_fineShifted, t_ref);
-F_pas = interp1(data(4).t_fineShifted, data(4).F_fineShifted, t_ref);
+rundownData = data(4);
+F_rd = interp1(rundownData.t_fineShifted, rundownData.F_fineShifted, t_ref);
+L_rd = interp1(rundownData.t_fineShifted, rundownData.L_fineShifted, t_ref);
+
+% passive reference
+F_pas = 0; %interp1(data(5).t_fineShifted, data(5).F_fineShifted, t_ref);
 F_rdact = F_rd - F_pas;
 F_refact = F_ref - F_pas;
 
@@ -482,10 +500,12 @@ L0 = 1.0;
 k  = -0.6;   % SL slope: increase until high-SL portion of corrected trace aligns with F_refact
 r0 = (68)/(56);
 r0=1.214286;
+% r828 = 80.09/71;
 F_rdact_comp = scaleRundown(F_rdact, L_ref, r0, L0, k);
-t_rd_comp = data(4).t_fineShifted;
+t_rd_comp = rundownData.t_fineShifted;
 F_rd_comp = interp1(t_ref, F_rdact_comp + F_pas, t_rd_comp);
-
+%%
+figure(297);clf;
 % plot(t_ref, F_refact, t_ref, F_rdact*r0, t_ref, F_rdact_comp,'LineWidth', 1);
 ax1 = nexttile(1);plot(t_ref, F_refact + F_pas, t_rd_comp, F_rd_comp,'LineWidth', 1);
 % ax2 = nexttile(2);plot(t_ref, L_ref, t_ref, L_rd,'LineWidth', 1);
@@ -493,12 +513,17 @@ ax1 = nexttile(1);plot(t_ref, F_refact + F_pas, t_rd_comp, F_rd_comp,'LineWidth'
 xlim([66.6300   78.5624])
 fprintf('With k = %g;r0=%f; cost = %g\n', k, r0, nansum(F_rdact_comp - F_refact));
 legend('First', 'Third rescaled with f(L)');
+xy_F = linspace(1, 100, 10);%[1:100];
+xy_L = linspace(0.6, 1.2, 10);%:0.1:1.2];
+sr = scaleRundown(xy_F, xy_L', r0, L0, k)';
+% nexttile(2);cla;surf(xy_F, xy_L, sr);
+% nexttile(2); plot(xy_F', scaleRundown(xy_F, L_ref, r0, L0, k)');
 % plot(t_ref, F_refact, t_ref, F_rdact)
 % F_rdact
 %% rundown corrig
-t = data(2).t_shifted;
-F = data(2).F_shifted;
-L = data(2).L_shifted;
+t = refData.t_shifted;
+F = refData.F_shifted;
+L = refData.L_shifted;
 zones = [71.5, 72.4;77.4, 78.4];
 % at 2.0
 mask = any(t >= zones(:,1)' & t <= zones(:,2)', 2);
@@ -519,10 +544,10 @@ plot(t, F, t(mask), F(mask), t, polyval(p1, t), t, polyval(p2, t), linewidth = 1
 %%
 
 %%
-% plot(data(4).t_shifted, data(4).F_shifted*r828, 'LineWidth', 1);
+% plot(rundownData.t_shifted, rundownData.F_shifted*r828, 'LineWidth', 1);
 
 ax2 = nexttile(2);hold on;
-plot(data(2).t_shifted, data(2).L_shifted, 'LineWidth', 1);
+plot(refData.t_shifted, refData.L_shifted, 'LineWidth', 1);
 plot(data(3).t_shifted, data(3).L_shifted, 'LineWidth', 1);
 
 %% Report Figure A — Comparison 2, upscaled-4, 3, 5
@@ -532,10 +557,10 @@ clr4 = [0.49, 0.18, 0.56];  % purple: 8mM repeat upscaled
 clr5 = [0.20, 0.63, 0.17];  % green:  PNB+Mava reference
 
 % Upscale i=4 to match i=2 using scaleRundown
-t_ref2 = data(2).t_fineShifted;
-F_ref2 = data(2).F_fineShifted;
-L_ref2 = data(2).L_fineShifted;
-F_rd4  = interp1(data(4).t_fineShifted, data(4).F_fineShifted, t_ref2, 'linear', NaN);
+t_ref2 = refData.t_fineShifted;
+F_ref2 = refData.F_fineShifted;
+L_ref2 = refData.L_fineShifted;
+F_rd4  = interp1(rundownData.t_fineShifted, rundownData.F_fineShifted, t_ref2, 'linear', NaN);
 F_pas5 = interp1(data(5).t_fineShifted, data(5).F_fineShifted, t_ref2, 'linear', NaN);
 F_rdact4      = F_rd4 - F_pas5;
 r0_up = 68/56;  L0_up = 1.0;  k_up = -0.8;
@@ -552,7 +577,7 @@ axA = gobjects(4, 1);
 for ii = 1:4
     axA(ii) = nexttile(ii); hold on;
     if ii < 4
-        plot(data(2).t_fineShifted, data(2).F_fineShifted, 'Color', clr2, 'LineWidth', 1.2, 'DisplayName', '8mM Active (i=2)');
+        plot(refData.t_fineShifted, refData.F_fineShifted, 'Color', clr2, 'LineWidth', 1.2, 'DisplayName', '8mM Active (i=2)');
         plot(t_ref2, F_4_upscaled,                         '--', 'Color', clr4, 'LineWidth', 1.0, 'DisplayName', '8mM repeat upscaled (i=4)');
         plot(data(3).t_fineShifted, data(3).F_fineShifted, 'Color', clr3, 'LineWidth', 1.2, 'DisplayName', '2mM Active (i=3)');
         plot(data(5).t_fineShifted, data(5).F_fineShifted, 'Color', clr5, 'LineWidth', 1.2, 'DisplayName', 'PNB+Mava (i=5)');
