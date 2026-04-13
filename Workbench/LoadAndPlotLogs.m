@@ -599,12 +599,12 @@ exportgraphics(fA, fullfile(dataDir, 'Report_Comparison_235.png'), 'Resolution',
 fprintf('Saved Report_Comparison_235.png\n');
 
 %% Report Figure B — Rundown linear fits i=2 and i=3
-ds_order = [3, 2];
-ds_labels = {'2mM Active (i=3)', '8mM Active (i=2)'};
+ds_order = [3, 2, 4];
+ds_labels = {'2mM Active (i=%g)', '8mM Active (i=%g)', '8mM Active repeat (i=%g)', 'passive(i=%g)'};
 
 fB = figure('Name', 'Report_Rundown_23', 'Units', 'centimeters', 'Position', [2 2 18 16]);
 
-for ii_loop = 1:2
+for ii_loop = 1:length(ds_order)
     ds_idx = ds_order(ii_loop);
     t = data(ds_idx).t_fineShifted;
     F = data(ds_idx).F_fineShifted;
@@ -627,7 +627,7 @@ for ii_loop = 1:2
 
     t_line = linspace(71, 79, 500);
 
-    subplot(2, 1, ii_loop); hold on;
+    nexttile;hold on;
     win = t >= 70 & t <= 79.5;
     plot(t(win), F(win), 'Color', [0.75 0.75 0.75], 'LineWidth', 0.8, 'DisplayName', 'Raw trace');
     plot(t(mask1), F(mask1), 'o', 'Color', [0.2 0.2 0.8], 'MarkerSize', 3, 'LineStyle', 'none', 'DisplayName', 'SL=2.0 pts');

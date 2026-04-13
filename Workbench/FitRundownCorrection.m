@@ -37,26 +37,84 @@ F_refact = F_ref - F_pas;
 
 L0 = 1.0;
 k  = -0.6;   % SL slope: increase until high-SL portion of corrected trace aligns with F_refact
-r0 = (68)/(56);
-r0=1.214286;
+% r0 = (68)/(56);
+% r0=1.214286;
 % r828 = 80.09/71;
+
+%% --- 1b. Within-recording slope correction ----------------------------------
+%
+% Each recording has a linear force decay due to ATP depletion during activation.
+% We measure this decay at the SL=2.0 plateau zones (stable isometric regions)
+% and correct both F_ref and F_rd to their values at a fixed reference time
+% t_zone_ref = midpoint of first stable zone (71.5–72.4 s).
+%
+% After correction:
+%   F_ref_corr(t) = F_ref(t) − slope_ref · (t − t_zone_ref)  [flat at t_zone_ref value]
+%   F_rd_corr(t)  = F_rd(t)  − slope_rd  · (t − t_zone_ref)
+%
+% The difference in slopes (slope_rd − slope_ref) gives the EXCESS decay rate
+% of the run-down recording, directly informing the time-extended model rate.
+%
+% T_offset is "hot-activated time": time since muscle activation (~t = 65 s),
+% not wall-clock time. Both recordings run the same wall-clock protocol.
+
+zones       = [71.5, 72.4; 77.4, 78.4];    % SL=2.0 stable zones (wall-clock seconds)
+t_zone_ref  = mean(zones(1,:));             % reference time point = 71.95 s
+
+% Zone mask helper
+zoneMask = @(t) any(t >= zones(:,1)' & t <= zones(:,2)', 2);
+
+% Fit slope for reference recording on its own time axis
+mask_ref   = zoneMask(t_ref) & isfinite(F_ref);
+[p_ref, s_p_ref] = polyfit(t_ref(mask_ref), F_ref(mask_ref), 1);
+slope_ref  = p_ref(1);   % kPa/s  (typically negative: force decays)
+
+% Fit slope for run-down recording on its own fine time axis
+t_rd_full  = rundownData.t_fineShifted;
+F_rd_full  = rundownData.F_fineShifted;
+mask_rd    = zoneMask(t_rd_full) & isfinite(F_rd_full);
+p_rd       = polyfit(t_rd_full(mask_rd), F_rd_full(mask_rd), 1);
+slope_rd   = p_rd(1);    % kPa/s
+
+plot(t_ref, F_ref,t_ref(mask_ref), F_ref(mask_ref),t_ref, polyval(p_ref, t_ref))
+
+fprintf('Within-recording slope fit:\n');
+fprintf('  Reference  (data 2): slope = %+.4f kPa/s\n', slope_ref);
+fprintf('  Run-down   (data 4): slope = %+.4f kPa/s\n', slope_rd);
+fprintf('  Δslope = %+.4f kPa/s  (excess decay of run-down recording)\n', slope_rd - slope_ref);
+
+% Correct both traces to t_zone_ref
+F_ref_corr = F_ref - slope_ref .* (t_ref - t_zone_ref);
+F_rd_corr  = F_rd  - slope_rd  .* (t_ref - t_zone_ref);  % F_rd already on t_ref grid
+
+% Overwrite active forces with corrected versions
+F_rdact_slopeCorrected  = F_rd_corr  - F_pas;
+F_refact_slopeCorrected = F_ref_corr - F_pas;
+
+% Rate implied by slope difference: d/dt[F_ref/F_rd] ≈ Δslope / F0_rd
+% Used below as a physically motivated prior for the time-extended model.
+F0_prior      = median(F_rd_corr(isfinite(F_rd_corr) & F_rd_corr > 3));
+rate_from_slope = (slope_rd - slope_ref) / F0_prior;   % [1/s]
+fprintf('  Implied correction rate  Δslope/F0 = %+.5f /s\n', rate_from_slope);
+
+% ---- end slope correction ---------------------------------------------------
 
 Fmin_thresh = 3;    % [mN/mm² or kPa] min active force; below this the ratio is noise
 validWin = isfinite(F_rdact) & isfinite(F_refact) & isfinite(L_ref) ...
       & F_rdact > Fmin_thresh & F_refact > 0 & t_ref > 68 & t_ref < 78;
 
 trd = t_ref(validWin);
-Frd  = F_rd(validWin);
-Fref = F_ref(validWin);
+Frd  = F_rd_corr(validWin);
+Fref = F_ref_corr(validWin);
 Lobs = L_ref(validWin);
 Fpas = 0;%F_pas(valid);
 
-F0    = median(Frd);    % normalisation reference force
+F0    = median(Frd(zoneMask(trd)));    % normalisation reference force
 L0fit = 1.0;            % pivot SL (same as manual L0)
 
 r_obs = Fref ./ Frd;   % observed pointwise correction ratio (for diagnostics)
 
-fprintf('Fitting on %d points  (F0 = %.1f, L range = [%.3f, %.3f])\n', ...
+fprintf('\nFitting on %d points  (F0 = %.1f, L range = [%.3f, %.3f])\n', ...
     numel(Frd), F0, min(Lobs), max(Lobs));
 
 %% --- 2. Model definitions --------------------------------------------------
@@ -98,31 +156,166 @@ p2 = fminsearch(@(p) cost(fcn2, p), [p1, 0.0],          opts);
 p3 = fminsearch(@(p) cost(fcn3, p), [p2, 0.0],          opts);
 p4 = fminsearch(@(p) cost(fcn4, p), [log(p1(1)), 1, p1(2)], opts);
 
+names  = {'M1: SL-linear', 'M2: +F linear', 'M3: +F×L interact', 'M4: power-law F'};
+models = {fcn1, fcn2, fcn3, fcn4};
+params = {p1,   p2,   p3,   p4};
+npar   = [2, 3, 4, 3];
+
+%% --- 3b. Two-stage time-extended fit (identifiable) -------------------------
+%
+% After within-recording slope correction (section 1b), both signals are
+% detrended to t_zone_ref. The static fits above capture the inter-recording
+% spatial correction. Now we attach the time dimension:
+%
+%   Two sources of information, each independently identifiable:
+%
+%   1) RATE  from measured Δslope:
+%      rate_from_slope = (slope_rd − slope_ref) / F0  [1/s]
+%      This is directly measurable from the data and physically meaningful:
+%      the excess within-activation decay of the run-down recording.
+%      Note: after detrending, R(t) should be nearly flat — rate_from_slope
+%      is the "projected" rate if we un-do the detrending.
+%
+%   2) T_OFFSET  from the correction level:
+%      mean(R) = 1 + rate * T_eff_mean  =>  T_eff_mean = (mean(R)−1) / rate
+%      T_eff_mean is the effective activated time at the window midpoint
+%      (= T_offset + half-window span in activated time units).
+%      T_offset = T_eff_mean − (t_mean_win − t_start_rd)
+%
+%   T_offset here represents "hot-activated time" elapsed since the reference
+%   recording: time the muscle spent active between the two recordings.
+%
+%   Both parameters are now separately identifiable from different data features.
+
+t_start_rd  = min(trd);           % wall-clock start of run-down window [s]
+dt_win      = trd - t_start_rd;   % within-window elapsed time, starting at 0 [s]
+t_mean_win  = mean(trd);          % window midpoint [s]
+
+T_fn = @(t, Toff) Toff + (t - t_start_rd);  % activated-time elapsed [s]
+
+rate_2s     = zeros(1,4);
+C0_2s       = zeros(1,4);    % C(t_start_rd) from mean correction level
+T_offset_2s = zeros(1,4);
+rate_resid  = zeros(1,4);    % residual slope after detrending (should be ~0)
+
+for mi = 1:4
+    R_resid = Fref ./ models{mi}(params{mi}, Frd, Lobs);
+
+    % Residual slope (diagnostic: should be ~0 after detrending in section 1b)
+    p_lin = polyfit(dt_win, R_resid, 1);
+    rate_resid(mi) = p_lin(1);
+
+    % Use rate_from_slope (measured) to infer T_offset from level
+    rate_2s(mi) = rate_from_slope;
+    R_mean = mean(R_resid);
+    if abs(rate_from_slope) > 1e-10
+        T_eff_mean = (R_mean - 1) / rate_from_slope;
+        T_offset_2s(mi) = T_eff_mean - (t_mean_win - t_start_rd);
+    else
+        T_offset_2s(mi) = NaN;
+    end
+    C0_2s(mi) = 1 + rate_from_slope * T_offset_2s(mi);  % C at window start
+end
+
+% Assemble params_t: [static_params, rate, T_offset]  (same layout as downstream code)
+p1t = [p1, rate_2s(1), T_offset_2s(1)];
+p2t = [p2, rate_2s(2), T_offset_2s(2)];
+p3t = [p3, rate_2s(3), T_offset_2s(3)];
+p4t = [p4, rate_2s(4), T_offset_2s(4)];
+
+% Time-extended model functions — static part from fixed a(F,L), time from T_fn
+fcn1t = @(p, F, L, t)  fcn1(p(1:2), F, L) .* (1 + p(3) .* T_fn(t, p(4)));
+fcn2t = @(p, F, L, t)  fcn2(p(1:3), F, L) .* (1 + p(4) .* T_fn(t, p(5)));
+fcn3t = @(p, F, L, t)  fcn3(p(1:4), F, L) .* (1 + p(5) .* T_fn(t, p(6)));
+fcn4t = @(p, F, L, t)  fcn4(p(1:3), F, L) .* (1 + p(4) .* T_fn(t, p(5)));
+
+Tspan_rd = max(trd) - t_start_rd;
+fprintf('\nTwo-stage fit  (rate from Δslope, T_offset from level):\n');
+fprintf('  %-24s  resid-slope   rate[1/s]   T_offset[s]   C(start)   C(end)\n', 'Model');
+for mi = 1:4
+    rate = rate_2s(mi);  Toff = T_offset_2s(mi);
+    fprintf('  %-24s  %+.5f    %+.5f    %8.1f      %.4f     %.4f\n', ...
+        [names{mi} 't'], rate_resid(mi), rate, Toff, 1+rate*Toff, 1+rate*(Toff+Tspan_rd));
+end
+fprintf('  rate fixed from Δslope/F0; T_offset from mean correction level\n');
+
+%% --- 3c. M1t_fit and M3t_fit: rate freely optimised (for comparison) --------
+% Joint optimisation of all params including rate and T_offset.
+% T_offset constrained ≥ 0 via log-transform. M1 and M3 only.
+
+T_fn_pos      = @(t, logToff) exp(logToff) + (t - t_start_rd);
+fcn1t_fitpos  = @(p, F, L, t) fcn1(p(1:2), F, L) .* (1 + p(3) .* T_fn_pos(t, p(4)));
+fcn3t_fitpos  = @(p, F, L, t) fcn3(p(1:4), F, L) .* (1 + p(5) .* T_fn_pos(t, p(6)));
+
+costt13   = @(fcn, p) sum((fcn(p, Frd, Lobs, trd) - Fref).^2);
+% rate_init_fit = (r0 - 1) / 300;
+rate_init_fit =rate_from_slope;
+logT0_fit     = log(300);
+
+p1t_fit_raw = fminsearch(@(p) costt13(fcn1t_fitpos, p), [p1, rate_init_fit, logT0_fit], opts);
+p3t_fit_raw = fminsearch(@(p) costt13(fcn3t_fitpos, p), [p3, rate_init_fit, logT0_fit], opts);
+
+p1t_fit = [p1t_fit_raw(1:end-1), exp(p1t_fit_raw(end))];
+p3t_fit = [p3t_fit_raw(1:end-1), exp(p3t_fit_raw(end))];
+
+fcn1t_fit = @(p, F, L, t) fcn1(p(1:2), F, L) .* (1 + p(3) .* T_fn(t, p(4)));
+fcn3t_fit = @(p, F, L, t) fcn3(p(1:4), F, L) .* (1 + p(5) .* T_fn(t, p(6)));
+
+SS_tot_quick = sum((Fref - mean(Fref)).^2);
+R2q = @(Fp) 1 - sum((Fp - Fref).^2) / SS_tot_quick;
+fprintf('\nFreely fitted time-extended models (M1t_fit, M3t_fit):\n');
+fprintf('  M1t_fit: rate=%+.5f /s  T_off=%7.1f s  R²=%.4f\n', ...
+    p1t_fit(end-1), p1t_fit(end), R2q(fcn1t_fit(p1t_fit, Frd, Lobs, trd)));
+fprintf('  M3t_fit: rate=%+.5f /s  T_off=%7.1f s  R²=%.4f\n', ...
+    p3t_fit(end-1), p3t_fit(end), R2q(fcn3t_fit(p3t_fit, Frd, Lobs, trd)));
+
 %% --- 4. Fit metrics --------------------------------------------------------
 
 SS_tot = sum((Fref - mean(Fref)).^2);
 R2fn   = @(Fp)  1 - sum((Fp - Fref).^2) / SS_tot;
 RMSEfn = @(Fp)  sqrt(mean((Fp - Fref).^2));
 
-models = {fcn1, fcn2, fcn3, fcn4};
-params = {p1,   p2,   p3,   p4};
-names  = {'M1: SL-linear', 'M2: +F linear', 'M3: +F×L interact', 'M4: power-law F'};
-npar   = [2, 3, 4, 3];
+% Static models (defined in section 3 above)
+
+% Time-extended variants — wrap to (p,F,L) signature for metrics on training data
+fcn1t_eval = @(p, F, L) fcn1t(p, F, L, trd);
+fcn2t_eval = @(p, F, L) fcn2t(p, F, L, trd);
+fcn3t_eval = @(p, F, L) fcn3t(p, F, L, trd);
+fcn4t_eval = @(p, F, L) fcn4t(p, F, L, trd);
+
+models_t = {fcn1t_eval, fcn2t_eval, fcn3t_eval, fcn4t_eval};
+params_t = {p1t, p2t, p3t, p4t};
+names_t  = {'M1t: +time', 'M2t: +time', 'M3t: +time', 'M4t: +time'};
+npar_t   = [4, 5, 6, 5];   % 2 extra params (rate, T_offset) vs static
 
 R2s   = cellfun(@(f,p) R2fn(f(p, Frd, Lobs)),   models, params);
 RMSEs = cellfun(@(f,p) RMSEfn(f(p, Frd, Lobs)), models, params);
+R2s_t   = cellfun(@(f,p) R2fn(f(p, Frd, Lobs)),   models_t, params_t);
+RMSEs_t = cellfun(@(f,p) RMSEfn(f(p, Frd, Lobs)), models_t, params_t);
 
-% AIC (relative, for model selection)
+% AIC across all 8 models (joint pool for ΔAIC)
 n    = numel(Frd);
-SSEs = cellfun(@(f,p) sum((f(p, Frd, Lobs) - Fref).^2), models, params);
-AICs = n.*log(SSEs./n) + 2.*npar;
-dAIC = AICs - min(AICs);
+SSEs   = cellfun(@(f,p) sum((f(p, Frd, Lobs) - Fref).^2), models,   params);
+SSEs_t = cellfun(@(f,p) sum((f(p, Frd, Lobs) - Fref).^2), models_t, params_t);
+all_SSE  = [SSEs,   SSEs_t];
+all_npar = [npar,   npar_t];
+all_AIC  = n.*log(all_SSE./n) + 2.*all_npar;
+dAIC_all = all_AIC - min(all_AIC);
+dAIC     = dAIC_all(1:4);
+dAIC_t   = dAIC_all(5:8);
 
 fprintf('\n%-24s  R²      RMSE    ΔAIC  params\n', 'Model');
 fprintf('%s\n', repmat('-',1,72));
 for mi = 1:4
     fprintf('%-24s  %.4f  %6.3f  %5.1f  %s\n', ...
         names{mi}, R2s(mi), RMSEs(mi), dAIC(mi), mat2str(params{mi}, 5));
+end
+fprintf('%s\n', repmat('-',1,72));
+for mi = 1:4
+    rate = params_t{mi}(end-1);
+    Toff = params_t{mi}(end);
+    fprintf('%-24s  %.4f  %6.3f  %5.1f  rate=%+.5f /s  T_off=%.0f s\n', ...
+        names_t{mi}, R2s_t(mi), RMSEs_t(mi), dAIC_t(mi), rate, Toff);
 end
 
 %% --- 5. Visualisation ------------------------------------------------------
@@ -193,59 +386,198 @@ for mi = 1:4
     grid on;
 end
 
-%% -- Tile 6: Timecourse comparison -------------------------------------------
-figure(44);clf;
-nexttile;
-hold on;
+%% -- Figure 44: time-decay factor + timecourse comparison -------------------
+figure(45); clf;
+tiledlayout('flow', 'TileSpacing', 'compact', 'Padding', 'compact');
 
-% Reference
+% -- Tile A: global correction factor C(T) = 1 + rate*T --------------------
+nexttile; hold on;
+cmapT = lines(4);
+
+% Show C(T) over a meaningful horizon.
+% With one recording pair, T_offset is near 0 and rate captures only the
+% within-window drift — extrapolation beyond ~T_span is speculative.
+% A horizon of max(600s, 5×Tspan_rd) gives at least 10 min for context.
+Tspan_rd_plot = max(trd) - t_start_rd;
+T_max_plot = max(600, 5 * Tspan_rd_plot);
+T_plot     = linspace(0, T_max_plot, 500);
+
+for mi = 1:4
+    rate = params_t{mi}(end-1);
+    Toff = params_t{mi}(end);
+    C_T  = 1 + rate .* T_plot;
+    plot(T_plot, C_T, '-', 'Color', cmapT(mi,:), 'LineWidth', 2, ...
+        'DisplayName', sprintf('%s  rate=%+.4f/s  T_{off}=%.0fs', names_t{mi}, rate, Toff));
+    
+    % Mark the run-down window: [T_offset, T_offset + Tspan_rd]
+    Tspan_rd = max(trd) - t_start_rd;
+    xregion(Toff, Toff + Tspan_rd, 'FaceColor', cmapT(mi,:), 'FaceAlpha', 0.08, ...
+        'HandleVisibility', 'off');
+    % Dot at T_offset
+    plot(Toff, 1 + rate*Toff, 'o', 'Color', cmapT(mi,:), 'MarkerSize', 7, ...
+        'MarkerFaceColor', cmapT(mi,:), 'HandleVisibility', 'off');
+end
+yline(1, 'k--', 'LineWidth', 1, 'HandleVisibility', 'off');
+xline(0, 'k-',  'LineWidth', 1.2, 'Label', 'Reference (T=0)', ...
+    'LabelVerticalAlignment', 'bottom', 'HandleVisibility', 'off');
+xlabel('Elapsed time since reference  T  [s]');
+ylabel('C(T) = correction factor');
+title('Global rundown:  C(T) = 1 + rate \cdot T   (dots = start of run-down window)');
+legend('Location', 'northwest', 'FontSize', 7);
+grid on;
+
+% -- Tile B: timecourse — best static vs best +time -------------------------
+nexttile; hold on;
+
 plot(t_ref, F_refact + Fpas, 'k', 'LineWidth', 1.8, 'DisplayName', 'Reference');
+plot(t_ref, F_rd, 'Color', [1 1 1]*0.5, 'LineWidth', 1, 'DisplayName', 'Impaired by rundown')
 
-% Current manual approach (inline: scaleRundown = F_rd * (r0 + k*(L-L0)))
-% F_corr_manual = F_rdact .* (r0 + k .* (L_ref - L0));
-% plot(t_ref, F_corr_manual + Fpas, 'b--', 'LineWidth', 1.0, ...
-%     'DisplayName', sprintf('Manual r0=%.3f k=%.2f', r0, k));
-
-% Fitted models
-ls = {'-', '-', '-', '-'};
-lw = [1.3, 1.3, 1.3, 1.8];
+% All static models (thin)
+lsS = {'--', '--', '--', '--'};
 for mi = 1:4
     Fcorr_i = models{mi}(params{mi}, F_rdact, L_ref) + Fpas;
-    plot(t_ref, Fcorr_i, ls{mi}, 'LineWidth', lw(mi), ...
+    plot(t_ref, Fcorr_i, lsS{mi}, 'Color', cmapT(mi,:), 'LineWidth', 1.0, ...
         'DisplayName', sprintf('%s (R²=%.3f)', names{mi}, R2s(mi)));
 end
 
+% All time-extended models (thick solid): evaluate at full t_ref timecourse
+fcnt_all = {fcn1t, fcn2t, fcn3t, fcn4t};
+for mi = 1:4
+    Fcorr_it = fcnt_all{mi}(params_t{mi}, F_rdact, L_ref, t_ref);
+    plot(t_ref, Fcorr_it + Fpas, '-', 'Color', cmapT(mi,:), 'LineWidth', 1, ...
+        'DisplayName', sprintf('%s (R²=%.3f)', names_t{mi}, R2s_t(mi)));
+end
+
 xlabel('Time (s)');
-ylabel('Active force');
-title('Timecourse: reference vs corrected run-down');
+ylabel('Force');
+title('Timecourse: reference vs corrected (dashed=static, solid=+time)');
 legend('Location', 'best', 'FontSize', 6);
 xlim([66.63 78.56]);
 grid on;
 
+% -- Tile C: timecourse - ratio
+nexttile; hold on;
+
+% All static models (thin)
+lsS = {'--', '--', '--', '--'};
+for mi = 1:4
+    Fcorr_i = models{mi}(params{mi}, F_rdact, L_ref) + Fpas;
+    plot(t_ref, Fcorr_i./F_rdact, lsS{mi}, 'Color', cmapT(mi,:), 'LineWidth', 1.0, ...
+        'DisplayName', sprintf('%s (R²=%.3f)', names{mi}, R2s(mi)));
+end
+
+% All time-extended models (thick solid): evaluate at full t_ref timecourse
+fcnt_all = {fcn1t, fcn2t, fcn3t, fcn4t};
+for mi = 1:4
+    Fcorr_it = fcnt_all{mi}(params_t{mi}, F_rdact, L_ref, t_ref)+ Fpas;
+    plot(t_ref, Fcorr_it./F_rdact, '-', 'Color', cmapT(mi,:), 'LineWidth', 1.8, ...
+        'DisplayName', sprintf('%s (R²=%.3f)', names_t{mi}, R2s_t(mi)));
+end
+
+xlabel('Time (s)');
+ylabel('Force');
+title('Timecourse: reference vs corrected (dashed=static, solid=+time)');
+legend('Location', 'best', 'FontSize', 6);
+xlim([66.63 78.56]);
+grid on;
+
+
+%% --- 5b. Figure 46: focused M1 / M3 family comparison ----------------------
+%
+% For each of M1 and M3, shows 4 variants of corrected F_rd:
+%   static       — spatial correction only (no time)
+%   t_calc       — + time factor, rate = Δslope/F0  (measured)
+%   t_fit        — + time factor, rate freely optimised
+%
+% Also shows:
+%   F_ref (original)      — the raw reference recording
+%   F_ref_corr            — slope-corrected reference (fitting target)
+%   F_rd (raw)            — impaired recording before any correction
+%
+% The slope-corrected F_rd variants should align with F_ref_corr (black dashed).
+
+figure(46); clf;
+tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+mi_labels   = {'M1', 'M3'};
+fcns_st     = {fcn1,     fcn3};
+pars_st     = {p1,       p3};
+fcns_tc     = {fcn1t,    fcn3t};
+pars_tc     = {p1t,      p3t};
+fcns_tf     = {fcn1t_fit, fcn3t_fit};
+pars_tf     = {p1t_fit,   p3t_fit};
+cbase46     = {[0.15 0.35 0.80], [0.05 0.60 0.15]};  % blue, green
+xlimW46     = [68 79.5];
+
+for ii = 1:2
+    cb = cbase46{ii};
+    nexttile; hold on;
+
+    % --- Reference traces ----------------------------------------------------
+    plot(t_ref, F_ref,      'k',   'LineWidth', 1.5, ...
+        'DisplayName', 'F_{ref} original');
+    plot(t_ref, F_ref_corr, 'k--', 'LineWidth', 1.5, ...
+        'DisplayName', 'F_{ref} slope-corrected (fitting target)');
+    plot(t_ref, F_rd,       'Color', [0.65 0.65 0.65], 'LineWidth', 0.8, ...
+        'DisplayName', 'F_{rd} raw');
+
+    % --- Corrected F_rd variants (operate on slope-corrected F_rdact) --------
+    % Static
+    Fc_st = fcns_st{ii}(pars_st{ii}, F_rdact, L_ref);
+    plot(t_ref, Fc_st, ':', 'Color', cb, 'LineWidth', 1.5, ...
+        'DisplayName', sprintf('%s static (R²=%.3f)', mi_labels{ii}, ...
+            R2fn(fcns_st{ii}(pars_st{ii}, Frd, Lobs))));
+
+    % Time with calculated slope
+    Fc_tc = fcns_tc{ii}(pars_tc{ii}, F_rdact, L_ref, t_ref);
+    rate_tc = pars_tc{ii}(end-1);  Toff_tc = pars_tc{ii}(end);
+    plot(t_ref, Fc_tc, '-', 'Color', cb, 'LineWidth', 1.8, ...
+        'DisplayName', sprintf('%st calc  rate=%.4f T_{off}=%.0fs (R²=%.3f)', ...
+            mi_labels{ii}, rate_tc, Toff_tc, ...
+            R2fn(fcns_tc{ii}(pars_tc{ii}, Frd, Lobs, trd))));
+
+    % Time with fitted slope
+    Fc_tf = fcns_tf{ii}(pars_tf{ii}, F_rdact, L_ref, t_ref);
+    rate_tf = pars_tf{ii}(end-1);  Toff_tf = pars_tf{ii}(end);
+    plot(t_ref, Fc_tf, '-', 'Color', cb*0.55 + [0.2 0.2 0.2], 'LineWidth', 2.2, ...
+        'DisplayName', sprintf('%st fit   rate=%.4f T_{off}=%.0fs (R²=%.3f)', ...
+            mi_labels{ii}, rate_tf, Toff_tf, ...
+            R2fn(fcns_tf{ii}(pars_tf{ii}, Frd, Lobs, trd))));
+
+    xlim(xlimW46); ylabel('Force (kPa)'); xlabel('Time (s)');
+    title(sprintf('%s family:  F_{ref} (solid=orig, dashed=corrected)  |  F_{rd} corrected (dot=static, thin=Δslope, thick=fitted)', ...
+        mi_labels{ii}));
+    legend('Location', 'northeast', 'FontSize', 7); box on; grid on;
+end
+
 %% --- 6. Best model summary -------------------------------------------------
 
-[~, best] = min(dAIC);
-fprintf('\nBest model by AIC: %s\n', names{best});
-fprintf('  params = %s\n', mat2str(params{best}, 6));
+[~, best_all] = min(dAIC_all);
+all_names = [names, names_t];
+fprintf('\nBest model overall by AIC: %s  (ΔAIC=0)\n', all_names{best_all});
+if best_all > 4
+    bmi   = best_all - 4;
+    rate  = params_t{bmi}(end-1);
+    Toff  = params_t{bmi}(end);
+    fprintf('  static params = %s\n', mat2str(params_t{bmi}(1:end-2), 6));
+    fprintf('  rate          = %+.6f /s\n', rate);
+    fprintf('  T_offset      = %.1f s\n', Toff);
+    fprintf('  C(T_offset)   = %.4f   C(T_offset+span) = %.4f\n', ...
+        1+rate*Toff, 1+rate*(Toff + max(trd)-t_start_rd));
+    fprintf('\n  Two-stage identification:\n');
+    fprintf('  rate     ← within-window time slope of residual ratio\n');
+    fprintf('  T_offset ← inferred from correction level: (C0-1)/rate\n');
+    fprintf('  Both are separately identifiable from one recording pair.\n');
+    fprintf('  rate*T_offset = %.4f  (total correction at window start)\n', rate*Toff);
+else
+    fprintf('  params = %s\n', mat2str(params{best_all}, 6));
+end
 
-% Build a ready-to-use anonymous function for downstream use:
-fprintf('\nTo apply the best correction in your script:\n');
-switch best
-    case 1
-        fprintf('  p = %s;\n', mat2str(p1,5));
-        fprintf('  F_corrected = F_rdact .* (p(1) + p(2).*(L_ref - %.2f));\n', L0fit);
-    case 2
-        fprintf('  F0 = %.4g;\n', F0);
-        fprintf('  p  = %s;\n', mat2str(p2,5));
-        fprintf('  F_corrected = F_rdact .* (p(1) + p(2).*(L_ref - %.2f) + p(3).*(F_rdact/F0 - 1));\n', L0fit);
-    case 3
-        fprintf('  F0 = %.4g;\n', F0);
-        fprintf('  p  = %s;\n', mat2str(p3,5));
-        fprintf(['  F_corrected = F_rdact .* (p(1) + p(2).*(L_ref - %.2f) + p(3).*(F_rdact/F0-1)' ...
-                 ' + p(4).*(L_ref - %.2f).*(F_rdact/F0-1));\n'], L0fit, L0fit);
-    case 4
-        fprintf('  p  = %s;\n', mat2str(p4,5));
-        fprintf('  F_corrected = exp(p(1) + p(2).*log(F_rdact) + p(3).*(L_ref - %.2f));\n', L0fit);
+fprintf('\nFuture dataset correction (given T = elapsed seconds since reference):\n');
+if best_all > 4
+    fprintf('  F_corrected = fcn%dt(p%dt, F_rd, L, t_recording);\n', bmi, bmi);
+    fprintf('  where T_fn(t) = T_offset + (t - t_start_recording)\n');
+    fprintf('  and   p%dt = %s\n', bmi, mat2str(params_t{bmi}, 5));
 end
 
 %% Saving
@@ -254,6 +586,7 @@ end
 fprintf('\nSaving merged outputs...\n');
 for mi = 1:3
     outNameRaw = sprintf('Merged_RunDownCorrection_Model%g.txt', mi);
+    outNameRaw = sprintf('Merged_RunDownTimeCorrection_Model%g.txt', mi);
     outName = fullfile(dataDir, outNameRaw);
 
     Fcorr_i = models{mi}(params{mi}, F_rdact, L_ref) + Fpas;

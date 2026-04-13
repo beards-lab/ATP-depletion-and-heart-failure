@@ -11,8 +11,8 @@
 %   All lengths are converted to µm inside loadDataset() via Lo_ref_um.
 %   Baker data is already in µm → set Lo_ref_um = 1.0 (no-op multiply).
 
-close all; clc;
-addpath(genpath('..'));
+% close all; clc;
+% addpath(genpath('..'));
 
 %% ══════════════════════════════════════════════════════════════════════════
 %% Section 1 — Dataset descriptor array
@@ -106,15 +106,15 @@ d.fillMarker = false;
 d.data_slack = [74.0 77.5];
 d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
-d.data_step  = [69.2 70.5];
-d.data_stair = [72.4 73.2];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
 
 % ── 03/27 8mM repeat - rundown compensation Model 1
 d = struct();
 d.label      = '03/27 8mM repeat model 1';
-d.dataFile   = '../data/03 27 2026 M/Merged_RunDownCorrection_Model1.txt';
+d.dataFile   = '../data/03 27 2026 M/Merged_RunDownTimeCorrection_Model1.txt';
 d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 d.Lo_ref_um  = 2.0;
 d.ATP        = 2;
@@ -125,14 +125,14 @@ d.fillMarker = false;
 d.data_slack = [74.0 77.5];
 d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
-d.data_step  = [69.2 70.5];
-d.data_stair = [72.4 73.2];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
 % ── 03/27 8mM repeat - rundown compensation Model 2
 d = struct();
 d.label      = '03/27 8mM repeat model 2';
-d.dataFile   = '../data/03 27 2026 M/Merged_RunDownCorrection_Model2.txt';
+d.dataFile   = '../data/03 27 2026 M/Merged_RunDownTimeCorrection_Model2.txt';
 d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 d.Lo_ref_um  = 2.0;
 d.ATP        = 2;
@@ -143,14 +143,14 @@ d.fillMarker = false;
 d.data_slack = [74.0 77.5];
 d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
-d.data_step  = [69.2 70.5];
-d.data_stair = [72.4 73.2];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
 % ── 03/27 8mM repeat - rundown compensation Model 3
 d = struct();
 d.label      = '03/27 8mM repeat model 3';
-d.dataFile   = '../data/03 27 2026 M/Merged_RunDownCorrection_Model3.txt';
+d.dataFile   = '../data/03 27 2026 M/Merged_RunDownTimeCorrection_Model3.txt';
 d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
 d.Lo_ref_um  = 2.0;
 d.ATP        = 2;
@@ -161,8 +161,8 @@ d.fillMarker = false;
 d.data_slack = [74.0 77.5];
 d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
-d.data_step  = [69.2 70.5];
-d.data_stair = [72.4 73.2];
+% d.data_step  = [69.2 70.5];
+% d.data_stair = [72.4 73.2];
 DSC{end+1} = d;
 
 % % ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
