@@ -19,23 +19,22 @@ dataDir = '../data/03 27 2026 M/';
 data = load(fullfile(dataDir, 'AllDataMerged')).data;
 
 refData = data(2);
-t_ref = refData.t_fineShifted;
-F_ref = refData.F_fineShifted;
-L_ref = refData.L_fineShifted;
-% t_ref = refData.t_shifted_orig;
-% F_ref = refData.F_shifted_orig;
-% L_ref = refData.L_shifted_orig;
+% F_ref: hi-fi smoothed-interpolated grid (used for F_ref processing & saving)
+t_hifi = refData.t_fineShifted;
+F_ref  = refData.F_fineShifted;
+L_ref  = refData.L_fineShifted;
+t_ref  = t_hifi;   % alias for downstream compat (F_ref timecourse)
 
-
-% run-down data
+% F_rd: lo-fi original measured points (unsmoothed, used for F_rd processing & saving)
+t_lofi = refData.t_shifted_orig;
 rundownData = data(4);
-F_rd = interp1(rundownData.t_fineShifted, rundownData.F_fineShifted, t_ref);
-L_rd = interp1(rundownData.t_fineShifted, rundownData.L_fineShifted, t_ref);
+F_rd   = interp1(rundownData.t_shifted_orig, rundownData.F_shifted_orig, t_lofi);
+L_rd   = interp1(t_hifi, L_ref, t_lofi, 'linear', NaN);  % Ls same protocol, resample
 
 % passive reference
-F_pas = 0; %interp1(data(5).t_fineShifted, data(5).F_fineShifted, t_ref);
-F_rdact = F_rd - F_pas;
-F_refact = F_ref - F_pas;
+F_pas    = 0;
+F_rdact  = F_rd  - F_pas;   % on t_lofi
+F_refact = F_ref - F_pas;   % on t_hifi
 
 L0 = 1.0;
 k  = -0.6;   % SL slope: increase until high-SL portion of corrected trace aligns with F_refact
@@ -71,9 +70,9 @@ mask_ref   = zoneMask(t_ref) & isfinite(F_ref);
 [p_ref, s_p_ref] = polyfit(t_ref(mask_ref), F_ref(mask_ref), 1);
 slope_ref  = p_ref(1);   % kPa/s  (typically negative: force decays)
 
-% Fit slope for run-down recording on its own fine time axis
-t_rd_full  = rundownData.t_fineShifted;
-F_rd_full  = rundownData.F_fineShifted;
+% Fit slope for run-down recording on its own lo-fi time axis (unsmoothed)
+t_rd_full  = rundownData.t_shifted_orig;
+F_rd_full  = rundownData.F_shifted_orig;
 mask_rd    = zoneMask(t_rd_full) & isfinite(F_rd_full);
 p_rd       = polyfit(t_rd_full(mask_rd), F_rd_full(mask_rd), 1);
 slope_rd   = p_rd(1);    % kPa/s
@@ -96,8 +95,8 @@ fprintf('  F_ref(zone1) = %.1f kPa,  F_rd(zone1) = %.1f kPa,  gap = %.1f kPa\n',
 fprintf('  T0 = gap / |slope_ref| = %.1f s  (hypothetical decay distance)\n', T0);
 
 % Simple slope correction: correct both traces to t_zone_ref
-F_ref_slopeCorr = F_ref - slope_ref .* (t_ref - t_zone_ref);
-F_rd_slopeCorr  = F_rd  - slope_rd  .* (t_ref - t_zone_ref);
+F_ref_slopeCorr = F_ref - slope_ref .* (t_hifi - t_zone_ref);   % on t_hifi
+F_rd_slopeCorr  = F_rd  - slope_rd  .* (t_lofi - t_zone_ref);   % on t_lofi
 
 % % Keep old names for compatibility
 % F_ref_corr = F_ref_slopeCorr;
@@ -109,21 +108,24 @@ F_rd_slopeCorr  = F_rd  - slope_rd  .* (t_ref - t_zone_ref);
 
 % Rate implied by slope difference: d/dt[F_ref/F_rd] ≈ Δslope / F0_rd
 % Used below as a physically motivated prior for the time-extended model.
-F0_prior      = median(F_rd_slopeCorr(isfinite(F_rd_slopeCorr) & F_rd_slopeCorr > 3));
+F0_prior        = median(F_rd_slopeCorr(isfinite(F_rd_slopeCorr) & F_rd_slopeCorr > 3));
 rate_from_slope = (slope_rd - slope_ref) / F0_prior;   % [1/s]
 fprintf('  Implied correction rate  Δslope/F0 = %+.5f /s\n', rate_from_slope);
 
 % ---- end slope correction ---------------------------------------------------
 
-Fmin_thresh = 3;    % [mN/mm² or kPa] min active force; below this the ratio is noise
-validWin = isfinite(F_rdact) & isfinite(F_refact) & isfinite(L_ref) ...
-      & F_rdact > Fmin_thresh & F_refact > 0 & t_ref > 68 & t_ref < 78;
+% Interpolate F_ref (hi-fi) onto lo-fi grid for paired fitting
+F_ref_lofi_slopeCorr = interp1(t_hifi, F_ref_slopeCorr, t_lofi, 'linear', NaN);
 
-trd = t_ref(validWin);
+Fmin_thresh = 3;    % [mN/mm² or kPa] min active force; below this the ratio is noise
+validWin = isfinite(F_rdact) & isfinite(F_ref_lofi_slopeCorr) & isfinite(L_rd) ...
+      & F_rdact > Fmin_thresh & t_lofi > 68 & t_lofi < 78;
+
+trd  = t_lofi(validWin);
 Frd  = F_rd_slopeCorr(validWin);
-Fref = F_ref_slopeCorr(validWin);
-Lobs = L_ref(validWin);
-Fpas = 0;%F_pas(valid);
+Fref = F_ref_lofi_slopeCorr(validWin);
+Lobs = L_rd(validWin);
+Fpas = 0;
 
 F0    = median(Frd(zoneMask(trd)));    % normalisation reference force
 L0fit = 1.0;            % pivot SL (same as manual L0)
@@ -198,7 +200,7 @@ npar   = [2, 3, 4, 3];
 %   - Captures SL dependence: correction varies with sarcomere length
 %   - For M3+: also captures F dependence and F×L interaction
 
-frac_ref = (t_ref - t_zone_ref) / T0;   % fraction of T0 at each time point
+frac_ref = (t_hifi - t_zone_ref) / T0;   % fraction of T0 at each time point (F_ref is on t_hifi)
 
 % M1 model-based correction of F_ref (SL-dependent, F-independent)
 r_M1_ref      = fcn1(p1, F_ref, L_ref) ./ F_ref;   % = p1(1) + p1(2)*(L-L0)
@@ -485,22 +487,22 @@ grid on;
 % -- Tile B: timecourse — best static vs best +time -------------------------
 nexttile; hold on;
 
-plot(t_ref, F_refact + Fpas, 'k', 'LineWidth', 1.8, 'DisplayName', 'Reference');
-plot(t_ref, F_rd, 'Color', [1 1 1]*0.5, 'LineWidth', 1, 'DisplayName', 'Impaired by rundown')
+plot(t_hifi, F_refact + Fpas, 'k', 'LineWidth', 1.8, 'DisplayName', 'Reference');
+plot(t_lofi, F_rd, 'Color', [1 1 1]*0.5, 'LineWidth', 1, 'DisplayName', 'Impaired by rundown')
 
-% All static models (thin)
+% All static models (thin) — on t_lofi
 lsS = {'--', '--', '--', '--'};
 for mi = 1:4
-    Fcorr_i = models{mi}(params{mi}, F_rdact, L_ref) + Fpas;
-    plot(t_ref, Fcorr_i, lsS{mi}, 'Color', cmapT(mi,:), 'LineWidth', 1.0, ...
+    Fcorr_i = models{mi}(params{mi}, F_rdact, L_rd) + Fpas;
+    plot(t_lofi, Fcorr_i, lsS{mi}, 'Color', cmapT(mi,:), 'LineWidth', 1.0, ...
         'DisplayName', sprintf('%s (R²=%.3f)', names{mi}, R2s(mi)));
 end
 
-% All time-extended models (thick solid): evaluate at full t_ref timecourse
+% All time-extended models (thick solid) — on t_lofi
 fcnt_all = {fcn1t, fcn2t, fcn3t, fcn4t};
 for mi = 1:4
-    Fcorr_it = fcnt_all{mi}(params_t{mi}, F_rdact, L_ref, t_ref);
-    plot(t_ref, Fcorr_it + Fpas, '-', 'Color', cmapT(mi,:), 'LineWidth', 1, ...
+    Fcorr_it = fcnt_all{mi}(params_t{mi}, F_rdact, L_rd, t_lofi);
+    plot(t_lofi, Fcorr_it + Fpas, '-', 'Color', cmapT(mi,:), 'LineWidth', 1, ...
         'DisplayName', sprintf('%s (R²=%.3f)', names_t{mi}, R2s_t(mi)));
 end
 
@@ -514,19 +516,19 @@ grid on;
 % -- Tile C: timecourse - ratio
 nexttile; hold on;
 
-% All static models (thin)
+% All static models (thin) — on t_lofi
 lsS = {'--', '--', '--', '--'};
 for mi = 1:4
-    Fcorr_i = models{mi}(params{mi}, F_rdact, L_ref) + Fpas;
-    plot(t_ref, Fcorr_i./F_rdact, lsS{mi}, 'Color', cmapT(mi,:), 'LineWidth', 1.0, ...
+    Fcorr_i = models{mi}(params{mi}, F_rdact, L_rd) + Fpas;
+    plot(t_lofi, Fcorr_i./F_rdact, lsS{mi}, 'Color', cmapT(mi,:), 'LineWidth', 1.0, ...
         'DisplayName', sprintf('%s (R²=%.3f)', names{mi}, R2s(mi)));
 end
 
-% All time-extended models (thick solid): evaluate at full t_ref timecourse
+% All time-extended models (thick solid) — on t_lofi
 fcnt_all = {fcn1t, fcn2t, fcn3t, fcn4t};
 for mi = 1:4
-    Fcorr_it = fcnt_all{mi}(params_t{mi}, F_rdact, L_ref, t_ref)+ Fpas;
-    plot(t_ref, Fcorr_it./F_rdact, '-', 'Color', cmapT(mi,:), 'LineWidth', 1.8, ...
+    Fcorr_it = fcnt_all{mi}(params_t{mi}, F_rdact, L_rd, t_lofi) + Fpas;
+    plot(t_lofi, Fcorr_it./F_rdact, '-', 'Color', cmapT(mi,:), 'LineWidth', 1.8, ...
         'DisplayName', sprintf('%s (R²=%.3f)', names_t{mi}, R2s_t(mi)));
 end
 
@@ -545,49 +547,52 @@ grid on;
 % Focus on M1 (linear static) as primary data-processing model.
 
 figure(46); clf;
-tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+tl46 = tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
 xlimW46 = [68 79.5];
 
 % -- Top: F_ref compensation comparison (slope vs M1-model vs M3-model) ------
-nexttile; hold on;
-plot(t_ref, F_ref,           'k',   'LineWidth', 1.5, 'DisplayName', 'F_{ref} original');
-plot(t_ref, F_ref_slopeCorr, '--',  'Color', [0.4 0.4 0.9], 'LineWidth', 1.5, ...
+ax46_top = nexttile(tl46); hold on;
+plot(t_hifi, F_ref,           'k',   'LineWidth', 1.5, 'DisplayName', 'F_{ref} original');
+plot(t_hifi, F_ref_slopeCorr, '--',  'Color', [0.4 0.4 0.9], 'LineWidth', 1.5, ...
     'DisplayName', sprintf('F_{ref} slope-corrected (%+.3f kPa/s)', slope_ref));
-plot(t_ref, F_ref_M1corr,   '-',   'Color', [0.0 0.5 0.8], 'LineWidth', 2.0, ...
+plot(t_hifi, F_ref_M1corr,   '-',   'Color', [0.0 0.5 0.8], 'LineWidth', 2.0, ...
     'DisplayName', sprintf('F_{ref} M1-model (T_0=%.1fs, a=%.3f)', T0, p1(1)));
-plot(t_ref, F_ref_M3corr,   '-',   'Color', [0.0 0.7 0.3], 'LineWidth', 1.5, ...
+plot(t_hifi, F_ref_M3corr,   '-',   'Color', [0.0 0.7 0.3], 'LineWidth', 1.5, ...
     'DisplayName', 'F_{ref} M3-model (F×L interact)');
 xlim(xlimW46); ylabel('Force (kPa)'); xlabel('Time (s)');
 title('F_{ref} within-recording correction: slope vs model-based');
-legend('Location', 'northeast', 'FontSize', 7); box on; grid on;
+legend('Location', 'southwest', 'FontSize', 7); box on; grid on;
 
 % -- Bottom: F_rd correction comparison (M1 only: static / t-calc / t-fit) ---
-nexttile; hold on;
-plot(t_ref, F_ref,         'k',    'LineWidth', 1.5, 'DisplayName', 'F_{ref} original');
-plot(t_ref, F_ref_M1corr,  'k--',  'LineWidth', 1.2, 'DisplayName', 'F_{ref} M1-corrected (target)');
-plot(t_ref, F_rd,          'Color', [0.65 0.65 0.65], 'LineWidth', 0.8, ...
+ax46_bot = nexttile(tl46); hold on;
+plot(t_hifi, F_ref,   'k',    'LineWidth', 1.5, 'DisplayName', 'F_{ref} original');
+plot(t_lofi, F_rd,    'Color', [0.65 0.65 0.65], 'LineWidth', 0.8, ...
     'DisplayName', 'F_{rd} raw');
 
 % M1 static
-Fc_M1 = fcn1(p1, F_rdact, L_ref);
-plot(t_ref, Fc_M1, ':', 'Color', [0.15 0.35 0.80], 'LineWidth', 1.5, ...
+Fc_M1 = fcn1(p1, F_rdact, L_rd);
+plot(t_lofi, Fc_M1, ':', 'Color', [0.15 0.35 0.80], 'LineWidth', 1.5, ...
     'DisplayName', sprintf('M1 static (R²=%.3f)', R2fn(fcn1(p1, Frd, Lobs))));
 
 % M1t calculated slope
-Fc_M1t = fcn1t(p1t, F_rdact, L_ref, t_ref);
-plot(t_ref, Fc_M1t, '-', 'Color', [0.15 0.35 0.80], 'LineWidth', 1.8, ...
+Fc_M1t = fcn1t(p1t, F_rdact, L_rd, t_lofi);
+plot(t_lofi, Fc_M1t, '-', 'Color', [0.15 0.35 0.80], 'LineWidth', 1.8, ...
     'DisplayName', sprintf('M1t calc  rate=%.4f/s (R²=%.3f)', p1t(end-1), ...
         R2fn(fcn1t(p1t, Frd, Lobs, trd))));
 
 % M1t fitted slope
-Fc_M1tf = fcn1t_fit(p1t_fit, F_rdact, L_ref, t_ref);
-plot(t_ref, Fc_M1tf, '-', 'Color', [0.50 0.25 0.65], 'LineWidth', 2.0, ...
+Fc_M1tf = fcn1t_fit(p1t_fit, F_rdact, L_rd, t_lofi);
+plot(t_lofi, Fc_M1tf, '-', 'Color', [0.50 0.25 0.65], 'LineWidth', 2.0, ...
     'DisplayName', sprintf('M1t fit   rate=%.4f/s T_{off}=%.0fs (R²=%.3f)', ...
         p1t_fit(end-1), p1t_fit(end), R2fn(fcn1t_fit(p1t_fit, Frd, Lobs, trd))));
 
+% Goal line (F_ref slope-detrended = actual fit target) — plotted LAST so it sits on top
+plot(t_hifi, F_ref_slopeCorr, 'k--', 'LineWidth', 1.5, ...
+    'DisplayName', 'F_{ref} slope-detrended (target)');
+
 xlim(xlimW46); ylabel('Force (kPa)'); xlabel('Time (s)');
-title('F_{rd} correction (M1 family): static | Δslope-time | fitted-time');
-legend('Location', 'northeast', 'FontSize', 7); box on; grid on;
+title('F_{rd} correction (M1 family): static | \Deltaslope-time | fitted-time');
+legend('Location', 'southwest', 'FontSize', 7); box on; grid on;
 
 %% --- 6. Best model summary -------------------------------------------------
 
@@ -632,10 +637,11 @@ cSlope = [0.25 0.25 0.85];
 cM1    = [0.85 0.20 0.10];
 cM3    = [0.05 0.60 0.15];
 
-% -- Panel A: zoomed timecourse (zone 1 → zone 2) with both methods ----------
+% -- Panel A: zoomed timecourse — raw decay + slope correction only ----------
+%    (Simple "problem statement": shows the decay and slope fix, not the model.)
 nexttile; hold on;
 xlimZ = [71 79.5];
-winZ  = t_ref >= xlimZ(1) & t_ref <= xlimZ(2);
+winZ  = t_hifi >= xlimZ(1) & t_hifi <= xlimZ(2);
 
 for zi = 1:2
     patch([zones(zi,1) zones(zi,2) zones(zi,2) zones(zi,1)], ...
@@ -645,28 +651,23 @@ for zi = 1:2
         'HorizontalAlignment', 'center', 'FontSize', 7.5, 'Color', [0.3 0.5 0.3]);
 end
 
-plot(t_ref(winZ), F_ref(winZ),          'k',  'LineWidth', 2.0, 'DisplayName', 'F_{ref} original');
-plot(t_ref(winZ), F_ref_slopeCorr(winZ),'--', 'Color', cSlope, 'LineWidth', 1.8, ...
-    'DisplayName', sprintf('F_{ref} slope-corrected (%.3f kPa/s)', slope_ref));
-plot(t_ref(winZ), F_ref_M1corr(winZ),   '-',  'Color', cM1,   'LineWidth', 2.0, ...
-    'DisplayName', sprintf('F_{ref} M1-model (T_0 = %.1f s)', T0));
-plot(t_ref(winZ), F_ref_M3corr(winZ),   '-',  'Color', cM3,   'LineWidth', 1.4, ...
-    'DisplayName', 'F_{ref} M3-model (F×SL)');
+plot(t_hifi(winZ), F_ref(winZ),           'k',  'LineWidth', 2.0, 'DisplayName', 'F_{ref} original');
+plot(t_hifi(winZ), F_ref_slopeCorr(winZ), '--', 'Color', cSlope, 'LineWidth', 1.8, ...
+    'DisplayName', sprintf('F_{ref} slope-corrected (%+.3f kPa/s)', slope_ref));
 
-% Annotate divergence at zone 2 mid-point
+% Annotate slope correction magnitude at zone 2 mid-point
 t_z2m   = mean(zones(2,:));
-f_orig  = interp1(t_ref, F_ref,          t_z2m);
-f_slope = interp1(t_ref, F_ref_slopeCorr,t_z2m);
-f_M1    = interp1(t_ref, F_ref_M1corr,   t_z2m);
-annotation_x = t_z2m + 0.05;
-plot([t_z2m t_z2m], [f_slope f_M1], 'k-', 'LineWidth', 0.8, 'HandleVisibility', 'off');
-text(t_z2m + 0.1, (f_slope+f_M1)/2, sprintf('+%.2f kPa', f_M1-f_slope), ...
+f_orig  = interp1(t_hifi, F_ref,          t_z2m);
+f_slope = interp1(t_hifi, F_ref_slopeCorr,t_z2m);
+plot([t_z2m t_z2m], [f_orig f_slope], '-', 'Color', cSlope, 'LineWidth', 1.2, ...
+    'HandleVisibility', 'off');
+text(t_z2m + 0.1, (f_orig+f_slope)/2, sprintf('+%.2f kPa', f_slope-f_orig), ...
     'FontSize', 7, 'VerticalAlignment', 'middle');
 
 xlim(xlimZ); ylim([61 77]);
 ylabel('Force (kPa)'); xlabel('Time (s)');
-title('F_{ref} within-recording correction — zoomed (zone 1 → zone 2)');
-legend('Location', 'northeast', 'FontSize', 7.5); grid on; box on;
+title('Within-recording force decay and slope correction (zone 1 \rightarrow zone 2)');
+legend('Location', 'southwest', 'FontSize', 7.5); grid on; box on;
 
 % -- Panel B: T0 concept — force vs activated time --------------------------
 nexttile; hold on;
@@ -719,33 +720,114 @@ ylabel('Force (kPa)');
 title('T_0 concept: decay timeline — correction methods at zone 2');
 legend('Location', 'northeast', 'FontSize', 7.5); grid on; box on;
 
+%% --- Figure 48: zoom of F_rd bottom panel (72–76 s, 40–100 kPa) -------------
+figure(48); clf;
+set(gcf, 'Units', 'centimeters', 'Position', [2 2 18 10]);
+hold on;
+plot(t_hifi, F_ref,          'k',   'LineWidth', 1.5, 'DisplayName', 'F_{ref} original');
+plot(t_lofi, F_rd,           'Color', [0.65 0.65 0.65], 'LineWidth', 0.8, 'DisplayName', 'F_{rd} raw');
+plot(t_lofi, Fc_M1,          ':', 'Color', [0.15 0.35 0.80], 'LineWidth', 1.5, ...
+    'DisplayName', sprintf('M1 static (R²=%.3f)', R2fn(fcn1(p1, Frd, Lobs))));
+plot(t_lofi, Fc_M1t,         '-', 'Color', [0.15 0.35 0.80], 'LineWidth', 1.8, ...
+    'DisplayName', 'M1t calc rate');
+plot(t_lofi, Fc_M1tf,        '-', 'Color', [0.50 0.25 0.65], 'LineWidth', 2.0, ...
+    'DisplayName', 'M1t fitted rate');
+plot(t_hifi, F_ref_slopeCorr,'k--','LineWidth', 1.5, 'DisplayName', 'Target (F_{ref} slope-detrended)');
+xlim([72 76]); ylim([40 100]);
+ylabel('Force (kPa)'); xlabel('Time (s)');
+title('F_{rd} correction — zoom 72–76 s');
+legend('Location', 'southwest', 'FontSize', 7); box on; grid on;
+
+%% --- Figure 49: zoom of F_ref top panel — last slack (76.7–77.4 s) ---------
+figure(49); clf;
+set(gcf, 'Units', 'centimeters', 'Position', [2 2 14 9]);
+hold on;
+plot(t_hifi, F_ref,           'k',  'LineWidth', 1.5, 'DisplayName', 'F_{ref} original');
+plot(t_hifi, F_ref_slopeCorr, '--', 'Color', [0.4 0.4 0.9], 'LineWidth', 1.5, ...
+    'DisplayName', 'Slope-corrected');
+plot(t_hifi, F_ref_M1corr,    '-',  'Color', [0.0 0.5 0.8], 'LineWidth', 2.0, ...
+    'DisplayName', 'M1-model');
+plot(t_hifi, F_ref_M3corr,    '-',  'Color', [0.0 0.7 0.3], 'LineWidth', 1.5, ...
+    'DisplayName', 'M3-model');
+xlim([76.7 77.4]); % auto y
+ylabel('Force (kPa)'); xlabel('Time (s)');
+title('F_{ref} correction — last slack zoom (76.7–77.4 s)');
+legend('Location', 'southeast', 'FontSize', 7); box on; grid on;
+
+%% --- Figure 50: M1 correction curves (standalone, from fig 302 tile 1) -----
+figure(50); clf;
+set(gcf, 'Units', 'centimeters', 'Position', [2 2 14 10]);
+hold on;
+cmap50 = lines(4);
+for si = 1:4
+    Lfix  = SL_levels(si);
+    Fcorr = fcn1(p1, F_range, Lfix);
+    yyaxis left;
+    plot(F_range, Fcorr, '-', 'Color', cmap50(si,:), 'LineWidth', 1.8, ...
+        'DisplayName', sprintf('SL = %.2f µm', Lfix*2));
+end
+yyaxis left;
+plot(F_range([1 end]), F_range([1 end]), 'k--', 'LineWidth', 0.8, 'HandleVisibility', 'off');
+ylabel('F_{corrected}  (kPa)');
+xlabel('F_{rd}  (active, kPa)');
+yyaxis right;
+for si = 1:4
+    Lfix  = SL_levels(si);
+    ratio = fcn1(p1, F_range, Lfix) ./ F_range;
+    plot(F_range, ratio, '--', 'Color', cmap50(si,:)*0.7, 'LineWidth', 0.9, ...
+        'HandleVisibility', 'off');
+end
+ylabel('Correction ratio r = F_{corr}/F_{rd}');
+yyaxis left;
+legend('Location', 'northwest', 'FontSize', 8);
+title(sprintf('M1: SL-linear correction  (a=%.3f, b=%.3f)  R²=%.4f', p1(1), p1(2), R2s(1)));
+grid on;
+
 %% --- Export figures ---------------------------------------------------------
 if writeFiles
-    exportgraphics(figure(46), fullfile(figDir, 'fig46_correction_comparison.png'), 'Resolution', 150);
-    exportgraphics(figure(47), fullfile(figDir, 'fig47_zoom_and_concept.png'),       'Resolution', 150);
+    exportgraphics(ax46_top, fullfile(figDir, 'fig46_top_fref.png'),       'Resolution', 150);
+    exportgraphics(ax46_bot, fullfile(figDir, 'fig46_bottom_frd.png'),      'Resolution', 150);
+    exportgraphics(figure(47), fullfile(figDir, 'fig47_zoom_and_concept.png'), 'Resolution', 150);
+    exportgraphics(figure(48), fullfile(figDir, 'fig48_zoom_frd.png'),      'Resolution', 150);
+    exportgraphics(figure(49), fullfile(figDir, 'fig49_zoom_fref_slack.png'),'Resolution', 150);
+    exportgraphics(figure(50), fullfile(figDir, 'fig50_M1_slopes.png'),     'Resolution', 150);
     fprintf('\nFigures exported to %s\n', figDir);
 end
 
 %% --- 7. Save all correction datasets -----------------------------------------
 
 if writeFiles
-    
-    outFiles = {
-        'Corr_Frd_M1_static.txt',       fcn1(p1, F_rdact, L_ref);
-        'Corr_Frd_M1t_slopeRate.txt',   fcn1t(p1t, F_rdact, L_ref, t_ref);
-        'Corr_Frd_M1t_fittedRate.txt',  fcn1t_fit(p1t_fit, F_rdact, L_ref, t_ref);
-        'Corr_Frd_M3_static.txt',       fcn3(p3, F_rdact, L_ref);
-        'Corr_Fref_slopeOnly.txt',      F_ref_slopeCorr;
-        'Corr_Fref_M1_model.txt',       F_ref_M1corr;
-        'Corr_Fref_M3_model.txt',       F_ref_M3corr;
-        'Corr_Fref_original.txt',       F_ref;
+    % F_rd files: saved on t_lofi (unsmoothed original grid)
+    frd_files = {
+        'Corr_Frd_M1_static.txt',       fcn1(p1, F_rdact, L_rd);
+        'Corr_Frd_M1t_slopeRate.txt',   fcn1t(p1t, F_rdact, L_rd, t_lofi);
+        'Corr_Frd_M1t_fittedRate.txt',  fcn1t_fit(p1t_fit, F_rdact, L_rd, t_lofi);
+        'Corr_Frd_M3_static.txt',       fcn3(p3, F_rdact, L_rd);
         'Corr_Frd_original.txt',        F_rd;
     };
-    for fi = 1:size(outFiles, 1)
-        writematrix([t_ref, L_ref, outFiles{fi, 2}], ...
-            fullfile(dataDir, outFiles{fi, 1}), 'Delimiter', '\t');
-        fprintf('  %s\n', outFiles{fi, 1});
+    for fi = 1:size(frd_files, 1)
+        writematrix([t_lofi, L_rd, frd_files{fi, 2}], ...
+            fullfile(dataDir, frd_files{fi, 1}), 'Delimiter', '\t');
+        fprintf('  %s\n', frd_files{fi, 1});
     end
+
+    % F_ref files: saved on t_hifi (fine-interpolated grid)
+    fref_files = {
+        'Corr_Fref_slopeOnly.txt',  F_ref_slopeCorr;
+        'Corr_Fref_M1_model.txt',   F_ref_M1corr;
+        'Corr_Fref_M3_model.txt',   F_ref_M3corr;
+        'Corr_Fref_original.txt',   F_ref;
+    };
+    for fi = 1:size(fref_files, 1)
+        writematrix([t_hifi, L_ref, fref_files{fi, 2}], ...
+            fullfile(dataDir, fref_files{fi, 1}), 'Delimiter', '\t');
+        fprintf('  %s\n', fref_files{fi, 1});
+    end
+
+    % Lo-fi F_ref reference file (for CompareProtocols '03/27 8mM Lo-Fi' dataset)
+    writematrix([refData.t_shifted_orig, refData.L_shifted_orig, refData.F_shifted_orig], ...
+        fullfile(dataDir, 'Fref_lofi.txt'), 'Delimiter', '\t');
+    fprintf('  Fref_lofi.txt\n');
 else
     fprintf('\nSkipping export correction datasets.\n');
 end

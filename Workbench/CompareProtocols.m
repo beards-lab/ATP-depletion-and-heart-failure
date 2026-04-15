@@ -15,10 +15,41 @@
 % addpath(genpath('..'));
 
 %% ══════════════════════════════════════════════════════════════════════════
-%% Section 1 — Dataset descriptor array
+%% Section 1 — Dataset selector + library
 %% ══════════════════════════════════════════════════════════════════════════
 
-DSC = {};  % cell array — comment out / reorder any block freely
+% ── Preset A: F_ref within-recording-rundown (WRR) comparison ────────────
+compareProtocols = {
+    '03/27 8mM',
+    '03/27 8mM slope corrected',
+    '03/27 8mM M1 corrected',
+    '03/27 8mM M3 corrected',
+};
+
+% ── Preset B: F_rd rundown compensation comparison ────────────────────────
+compareProtocols = {
+    '03/27 8mM Lo-Fi',
+    '03/27 8mM repeat',
+    '03/27 8mM M1 compensated',
+    '03/27 8mM M3 compensated',
+};
+
+% ── Preset C: cross-experiment comparison ────────────────────────────────
+% compareProtocols = {
+%     'Baker 8mM',
+%     'Baker 2mM',
+%     '03/27 8mM',
+%     '03/27 2mM',
+%     '04/03 8mM',
+%     '04/03 2mM',
+% };
+
+% compareProtocols = {    '03/27 8mM',     '03/27 8mM Lo-Fi', '03/27 8mM repeat'};
+
+runSteps = false;
+runStairs = false;
+
+DSC_lib = {};  % full library — all datasets defined here
 
 % ── Baker 8mM  (slack only; datatable+velocitytable in .mat)
 d = struct();
@@ -33,7 +64,7 @@ d.fillMarker = true;
 d.data_slack  = [1.0 3.1];   % Baker time axis: slack window is ~1–3 s
 d.ktr_matFile = '../data/bakers_ktr_8.mat';
 d.ktr_tstart  = 0.0;   % s — recovery begins here
-DSC{end+1} = d;
+DSC_lib{end+1} = d;
 
 % ── Baker 2mM  (slack from .mat; ktr from raw txt — no processed .mat exists)
 % Raw ktr txt: t in ms, L in Lo (×2.0 → µm), 4 header lines.
@@ -54,7 +85,7 @@ d.ktr_t_scale    = 1e-3;  % ms → s
 d.ktr_t_offset   = -0.1;  % −100 ms offset applied in LoadBakersExp
 d.ktr_Lo_ref_um  = 2.0;   % raw txt L is in Lo; ML = 2.0 µm
 d.ktr_tstart     = 0.0;   % s — restretch ends near t = 0 after offset
-DSC{end+1} = d;
+DSC_lib{end+1} = d;
 
 % ── 03/27 8mM
 d = struct();
@@ -73,56 +104,71 @@ d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
 d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
-DSC{end+1} = d;
+DSC_lib{end+1} = d;
 
 % Corr_Fref_slopeOnly.txt	F_ref with linear slope correction to zone 1
 % Corr_Fref_M1_model.txt	F_ref with M1 model-based correction to zone 1
 % Corr_Fref_M3_model.txt	F_ref with M3 model-based correction to zone 1
 
-% % ── 03/27 8mM Slope corrected
-% d = struct();
-% d.label      = '03/27 8mM slope corrected';
-% d.dataFile   = '../data/03 27 2026 M/Corr_Fref_slopeOnly.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 8;
-% d.marker     = 'o';   % 8 mM
-% d.lineStyle  = '-';
-% d.fillMarker = true;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% DSC{end+1} = d;
-% 
-% % ── 03/27 8mM M1 corrected
-% d = struct();
-% d.label      = '03/27 8mM M1 corrected';
-% d.dataFile   = '../data/03 27 2026 M/Corr_Fref_M1_model.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 8;
-% d.marker     = 'o';   % 8 mM
-% d.lineStyle  = '-';
-% d.fillMarker = true;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% DSC{end+1} = d;
-% 
-% % ── 03/27 8mM M3 corrected
-% d = struct();
-% d.label      = '03/27 8mM M3 corrected';
-% d.dataFile   = '../data/03 27 2026 M/Corr_Fref_M3_model.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 8;
-% d.marker     = 'o';   % 8 mM
-% d.lineStyle  = '-';
-% d.fillMarker = true;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% DSC{end+1} = d;
+% ── 03/27 8mM Lo-Fi (original unsmoothed reference; for Preset B baseline)
+d = struct();
+d.label      = '03/27 8mM Lo-Fi';
+d.dataFile   = '../data/03 27 2026 M/Fref_lofi.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.marker     = 'o';
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
+
+% ── 03/27 8mM Slope corrected
+d = struct();
+d.label      = '03/27 8mM slope corrected';
+d.dataFile   = '../data/03 27 2026 M/Corr_Fref_slopeOnly.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.marker     = 'o';
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
+
+% ── 03/27 8mM M1 corrected
+d = struct();
+d.label      = '03/27 8mM M1 corrected';
+d.dataFile   = '../data/03 27 2026 M/Corr_Fref_M1_model.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.marker     = 'o';
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
+
+% ── 03/27 8mM M3 corrected
+d = struct();
+d.label      = '03/27 8mM M3 corrected';
+d.dataFile   = '../data/03 27 2026 M/Corr_Fref_M3_model.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.marker     = 'o';
+d.lineStyle  = '-';
+d.fillMarker = true;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
 
 % ── 03/27 2mM
 d = struct();
@@ -140,26 +186,22 @@ d.vt_slack   = [74.4 Inf];
 d.data_ktr   = [70.8 71.5];
 d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
-DSC{end+1} = d;
+DSC_lib{end+1} = d;
 
-% % ── 03/27 8mM repeat
-% d = struct();
-% d.label      = '03/27 8mM repeat';
-% d.dataFile   = '../data/03 27 2026 M/04_Merged_8mM_Active_repeat.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 2;
-% d.color      = [0.10 0.84 0.11];
-% d.marker     = 'p';
-% d.lineStyle  = '-';
-% d.fillMarker = false;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% % d.data_step  = [69.2 70.5];
-% % d.data_stair = [72.4 73.2];
-% DSC{end+1} = d;
-
+% ── 03/27 8mM repeat (run-down recording, as-is; Preset B)
+d = struct();
+d.label      = '03/27 8mM repeat';
+d.dataFile   = '../data/03 27 2026 M/Corr_Frd_original.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.marker     = 'p';
+d.lineStyle  = '-';
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
 
 % Corr_Frd_original.txt	F_rd as recorded (no correction)
 % Corr_Frd_M1_static.txt	F_rd corrected by M1 static model
@@ -167,59 +209,37 @@ DSC{end+1} = d;
 % Corr_Frd_M1t_fittedRate.txt	F_rd corrected by M1 + time (rate freely fitted)
 % Corr_Frd_M3_static.txt	F_rd corrected by M3 static model
 
-% % ── 03/27 8mM repeat - rundown compensation Model 1
-% d = struct();
-% d.label      = '03/27 8mM repeat model 1';
-% d.dataFile   = '../data/03 27 2026 M/Merged_RunDownTimeCorrection_Model1.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 2;
-% d.color      = [0.00 0.45 0.70];
-% d.marker     = '<';
-% d.lineStyle  = '-';
-% d.fillMarker = false;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% % d.data_step  = [69.2 70.5];
-% % d.data_stair = [72.4 73.2];
-% DSC{end+1} = d;
-% 
-% % ── 03/27 8mM repeat - rundown compensation Model 2
-% d = struct();
-% d.label      = '03/27 8mM repeat model 2';
-% d.dataFile   = '../data/03 27 2026 M/Merged_RunDownTimeCorrection_Model2.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 2;
-% d.color      = [0.47 0.67 0.19];
-% d.marker     = '^';
-% d.lineStyle  = '-';
-% d.fillMarker = false;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% % d.data_step  = [69.2 70.5];
-% % d.data_stair = [72.4 73.2];
-% DSC{end+1} = d;
-% 
-% % ── 03/27 8mM repeat - rundown compensation Model 3
-% d = struct();
-% d.label      = '03/27 8mM repeat model 3';
-% d.dataFile   = '../data/03 27 2026 M/Merged_RunDownTimeCorrection_Model3.txt';
-% d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
-% d.Lo_ref_um  = 2.0;
-% d.ATP        = 2;
-% d.color      = [0.19 0.47 0.67];
-% d.marker     = '>';
-% d.lineStyle  = '-';
-% d.fillMarker = false;
-% d.data_slack = [74.0 77.5];
-% d.vt_slack   = [74.4 Inf];
-% d.data_ktr   = [70.8 71.5];
-% % d.data_step  = [69.2 70.5];
-% % d.data_stair = [72.4 73.2];
-% DSC{end+1} = d;
+% ── 03/27 8mM M1 compensated (run-down corrected via M1 static model)
+d = struct();
+d.label      = '03/27 8mM M1 compensated';
+d.dataFile   = '../data/03 27 2026 M/Corr_Frd_M1_static.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.color      = [0.00 0.45 0.70];
+d.marker     = '<';
+d.lineStyle  = '-';
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
+
+% ── 03/27 8mM M3 compensated (run-down corrected via M3 static model)
+d = struct();
+d.label      = '03/27 8mM M3 compensated';
+d.dataFile   = '../data/03 27 2026 M/Corr_Frd_M3_static.txt';
+d.vtFile     = '../data/protocol_03_27_2026_velocitytable.mat';
+d.Lo_ref_um  = 2.0;
+d.ATP        = 8;
+d.color      = [0.47 0.67 0.19];
+d.marker     = '>';
+d.lineStyle  = '-';
+d.fillMarker = false;
+d.data_slack = [74.0 77.5];
+d.vt_slack   = [74.4 Inf];
+d.data_ktr   = [70.8 71.5];
+DSC_lib{end+1} = d;
 
 % ── 04/03 8mM  (preamble slack before 74.8 → vt_slack offset)
 d = struct();
@@ -237,7 +257,7 @@ d.vt_slack   = [74.8 Inf];
 d.data_ktr   = [70.8 71.5];
 d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
-DSC{end+1} = d;
+DSC_lib{end+1} = d;
 
 % ── 04/03 2mM
 d = struct();
@@ -255,7 +275,29 @@ d.vt_slack   = [74.8 Inf];
 d.data_ktr   = [70.8 71.5];
 d.data_step  = [69.2 70.5];
 d.data_stair = [72.4 73.2];
-DSC{end+1} = d;
+DSC_lib{end+1} = d;
+
+% Unify fields across all structs so we can build a struct array.
+% Each DSC entry may have different fields — collect the superset,
+% fill missing ones with [], then concatenate.
+% ── Filter library to active protocols ───────────────────────────────────
+DSC = {};
+for k = 1:numel(DSC_lib)
+    if any(strcmp(DSC_lib{k}.label, compareProtocols))
+        DSC{end+1} = DSC_lib{k};
+    end
+end
+% Preserve the order specified in compareProtocols
+DSC_ordered = {};
+for k = 1:numel(compareProtocols)
+    for m = 1:numel(DSC)
+        if strcmp(DSC{m}.label, compareProtocols{k})
+            DSC_ordered{end+1} = DSC{m};
+            break;
+        end
+    end
+end
+DSC = DSC_ordered;
 
 % Unify fields across all structs so we can build a struct array.
 % Each DSC entry may have different fields — collect the superset,
@@ -419,7 +461,7 @@ end
 mdl_step = fittype('Fss + A1*exp(-k1*x) + A2*exp(-k2*x)', ...
     'coeff', {'Fss','A1','A2','k1','k2'}, 'independent', 'x');
 
-for di = 1:numel(DS)
+for di = 1:numel(DS)*runSteps
     if ~isfield(DS(di), 'data_step') || isempty(DS(di).data_step); continue; end
 
     fprintf('=== Step perturbation: %s ===\n', DS(di).label);
@@ -539,7 +581,7 @@ end
 mdl_stair = fittype('Fss + A1*exp(-k1*x) + A2*exp(-k2*x)', ...
     'coeff', {'Fss','A1','A2','k1','k2'}, 'independent', 'x');
 
-for di = 1:numel(DS)
+for di = 1:numel(DS)*runStairs
     if ~isfield(DS(di), 'data_stair') || isempty(DS(di).data_stair); continue; end
 
     fprintf('=== Staircase: %s ===\n', DS(di).label);
@@ -726,6 +768,31 @@ if ~isempty(fc)
     plotMultipleFeatures(fc, lbls, clrs, mkrs, fn_stair, lsts, fills);
 end
 
+%% ── Export comparison figures ──────────────────────────────────────────
+figDir = '../Docs/figures/';
+
+% Build a preset tag from the active protocol labels for file naming
+presetLabels = strjoin(compareProtocols, '_');
+if contains(presetLabels, 'Lo-Fi') || contains(presetLabels, 'compensated')
+    presetTag = 'FrdComp';
+elseif contains(presetLabels, 'corrected')
+    presetTag = 'WRR';
+else
+    presetTag = strrep(strtrim(compareProtocols{1}), ' ', '_');
+    presetTag = regexprep(presetTag, '[^A-Za-z0-9_]', '');
+end
+
+if ishandle(figure(403)) && ~isempty(get(figure(403), 'Children'))
+    drawnow;
+    exportgraphics(figure(403), fullfile(figDir, ['fig403_' presetTag '.png']), 'Resolution', 150);
+    fprintf('Exported fig403_%s.png\n', presetTag);
+end
+if ishandle(figure(420)) && ~isempty(get(figure(420), 'Children'))
+    drawnow;
+    exportgraphics(figure(420), fullfile(figDir, ['fig420_' presetTag '.png']), 'Resolution', 150);
+    fprintf('Exported fig420_%s.png\n', presetTag);
+end
+
 %% ══════════════════════════════════════════════════════════════════════════
 %% Section 8 — Universal print table
 %% ══════════════════════════════════════════════════════════════════════════
@@ -803,6 +870,10 @@ end
 function [fc, lbls, clrs, mkrs, lsts, fills] = collectDS(DS, fieldname)
 %COLLECTDS  Return cell arrays for datasets that have the given field.
     idx   = find(arrayfun(@(d) isfield(d, fieldname) && ~isempty(d.(fieldname)), DS));
+    if isempty(idx)
+        fc = {}; lbls = {}; clrs = zeros(0,3); mkrs = {}; lsts = {}; fills = [];
+        return;
+    end
     fc    = {DS(idx).(fieldname)};
     lbls  = {DS(idx).label};
     clrs  = vertcat(DS(idx).color);
