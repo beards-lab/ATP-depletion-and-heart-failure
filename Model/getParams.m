@@ -137,6 +137,8 @@ end
         'useHalfActiveForSR', false, ...
         'UseA2Reattaching', false, ...
         'UseA2Popping', false, ...
+        'UseA2AttachmentShift', false, ... % p2 heads at high strain hop to adjacent actin site (A2 hopping)
+        'UseA2MechanicalRecocking', false, ... % p2 heads at high strain ratchet back to p1
         'UseForceOnsetShift', false, ...
         'L_thick', 1.67, ... % Length of thick filament, um
         'L_hbare', 0.10,... % Length of bare region of thick filament, um
@@ -185,7 +187,30 @@ end
         'OptimizeFVInit', true, ...
         'EvalFeatures', false, ...
         'recalculateDataFeats', false, ...
-        'MaxSpaceExtensionCount', Inf       );
+        'MaxSpaceExtensionCount', Inf, ...
+        'UseMaxwellDashpot', false, ...
+        'mu_neg', '=mu', ...
+        'mu2', 0, ...
+        'ksrd2sr', 0, ...          % SRD→SR rate (s⁻¹); used when UseSuperRelaxed && UseSuperRelaxedADP
+        'slope', 11000, ...        % A2 hopping rate per unit excess strain; used when UseA2AttachmentShift
+        's_threshold_R', 0.0046, ... % positive strain threshold for A2 hopping (um)
+        's_threshold_L', 5.5, ...  % negative strain threshold for A2 hopping (large = disabled by default)
+        'd_actin', 0.0055, ...     % actin site repeat distance (um)
+        'kSE_M', 500, ...          % Maxwell dashpot spring stiffness; used when UseMaxwellDashpot
+        'eta_M', 1.0, ...          % Maxwell dashpot viscosity; used when UseMaxwellDashpot
+        'FudgeA', 0, ...           % quadratic SL coeff for slack velocity; used when FudgeVmax
+        'FudgeB', 0, ...           % linear SL coeff for slack velocity
+        'FudgeC', 0, ...           % constant SL coeff for slack velocity
+        'kstiff2_n', '=kstiff2', ... % P2 stiffness for negative strain; used when UseNegativeKstiff
+        'kstiff1_n', '=kstiff1', ... % P1 stiffness for negative strain
+        'k2d', 0, ...              % A2 mechanical recocking rate (s⁻¹); used when UseA2MechanicalRecocking
+        'drmr', 0, ...             % strain threshold for mechanical recocking (um)
+        'pop_s', -Inf, ...         % A2 popping strain threshold (um; -Inf = never triggers); used when UseA2Popping
+        'Srd_max', 0, ...          % max SRD→PD transition rate; used when UseLimitedSRDTransition
+        'Srd_n', 1, ...
+        'UseJPattern', false, ...  % precompute Jacobian sparsity pattern for ode15s (default off)
+        'UseFastPPval', false, ... % replace ppval with precomputed table lookup (default off)
+        'UseCompiledMex', false);  % use compiled C MEX for ODE RHS (requires compileMex.m; config-specific)
 
 % , false, ...
 % , false, ...
@@ -209,6 +234,7 @@ end
     
     % rate constants
     params0.kah = 80; % rate of ATP hydrolysis state change
+    params0.kamh = '=0.1*kah'; % rate of reverse ATP hydrolysis (M·ADP·Pi → M·ATP)
     params0.kadh = 20; % % rate of ATP de-hydrolysis state change
     params0.ka  = 373.23;
     params0.kd  = 102.94; 
@@ -381,6 +407,42 @@ end
     else
         params.PieceWiseStrainDepR21 = [];
     end
+    %% Step 6b (optional): Pre-unpack pchip structs for inline polynomial evaluation
+    % Enabled by params.UseFastPPval = true. Requires UsePieceWiseStrainDep = true.
+    % Stores raw breaks + coefficients from unmkpp so the ODE RHS can evaluate
+    % the piecewise polynomial directly (no ppval/unmkpp call overhead per step).
+    if params.UseFastPPval && isfield(params, 'UsePieceWiseStrainDep') && params.UsePieceWiseStrainDep
+        % Store breaks as COLUMN vectors — this is critical for shape-safe indexing:
+        % b(si) where b is column and si is (ss×1) always returns (ss×1).
+        [brk, cof] = unmkpp(params.PieceWiseStrainDep);
+        params.cached.pwsd_brk   = brk(:);   params.cached.pwsd_cof   = cof;
+
+        if ~isempty(params.PieceWiseStrainDep2)
+            [brk, cof] = unmkpp(params.PieceWiseStrainDep2);
+            params.cached.pwsd2_brk  = brk(:);   params.cached.pwsd2_cof  = cof;
+        else
+            params.cached.pwsd2_brk = [];  params.cached.pwsd2_cof = [];
+        end
+
+        if ~isempty(params.PieceWiseStrainDepR1D)
+            [brk, cof] = unmkpp(params.PieceWiseStrainDepR1D);
+            params.cached.pwsdR1D_brk = brk(:);  params.cached.pwsdR1D_cof = cof;
+        else
+            params.cached.pwsdR1D_brk = [];  params.cached.pwsdR1D_cof = [];
+        end
+
+        if ~isempty(params.PieceWiseStrainDepR21)
+            [brk, cof] = unmkpp(params.PieceWiseStrainDepR21);
+            params.cached.pwsdR21_brk = brk(:);  params.cached.pwsdR21_cof = cof;
+        else
+            params.cached.pwsdR21_brk = [];  params.cached.pwsdR21_cof = [];
+        end
+    end
+
+    %% Step 6c: Pack flat MEX parameter array (UseCompiledMex)
+    % Must run AFTER step 6b (pchip unpacking) and AFTER step 7 (strain grid).
+    % Deferred — called at end of this function after params.s is set.
+
     %% Step 7: Compute strain grid (params.s) from Slim_l, Slim_r, dS, SL0
     % Warn if SL0 is outside the physiological sarcomere length range
     if isfield(params, 'SL0') && (params.SL0 < 1.4 || params.SL0 > 3.0)
@@ -472,6 +534,13 @@ end
         end
     end
     
+%% Step 6c (deferred): Pack flat MEX parameter array
+    % Requires: UseFastPPval=true (pchip cache), strain grid (params.s), and
+    % all numerical params to be resolved. Called here so params.s is available.
+    if params.UseCompiledMex && params.UseFastPPval && isfield(params,'s')
+        params.mex_vals = packMexVals(params);
+    end
+
 %% Step 9: Precompute attachment kernel (Gaussian/triangular, for UseA1AttachmentKernel)
     % Precompute kernel parameters
     if params.UseA1AttachmentKernel && params.A1AttachmentWidth > 0

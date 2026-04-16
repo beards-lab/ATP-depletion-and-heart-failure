@@ -141,6 +141,12 @@ if params.UseTitinInterpolation
     params.TitinTable = load("PassiveTitin\titin-slack.mat").tit;
 end
 i_tf0 = 0;
+
+% UseJPattern is reserved for future use.
+% Computing JPattern at PU0=0 gives a nearly-zero pattern (rates scale with p1/p2)
+% which causes ode15s to use a deficient Jacobian → thousands of tiny timesteps.
+% Left as a no-op until a representative non-zero state is available for pattern computation.
+
 % vs for VelocitySegment
 for vs = 1:length(T) - 1
     ts = T(vs);
@@ -152,7 +158,7 @@ for vs = 1:length(T) - 1
     params.Vums = params.v*params.ML; % velocity in um/s
 
 
-    opts = odeset('Events', @movingWindow, 'AbsTol',1e-4, 'RelTol', 1e-2);
+    opts = odeset('Events', @movingWindow, 'AbsTol', 1e-4, 'RelTol', 1e-2);
 
     % test odess
     %         tic

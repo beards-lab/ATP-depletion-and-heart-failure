@@ -84,7 +84,7 @@ params0.PieceWiseStrainDepParams = 1*[10.0000   10.8001    2.8824    1.1554    0
 % R2
 params0.PieceWiseStrainDep2X = [-0.01   -0.0105   -0.0085   -0.0055 -0.004  -0.000   0.006 0.01 0.0233    0.1];
 params0.PieceWiseStrainDep2Params = [50.0000   50.0000   50.6847    1 1         0.5    1 20  50 50.0000];
-params0.justPlotStateTransitionsFlag = true;
+params0.justPlotStateTransitionsFlag = false;
 
 % R21
 % params0.PieceWiseStrainDepR21X = [-0.0580   -0.0049    0.0062    0.0500];

@@ -19,30 +19,30 @@
 %% ══════════════════════════════════════════════════════════════════════════
 
 % ── Preset A: F_ref within-recording-rundown (WRR) comparison ────────────
-compareProtocols = {
-    '03/27 8mM',
-    '03/27 8mM slope corrected',
-    '03/27 8mM M1 corrected',
-    '03/27 8mM M3 corrected',
-};
+% compareProtocols = {
+%     '03/27 8mM',
+%     '03/27 8mM slope corrected',
+%     '03/27 8mM M1 corrected',
+%     '03/27 8mM M3 corrected',
+% };
 
 % ── Preset B: F_rd rundown compensation comparison ────────────────────────
-compareProtocols = {
-    '03/27 8mM Lo-Fi',
-    '03/27 8mM repeat',
-    '03/27 8mM M1 compensated',
-    '03/27 8mM M3 compensated',
-};
+% compareProtocols = {
+%     '03/27 8mM Lo-Fi',
+%     '03/27 8mM repeat',
+%     '03/27 8mM M1 compensated',
+%     '03/27 8mM M3 compensated',
+% };
 
 % ── Preset C: cross-experiment comparison ────────────────────────────────
-% compareProtocols = {
-%     'Baker 8mM',
-%     'Baker 2mM',
-%     '03/27 8mM',
-%     '03/27 2mM',
-%     '04/03 8mM',
-%     '04/03 2mM',
-% };
+compareProtocols = {
+    'Baker 8mM',
+    'Baker 2mM',
+    '03/27 8mM',
+    '03/27 2mM',
+    '04/03 8mM',
+    '04/03 2mM',
+};
 
 % compareProtocols = {    '03/27 8mM',     '03/27 8mM Lo-Fi', '03/27 8mM repeat'};
 

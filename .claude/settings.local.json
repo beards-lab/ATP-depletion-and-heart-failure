@@ -9,7 +9,11 @@
       "Read(//mnt/c/home/git/TitinViscoelasticity/DataProcessing/**)",
       "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
       "WebFetch(domain:www.nature.com)",
-      "WebFetch(domain:elifesciences.org)"
+      "WebFetch(domain:elifesciences.org)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(\"/mnt/c/Program Files/MATLAB/R2025b/bin/matlab.exe\" -batch \"disp\\('hello'\\)\")",
+      "Bash(cmd.exe /c \"dir \\\\\"C:\\\\Program Files\\\\MATLAB\\\\\"\")",
+      "Bash(powershell.exe -Command \"Test-Path 'C:\\\\Program Files\\\\MATLAB\\\\R2023a\\\\bin\\\\matlab.exe'\")"
     ]
   }
 }

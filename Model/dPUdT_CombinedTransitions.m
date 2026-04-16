@@ -305,41 +305,39 @@ end
 
 if params.UsePieceWiseStrainDep
     
-    % % Ensure monotonic increasing y (clip or enforce)
-    % for i = 2:length(args)
-    %     if args(i) <= args(i-1)
-    %         args(i) = args(i-1) + 1e-3;
-    %     end
-    % end
+    if params.UseFastPPval && isfield(params.cached, 'pwsd_brk')
+        % Fast path: inline piecewise cubic evaluation — no ppval/unmkpp call overhead.
+        % Breaks (row) and coefs (n_segs×4) were pre-unpacked in getParams Step 6b.
+        % Segment search: count breaks strictly less than s (vectorised broadcast).
+        % Broadcasting: s (ss×1) vs b(1:end-1) (1×k) → (ss×k) logical, then sum→(ss×1).
 
-    % Monotonic cubic interpolation    
-    % if params.UseStrainDep4R1D
-    %     R1D = params.kd*p1.*exp(-(s.^2) / (2*params.kd_sigma^2));
-    % elseif isfield(params, 'PieceWiseStrainDepR1D') && ~isempty(params.PieceWiseStrainDepR1D)
+        % b stored as (k+1)×1 column → b(1:end-1)' is (1×k) row for broadcast
+        % s (ss×1) >= b_row (1×k) → (ss×k); sum along dim 2 → (ss×1)
+        % b(si) with b column and si (ss×1) always returns (ss×1)  ← key invariant
+
+        b = params.cached.pwsdR1D_brk; c = params.cached.pwsdR1D_cof;
+        si = max(1, min(size(c,1), sum(s >= b(1:end-1)', 2)));
+        dx = s - b(si); R1D = params.kd  * p1 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
+
+        b = params.cached.pwsd_brk;    c = params.cached.pwsd_cof;
+        si = max(1, min(size(c,1), sum(s >= b(1:end-1)', 2)));
+        dx = s - b(si); R12 = params.k1  * p1 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
+
+        b = params.cached.pwsdR21_brk; c = params.cached.pwsdR21_cof;
+        si = max(1, min(size(c,1), sum(s >= b(1:end-1)', 2)));
+        dx = s - b(si); R21 = params.k_1 * p2 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
+
+        s2 = s + params.dr2 - params.dr;
+        b = params.cached.pwsd2_brk;   c = params.cached.pwsd2_cof;
+        si = max(1, min(size(c,1), sum(s2 >= b(1:end-1)', 2)));
+        dx = s2 - b(si); R2 = params.k2  * p2 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
+    else
+        % Original path: piecewise cubic (pchip) evaluation via ppval.
         R1D = params.kd*p1.*ppval(params.PieceWiseStrainDepR1D, s);
-    % else        
-    %     R1D = params.kd*p1;
-    % end
-
-    R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
-    
-    % if isfield(params, 'PieceWiseStrainDepR21') && ~isempty(params.PieceWiseStrainDepR21)    
+        R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
         R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, s);
-    % else
-    %     R21 = p2*0;    
-    % end
-    
-    % if isfield(params, 'A2_PieceWiseStrainDepX')
-    %     error('Not implemented atm!');
-    %     f2 = @(x)pchip(params.A2_PieceWiseStrainDepX, params.A2_PieceWiseStrainDepParams, x);
-    % else
-        % f2 = f;
-    % elseif isfield(params, 'PieceWiseStrainDep2')
-        R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
-    % else
-    %     R2 = params.k2*p2.*ppval(params.PieceWiseStrainDep, s + params.dr2 - params.dr);
-    % end
-    % plot(params.PieceWiseStrainDepX,params.PieceWiseStrainDepParams, 'o', s, f(s), 'x-', s, f(s+ params.dr2 - params.dr), '--')
+        R2  = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
+    end
 
 elseif params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
@@ -644,3 +642,4 @@ function [s_i0, s_i1, s_i0k] = attachmentPoint(s0, dS, ss)
         s_i0k = s_i1 - s_p0;
     end
 end
+

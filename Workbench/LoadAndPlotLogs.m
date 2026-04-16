@@ -13,7 +13,7 @@ data_ref = readmatrix(fpath, 'NumHeaderLines', 4);
 dataDir = '../data/03 27 2026 M/';
 
 % dataset 2
-% dataDir = '../data/04 03 2026 F/';
+dataDir = '../data/04 03 2026 F/';
 S = dir([dataDir '*Log_*.txt']);
 [~, idx] = sort({S.name});
 S = S(idx);
@@ -69,10 +69,13 @@ end
 
 %% Use file 06 (last file) as reference time axis for piecewise shift
 % figure(106);hold on;
+clf; hold on;
+% plotAll = true;
 refIdx = n; % 06_Log_8mM_Active_PNB_Mava is last after sorting
 a_ref  = data(refIdx).anchors; % [t1_ref, t2_ref, t3_ref]
 
-for i = 1:n
+% for i = [1, 2, 5] % passive, active and passive ca
+for i = 1:n    
     t_i = data(i).t;
     a_i = data(i).anchors;
 
@@ -112,14 +115,18 @@ for i = 1:n
     data(i).F_shifted = F_i(ok);
     data(i).L_shifted = L_i(ok);
     if plotAll
-        ax1 = nexttile(1);hold on;plot(data(i).t_shifted, data(i).F_shifted);
-        ax2 = nexttile(2);hold on;plot(data(i).t_shifted, data(i).L_shifted);
+        ax1 = nexttile(1);hold on;plot(data(i).t_shifted, data(i).L_shifted*2, DisplayName=labels{i});
+        ylabel('ML (\mum)');
+        ax2 = nexttile(2);hold on;plot(data(i).t_shifted, data(i).F_shifted, DisplayName=labels{i}, LineWidth=1.5);
+        xlabel('Time (s)');ylabel('Force (kPa)');
         linkaxes([ax1 ax2], 'x');
+        ylim([0 100]);xlim([70 78.5]);
     end
 
 end
 
-
+nexttile(1); legend(Location="best");
+% nexttile(2);xlabel('Time (s)');ylabel('Force (kPa)');
 %% Process High-Sampled Files and Merge
 allFiles = dir([dataDir '*.txt']);
 isLog = contains({allFiles.name}, 'Log_');

@@ -16,7 +16,7 @@
 %     params0.EvalFeatures       — use feature-based (vs time-domain) cost
 %
 %   See also: RunOptim, RunOptimLakes, evaluateProblem, getParams.
-
+clear; close all;
 clf;
 LoadData;
 params0 = getParams();
