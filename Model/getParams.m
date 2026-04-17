@@ -210,7 +210,8 @@ end
         'Srd_n', 1, ...
         'UseJPattern', false, ...  % precompute Jacobian sparsity pattern for ode15s (default off)
         'UseFastPPval', false, ... % replace ppval with precomputed table lookup (default off)
-        'UseCompiledMex', false);  % use compiled C MEX for ODE RHS (requires compileMex.m; config-specific)
+        'UseCompiledMex', false, ...  % use compiled C MEX for ODE RHS (requires compileMex.m; config-specific)
+        'LoadPassiveMat', '');     % path to preprocessed driving signal .mat; if non-empty, loads sig into params.driveSig
 
 % , false, ...
 % , false, ...
@@ -539,6 +540,15 @@ end
     % all numerical params to be resolved. Called here so params.s is available.
     if params.UseCompiledMex && params.UseFastPPval && isfield(params,'s')
         params.mex_vals = packMexVals(params);
+    end
+
+%% Step 6d: Load preprocessed driving signal for passive force lookup
+    % If params.LoadPassiveMat is a non-empty path, load the sig struct and
+    % store it as params.driveSig. The file is produced by preprocessDrivingSignal.m.
+    % Used by dPUdT_CombinedTransitions when params.LoadPassiveMat is set.
+    if isfield(params, 'LoadPassiveMat') && ~isempty(params.LoadPassiveMat)
+        tmp = load(params.LoadPassiveMat, 'sig');
+        params.driveSig = tmp.sig;
     end
 
 %% Step 9: Precompute attachment kernel (Gaussian/triangular, for UseA1AttachmentKernel)

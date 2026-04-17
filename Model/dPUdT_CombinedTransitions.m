@@ -218,6 +218,12 @@ if params.UseDynamicPassive && vel > 0
     F_passive = F_passive + params.c_titin_visc * vel;
 end
 
+% H3: Driving signal passive — time-varying force from preprocessed lookup.
+% params.LoadPassiveMat must be set and sig loaded into params.driveSig by getParams.
+if ~isempty(params.LoadPassiveMat)
+    F_passive = sigLookup(params.driveSig, t);
+end
+
 % default
 F_total = F_active + F_passive;
 
