@@ -45,7 +45,7 @@ params0.velocitytableonfile = 'protocol_03_27_2026_velocitytable.mat';
 
 % Configuration
 params0.PlotEachSeparately = 0;
-params0.RunSlackSegments = 'AllPar';
+params0.RunSlackSegments = 'All';
 params0.RunSlack = true;
 params0.RunForceVelocity = false;
 params0.RunForceLengthEstim = false;
@@ -53,7 +53,10 @@ params0.BreakOnODEUnstable = true;
 
 % Features to target
 params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
-
+params0.LoadPassiveMat = 'protocol_03_27_2026_PassiveCa_slack.mat';
+% params0.LoadPassiveMat = '';
+tic;RunBakersExp;
+toc
 %% 2. Define Parameters for Optimization
 % Top identifiable parameters from previous sensitivity analysis:
 % 1: k2, 2: kSE, 3: kstiff2, 4: k_pas, 5: dr, 6: k1, 7: sigma1, 8: kd

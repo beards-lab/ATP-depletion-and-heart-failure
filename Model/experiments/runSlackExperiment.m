@@ -22,8 +22,8 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 %   Outputs:
 %     E_slack        - Row vector of cost values:
 %                        E_slack(1) = main force-trace MSE (scaled by 20)
-%                        E_slack(2) = slack-onset dt cost (if EvalFitSlackOnset)
-%                        E_slack(3) = slack-onset ktr cost (if EvalFitSlackOnset)
+%                        E_slack(2) = slack-onset dt costparam (if EvalFitSlackOnset)
+%                        E_slack(3) = slack-onset params.ktr cost (if EvalFitSlackOnset)
 %                      Elements 2–3 are omitted when EvalFitSlackOnset is false.
 %     out_slack      - Merged output struct from all simulation chunks.
 %     features_model - Struct of simulated slack features (populated only when

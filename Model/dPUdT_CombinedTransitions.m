@@ -195,34 +195,36 @@ if params.UseOverlapFactor
 end    
 
 F_passive = 0;
-if params.UsePassive && ~params.UseTitinIdentifiedPassive
-    Lsc0    = 1.51;
-    % gamma = 7.5;
-    F_passive = F_passive + params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
-elseif params.UsePassive && params.UseTitinIdentifiedPassive
-    % identified from FitPassiveRampUp.m
-    y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
-    F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
-    % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
-end
-
-if params.UseTitinInterpolation
-    F_passive = F_passive + max(0, interp1(params.TitinTable.Time, params.TitinTable.ForceV, ...
-        min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
-end
-
-% H2: Dynamic passive — titin viscoelasticity during rapid restretch.
-% Titin is stiffer at high stretch rates; after slack it re-engages with a
-% transient force proportional to restretch velocity.
-if params.UseDynamicPassive && vel > 0
-    F_passive = F_passive + params.c_titin_visc * vel;
+if params.UsePassive && ~isempty(params.LoadPassiveMat)
+    F_passive = sigLookup(params.driveSig, t);
+else
+    if params.UsePassive && ~params.UseTitinIdentifiedPassive
+        Lsc0    = 1.51;
+        % gamma = 7.5;
+        F_passive = F_passive + params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
+    elseif params.UsePassive && params.UseTitinIdentifiedPassive
+        % identified from FitPassiveRampUp.m
+        y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+        F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
+        % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
+    end
+    
+    if params.UseTitinInterpolation
+        F_passive = F_passive + max(0, interp1(params.TitinTable.Time, params.TitinTable.ForceV, ...
+            min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
+    end
+    
+    % H2: Dynamic passive — titin viscoelasticity during rapid restretch.
+    % Titin is stiffer at high stretch rates; after slack it re-engages with a
+    % transient force proportional to restretch velocity.
+    if params.UseDynamicPassive && vel > 0
+        F_passive = F_passive + params.c_titin_visc * vel;
+    end
 end
 
 % H3: Driving signal passive — time-varying force from preprocessed lookup.
 % params.LoadPassiveMat must be set and sig loaded into params.driveSig by getParams.
-if ~isempty(params.LoadPassiveMat)
-    F_passive = sigLookup(params.driveSig, t);
-end
+
 
 % default
 F_total = F_active + F_passive;

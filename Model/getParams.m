@@ -547,7 +547,7 @@ end
     % store it as params.driveSig. The file is produced by preprocessDrivingSignal.m.
     % Used by dPUdT_CombinedTransitions when params.LoadPassiveMat is set.
     if isfield(params, 'LoadPassiveMat') && ~isempty(params.LoadPassiveMat)
-        tmp = load(params.LoadPassiveMat, 'sig');
+        tmp = load(['data\' params.LoadPassiveMat], 'sig');
         params.driveSig = tmp.sig;
     end
 

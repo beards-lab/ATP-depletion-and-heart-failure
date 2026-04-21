@@ -148,7 +148,7 @@ LoadData;
 
 % Run the experiment scripts
 % writeParamsToMFile('params/ModelParamsInitManualLastSlack.m', params0);
-params0.LoadPassiveMat = '..\data\03 27 2026 M\06_Merged_8mM_Active_PNB_Mava_proc.mat';
+params0.LoadPassiveMat = '03 27 2026 M\06_Merged_8mM_Active_PNB_Mava_proc.mat';
 tic
 RunBakersExp;
 toc
