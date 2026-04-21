@@ -12,8 +12,7 @@
 %        Perturb 1: ends 200 ms before first slack
 %        Perturb 2: starts 500 ms after last restretch end
 
-cd('C:\home\git\ATP-depletion-and-heart-failure');
-datastruct = load('data/bakers_slack8mM_all.mat');
+datastruct = load('../data/bakers_slack8mM_all.mat');
 vt_orig   = datastruct.velocitytable;
 datatable = datastruct.datatable;
 
@@ -184,6 +183,6 @@ sgtitle('Original vs New Baker Slack Protocol');
 
 %% Save
 velocitytable = vt_new;
-save('data/bakers_slack8mM_update.mat', 'velocitytable', 'datatable');
-fprintf('\nSaved  data/bakers_slack8mM_update.mat\n');
+save('../data/bakers_slack8mM_update.mat', 'velocitytable', 'datatable');
+fprintf('\nSaved  ../data/bakers_slack8mM_update.mat\n');
 fprintf('SL range: [%.4f, %.4f] µm\n', min(SLn), max(SLn));

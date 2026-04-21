@@ -1,6 +1,6 @@
 %% Fix and Fudge Velocity table
 
-datastruct = load('data/bakers_slack8mM_all.mat');
+datastruct = load('../data/bakers_slack8mM_all.mat');
 velocitytable =    datastruct.velocitytable;
 
 %% Fix velcity table to have equal speeds

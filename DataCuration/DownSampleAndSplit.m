@@ -59,7 +59,7 @@ end
 
     if ~isempty(saveAs)
         % Export the data into modelica-readable format and for identificatoin
-        fn = ['data/' saveAs '.mat'];
+        fn = ['../data/' saveAs '.mat'];
         save(fn,  'datatable', 'velocitytable');
         disp(['Saved as ' fn])
     end

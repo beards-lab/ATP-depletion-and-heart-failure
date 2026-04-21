@@ -2,16 +2,16 @@
 isovelocitydata = true;
 
 if isovelocitydata
-    opts = detectImportOptions('data/2021 06 15 isovelocity fit Filip.xlsx', 'Sheet', 1); % Specify the sheet to read from
+    opts = detectImportOptions('../data/2021 06 15 isovelocity fit Filip.xlsx', 'Sheet', 1); % Specify the sheet to read from
     opts.DataRange = 'A5'; % Set the data range starting from the 5th row
-    dataTable = readtable('data/2021 06 15 isovelocity fit Filip.xlsx', opts); % Load the data into a table
+    dataTable = readtable('../data/2021 06 15 isovelocity fit Filip.xlsx', opts); % Load the data into a table
     
     % Limit to 3 columns and rename variables
     dataTable = dataTable(:, 1:3);
     dataTable.Properties.VariableNames = {'t', 'L', 'F'};
 
 else
-    datatable = load("data\bakers_slack8mM_all.mat").datatable;
+    datatable = load("..\data\bakers_slack8mM_all.mat").datatable;
     t = datatable(:, 1)*1000; % Extract time data
     L = datatable(:, 2); % Extract L data
     F = datatable(:, 3); % Extract F data
@@ -45,7 +45,7 @@ if isovelocitydata
     riseIndices = riseVelocities([false; diff(riseVelocities) > 1000]);
     winstart = 480 - 480;
 else
-    velocitytable = load("data\bakers_slack8mM_all.mat").velocitytable;
+    velocitytable = load("..\data\bakers_slack8mM_all.mat").velocitytable;
     times = velocitytable(find(velocitytable(:, 2) < 0) + 3, 1)*1000;
     
     % Find indices of vector t where it starts with values in times
