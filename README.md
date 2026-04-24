@@ -18,20 +18,24 @@ MATLAB codebase implementing a strain-discretized cardiac cross-bridge (sarcomer
 ```
 ATP-depletion-and-heart-failure/
 │
-├── Model/              Core ODE engine, parameter system, experiment coordinators
+├── Model/              Core ODE engine, parameter system, experiment runners,
+│   │                   feature extraction and cost functions
 │   └── experiments/    Specialized protocol runners (FV, ktr, slack, stairs)
 │
-├── Auxiliary/          Reusable utility functions: visualization, feature extraction,
-│                       fitting, analysis helpers
+├── DataCuration/       Raw data → model-ready data: log loading, resampling,
+│                       velocity-table construction, protocol building
 │
-├── Workbench/          Interactive driver scripts, optimization entry points
-│   ├── DataCuration/   Velocity-table building, protocol construction, raw-data extraction
-│   └── Tests/          Test and validation scripts for individual subsystems
+├── Analysis/           Documented scientific investigations tied to specific
+│                       hypotheses or paper sections (sensitivity, mechanism
+│                       evaluation, restretch, piecewise optimization)
 │
-├── Analysis/           High-level analysis and tuning campaigns (sensitivity, mechanism
-│                       evaluation, restretch tuning, piecewise optimization)
+├── Workbench/          Interactive exploration: parameter tuning, optimization
+│   └── Tests/          campaigns, ad-hoc experiments
 │
-├── ModelOptParams/     Auto-generated parameter snapshots from optimization runs (73+ files)
+├── Auxiliary/          Generic reusable tools: visualization, fitting utilities,
+│                       math helpers, sensitivity analysis functions
+│
+├── ModelOptParams/     Auto-generated parameter snapshots from optimization runs
 │
 ├── params/             Hand-curated and validated parameter sets
 │
@@ -39,7 +43,7 @@ ATP-depletion-and-heart-failure/
 │
 ├── Docs/               Presentations, meeting notes, model descriptions
 ├── Figures/            Generated and reference figures
-└── data/               Experimental data (ATP levels, slack, ktr, force-velocity)
+└── data/               Experimental data — not tracked by git
 ```
 
 ---
@@ -49,8 +53,13 @@ ATP-depletion-and-heart-failure/
 ### 1. Demo — run the model once
 
 ```matlab
+% Minimal — Model/Driver.m (canonical entry point)
+cd Model
+Driver
+
+% Full demo with MEX and parallel pool:
 cd Workbench
-RunModel          % loads data, builds params, runs ODE, plots output
+RunModel
 ```
 
 ### 2. Evaluate fit against Baker lab data
@@ -85,6 +94,75 @@ Workbench/CompareProtocols   % loads all datasets, fits all feature types, plots
 
 ---
 
+## Full Pipeline Diagram
+
+```mermaid
+flowchart TD
+    subgraph entry["Entry points"]
+        A1["Model/Driver.m\n(minimal)"]
+        A2["Workbench/RunModel.m\n(full demo, MEX, parpool)"]
+        A3["RunOptim / RunOptimLakes\n→ evaluateProblem(fcn, g)"]
+        A4["HandtuneAlternativeModel.m\n(interactive)"]
+    end
+
+    subgraph setup["Workspace setup"]
+        B1["LoadData.m\nATP_c · Data_ATP · Ktr_mean · FV_velocities\n(all inline numeric constants)"]
+        B2["params script\n(params/*.m or ModelOptParams/*.m)\n→ sets params0 fields"]
+        B3["getParams(params0, g)\n→ defaults · apply mods g · resolveParams\n→ strain grid s · PU0"]
+    end
+
+    entry --> setup
+    B1 --> B3
+    B2 --> B3
+    B3 --> coord
+
+    subgraph coord["RunBakersExp.m  (coordinator script)"]
+        direction LR
+        F1["RunForceVelocity"]
+        F2["RunKtr"]
+        F3["RunStairs"]
+        F4["RunSlack"]
+        F5["RunMinStretch"]
+        F6["EvalFeatures"]
+    end
+
+    F1 -->|"Data_ATP, FV_velocities\n(from workspace)"| FV["runFVExperiment"]
+    F2 -->|"Ktr_mean (workspace)\nbakers_ktr_8.mat (plot only)"| KTR["runKtrExperiment"]
+    F3 -->|"data/bakers_rampup8.mat\n(velocitytable + datatable)"| STA["runStairsExperiment"]
+    F4 -->|"data/bakers_slack8mM_all.mat\nor params0.velocitytableonfile"| SLK["runSlackExperiment"]
+    F5 -->|"data/PassiveCaSrc2/\n.../02_03_Fmax_stiff_ktr.txt"| MIN["inline stretch protocol\nin RunBakersExp"]
+
+    FV & KTR & STA & SLK & MIN --> EM
+
+    EM["evaluateModel(modelFcn, T, params)\n→ ode15s with per-segment velocity"]
+    EM --> ODE["dPUdT_CombinedTransitions.m\n(PRIMARY ODE — strain-discretized XB states)\nset via params0.modelFcn"]
+    ODE --> OUT["out: { t · Force · FXB · FXBPassive\n  SL · LSE · PU · SR · SRD · NP · ... }"]
+
+    OUT --> costs
+
+    subgraph costs["Cost functions  →  E vector"]
+        E1["E_fv = Σ(F_sim/F_data − 1)² / N_pts\n(normalized ratio MSE)"]
+        E2["E_ktr = (Ktr_sim − Ktr_target)²\n(squared rate deviation)"]
+        E3["E_stairs = MSE(F) × 10"]
+        E4["E_slack = MSE(F, validZone) × 20\n+ optional onset terms"]
+    end
+
+    F6 -->|"recalculateDataFeats\nor hardcoded ref values"| FEAT
+
+    subgraph FEAT["Feature path  (EvalFeatures = true)"]
+        FX["extractForceVelocityAttributes\n→ FV_v, FV_f, FV_fnorm"]
+        SX["extractSlackAttributes\n→ ktr, A, t0, SLslack, peak1_y,\n   vall_y, peak2, steady, ..."]
+        FC["evalFeatureCost(feats_data, feats_sim, params0.fn)\n→ E_feat (weighted scalar per feature group)"]
+    end
+
+    FX & SX --> FC
+
+    costs & FC --> EVEC["E = [E_fv, E_ktr, E_stairs, E_slack, E_feat] × ErrorMultiplier\nEtot = sum(E)  →  returned to optimizer"]
+    EVEC -->|"optimizer feedback loop"| A3
+```
+
+---
+
 ## Core Execution Stack
 
 ```
@@ -105,16 +183,59 @@ where `ss = numel(params.s)` = number of strain bins.
 
 ---
 
+## Adding a New Protocol Experiment
+
+1. **Create** `Model/experiments/runMyExperiment.m` — return `[E_new, out, features_model, features_data]`:
+   ```matlab
+   function [E, out, fm, fd] = runMyExperiment(params0)
+       modelFcn = str2func(params0.modelFcn);
+       params = params0;
+       datastruct = load('../data/my_data.mat');  % load your data file
+       params.Velocity = datastruct.velocitytable(:, 2);
+       params = getParams(params, params.g, true);
+       [~, out] = evaluateModel(modelFcn, datastruct.velocitytable(:, 1), params);
+       Fi = interp1(out.t, out.Force, datastruct.datatable(:, 1));
+       E  = mean((datastruct.datatable(:, 3) - Fi).^2) * 10;  % MSE × scale
+       fm = struct(); fd = struct();  % optionally populate via extractSlackAttributes etc.
+   end
+   ```
+
+2. **Register the flag** in `getParams.m` defaults:
+   ```matlab
+   params.RunMyProtocol = false;  % add near other Run* defaults
+   ```
+
+3. **Wire into coordinator** `RunBakersExp.m`:
+   ```matlab
+   if params0.RunMyProtocol
+       [E_new, out_new] = runMyExperiment(params0);
+       E(end+1) = E_new;
+   end
+   ```
+
+4. **Enable it** in your param script: `params0.RunMyProtocol = true;`
+
+---
+
 ## Model/ — Core Files
 
 | File | Role |
 |------|------|
+| `Driver.m` | **Canonical entry point** — minimal script; run from `Model/` |
 | `getParams.m` | **CENTRAL** — builds/updates the params struct; call after changing any field |
 | `dPUdT_CombinedTransitions.m` | **PRIMARY ODE** — set via `params0.modelFcn`; all active mechanisms |
 | `evaluateModel.m` | Integrates ODE for one experimental condition |
 | `RunBakersExp.m` | Coordinator: runs FV, ktr, slack, staircase protocols and computes E |
 | `evaluateProblem.m` | Thin wrapper for use by optimisers |
 | `resolveParams.m` | Resolves `'='`-prefixed param fields as MATLAB expressions |
+| `LoadBakersExp.m` | Loads and plots all Baker lab experimental data files |
+| `extractSlackAttributes.m` | Feature extraction from slack-release protocol output |
+| `extractForceVelocityAttributes.m` | Feature extraction from FV protocol output |
+| `extractPerturbAttributes.m` | Feature extraction from perturbation (ktr) protocol output |
+| `evalFeatureCost.m` | Feature-based cost function (data vs simulation) |
+| `updateRates.m` | Scale all turnover rates by `xrate` multiplier |
+| `handleAndRethrowCostException.m` | Error handling wrapper for cost evaluation |
+| `simulateForceLengthEstim.m` | Force-length estimation simulation |
 | `dPUdTCa*.m` | Legacy / alternative ODE variants (kept for reference) |
 | `experiments/` | `runFVExperiment`, `runKtrExperiment`, `runSlackExperiment`, `runStairsExperiment` |
 
@@ -122,33 +243,76 @@ where `ss = numel(params.s)` = number of strain bins.
 
 ## Auxiliary/ — Utilities
 
+Generic reusable tools with no specific analysis context — called from many places.
+
 | File | Role |
 |------|------|
-| `extractSlackAttributes.m` | Feature extraction from slack-release protocol |
-| `extractForceVelocityAttributes.m` | Feature extraction from FV protocol |
-| `extractPerturbAttributes.m` | Feature extraction from perturbation (ktr) protocol |
-| `evalFeatureCost.m` | Feature-based cost function (data vs simulation) |
-| `fitRecovery.m` | Fit force-recovery kinetics (used for ktr) |
-| `plotFeatures.m` | Plot data-vs-sim features (wrapper around plotMultipleFeatures) |
-| `plotMultipleFeatures.m` | Core multi-dataset feature comparison plots |
 | `animateStateProbabilities.m` | Animate cross-bridge state probability distributions |
+| `plotStateFluxes.m` / `plotFeatures.m` / `plotRates.m` | Visualization |
+| `StatesInTime.m` / `runStatesInTime.m` | State probability time series |
+| `VisualizeSensMat.m` | Visualize sensitivity matrix output |
 | `calcSensitivities.m` | One-at-a-time parameter sensitivity analysis |
-| `updateRates.m` | Scale all turnover rates by `xrate` multiplier |
+| `ResidualAndJacobian.m` | Residual vector and Jacobian for SA / optimization |
+| `fitRecovery.m` / `fitSlackForceOnset.m` | Fitting utilities |
 | `writeParamsToMFile.m` | Serialize params struct to a `.m` file |
+| `sigLookup.m` | Catmull-Rom interpolation lookup in sig struct |
+| `matchStructFields.m` / `insertAt.m` / `getAllDifferent.m` | Generic struct/array utilities |
 
 ---
 
-## Workbench/ — Drivers
+## DataCuration/ — Data Pipeline
+
+Scripts that turn raw experimental recordings into the `.mat` files the model consumes.
+All scripts use `../data/` paths and are run from the `DataCuration/` directory.
+
+### Baker lab legacy data (8 / 2 / 0.2 mM ATP protocols)
+
+The pre-processed `data/*.txt` and `data/bakers_slack8mM_all.mat` files are already
+ready for the model — no DataCuration step needed for standard fitting.
+
+Optional modifications:
+- `BuildUpdatedSlackProtocol.m` — rebuild velocity table with uniform hold/recovery durations → `data/bakers_slack8mM_update.mat`
+- `ManipulateVelocityTable.m` — further adjustments → `data/bakers_slack8mM_all_fix.mat`
+- `LoadBakersIsovelocity.m` — load and inspect Baker isovelocity dataset
+
+### New 2026 driving-signal experiments (`data/03 27 2026 M/`, `data/04 03 2026 F/`)
+
+Run in this order:
+
+```
+1. LoadAndPlotLogs          — inspect raw Log_*.txt files; writes AllDataMerged.mat to data dir
+2. preprocessDrivingSignal  — resample + smooth merged .txt  →  *_proc.mat  (sig struct)
+3. CreateProtocolVelocityTable  — extract velocity table from merged .txt
+                                  →  data/protocol_03_27_2026_velocitytable_slack.mat
+4. ClipDrivingSignal        — clip proc.mat signal to the protocol window
+                              →  data/protocol_03_27_2026_PassiveCa_slack.mat
+5. ExtractFeatures0327      — extract model-comparable scalar features from the processed data
+                              (optional; for comparison, not required to run the model)
+```
+
+Point the model at the outputs via:
+```matlab
+params0.velocitytableonfile = '../data/protocol_03_27_2026_velocitytable_slack.mat';
+```
+
+### Passive stiffness (`data/PassiveCaSrc2/`)
+
+- `GetKstiffFromViscoElasticityMeasurements.m` — reads dated subdirectories, extracts stiffness and Fmax values used for titin model parameter identification
+- `FitRundownCorrection.m` — fits a parametric rundown correction surface `F_ref ≈ f(F_rd, SL)`; requires `AllDataMerged.mat` from step 1 above
+
+---
+
+## Workbench/ — Interactive Exploration
 
 | File | Role |
 |------|------|
-| `RunModel.m` | Simplest demo: one ODE run + plots |
-| `HandtuneAlternativeModel.m` | Interactive tuning loop |
+| `RunModel.m` | Full demo with MEX and parallel pool |
+| `HandtuneAlternativeModel.m` | Interactive parameter tuning loop |
+| `HandtuneSlackParams.m` | Slack-specific parameter tuning |
 | `RunOptim.m` / `RunOptimLakes.m` | Optimisation entry points |
 | `Force_pCa.m` | Force-pCa curve at varying ATP concentrations |
-| `CompareProtocols.m` | **Multi-dataset comparison**: slack, ktr, step, staircase across ATP levels |
-| `LoadAndPlotLogs.m` | Load and visualise optimisation log files |
-| `DataCuration/` | Velocity table construction, protocol building, raw log extraction |
+| `CompareProtocols.m` | Multi-dataset comparison: slack, ktr, step, staircase across ATP levels |
+| `RunAllParametrizatinos.m` | Batch evaluation across all saved parameter sets |
 | `Tests/` | Validation scripts for individual subsystems (`TestSR`, `TestFitRates`, etc.) |
 
 ---
