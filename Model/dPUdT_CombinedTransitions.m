@@ -107,18 +107,16 @@ else
     P_SRD = 0;
 end
 
-% x_dash_n = 2.0;
 if params.UseMaxwellDashpot
-    x_dash = PU(Ns*ss+7); % current middle of the parallel visco-elasticity
-    % 3. Maxwell Force (State-Dependent)
-    F_Maxwell  = params.kSE_M * (SL - x_dash);
-    
-    % Update the internal dashpot state (Simple Euler or use your ODE solver)
-    % dx_dash/dt = (Spring_Force) / Viscosity
-    dx_dash_dt = F_Maxwell  / params.eta_M;
-
+    % Titin viscoelastic model: F_titin = F_elastic(SL_c) + X_visc
+    % X_visc is a viscous stress deviation; decays to zero so F_titin decays toward F_elastic.
+    % dX/dt = kSE_M * dSLc - X / eta_M   (computed after dLSEdt is known, below)
+    X_visc = PU(Ns*ss+7);
+    F_elastic_titin = params.k_pas * max((SL - LSE) - 1.51, 0)^params.gamma;
+    F_Maxwell = F_elastic_titin*0 + X_visc;
+    dx_dash_dt = 0; % placeholder; overwritten after dLSEdt
 else
-    x_dash = 0; F_Maxwell  = 0; dx_dash_dt = 0;
+    X_visc = 0; F_Maxwell = 0; dx_dash_dt = 0;
 end
 
 
@@ -199,9 +197,9 @@ if params.UsePassive && ~isempty(params.LoadPassiveMat)
     F_passive = sigLookup(params.driveSig, t);
 else
     if params.UsePassive && ~params.UseTitinIdentifiedPassive
-        Lsc0    = 1.51;
+        % Lsc0    = 1.51;
         % gamma = 7.5;
-        F_passive = F_passive + params.k_pas*max(SL-LSE - Lsc0, 0)^params.gamma; 
+        F_passive = F_passive + params.k_pas*max(SL-LSE -  params.Lsc0, 0)^params.gamma; 
     elseif params.UsePassive && params.UseTitinIdentifiedPassive
         % identified from FitPassiveRampUp.m
         y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
@@ -220,6 +218,10 @@ else
     if params.UseDynamicPassive && vel > 0
         F_passive = F_passive + params.c_titin_visc * vel;
     end
+end
+
+if params.UseMaxwellDashpot
+    F_passive = F_passive + F_Maxwell;
 end
 
 % H3: Driving signal passive — time-varying force from preprocessed lookup.
@@ -265,7 +267,12 @@ else
     end
 end
 
-Force = Force + params.mu2*vel + F_Maxwell;
+Force = Force + params.mu2*vel;
+
+if params.UseMaxwellDashpot
+    dSLc = vel - dLSEdt;
+    dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
+end
 
 %% TRANSITIONS
 % plotStateTransitionsFlag = true;
@@ -603,16 +610,16 @@ rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR,
 
 if params.DryRun
     f = zeros(size(PU));
-    outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1];
-    rates = zeros(1, 13);
+    % outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1];
+    rates = zeros(size(rates));
     return;
 end
 
 %% breakpints
-if any(isnan(f)) || t > 2.92 % && any(PD > 0)
+if any(isnan(f)) || t > 76 % && any(PD > 0)
     % P_SR < 0 % && dU_SR < 0 
     % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
-    numberofthebeast = 6678;
+    numberofthebeast = 66788;
     
 end
 

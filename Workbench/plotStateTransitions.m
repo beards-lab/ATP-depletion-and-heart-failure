@@ -19,8 +19,9 @@ xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 
 %%  ATTACHED STATES
 nexttile(1);cla; title('Attached states'); hold on;
-plot(s, R1D,'<-.', LineWidth=1.5);
-plot(s, R12, '>-', s, R21, '<-.');
+line_R1D = plot(s, R1D,'<-.', LineWidth=1.5);
+line_R12 = plot(s, R12, '>-');
+line_R21 = plot(s, R21, '<-.');
 
 ylim([0, myl])
 xlim([s(1) s(end)])
@@ -33,25 +34,37 @@ xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 % xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 
 % nexttile; title('R2T'); hold on;
-plot(s, R2, '>-');
-plot(s, R2D, '>-');
+line_R2 = plot(s, R2, '>-');
+line_R2D = plot(s, R2D, '>-');
 ylim([0, myl])
 xlim([s(1) s(end)])
 xlabel('s (\mum)');ylabel('Transition rate (1/s)');
 legend('R1D', 'R12', 'R21', 'R2','R2D','AutoUpdate','off');
 % now just the function points 
 if isfield(params, 'PieceWiseStrainDepX') && ~isempty(params.PieceWiseStrainDepX)
-    plot(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, 'x', MarkerSize=14, LineWidth=2)
+    plot(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, 'x', MarkerSize=14, LineWidth=5, Color=line_R12.Color)
+    
+    text(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, cellstr(num2str((1:length(params.PieceWiseStrainDepX))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
 end
 if isfield(params, 'PieceWiseStrainDep2X') && ~isempty(params.PieceWiseStrainDep2X)
-    plot(params.PieceWiseStrainDep2X - (params.dr2 - params.dr), params.k2*params.PieceWiseStrainDep2Params, 'x', MarkerSize=14, LineWidth=2)
+    plot(params.PieceWiseStrainDep2X - (params.dr2 - params.dr), params.k2*params.PieceWiseStrainDep2Params, 'x', MarkerSize=14, LineWidth=5, Color=line_R2.Color)
+    
+    text(params.PieceWiseStrainDep2X- (params.dr2 - params.dr), params.k2*params.PieceWiseStrainDep2Params, cellstr(num2str((1:length(params.PieceWiseStrainDep2X))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
 end
 if isfield(params, 'PieceWiseStrainDepR1DX') && ~isempty(params.PieceWiseStrainDepR1DParams)
-    plot(params.PieceWiseStrainDepR1DX , params.kd*params.PieceWiseStrainDepR1DParams, 'x', MarkerSize=14, LineWidth=2)
+    plot(params.PieceWiseStrainDepR1DX , params.kd*params.PieceWiseStrainDepR1DParams, 'x', MarkerSize=14, LineWidth=5, Color=line_R1D.Color)
+    
+    text(params.PieceWiseStrainDepR1DX , params.kd*params.PieceWiseStrainDepR1DParams,  cellstr(num2str((1:length(params.PieceWiseStrainDepR1DX))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
 end
 
 if isfield(params, 'PieceWiseStrainDepR21X') && ~isempty(params.PieceWiseStrainDepR21X)
-    plot(params.PieceWiseStrainDepR21X, params.k_1*params.PieceWiseStrainDepR21Params, 'x', MarkerSize=14, LineWidth=2)
+    plot(params.PieceWiseStrainDepR21X, params.k_1*params.PieceWiseStrainDepR21Params, 'x', MarkerSize=14, LineWidth=5, Color=line_R21.Color)
+    
+    text(params.PieceWiseStrainDepR21X, params.k_1*params.PieceWiseStrainDepR21Params, cellstr(num2str((1:length(params.PieceWiseStrainDepR21X))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
 end
 
 %% hopping

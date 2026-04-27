@@ -13,6 +13,10 @@ function y = sigLookup(sig, t)
 %
 %   Uses cubic Hermite basis with Catmull-Rom slopes for C1 continuity.
 %   Uniform grid means index k = floor((t-t0)*Fs)+1 — no binary search.
+k   = max(1, min(sig.N - 1, 1 + round((t - sig.t0) * sig.Fs)));
+y = sig.y(k);
+return;
+
 
     k   = max(1, min(sig.N - 1, 1 + floor((t - sig.t0) * sig.Fs)));
     tau = (t - (sig.t0 + (k-1)/sig.Fs)) * sig.Fs;   % in [0, 1)

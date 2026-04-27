@@ -8,8 +8,11 @@ function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn,
 %   FN is a cell array of feature specifiers. Each entry is a string that
 %   may contain multiple feature names separated by '|'. The last token, if
 %   numeric, is treated as a weight (0 = disabled, 1 = default).
-%   Example: 'FV_f|FV_v|0.5' — uses both FV_f and FV_v features with weight 0.5
-%            'ktr|0'          — evaluates ktr but does not count it in the total
+%   Example: 'FV_f|FV_v|0.5'                    — weight 0.5, normalized L-norm
+%            'ktr|0'                              — weight 0, not counted in total
+%            'FV_f|@(X,Y_data) 0.1*sum(...)'     — custom cost fn; X=sim, Y_data=data
+%   For custom functions, '|' inside the function body is treated as logical OR,
+%   not a separator. Weight defaults to 1.
 %
 %   Cost for each feature:
 %     cost(i) = sum(|data/mean(data) - sim/mean(data)|^costExp) + NaN_penalty
@@ -49,15 +52,32 @@ MISSING_FEATURE_COST = 100;
 if nargin < 4
     costExp = 2;
 end
-for i_feat = 1:size(fn, 2)
+for i_feat = 1:length(fn)
 
-    featnames = split(fn{i_feat}, '|');
-    feat_y{i_feat} = featnames{1};
+    fn_str = fn{i_feat};
 
-    if isempty(str2double(featnames{end})) || isnan(str2double(featnames{end}))
+    % Split off custom cost function at '@' — from '@' onward may contain '|' as logical OR
+    at_pos = strfind(fn_str, '@');
+    if ~isempty(at_pos)
+        prefix         = fn_str(1:at_pos(1)-1);
+        cost_fn        = str2func(strtrim(fn_str(at_pos(1):end)));
         weight(i_feat) = 1;
     else
-        weight(i_feat) = str2double(featnames{end});
+        prefix  = fn_str;
+        cost_fn = [];
+    end
+
+    % Split prefix on '|'; last token may be a numeric weight
+    tokens = split(prefix, '|');
+    tokens = tokens(~cellfun(@isempty, tokens));  % drop empty strings from trailing '|'
+    feat_y{i_feat} = tokens{1};
+    if isempty(cost_fn)
+        w = str2double(tokens{end});
+        if ~isnan(w)
+            weight(i_feat) = w;
+        else
+            weight(i_feat) = 1;
+        end
     end
 
     % If either struct is missing the field, the experiment was not run.
@@ -70,10 +90,12 @@ for i_feat = 1:size(fn, 2)
     fd = [feats_data.(feat_y{i_feat})];
     fs = [feats_sim.(feat_y{i_feat})];
 
-    % normalization factor
-    n_F = mean(fd);
-
-    cost(i_feat) = nansum(abs(fd/n_F - fs/n_F).^costExp) + sum(isnan(fs)*NAN_COST);
+    if ~isempty(cost_fn)
+        cost(i_feat) = cost_fn(fs, fd) + sum(isnan(fs) * NAN_COST);
+    else
+        n_F = mean(fd);
+        cost(i_feat) = nansum(abs(fd/n_F - fs/n_F).^costExp) + sum(isnan(fs) * NAN_COST);
+    end
 
 end
 

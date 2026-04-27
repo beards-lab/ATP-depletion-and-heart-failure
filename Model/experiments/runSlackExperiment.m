@@ -33,7 +33,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 
     modelFcn = str2func(params0.modelFcn);
 
-    recalculateDataFeats = params0.recalculateDataFeats;
+    % recalculateDataFeats = params0.recalculateDataFeats;
     features_model = struct();
     features_data  = struct();
 
@@ -45,6 +45,12 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         datastruct = load('data/bakers_slack8mM_all.mat');
     end
     datatable = datastruct.datatable;
+    if isfield(datastruct, 'features_data')
+        features_data = datastruct.features_data;
+    end
+
+    
+
     validZone = datatable(:, 1) > 1;
 
     datastruct.velocitytable(1, 1) = -20;
@@ -113,7 +119,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             PU0 = out_init.PU(end, :);
             LXBpivot0 = out_init.params.LXBpivot;   % capture pivot after init run
 
-            wins = 3:4:(size(velocitytable, 1) - 1);
+            wins = 2:4:(size(velocitytable, 1) - 1);
 
             % Preallocate cell array
             par_velocitytable = cell(length(wins), 1);
@@ -210,6 +216,18 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 
     e = (datatable(validZone, 3) - max(0, Fi)).^2;
     E_slack = mean(e(~isnan(e))) * 20;
+    % plot(datatable(validZone, 1), 10*cumsum(e)/length(e), datatable(validZone, 1), datatable(validZone, 3))
+
+    %% peaks for the passive - TODO CLEAR
+    
+    if params.EvalPeaks
+        % peaks_data = findpeaks(datatable(:, 3), datatable(:, 1),  MinPeakProminence=10, MinPeakHeight=10, Annotate="peaks");
+        peaks_data =    [21.4488;   21.1131;    23.4577;   24.4631];
+        peaks_model = findpeaks(out_slack.Force(nonrepeating), out_slack.t(nonrepeating), MinPeakProminence=10, MinPeakHeight=10, Annotate="peaks")';
+        N = min(length(peaks_data), length(peaks_model));
+        E_p = 0.5*sum((peaks_data(1:N) - peaks_model(1:N)).^2);
+        E_slack = E_slack + E_p;
+    end
 
     %% Plotting
     if params.PlotEachSeparately
@@ -305,9 +323,10 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         end
     end
 
-    %% Optional: extract features
+    %% Optional: extract features if missing
+
     if params.EvalFeatures
-        if recalculateDataFeats
+        if isempty(features_data) && recalculateDataFeats
             features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], false);
             % Print extracted values to console so they can be pasted into the else branch below
             fieldNames = fieldnames(features_data);
@@ -318,7 +337,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
                 s = mat2str(round(val, 4, 'significant'));
                 fprintf('features_data.%s = %s;\n', fname, s);
             end
-        else
+        elseif isempty(features_data)
             % Hardcoded Baker lab 8 mM slack reference values (extracted 2024-11)
             features_data.ktr                 = [39.76 34.18 31.63 28.36 27.6];
             features_data.A                   = [68.4 65.47 58.92 52.2 43.51];
@@ -342,7 +361,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             features_data.ovrsht_dy           = [0.431 1.392 1.244 1.552 0.3205];
             features_data.ovrsht_t            = [0.2116 0.225 0.247 0.239 0.2676];
             features_data.XTOR               = [10 10 10 10 10];
-        end
-        features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting);
+        end        
     end
+    features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting);
 end

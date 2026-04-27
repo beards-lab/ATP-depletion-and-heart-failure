@@ -180,6 +180,10 @@ MARKER_SIZE           = 12;    % plot marker size
             feats.ktr2_overshoot = NaN;
         end
 
+        if isempty(y)
+            y = NaN;
+            SL = NaN;
+        end
         feats.Am      = y(end);
         feats.SLslack = SL(end);
         feats.SLdiff  = max(data_SL) - SL(end);

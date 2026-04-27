@@ -44,7 +44,7 @@ end
 % from evalFeatureCost (≥ 100 → shown as "[miss]").
 [cost, ~, cost_raw] = evalFeatureCost(feats_data, feats_sim, fn);
 % cost_raw is the unweighted per-feature error; cost is the weighted total
-cmap = containers.Map(fn, num2cell(cost_raw));
+cmap = containers.Map(fn, num2cell(cost));
 
 figure(80085); clf;
 plotMultipleFeatures(feats_cell, labels, colors, markers, fn, [], [], cmap);

@@ -186,6 +186,7 @@ end
         'UseA1AttachmentKernel', false,...
         'OptimizeFVInit', true, ...
         'EvalFeatures', false, ...
+        'EvalPeaks', false, ...
         'recalculateDataFeats', false, ...
         'MaxSpaceExtensionCount', Inf, ...
         'UseMaxwellDashpot', false, ...
@@ -211,6 +212,9 @@ end
         'UseJPattern', false, ...  % precompute Jacobian sparsity pattern for ode15s (default off)
         'UseFastPPval', false, ... % replace ppval with precomputed table lookup (default off)
         'UseCompiledMex', false, ...  % use compiled C MEX for ODE RHS (requires compileMex.m; config-specific)
+        'PieceWiseStrainDepR21X_logOffset', 1, ...
+        'PieceWiseStrainDepR1DX_logOffset', 1, ...
+        'PieceWiseStrainDep2X_logOffset', 1, ...
         'LoadPassiveMat', '');     % path to preprocessed driving signal .mat; if non-empty, loads sig into params.driveSig
 
 % , false, ...
@@ -390,21 +394,21 @@ end
 
     if isfield(params, 'PieceWiseStrainDep2X') && isfield(params, 'PieceWiseStrainDep2Params') ...
             && ~isempty(params.PieceWiseStrainDep2X) && ~isempty(params.PieceWiseStrainDep2Params) 
-        params.PieceWiseStrainDep2 = pchip(params.PieceWiseStrainDep2X, params.PieceWiseStrainDep2Params);
+        params.PieceWiseStrainDep2 = pchip(params.PieceWiseStrainDep2X + log(params.PieceWiseStrainDep2X_logOffset)/10, params.PieceWiseStrainDep2Params);
     else
         params.PieceWiseStrainDep2 = [];
     end
 
     if isfield(params, 'PieceWiseStrainDepR1DX') && isfield(params, 'PieceWiseStrainDepR1DParams') ...
             && ~isempty(params.PieceWiseStrainDepR1DX) && ~isempty(params.PieceWiseStrainDepR1DParams) 
-        params.PieceWiseStrainDepR1D = pchip(params.PieceWiseStrainDepR1DX, params.PieceWiseStrainDepR1DParams);
+        params.PieceWiseStrainDepR1D = pchip(params.PieceWiseStrainDepR1DX + log(params.PieceWiseStrainDepR1DX_logOffset)/10, params.PieceWiseStrainDepR1DParams);
     else
         params.PieceWiseStrainDepR1D = [];
     end
 
     if isfield(params, 'PieceWiseStrainDepR21X') && isfield(params, 'PieceWiseStrainDepR21Params') ...
             && ~isempty(params.PieceWiseStrainDepR21X) && ~isempty(params.PieceWiseStrainDepR21Params) 
-        params.PieceWiseStrainDepR21 = pchip(params.PieceWiseStrainDepR21X, params.PieceWiseStrainDepR21Params);
+        params.PieceWiseStrainDepR21 = pchip(params.PieceWiseStrainDepR21X + log(params.PieceWiseStrainDepR21X_logOffset)/10, params.PieceWiseStrainDepR21Params);
     else
         params.PieceWiseStrainDepR21 = [];
     end
@@ -521,7 +525,7 @@ end
         PuATP = 0;
         SL0 = params.SL0*params.rsl0;
         params.LXBpivot = SL0;
-        x_dash = SL0;
+        x_dash = 0; % X_visc: initial viscous stress deviation is zero
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
         if params.NumberOfStates == 2

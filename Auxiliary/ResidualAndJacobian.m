@@ -3,6 +3,12 @@
 function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
     % Use 'persistent' variables to store values between function calls
     persistent S_Cache call_count history
+
+    if any(g < 0)
+        Residuals = 1e3;
+        Jacobian = S_Cache;
+        return;
+    end
     
     if nargin < 3 
         ignoreJac = false;
@@ -35,12 +41,17 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
     try
         LoadData;
         RunBakersExp; % This is your costly model call!
-        [Residuals, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 1);
+        if isfield(params0, 'OptimizeOn') && strcmp(params0.OptimizeOn, 'Time')
+            Residuals = E(1);
+        else
+            [Residuals, weights, cost] = evalFeatureCost(features_data, features_model, params0.fn, 2);
+        end
     catch e
         disp(e)
         Residuals = 1e3*ones(size(params0.fn));
         Jacobian = S_Cache;
     end
+    return;
 
     if isempty(history)
         history = Residuals;

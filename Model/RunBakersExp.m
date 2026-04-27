@@ -30,6 +30,7 @@ end
 
 %% FORCE VELOCITY
 if params0.RunForceVelocity
+    LoadData;
     [E_fv, outs_fv, fm_fv, fd_fv] = runFVExperiment(params0, ATP_c, Data_ATP);
     E(end+1) = E_fv;
     features_model = mergeStructs(features_model, fm_fv);

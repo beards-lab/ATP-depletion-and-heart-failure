@@ -3,11 +3,14 @@
 % - fix the velocitytable for those as well
 
 % CreateProtocolVelocityTable.m
-clear;
+% clear;
 dataDir    = '../data/03 27 2026 M/';
 fpath      = [dataDir '06_Merged_8mM_Active_PNB_Mava.txt'];
+fpath      = [dataDir '02_Merged_8mM_Active.txt'];
 % exportData = [dataDir '06_Merged_8mM_Active_PNB_Mava_proc.mat'];
-outPath    = '../data/protocol_03_27_2026_velocitytable_slack.mat';
+% outPath    = '../data/protocol_03_27_2026_velocitytable_slack.mat';
+outPath    = '../data/protocol_03_27_2026_8mM_slack.mat';
+% outPath    = '../data/protocol_03_27_2026_ActivePNBMava_slack.mat';
 
 % set #02
 % dataDir = '../data/04 03 2026 F/';
@@ -21,7 +24,7 @@ M = readmatrix(fpath);
 idx0 = find(M(:,1) >= -0.1, 1);
 t = M(idx0:end, 1);
 L = M(idx0:end, 2);
-clf;ax1 = nexttile(1);plot(t, L); ax2 = nexttile(2);plot(t(2:end), diff(L)); linkaxes([ax1 ax2], 'x')
+% clf;ax1 = nexttile(1);plot(t, L); ax2 = nexttile(2);plot(t(2:end), diff(L)); linkaxes([ax1 ax2], 'x')
 
 F = M(idx0:end, 3);
 
@@ -104,7 +107,7 @@ vel_um = v_vt * 2; % placeholder scaling
 velocitytable = [t_vt, v_vt, vel_um, L_vt];
 
 % Generate datatable (downsampled full trace for cost function evaluation)
-dsf = 20; % downsample factor
+dsf = 5; % downsample factor
 datatable = [downsample(t, dsf), downsample(L, dsf), downsample(F, dsf)];
 
 
@@ -131,19 +134,44 @@ end
 % ── datatable: clip only ──
 datatable = datatable(datatable(:,1) >= slackSegment(1) & datatable(:,1) <= slackSegment(2), :);
 
-clf;plot(datatable(:,1), datatable(:,2), '|-', velocitytable(:, 1),velocitytable(:, 4), 'x-');
+% clf;nexttile;plot(datatable(:,1), datatable(:,2), '|-', velocitytable(:, 1),velocitytable(:, 4), 'x-');
+
+if mean(datatable(:,2)) < 1.5
+    % fix ML to SL
+    datatable(:,2) = datatable(:,2)*2;
+end
+%% fit data features in slack
+features_data = struct();
+features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], true);
+            % % Print extracted values to console so they can be pasted into the else branch below
+            % fieldNames = fieldnames(features_data);
+            % for k = 1:numel(fieldNames)
+            %     fname = fieldNames{k};
+            %     val   = features_data.(fname);
+            %     if ~isnumeric(val), continue; end
+            %     s = mat2str(round(val, 4, 'significant'));
+            %     fprintf('features_data.%s = %s;\n', fname, s);
+            % end
+
+
+%%
 
 % Save it
-save(outPath, 'velocitytable', 'datatable');
+save(outPath, 'velocitytable', 'datatable', 'features_data');
 fprintf('Saved new velocitytable (%dx4) and datatable (%dx3) to %s\n', ...
         size(velocitytable,1), size(datatable,1), outPath);
 
 figure(50); clf;
+ax1 = nexttile;
 plot(t, L, 'Color', [0.7 0.7 0.7]); hold on;
 plot(velocitytable(:,1), velocitytable(:,4), 'ro-', 'MarkerSize', 4);
 title('Extracted Velocity Table over Original L trace');
 ylabel('Length (Lo)'); xlabel('Time (s)');
 legend('Raw L', 'Velocity Table Segments');
+ax2 = nexttile;
+plot(t, F, 'Color', [0.7 0.7 0.7]); hold on;
+plot(datatable(:,1), datatable(:,3), 'r-');
+linkaxes([ax1 ax2], 'x')
 
 function keep = rdp(x, y, epsilon)
     % Iterative RDP algorithm

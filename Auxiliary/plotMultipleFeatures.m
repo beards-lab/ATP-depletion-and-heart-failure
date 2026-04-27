@@ -54,12 +54,24 @@ tiledlayout('flow', 'TileSpacing', 'compact', 'Padding', 'compact');
 for i_feat = 1:numel(fn)
     nexttile(); hold on;
 
-    % Parse 'y|x' or plain 'y'
-    parts  = split(fn{i_feat}, '|');
-    feat_y = parts{1};
+    % Parse 'y|x', 'y|x|weight', or 'y|@(X,Y_data) ...' (function may contain '|')
+    fn_str  = fn{i_feat};
+    at_pos  = strfind(fn_str, '@');
+    if ~isempty(at_pos)
+        prefix      = fn_str(1:at_pos(1)-1);
+        fn_body     = strtrim(fn_str(at_pos(1):end));
+        has_cost_fn = true;
+    else
+        prefix      = fn_str;
+        fn_body     = '';
+        has_cost_fn = false;
+    end
+    tokens = split(prefix, '|');
+    tokens = tokens(~cellfun(@isempty, tokens));
+    feat_y = tokens{1};
     feat_x = '';
-    if numel(parts) >= 2 && ~strcmp(parts{2}, '_') && isnan(str2double(parts{2}))
-        feat_x = parts{2};
+    if ~has_cost_fn && numel(tokens) >= 2 && ~strcmp(tokens{2}, '_') && isnan(str2double(tokens{2}))
+        feat_x = tokens{2};
     end
 
     plotted_any = false;
@@ -108,14 +120,19 @@ for i_feat = 1:numel(fn)
         end
     end
 
-    if isempty(feat_x)
-        title([strrep(fn{i_feat}, '_', '\_') cost_str], 'Interpreter', 'none');
+    if has_cost_fn
+        fn_disp = fn_body;
+        if numel(fn_disp) > 42; fn_disp = [fn_disp(1:42) '...']; end
+        title({[feat_y cost_str], fn_disp}, 'Interpreter', 'none');
+        xlabel('Segment');
+    elseif isempty(feat_x)
+        title([strrep(fn{i_feat}, '_', '_') cost_str], 'Interpreter', 'none');
         xlabel('Segment');
     else
         title(sprintf('%s vs %s%s', feat_y, feat_x, cost_str), 'Interpreter', 'none');
-        xlabel(strrep(feat_x, '_', '\_'), 'Interpreter', 'none');
+        xlabel(strrep(feat_x, '_', '_'), 'Interpreter', 'none');
     end
-    ylabel(strrep(feat_y, '_', '\_'), 'Interpreter', 'none');
+    ylabel(strrep(feat_y, '_', '_'), 'Interpreter', 'none');
     box on;
     if i_feat == 1
         legend('Location', 'best', 'FontSize', 7);

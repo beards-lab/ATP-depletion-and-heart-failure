@@ -71,24 +71,24 @@ RunBakersExp  % script in Model/, uses params0 from workspace
   - `dPUdTCaSimpleAlternative2State.m`, `dPUdTCa.m`, etc. — alternative ODE variants
   - `resolveParams.m` — resolves param fields that are expressions (prefixed with `'='`)
   - `LoadBakersExp.m` — loads and plots experimental data
+  - `extractSlackAttributes.m`, `extractForceVelocityAttributes.m`, `extractPerturbAttributes.m` — feature extraction from simulation output (called by experiment runners)
+  - `evalFeatureCost.m` — feature-based cost function
+  - `updateRates.m` — scales all turnover rates by a single `xrate` multiplier
+- **`DataCuration/`** — raw data → model-ready data; all scripts use `../data/` paths:
+  - See README for pipeline order (Baker legacy vs. 2026 driving-signal experiments)
 - **`Workbench/`** — driver scripts and optimization:
   - `RunOptim.m`, `RunOptimLakes.m` — optimization entry points
   - `HandtuneAlternativeModel.m` — manual parameter tuning workflow
   - `tunableParams.m` — lists which params are eligible for optimization
   - `DriverSimple.m`, `DriverSimple_Beard2022.m`, etc. — variant entry-point scripts (playground)
-- **`params/`** — saved parameter snapshots (complete `params0` structs as scripts):
-  - `ModelParamsInitNiceSlack_prescribedSR.m` (in `Workbench/`) and variants
-  - `ModelParamsInitNiceSlack_prescribedSrxD.m`, `ModelParamsInitNiceSlack_prescribedSR_var2.m`
-  - `ModelOptParamsFeaturesOvernight.m` — generated snapshot from overnight optimization
-- **`Auxiliary/`** — utility functions:
+- **`params/`** — saved parameter snapshots (complete `params0` structs as scripts)
+- **`Auxiliary/`** — generic reusable utilities:
   - `animateStateProbabilities.m`, `plotStateFluxes.m`, `StatesInTime.m` — visualization
-  - `calcSensitivities.m` — one-at-a-time parameter sensitivity analysis
-  - `extractSlackAttributes.m`, `extractForceVelocityAttributes.m` — feature extraction from simulation output
-  - `evalFeatureCost.m` — feature-based cost function
-  - `updateRates.m` — scales all turnover rates by a single `xrate` multiplier
+  - `calcSensitivities.m`, `ResidualAndJacobian.m` — sensitivity analysis tools
+  - `fitRecovery.m`, `fitSlackForceOnset.m` — fitting utilities
   - `writeParamsToMFile.m` — serializes a params struct to a `.m` file
-- **`data/`** — experimental `.txt` data files (ATP concentrations, slack, Ktr, force-velocity)
-- **`Thrash/`** — deleted (was obsolete/experimental code with no active references)
+- **`data/`** — experimental `.txt` data files (ATP concentrations, slack, Ktr, force-velocity); not tracked by git
+- **`Thrash/`** — obsolete/experimental code kept for reference
 - **`Docs/`** — presentations and model description documents
 
 ## Architecture: Parameter System
