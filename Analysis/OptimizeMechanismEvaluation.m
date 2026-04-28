@@ -26,7 +26,7 @@ params0.UseFastPPval = true;
 
 % Features to target
 params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
-params0.MaxRunTime = 900;
+params0.MaxRunTime = 10;
 params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
 tic;RunBakersExp;
 toc
@@ -64,9 +64,13 @@ force = {'kstiff1', 'kstiff2', 'dr', 'estiff'};
 
 % Serial elastic element
 se = {'kSE', 'ekSE', 'mu', 'mu_neg'};
+% SE is fixed
+se = {};
 
 % Passive / titin viscoelastic
 titin = {'k_pas', 'gamma', 'kSE_M', 'eta_M'};
+% titin is fixed
+titin = {};
 
 % A2 hopping
 a2 = {'slope', 's_threshold_R'};
@@ -94,36 +98,37 @@ pw_kd_x    = {'PieceWiseStrainDepR1DX__3', ...
 % __1,__2,__9,__10 ≈ 50 are high-rate endpoints
 pw_k2_vals = {'PieceWiseStrainDep2Params__3', 'PieceWiseStrainDep2Params__4', ...
               'PieceWiseStrainDep2Params__5', 'PieceWiseStrainDep2Params__6', ...
-              'PieceWiseStrainDep2Params__7', 'PieceWiseStrainDep2Params__8'};
-pw_k2_x    = {'PieceWiseStrainDep2X__2', 'PieceWiseStrainDep2X__3', ...
-              'PieceWiseStrainDep2X__4', 'PieceWiseStrainDep2X__5', ...
-              'PieceWiseStrainDep2X__6', 'PieceWiseStrainDep2X__7', ...
-              'PieceWiseStrainDep2X__8', 'PieceWiseStrainDep2X__9'};
+              'PieceWiseStrainDep2Params__7'};
+pw_k2_x    = {'PieceWiseStrainDep2X__4', 'PieceWiseStrainDep2X__5', ...
+              'PieceWiseStrainDep2X__7'};
 
-% PWSD shape — p2→p1 (R21, multiplies k_1) — low impact, include if needed
-pw_k_1_vals = {'PieceWiseStrainDepR21Params__2', 'PieceWiseStrainDepR21Params__3'};
-pw_k_1_x    = {'PieceWiseStrainDepR21X__2', 'PieceWiseStrainDepR21X__3'};
-
+% % PWSD shape — p2→p1 (R21, multiplies k_1) — low impact, include if needed
+% pw_k_1_vals = {'PieceWiseStrainDepR21Params__2', 'PieceWiseStrainDepR21Params__3'};
+% pw_k_1_x    = {'PieceWiseStrainDepR21X__2', 'PieceWiseStrainDepR21X__3'};
+        
 offsets  = {'PieceWiseStrainDep2X_logOffset', 'PieceWiseStrainDepR1DX_logOffset', 'PieceWiseStrainDepR21X_logOffset', 'PieceWiseStrainDepX_logOffset'};
 
-%% Random parameter draw
+lattice = {'d10_ref', 'R_thick', 'R_thin', 'd_optimal'};
+
+% Super-relaxed (SRX): NR↔SR transition rates and strain sensitivity
+sr = {'ksr0', 'kmsr', 'sigma1', 'sigma2'};
+
+% Super-relaxed ADP (SRD): SRD state rates
+srd = {'ksr2srd', 'ksrd2sr', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
+
+%% Groups for random parameter draw
 % Add/remove groups here to control the pool
 active_groups = [xb_rates, force, se, titin, a2, overlap, ...
                  pw_k1_vals, pw_k1_x, pw_kd_vals, pw_kd_x, ...
-                 pw_k2_vals, pw_k2_x, pw_k_1_vals, pw_k_1_x, offsets];
+                 pw_k2_vals, pw_k2_x, pw_k_1_vals, pw_k_1_x, offsets, ...
+                 sr, srd];
 active_groups = unique(active_groups, 'stable');
+compulsory_params = {};
 
-n_draw = 10;
-idx = randperm(numel(active_groups), min(n_draw, numel(active_groups)));
-params0.mods = active_groups(idx);
-fprintf('Drew %d params: %s\n', numel(params0.mods), strjoin(params0.mods, ', '));
 
 % connections
 params0.kstiff1 = "=kstiff2";
 params0.UseLatticeSpacing = true;
-
-lattice = {'d10_ref', 'R_thick', 'R_thin', 'd_optimal'};
-
 
 % Top identifiable parameters from previous sensitivity analysis:
 % 1: k2, 2: kSE, 3: kstiff2, 4: k_pas, 5: dr, 6: k1, 7: sigma1, 8: kd
@@ -168,14 +173,29 @@ fprintf('Initial Cost: %.4f\n', initCost);
 
 %% 4. Optimization
 disp('Starting fminsearch Optimization...');
-options = optimset('Display', 'iter', 'TolFun', 1e-4, 'TolX', 1e-3, 'MaxIter', 100, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 100);
+options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 15, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 50);
+g_opt = params0.g; 
+iter_num = 0;
+fval_pre = 35.6043;
 
-% Define objective function using internal Jacobian handling to prevent wasteful finite differences
-costFun = @(g) sum(ResidualAndJacobian(g, params0, true));
+for iter_num = 1:100    
+    try
+        params0 = draw10(params0, g_opt, active_groups, 10, compulsory_params);
+        % Define objective function using internal Jacobian handling to prevent wasteful finite differences
+        costFun = @(g) sum(ResidualAndJacobian(g, params0, true));
+        fval_pre = fval;
+        [g_opt, fval] = fminsearch(costFun, params0.g, options);
+        save("envOptIter0.mat", 'params0', 'g_opt');
+        params0.g = g_opt;
+        writeParamsToMFile(sprintf('../params/ModelOptParams_iter_%g.m', iter_num), params0, [], ...
+        sprintf("Iteration cost: %0.1f (from %0.1f) \r\n%% params0.mods = {'%s'};\r\n%% params0.g = [%s]", fval,fval_pre, strjoin(params0.mods, "', '"), num2str(g_opt)));
+    catch e
+        disp(e)
+        disp("Going on...")
+    end
 
-[g_opt, fval] = fminsearch(costFun, params0.g, options);
-params0.g = g_opt;
-save envOpt3;
+end
+
 fprintf('\n=== Optimization Complete ===\n');
 fprintf('Final Cost: %.4f\n', fval);
 for i=1:length(params0.mods)
@@ -190,18 +210,22 @@ params0 = getParams(params0, params0.g, false, true);
 features_ghost = features_model;
 %%
 figure(1); clf;
-params0.PlotEachSeparately = 1;
-% params0.UseMaxwellDashpot = 1;
-% params0.UseDynamicPassive = 1;
-% params0.kSE_M = 50;
-% params0.eta_M  = 0.05;
-% params0.mu  = 0.22;
-% params0.mu_neg = 0.22;
-params0.xrate = 3.05;
-params0.kstiff2 = 21000;
-params0.UseFastPPval = true;
-params0.justPlotStateTransitionsFlag = true;
-% params0.PieceWiseStrainDep2X_logOffset = 0.98;
+params0 = getParams();
+ModelOptParams_iter_27
+
+
+% params0.PlotEachSeparately = 1;
+% % params0.UseMaxwellDashpot = 1;
+% % params0.UseDynamicPassive = 1;
+% % params0.kSE_M = 50;
+% % params0.eta_M  = 0.05;
+% % params0.mu  = 0.22;
+% % params0.mu_neg = 0.22;
+% params0.xrate = 3.05;
+% params0.kstiff2 = 21000;
+% params0.UseFastPPval = true;
+% params0.justPlotStateTransitionsFlag = false;
+% params0.PieceWiseStrainDep2X_logOffset = 1;
 
 tic
 RunBakersExp;
@@ -211,3 +235,21 @@ toc
 
 sum(plotFeatures(features_data, features_model, features_ghost, params0.fn))
 disp('Done!');
+
+function params = draw10(params0, g, active_groups, n_draw, compulsory_groups)
+    if nargin < 5
+        compulsory_groups = {};
+    end
+
+    % Remove compulsory from the pool to avoid duplicates, then draw remainder
+    pool = active_groups(~ismember(active_groups, compulsory_groups));
+    n_rand = max(0, n_draw - numel(compulsory_groups));
+    idx = randperm(numel(pool), min(n_rand, numel(pool)));
+    drawn = [compulsory_groups, pool(idx)];
+
+    params0.g = g;
+    params = getParams(params0, params0.g, false, true);
+    params.mods = drawn;
+    params.g = ones(1, numel(params.mods));
+    fprintf('Drew %d params: %s\n', numel(params.mods), strjoin(params.mods, ', '));
+end
