@@ -53,10 +53,10 @@ params0.LoadPassiveMat = 'protocol_03_27_2026_PassiveCa_slack.mat';
 params0.LoadPassiveMat = '03 27 2026 M/06_Merged_8mM_Active_PNB_Mava_loess_slack_sig.mat';
 params0.LoadPassiveMat = '';
 params0.MaxRunTime = 900;
-params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
-% params0.velocitytableonfile = 'protocol_03_27_2026_ActivePNBMava_slack.mat';
+% params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
+params0.velocitytableonfile = 'protocol_03_27_2026_ActivePNBMava_slack.mat';
 params0.PlotEachSeparately = 1;
-% params0.ka = 100;
+params0.ka = 0;
 % params0.MaxSlackNegativeForce = -5;
 
 ModelParams_Passive
