@@ -5,11 +5,11 @@ t_init = out.t(round(end/2));
 
 figure(10);clf;
 % params = getParams(params);
-nexttile(1);
+sit_ax1 = nexttile(1);
 plot(out.t, out.p1_0, '-', out.t, out.p2_0, '-', out.t, out.PuATP, '-',out.t, out.PuR, '-', out.t, out.SR , '-', out.t, out.SRD, '-', LineWidth=1.5)
 legend('P1','P2','PuATP','PuR', 'SRT', 'SRD');
 
-nexttile(2); cla; hold on;
+sit_ax2 = nexttile(2); cla; hold on;
 
 % 3. Create the legend with your specific labels
 labels = {'RSR2PT', 'RSRD2PD', 'RTD', 'RD1', 'R12', 'R2T', 'RSR2SRD', ...
@@ -37,6 +37,8 @@ h2 = plot(out.t, out.RPT2SR, ':', ...
     out.t, out.R1D, ':', ...
     out.t, out.R21, ':', ...
     out.t, out.RT2, ':', 'LineWidth', 2);
+
+linkaxes([sit_ax1, sit_ax2], 'x')
 
 % Combine all handles into one vector
 h = [h1; h2];

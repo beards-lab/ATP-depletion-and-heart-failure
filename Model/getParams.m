@@ -216,7 +216,8 @@ end
         'PieceWiseStrainDepR1DX_logOffset', 1, ...
         'PieceWiseStrainDep2X_logOffset', 1, ...
         'PieceWiseStrainDepX_logOffset', 1, ...
-        'LoadPassiveMat', '');     % path to preprocessed driving signal .mat; if non-empty, loads sig into params.driveSig
+        'LoadPassiveMat', '', ...  % path to preprocessed driving signal .mat; if non-empty, loads sig into params.driveSig
+        'xrate', 1);    
 
 % , false, ...
 % , false, ...
@@ -330,10 +331,6 @@ end
 
     params = fillInDefaults(params, params0);
 
-    %% Step 2: Scale rates (if params.xrate is set, multiplies all turnover rates)
-    params = updateRates(params);
-
-
     %% Step 3: Apply multiplicative modifiers G for optimization
     if updateModifiers
         %     mods = {'kstiff1', 'kstiff2'};
@@ -364,7 +361,10 @@ end
         % ensure we delete the modifiers right after
         params.mods = {};
         params.g = [];
+        %% Step 2: Scale rates (if params.xrate is set, multiplies all turnover rates)
+        params = updateRates(params);
     end
+
 
     %% Step 4: Resolve linked parameters (fields starting with '=')
     params = resolveParams(params);

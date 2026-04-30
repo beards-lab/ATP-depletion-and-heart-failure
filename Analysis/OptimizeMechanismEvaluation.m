@@ -112,23 +112,38 @@ lattice = {'d10_ref', 'R_thick', 'R_thin', 'd_optimal'};
 
 % Super-relaxed (SRX): NR↔SR transition rates and strain sensitivity
 sr = {'ksr0', 'kmsr', 'sigma1', 'sigma2'};
+sr = {};
 
 % Super-relaxed ADP (SRD): SRD state rates
-srd = {'ksr2srd', 'ksrd2sr', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
+srd = {'kmsrd', 'sigma_srd1', 'sigma_srd2'};
+srd = {};
+
+othrs = {'MaxSlackNegativeForce', 'kah', 'kamh', 'xrate'};
+
+nonlinKstiff = {'kstiff2_n', 'kstiff1_n'};
 
 %% Groups for random parameter draw
 % Add/remove groups here to control the pool
 active_groups = [xb_rates, force, se, titin, a2, overlap, ...
                  pw_k1_vals, pw_k1_x, pw_kd_vals, pw_kd_x, ...
-                 pw_k2_vals, pw_k2_x, pw_k_1_vals, pw_k_1_x, offsets, ...
-                 sr, srd];
+                 pw_k2_vals, pw_k2_x, offsets, ...
+                 sr, srd, othrs];
 active_groups = unique(active_groups, 'stable');
-compulsory_params = {};
+compulsory_params = {'ksr0', 'kmsr', 'sigma1', 'sigma2', 'ksrd', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
+% compulsory_params = {'kstiff2_n', 'kstiff1_n', 'kstiff2', 'kstiff1', 'estiff'};
 
 
-% connections
-params0.kstiff1 = "=kstiff2";
+% initial setup
+params0.kstiff1_n = params0.kstiff1;
+params0.kstiff2_n = params0.kstiff2;
+params0.kstiff1 = params0.kstiff2;
+params0.ksr2srd = params0.kah;
+params0.ksrd2sr = params0.kamh;
 params0.UseLatticeSpacing = true;
+
+params0.UseNegativeKstiff = false;
+params0.UseSuperRelaxed = true;
+params0.UseSuperRelaxedADP = true;
 
 % Top identifiable parameters from previous sensitivity analysis:
 % 1: k2, 2: kSE, 3: kstiff2, 4: k_pas, 5: dr, 6: k1, 7: sigma1, 8: kd
@@ -137,25 +152,27 @@ params0.g = ones(1, length(params0.mods));
 
 
 %% Define the output metrics
-params0.fn = {'FV_f|FV_v|@(x,y)sum((x/65 - y/56.4).^2)', ...
-'ktr|2' , ...               
-'A|50' , ...                 
-'t0|5' , ...                
+ModelOptParams_SRXTD_iter_9
+params0.fn = {'FV_f|FV_v|@(x,y)10*sum((x/65 - y/56.4).^2)', ...
+'ktr|SLslack|10' , ...               
+'A|SLslack|100' , ...                 
+'t0|SLdiff|5' , ...                
 'ktr_rmse|0' , ...          
-'restretchSlopeStart|0.1', ...
-'restretchSlopeEnd|0.1' , ... 
+'restretchSlopeStart|v_restretch|0.1', ...
+'restretchSlopeEnd|0.01' , ... 
 'peak1_y|10' , ...   
-'peak1_dSL|0.2' , ...                    
+'peak1_dSL|SLdiff|0.2' , ...                    
 'vall_y|10' , ...            
 'vall_t|0.2' , ...            
 'peak2|5' , ...             
 'steady|50' , ...            
 'vall2_dy|0.1' , ...          
 'ovrsht_dy|0.1' , ...              
-'XTOR|@(X, Y_data) 0.01*sum((max(0, 2 - X) + max(0, X - 8)).^2)'}          
+'XTOR|@(X, Y_data) 0.001*sum((max(0, 2 - X) + max(0, X - 8)).^2)'}          
 
 % c = @(X, Y_data) 0.1*sum((max(0, 2 - X) + max(0, X - 8)).^2);
 plotFeatures(features_data, features_model, features_ghost, params0.fn)
+features_ghost = features_model;
 %% 3. Run Initial Evaluation
 disp('Evaluating Pre-Optimization Baseline...');
 params0.OptimizeOn = 'Feats';
@@ -173,21 +190,23 @@ fprintf('Initial Cost: %.4f\n', initCost);
 
 %% 4. Optimization
 disp('Starting fminsearch Optimization...');
-options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 15, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 50);
+options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 15, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 60);
 g_opt = params0.g; 
 iter_num = 0;
-fval_pre = 35.6043;
+fval = 21.87;
+compulsory_params = {'ksr0', 'kmsr', 'sigma1', 'sigma2', 'ksrd', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
+compulsory_params = {'ksr0', 'kmsr'};
 
-for iter_num = 1:100    
+for iter_num = 10:100    
     try
-        params0 = draw10(params0, g_opt, active_groups, 10, compulsory_params);
+        params0 = draw10(params0, g_opt, active_groups, 12, compulsory_params);
         % Define objective function using internal Jacobian handling to prevent wasteful finite differences
         costFun = @(g) sum(ResidualAndJacobian(g, params0, true));
         fval_pre = fval;
-        [g_opt, fval] = fminsearch(costFun, params0.g, options);
-        save("envOptIter0.mat", 'params0', 'g_opt');
+        [g_opt, fval, a, optim_outputs] = fminsearch(costFun, params0.g, options);
+        save("envOptIter2.mat", 'params0', 'g_opt');
         params0.g = g_opt;
-        writeParamsToMFile(sprintf('../params/ModelOptParams_iter_%g.m', iter_num), params0, [], ...
+        writeParamsToMFile(sprintf('../params/ModelOptParams_SRXTD_iter_%g.m', iter_num), params0, [], ...
         sprintf("Iteration cost: %0.1f (from %0.1f) \r\n%% params0.mods = {'%s'};\r\n%% params0.g = [%s]", fval,fval_pre, strjoin(params0.mods, "', '"), num2str(g_opt)));
     catch e
         disp(e)
@@ -209,12 +228,19 @@ params0.g = g_opt;
 params0 = getParams(params0, params0.g, false, true);
 features_ghost = features_model;
 %%
+xxx = @(x, y) [x/x(1);y/y(1)];
+
+xxx([1 2 3], [4 5 6])
+StatesInTime
+%% Test it 
 figure(1); clf;
-params0 = getParams();
-ModelOptParams_iter_27
+% params0 = getParams();
+% ModelOptParams_iter_27
+% ModelOptParams_NonLinKstiff_iter_4
+% ModelOptParams_SRXTD_iter_3
 
-
-% params0.PlotEachSeparately = 1;
+params0.PlotEachSeparately = 1;
+% params0.MaxSlackNegativeForce = 0;
 % % params0.UseMaxwellDashpot = 1;
 % % params0.UseDynamicPassive = 1;
 % % params0.kSE_M = 50;
@@ -224,7 +250,8 @@ ModelOptParams_iter_27
 % params0.xrate = 3.05;
 % params0.kstiff2 = 21000;
 % params0.UseFastPPval = true;
-% params0.justPlotStateTransitionsFlag = false;
+params0.justPlotStateTransitionsFlag = false;
+% params0.PieceWiseStrainDepR1DX_logOffset = 1;
 % params0.PieceWiseStrainDep2X_logOffset = 1;
 
 tic
@@ -235,6 +262,26 @@ toc
 
 sum(plotFeatures(features_data, features_model, features_ghost, params0.fn))
 disp('Done!');
+%% Experiment
+params0 = getParams();
+% features_ghost = features_model;
+ModelOptParams_iter_27
+params0.PlotEachSeparately = 1;
+params0.RunForceVelocity = false;
+
+params0.justPlotStateTransitionsFlag = true;
+% params0.PieceWiseStrainDepR1DX_logOffset = 1;
+% params0.PieceWiseStrainDep2X_logOffset = 1;
+
+tic
+RunBakersExp;
+toc
+% ResidualAndJacobian(g_opt, params0, true);
+
+
+sum(plotFeatures(features_data, features_model, features_ghost, params0.fn))
+disp('Done!');
+
 
 function params = draw10(params0, g, active_groups, n_draw, compulsory_groups)
     if nargin < 5
