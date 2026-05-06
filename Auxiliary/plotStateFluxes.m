@@ -53,7 +53,7 @@ states = [out.PuATP; out.PuR; out.p1_0; out.p2_0; out.SR; out.SRD]';
 diffs = diff(states)./diff(out.t)';
 
 values = states(i_pos, :);
-dvdts = diffs(i_pos, :);
+dvdts = diffs(min(length(diffs), i_pos), :);
 %%
 
 

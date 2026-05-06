@@ -535,8 +535,9 @@ try
         f_sat = max(0, 1 - p_occ / params.max_attached_per_bin);
     elseif params.UseVernierVelocity
         v_hs = abs(velHS);
-        f_sat_scalar = 1 + params.alpha_vernier * v_hs / (v_hs + params.v_ref_vernier);
-        f_sat = f_sat_scalar * ones(size(p1));
+        % f_sat_scalar = 1 + params.alpha_vernier * v_hs / (v_hs + params.v_ref_vernier);
+        % f_sat = f_sat_scalar * ones(size(p1));
+        f_sat = params.alpha_vernier + (1 - params.alpha_vernier)./(1+params.v_ref_vernier./v_hs);
     end
 
     if params.UseA1AttachmentKernel
@@ -566,7 +567,7 @@ try
             att(jj) = w;
         end
         att_norm = att/max(1, sum(att))/dS;
-        dp1 = dp1 + att_norm .* f_sat * RD1;
+        dp1 = dp1 + att_norm .* f_sat .* RD1;
     end
 catch e
     
@@ -592,7 +593,7 @@ if params.UseTargetZoneSaturation
     s_i0_out = max(1, min(ss, 1 + floor(-s(1)/dS)));
     f_saturation = f_sat(s_i0_out);
 elseif params.UseVernierVelocity
-    f_saturation = f_sat_scalar;
+    f_saturation = f_sat;
 else
     f_saturation = 1;
 end
