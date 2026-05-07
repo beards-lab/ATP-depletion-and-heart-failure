@@ -96,12 +96,15 @@ params0.ShowStatePlots = false;
     cost_vec = [];
     if isfield(params0, 'fn') && ~isempty(params0.fn) && ...
             ~isempty(fieldnames(features_data)) && ~isempty(fieldnames(features_model))
-        cost_vec = plotFeatures(features_data, features_model, [], params0.fn);
+        cost_vec = plotFeatures(features_data, features_model, [], params0.fn, params0);
         figure(80085);
         annotation('textbox', [0 0.96 1 0.04], ...
             'String', sprintf('Total cost: %.3f', sum(cost_vec)), ...
             'HorizontalAlignment', 'center', 'EdgeColor', 'none', 'FontSize', 11);
         exportgraphics(figure(80085), fullfile(out_dir, [name '_Fig80085.png']), 'Resolution', 150);
+        if ishandle(80086)
+            exportgraphics(figure(80086), fullfile(out_dir, [name '_Fig80086_physiology.png']), 'Resolution', 150);
+        end
         fprintf('  total_cost = %.3f\n', sum(cost_vec));
     else
         fprintf('  (no features to plot)\n');

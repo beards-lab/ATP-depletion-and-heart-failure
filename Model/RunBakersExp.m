@@ -150,6 +150,18 @@ if params0.EvalFeatures && isfield(params0, 'fn') && ~isempty(params0.fn)
     E = [E, E_feat];
 end
 
+%% PHYSIOLOGY-BOUND COST
+% Adds a single scalar penalty term to E if w_phys > 0. The bounds are
+% applied universally to all params in parameterBounds.m, regardless of
+% whether they are in `mods` — so a wrong frozen value still registers.
+if isfield(params0, 'w_phys') && params0.w_phys > 0
+    if ~isfield(params0, 'physiologyBounds') || isempty(params0.physiologyBounds)
+        params0.physiologyBounds = parameterBounds();
+    end
+    E_phys = evalPhysiologyCost(params0, params0.physiologyBounds);
+    E = [E, params0.w_phys * E_phys];
+end
+
 %% READJUST ERROR FUNCTION
 if isfield(params0, 'ErrorMultiplier')
     erl = 1:min(length(E), length(params0.ErrorMultiplier));
