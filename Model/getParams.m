@@ -217,7 +217,8 @@ end
         'PieceWiseStrainDep2X_logOffset', 1, ...
         'PieceWiseStrainDepX_logOffset', 1, ...
         'LoadPassiveMat', '', ...  % path to preprocessed driving signal .mat; if non-empty, loads sig into params.driveSig
-        'xrate', 1);    
+        'xrate', 1, ...
+        'PlotFeatureFitting', false);    
 
 % , false, ...
 % , false, ...
@@ -265,6 +266,12 @@ end
     params0.ksr2srd = 0;
     params0.sigma_srd1 = 33.125;
 	params0.sigma_srd2 = 1e6;
+
+    % Initial SRX fractions — probability "parked" in off-state heads.
+    % Default 0 preserves prior behaviour. Set non-zero so that turning SRX
+    % on/off only gates transitions, not probability mass (no cycling transient).
+    params0.SRXT_0 = 0;   % initial P_SR fraction (super-relaxed, ATP-bound)
+    params0.SRXD_0 = 0;   % initial P_SRD fraction (super-relaxed, ADP-bound)
 
     % dissociation constants
     params0.K_Pi = 4.007;
@@ -520,8 +527,8 @@ end
         % only during init - otherwise keep it
 
         p0 = zeros(1, params.ss);
-        U_SR = 0;
-        U_SRD = 0;
+        U_SR  = params.SRXT_0;
+        U_SRD = params.SRXD_0;
         NP = 0;
         PuATP = 0;
         SL0 = params.SL0*params.rsl0;

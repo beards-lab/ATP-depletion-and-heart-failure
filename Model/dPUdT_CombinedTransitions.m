@@ -60,11 +60,7 @@ else
     Ns = 2; % number of states
 end
 
-if params.UseSuperRelaxed
-    P_SR = PU(Ns*ss+1);
-else
-    P_SR = 0;
-end
+P_SR = max(0, PU(Ns*ss+1));  % always read; transitions gated separately below
 
 % if ~params.UseCa
     NP = 0;
@@ -101,11 +97,7 @@ end
 LSE = PU(Ns*ss + 4); % length of the serial stiffness
 PD = PU(Ns*ss + 5);
 
-if params.UseSuperRelaxedADP
-    P_SRD = PU(Ns*ss+6);
-else
-    P_SRD = 0;
-end
+P_SRD = max(0, PU(Ns*ss+6));  % always read; transitions gated separately below
 
 if params.UseMaxwellDashpot
     % Titin viscoelastic model: F_titin = F_elastic(SL_c) + X_visc
