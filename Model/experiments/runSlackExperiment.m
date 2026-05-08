@@ -361,7 +361,13 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             features_data.ovrsht_dy           = [0.431 1.392 1.244 1.552 0.3205];
             features_data.ovrsht_t            = [0.2116 0.225 0.247 0.239 0.2676];
             features_data.XTOR               = [10 10 10 10 10];
-        end        
+            % Output-bounding features — NaN entries are bound-only (feats_data not read)
+            features_data.XTOR_vmax          = [NaN NaN NaN NaN NaN];
+            features_data.SRX_ss             = [0.50 0.50 0.50 0.50 0.50];
+            features_data.attached_ss        = [0.12 0.12 0.12 0.12 0.12];
+            features_data.PT_ss              = [NaN NaN NaN NaN NaN];
+            features_data.t0_crossing        = features_data.t0;
+        end
     end
     features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting);
 end

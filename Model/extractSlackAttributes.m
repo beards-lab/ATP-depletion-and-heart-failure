@@ -308,11 +308,70 @@ MARKER_SIZE           = 12;    % plot marker size
             plot(feats.ovrsht_t + t_seg, o_v, 'r^', 'MarkerSize', ms, 'LineWidth', 2);
         end
 
-        if ~isempty(out)
+        % ── Output-state features (from evaluateModel out struct) ─────────────
+        if ~isempty(out) && isfield(out, 't')
+            t_out  = out.t(:);
+            t_on   = velocity_segment(2);    % slack onset time (absolute)
+            t_rstr = velocity_segment(3);    % restretch start time
+
+            % XTOR: RTD at final time point (steady state of last segment)
             feats.XTOR = out.RTD(end);
+
+            % Pre-slack steady state window (last 20 ms before slack onset)
+            mask_ss = t_out >= (t_on - 0.02) & t_out < t_on;
+            if any(mask_ss)
+                SRD_ss = zeros(size(out.SR(mask_ss)));
+                if isfield(out, 'SRD'); SRD_ss = out.SRD(mask_ss); end
+                feats.SRX_ss      = mean(out.SR(mask_ss) + SRD_ss, 'omitnan');
+                feats.attached_ss = mean(out.p1_0(mask_ss) + out.p2_0(mask_ss), 'omitnan');
+                feats.PT_ss       = mean(out.PuATP(mask_ss), 'omitnan');
+            else
+                feats.SRX_ss      = NaN;
+                feats.attached_ss = NaN;
+                feats.PT_ss       = NaN;
+            end
+
+            % Slack-phase features (between slack onset and restretch)
+            % Use LXB = SL - LSE (contractile element length).
+            mask_slack = t_out >= t_on & t_out <= t_rstr;
+            if any(mask_slack) && isfield(out, 'LXB')
+                LXB_sl = out.LXB(mask_slack);
+                t_sl   = t_out(mask_slack);
+                RTD_sl = out.RTD(mask_slack);
+
+                % XTOR_vmax: RTD at time of maximum shortening speed during slack
+                dLXB_dt = gradient(LXB_sl, t_sl);
+                [~, idx_vmax]   = min(dLXB_dt);
+                feats.XTOR_vmax = RTD_sl(idx_vmax);
+            else
+                feats.XTOR_vmax   = NaN;
+            end
+
+            % t0_crossing: time from shortening start to when LXB first crosses SL
+            % (i.e., LSE → 0, force → 0). Extends search back to shortening onset.
+            t_short_start = velocity_segment(1);  % row 1 col 1 of 5×4 segment matrix
+            mask_cross = t_out >= t_short_start & t_out <= t_rstr;
+            if any(mask_cross) && isfield(out, 'LXB') && isfield(out, 'SL')
+                LXB_c = out.LXB(mask_cross);
+                SL_c  = out.SL(mask_cross);
+                t_c   = t_out(mask_cross);
+                % First point where LXB ≥ SL (crossed from below: LSE ≤ 0, force ≤ 0)
+                cross_idx = find(LXB_c >= SL_c, 1, 'first');
+                if ~isempty(cross_idx)
+                    feats.t0_crossing = t_c(cross_idx) - t_short_start;
+                else
+                    feats.t0_crossing = NaN;
+                end
+            else
+                feats.t0_crossing = NaN;
+            end
         else
-            % default "goal"
-            feats.XTOR = 10;
+            feats.XTOR        = 10;
+            feats.SRX_ss      = NaN;
+            feats.attached_ss = NaN;
+            feats.PT_ss       = NaN;
+            feats.XTOR_vmax   = NaN;
+            feats.t0_crossing = NaN;
         end
 
         
