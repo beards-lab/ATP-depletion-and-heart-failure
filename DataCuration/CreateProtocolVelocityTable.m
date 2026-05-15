@@ -96,6 +96,49 @@ while k < length(t_vt)
     end
 end
 
+% ─── Refine fast-transition timing using raw L data ─────────────────────────
+% The cluster algorithm can place transition boundaries on plateau-RDP points
+% that are 10–15 ms before/after the actual onset/offset. For each fast
+% downward step (slack release), search raw L to find the precise boundaries.
+v_approx          = diff(L_vt) ./ diff(t_vt);
+vel_refine_thresh = -2.0;     % Lo/s: apply only to fast downward steps
+tol_raw           = epsilon;  % L tolerance: same as RDP epsilon (0.001 Lo)
+win_dt_refine     = 0.020;    % ±20 ms search window around each VT point
+
+for ii = 1:length(v_approx)
+    if v_approx(ii) < vel_refine_thresh        % downward step
+        L_before = L_vt(ii);
+        L_after  = L_vt(ii+1);
+
+        % -- onset: last raw sample still near the high plateau --------------
+        mask = t >= t_vt(ii) - win_dt_refine & t <= t_vt(ii) + win_dt_refine;
+        tw = t(mask);  Lw = L(mask);
+        io = find(Lw > L_before - tol_raw, 1, 'last');
+        if ~isempty(io)
+            t_vt(ii) = tw(io);  L_vt(ii) = Lw(io);
+        end
+
+        % -- offset: first raw sample at the new plateau ---------------------
+        mask = t >= t_vt(ii+1) - win_dt_refine & t <= t_vt(ii+1) + win_dt_refine;
+        tw = t(mask);  Lw = L(mask);
+        io = find(Lw < L_after + tol_raw, 1, 'first');
+        if ~isempty(io)
+            t_vt(ii+1) = tw(io);  L_vt(ii+1) = Lw(io);
+        end
+    end
+end
+
+% Re-apply hard_dt after refinement
+k = 1;
+while k < length(t_vt)
+    if t_vt(k+1) - t_vt(k) < hard_dt
+        t_vt(k+1) = [];  L_vt(k+1) = [];
+    else
+        k = k + 1;
+    end
+end
+% ─────────────────────────────────────────────────────────────────────────────
+
 % Compute velocities (Lo/s)
 v_vt = diff(L_vt) ./ diff(t_vt);
 v_vt = [v_vt; 0]; % last segment velocity is 0
