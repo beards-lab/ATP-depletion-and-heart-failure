@@ -95,10 +95,10 @@ MARKER_SIZE           = 12;    % plot marker size
         
         % set 1
         velocity_segment = velocitytable(segments(i_seg):segments(i_seg)+4, :);
-        t_seg = velocity_segment(2); 
+        t_seg = velocity_segment(1); 
 
-        win = data_t > velocity_segment(2) & data_t < velocity_segment(3);
-        t = data_t(win); y = data_y(win);
+        % win = data_t > velocity_segment(2) & data_t < velocity_segment(3);
+        % t = data_t(win); y = data_y(win);
 
         % cut off below FORCE_THRESHOLD_KPA (excludes near-zero force data)
         win = data_t > velocity_segment(2) & data_t < velocity_segment(3) & data_y > FORCE_THRESHOLD_KPA; % & data_t < t_seg + 0.048;

@@ -15,8 +15,10 @@ addpath(genpath(root));
 
 %% Load param file
 params0 = getParams();
-param_file = fullfile(root, 'params', 'ModelParamsWPassive_PreOpt.m');
-run(param_file);
+% param_file = fullfile(root, 'params', 'ModelParamsWPassive_PreOpt.m');
+% run(param_file);
+ModelParamsWPassive_PreOpt
+% ModelParamsFeats_FVSlackUpdateValley2
 
 %% Configure for slack experiment only
 params0.RunForceVelocity             = true;
@@ -54,8 +56,15 @@ params0.fn = {
 features_data  = struct();
 features_model = struct();
 ModelParams_Passive;
+params0.xrate = 2;
+
+params0.SRXD_0 = .15;
+
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = false;
 
 figure(1); clf;
+params0.RunSlackSegments = 'AllPar';
 RunBakersExp;
 
 %% Print new features

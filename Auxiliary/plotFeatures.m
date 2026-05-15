@@ -59,6 +59,7 @@ plotCostCulprits(fn, cost, gca);
 % Append a "bound violations" tile if params provided: which physiology
 % bounds are out, with their individual penalty contributions and the sum.
 if nargin >= 5 && ~isempty(params)
+    params = getParams(params, params.g, false, true);
     [~, violations] = evalPhysiologyCost(params, parameterBounds());
     nexttile();
     plotBoundViolators(violations, gca);
