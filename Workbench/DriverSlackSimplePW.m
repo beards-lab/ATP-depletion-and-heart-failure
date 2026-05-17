@@ -64,26 +64,16 @@ legend('Location', 'best');
 
 sgtitle('Full vs simplified piecewise — shape comparison');
 
-%% Apply simplified curves
-params0.PieceWiseStrainDepR1DX      = R1D_X_simp;
-params0.PieceWiseStrainDepR1DParams = R1D_P_simp;
-params0.PieceWiseStrainDep2X        = R2_X_simp;
-params0.PieceWiseStrainDep2Params   = R2_P_simp;
-
-%% Run slack experiment
-figure(201); clf;
-tic
-RunBakersExp;
-toc
-
-if params0.EvalFeatures
-    plotFeatures(features_data, features_model, [], params0.fn);
-end
+%% Skip simplified run (unstable); go straight to v2
+% The simplified shapes (5-pt versions) cause ODE instability.
+% We will build v2 (rescaled) and v3 (with ATP reduction + FV shoulder) directly from full shapes instead.
 
 %% ============================================================
-%  Physiologically grounded shapes v2
-%  (rescaled to min~1, simplified left plateau, + experimental R21)
+%  Physiologically grounded shapes v2 + v3
+%  (rescaled to min~1, + experimental R21, + ATP reduction)
 % ============================================================
+%
+% Build v2 and v3 directly from full original shapes (more stable than simplified)
 %
 % STRAIN CONVENTION (for all four transitions):
 %   s = 0        : attachment point — P1 binds actin here
@@ -103,15 +93,12 @@ end
 %     Power stroke rate increases with decreasing load (negative strain)
 %
 % R1D_v2 — pure reparametrisation, IDENTICAL effective rates, better interpretability.
-%   min=1 at s=0, kd_v2 = kd_orig × R1D(s=0).  Drops spurious bump at +4.2 nm.
+%   min=1 at s=0, kd_v2 = kd_orig × R1D(s=0).
 %   kd_v2 ≈ 122 s⁻¹ matches literature for cardiac α-MHC (Greenberg 2016: 88–121 s⁻¹).
 %
-% R2_v2 — reparametrisation + left-plateau simplification, effectively same rates.
+% R2_v2 — reparametrisation, effectively same rates.
 %   min=1 at s=0, k2_v2 = k2_orig × R2(s≈0).
 %   k2_v2 ≈ 60 s⁻¹ = ADP release at optimal loaded P2 (eff strain ≈ 11 nm).
-%   Left flank: δ_left = 4.45/ln(44) ≈ 1.2 nm — consistent with Bell δ = 1.1 nm.
-%   Right flank: δ_right ≈ 2.7 nm (implies kstiff_head ≈ 1 pN/nm; within range).
-%   Single left clamp replaces 3-pt cluster of full version (PCHIP artifact risk).
 %
 % R12_v2 — UNCHANGED from current optimized shape.
 %   Peak at s = −8.3 nm: thermodynamic bias (compressed P1 closer to P2 natural length).
@@ -122,11 +109,8 @@ end
 %   At s = −dr = −10.5 nm : P2 at natural length, no load     → 3× easier reversal
 %   At s = 0               : P2 loaded by dr, reference        → 1×
 %   At s = +10 nm          : P2 highly loaded                  → 0.2× (suppressed)
-%   Characteristic length ~6 nm (conservative; Capitanio myosin-V d ≈ 1.2 nm).
-%   R2/R21 >> 1 at s < −5 nm → R21 change negligible during fast shortening.
-%   Effect near isometric (s ≈ 0 to +5 nm): modest increase in power-stroke commitment.
 
-% --- compute normalization factors from current (simplified) shapes in params0 ---
+% --- compute normalization factors from CURRENT (original) shapes in params0 ---
 R1D_at_0   = ppval(pchip(params0.PieceWiseStrainDepR1DX,    params0.PieceWiseStrainDepR1DParams), 0);
 R2_at_eval = ppval(pchip(params0.PieceWiseStrainDep2X,      params0.PieceWiseStrainDep2Params),   params0.dr2 - params0.dr);
 
@@ -136,105 +120,171 @@ k2_v2 = params0.k2 * R2_at_eval;  % absorb R2(s≈0) multiplier into base rate
 fprintf('v2 base rates: kd_v2 = %.1f s-1 (was %.1f), k2_v2 = %.1f s-1 (was %.1f)\n', ...
     kd_v2, params0.kd, k2_v2, params0.k2);
 
-% R1D_v2: rescaled breakpoints (same X as simplified, P divided by R1D_at_0)
+% R1D_v2: rescaled breakpoints (same X as original full, P divided by R1D_at_0)
 R1D_X_v2 = params0.PieceWiseStrainDepR1DX;
 R1D_P_v2 = params0.PieceWiseStrainDepR1DParams / R1D_at_0;
-% Shape: min=1 at s=0; left clamp ~956×; right ~32× at s=+dr (P1 at full power-stroke length)
 
-% R2_v2: rescaled breakpoints (same X as simplified, P divided by R2_at_eval)
+% R2_v2: rescaled breakpoints (same X as original full, P divided by R2_at_eval)
 R2_X_v2 = params0.PieceWiseStrainDep2X;
 R2_P_v2 = params0.PieceWiseStrainDep2Params / R2_at_eval;
-% Shape: min=1 at s≈0; left clamp ~107×; right ~43× at s=+10 nm (Bell δ_eff ≈ 2.7 nm)
 
 % R12_v2: unchanged (literature validates peak at negative strain)
 R12_X_v2 = params0.PieceWiseStrainDepX;
 R12_P_v2 = params0.PieceWiseStrainDepParams;
 
 % R21_v2: new strain-dependent shape (EXPERIMENTAL)
-%   At s = −10.5 nm (P2 natural length): easy reversal   → 3–4×
-%   At s = 0 (reference):                                 → 1×
-%   At s = +10 nm (highly loaded):                        → 0.2×
 R21_X_v2 = [-0.050,  -0.010,  0,    0.010,  0.050];
 R21_P_v2 = [  4.0,     3.0,   1.0,  0.2,    0.05];
 
-% --- 4-panel comparison plot ---
+% --- 4-panel comparison plot (v2 vs original) ---
 s_ev  = linspace(-0.015, 0.020, 1000)';
 s_nm  = s_ev * 1000;
-dr_s  = params0.dr2 - params0.dr;   % R2 evaluation offset (≈ −0.5 nm)
+dr_s  = params0.dr2 - params0.dr;
 dr_nm = params0.dr * 1000;
 
 figure(202); clf;
 tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
-% R1D — show effective rates (kd × multiplier) so v2 overlays simplified exactly
 nexttile; hold on;
-plot(s_nm, params0.kd   * ppval(pchip(R1D_X_full, R1D_P_full), s_ev), 'b-',  'LineWidth', 1.5, 'DisplayName', 'full (7 pt, kd=29)');
-plot(s_nm, params0.kd   * ppval(pchip(R1D_X_simp, R1D_P_simp), s_ev), 'r--', 'LineWidth', 1.5, 'DisplayName', 'simplified (5 pt, kd=29)');
-plot(s_nm, kd_v2        * ppval(pchip(R1D_X_v2,   R1D_P_v2),   s_ev), 'g-',  'LineWidth', 2,   'DisplayName', sprintf('v2 (min=1, kd=%.0f)',kd_v2));
-xline(0, 'k--', 'attach', 'FontSize', 8);
-set(gca, 'YScale', 'log'); xlim([-15 20]); ylim([10 2e5]); grid on; box on;
+plot(s_nm, params0.kd * ppval(pchip(params0.PieceWiseStrainDepR1DX, params0.PieceWiseStrainDepR1DParams), s_ev), ...
+    'b-',  'LineWidth', 1.5, 'DisplayName', 'original (full)');
+plot(s_nm, kd_v2      * ppval(pchip(R1D_X_v2, R1D_P_v2), s_ev), ...
+    'g-',  'LineWidth', 2,   'DisplayName', sprintf('v2 (min=1, kd=%.0f)',kd_v2));
+xline(0, 'k--'); set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
 xlabel('Strain s (nm)'); ylabel('Effective kd rate (s⁻¹)');
 title('R1D  (P1→PD detachment)');
 legend('Location', 'southeast', 'FontSize', 7);
-text(-14, 500, 'v2 overlays simplified — same effective rates', 'FontSize', 7, 'Color', [0 0.5 0]);
 
-% R12 — unchanged; just annotate
 nexttile; hold on;
 plot(s_nm, ppval(pchip(params0.PieceWiseStrainDepX, params0.PieceWiseStrainDepParams), s_ev), ...
-    'b-', 'LineWidth', 2, 'DisplayName', 'current = v2 (unchanged)');
-xline(0,    'k--', 'attach',    'FontSize', 8);
-xline(-dr_nm,'b:',  'P2 nat. len.','FontSize', 8);
+    'b-', 'LineWidth', 2, 'DisplayName', 'unchanged (same as v2)');
+xline(0,'k--'); xline(-dr_nm,'b:','P2 nat. len.');
 set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
 xlabel('Strain s (nm)'); ylabel('R12 multiplier');
 title('R12  (P1→P2 power stroke, UNCHANGED)');
-text(-14, 0.1, sprintf('Peak at −8.3 nm = Piazzesi 2007 (6000 s⁻¹ at low load)', []), 'FontSize', 7);
 legend('Location', 'northeast', 'FontSize', 7);
 
-% R2 — show effective rates (k2 × multiplier)
 nexttile; hold on;
-plot(s_nm, params0.k2   * ppval(pchip(R2_X_full, R2_P_full), s_ev + dr_s), 'b-',  'LineWidth', 1.5, 'DisplayName', 'full (10 pt, k2=128)');
-plot(s_nm, params0.k2   * ppval(pchip(R2_X_simp, R2_P_simp), s_ev + dr_s), 'r--', 'LineWidth', 1.5, 'DisplayName', 'simplified (5 pt, k2=128)');
-plot(s_nm, k2_v2        * ppval(pchip(R2_X_v2,   R2_P_v2),   s_ev + dr_s), 'g-',  'LineWidth', 2,   'DisplayName', sprintf('v2 (min=1, k2=%.0f)',k2_v2));
-xline(0, 'k--', 'attach', 'FontSize', 8);
-set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
-xlabel('Strain s (nm)  [evaluated at s − 0.5 nm]'); ylabel('Effective k2 rate (s⁻¹)');
+plot(s_nm, params0.k2 * ppval(pchip(params0.PieceWiseStrainDep2X, params0.PieceWiseStrainDep2Params), s_ev + dr_s), ...
+    'b-',  'LineWidth', 1.5, 'DisplayName', 'original (full)');
+plot(s_nm, k2_v2      * ppval(pchip(R2_X_v2, R2_P_v2), s_ev + dr_s), ...
+    'g-',  'LineWidth', 2,   'DisplayName', sprintf('v2 (min=1, k2=%.0f)',k2_v2));
+xline(0, 'k--'); set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
+xlabel('Strain s (nm)'); ylabel('Effective k2 rate (s⁻¹)');
 title('R2  (P2→PD, ADP release)');
 legend('Location', 'northeast', 'FontSize', 7);
-text(-14, 200, sprintf('δ_{left}≈1.2 nm (Bell), k2@s=0: %.0f s⁻¹', k2_v2), 'FontSize', 7, 'Color', [0 0.5 0]);
 
-% R21 — multiplier comparison (current flat vs new strain-dependent)
 nexttile; hold on;
 plot(s_nm, ppval(pchip(params0.PieceWiseStrainDepR21X, params0.PieceWiseStrainDepR21Params), s_ev), ...
-    'b-', 'LineWidth', 1.5, 'DisplayName', 'current (flat ≈ 1×)');
+    'b-', 'LineWidth', 1.5, 'DisplayName', 'original (flat ≈ 1×)');
 plot(s_nm, ppval(pchip(R21_X_v2, R21_P_v2), s_ev), ...
-    'g-', 'LineWidth', 2, 'DisplayName', 'v2 (strain-dep, EXPERIMENTAL)');
-xline(0,    'k--', 'attach',      'FontSize', 8);
-xline(-dr_nm,'b:', 'P2 nat. len.','FontSize', 8);
-set(gca, 'YScale', 'log'); xlim([-15 20]); ylim([0.01 10]); grid on; box on;
+    'g-', 'LineWidth', 2, 'DisplayName', 'v2 (strain-dep, NEW)');
+xline(0,'k--'); xline(-dr_nm,'b:','P2 nat. len.'); set(gca, 'YScale', 'log');
+xlim([-15 20]); ylim([0.01 10]); grid on; box on;
 xlabel('Strain s (nm)'); ylabel('R21 multiplier');
 title('R21  (P2→P1 reverse stroke, NEW)');
 legend('Location', 'northeast', 'FontSize', 7);
-text(-14, 4, 'Capitanio 2012: d≈1.2 nm (myosin-V)', 'FontSize', 7, 'Color', [0 0.5 0]);
 
-sgtitle('Physiologically grounded v2 shapes vs current/simplified', 'FontSize', 11, 'FontWeight', 'bold');
+sgtitle('v2 shapes: rescaled + new R21 (no ATP/FV changes yet)', 'FontSize', 11, 'FontWeight', 'bold');
 
 %% Apply v2 shapes and run slack
 params0.kd                          = kd_v2;
 params0.PieceWiseStrainDepR1DX      = R1D_X_v2;
 params0.PieceWiseStrainDepR1DParams = R1D_P_v2;
-
 params0.k2                          = k2_v2;
 params0.PieceWiseStrainDep2X        = R2_X_v2;
 params0.PieceWiseStrainDep2Params   = R2_P_v2;
-
-% R12 unchanged — no assignment needed
 params0.PieceWiseStrainDepR21X      = R21_X_v2;
 params0.PieceWiseStrainDepR21Params = R21_P_v2;
 
 figure(203); clf;
 params0.RunForceVelocity = true;
-params0.FV_velocities = [0 -0.5000   -1.0000   -2.0000   -4.0000];
-disp('=== v2 shapes: slack experiment ===');
+params0.FV_velocities = [0 -0.5000 -1.0000 -2.0000 -4.0000];
+disp('=== v2 shapes: slack + FV experiment ===');
+tic; RunBakersExp; toc
+
+if params0.EvalFeatures
+    plotFeatures(features_data, features_model, [], params0.fn);
+end
+
+%% ============================================================
+%  v3: ATP turnover reduction + FV flattening
+% ============================================================
+%
+% ATP TURNOVER ISSUE:
+%   Total ATP consumption = kah × PT  (DRX) + ksr2srd × P_SR  (SRX).
+%   With ksr2srd = 49.58 s⁻¹ and P_SR ≈ 0.5, the SRX arm alone contributes
+%   ~25 s⁻¹, dominating over DRX. Reducing ksr2srd × 5 preserves the
+%   SRX-T/SRX-D equilibrium (same ratio ksr2srd/ksrd2sr) and does not
+%   affect force, since SRX heads are non-force-generating.
+%   Also reduce kah/kamh × 5 (same logic for DRX arm; check transient dynamics).
+%
+% FV FLATTENING:
+%   Add breakpoint at s = -2 nm to R2 left flank to enforce a flat shoulder
+%   between s = -2 and 0 nm (slow shortening zone). This keeps more P2 heads
+%   attached at low shortening velocities → higher force near F0 → flatter FV.
+%   Vmax is unaffected (−5.55 nm corner is unchanged).
+
+% --- ATP rates: 5× reduction (proportional in each pair) ---
+ksr2srd_v3 = params0.ksr2srd / 5;   % 49.58 → 9.92 s⁻¹
+ksrd2sr_v3 = params0.ksrd2sr / 5;   % 3.50  → 0.70 s⁻¹
+kah_v3     = params0.kah     / 5;   % 49.67 → 9.93 s⁻¹
+kamh_v3    = params0.kamh    / 5;   % 3.50  → 0.70 s⁻¹
+
+fprintf('v3 ATP rates: ksr2srd=%.2f (was %.2f), ksrd2sr=%.2f (was %.2f)\n', ...
+    ksr2srd_v3, params0.ksr2srd, ksrd2sr_v3, params0.ksrd2sr);
+fprintf('              kah=%.2f (was %.2f), kamh=%.2f (was %.2f)\n', ...
+    kah_v3, params0.kah, kamh_v3, params0.kamh);
+
+% --- R2 left flank: add shoulder at −2 nm ---
+% Start from v2 shape (already set in params0 after %% Apply v2 shapes block)
+% Insert new breakpoint at X = -0.002 (−2 nm), P = 1.2×
+R2_X_v3 = sort([-0.002, params0.PieceWiseStrainDep2X]);   % insert -2 nm pt
+% Build P_v3 by interpolating existing v2 shape at new breakpoints
+R2_P_v3 = ppval(pchip(params0.PieceWiseStrainDep2X, params0.PieceWiseStrainDep2Params), R2_X_v3);
+% Override the new breakpoint value (flat shoulder)
+R2_P_v3(R2_X_v3 == -0.002) = 1.2;
+
+% --- R2 v3 vs v2 comparison figure ---
+figure(204); clf;
+tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+s_ev3  = linspace(-0.015, 0.020, 1000)';
+s_nm3  = s_ev3 * 1000;
+dr_s3  = params0.dr2 - params0.dr;
+
+nexttile; hold on;
+plot(s_nm3, k2_v2 * ppval(pchip(params0.PieceWiseStrainDep2X,  params0.PieceWiseStrainDep2Params),  s_ev3 + dr_s3), ...
+    'g-',  'LineWidth', 2, 'DisplayName', sprintf('v2 (k2=%.0f)',k2_v2));
+plot(s_nm3, k2_v2 * ppval(pchip(R2_X_v3, R2_P_v3), s_ev3 + dr_s3), ...
+    'm-',  'LineWidth', 2, 'DisplayName', 'v3 (shoulder at -2 nm)');
+xline(0, 'k--'); xline(-2, 'k:', '-2 nm');
+set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
+xlabel('Strain s (nm)'); ylabel('Effective k2 rate (s⁻¹)');
+title('R2: v2 vs v3 (FV shoulder)');
+legend('Location', 'northeast', 'FontSize', 8);
+
+nexttile; hold on;
+% FV curve comparison will be generated by RunBakersExp with FV enabled
+title('FV curve will appear after RunBakersExp');
+text(0.5, 0.5, 'Run section below first', 'Units','normalized', 'HorizontalAlignment','center');
+
+sgtitle('v3 shapes: FV shoulder + ATP rate check');
+
+% --- Apply v3 shapes ---
+params0.ksr2srd                     = ksr2srd_v3;
+params0.ksrd2sr                     = ksrd2sr_v3;
+params0.kah                         = kah_v3;
+params0.kamh                        = kamh_v3;
+
+params0.PieceWiseStrainDep2X        = R2_X_v3;
+params0.PieceWiseStrainDep2Params   = R2_P_v3;
+
+% --- Run FV + slack with v3 shapes ---
+params0.RunForceVelocity = true;
+params0.FV_velocities = [0 -0.5 -1 -2 -4];
+figure(205); clf;
+disp('=== v3 shapes: FV + slack experiment ===');
 tic; RunBakersExp; toc
 
 if params0.EvalFeatures
