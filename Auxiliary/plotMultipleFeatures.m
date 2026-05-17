@@ -65,7 +65,7 @@ for i_feat = 1:numel(fn)
     end
     tokens = split(prefix, '|');
     tokens = tokens(~cellfun(@isempty, tokens));
-    feat_y = tokens{1};
+    [feat_y, sel_y] = parseFeatSelector(tokens{1});
 
     % ── SINGLE BOUNDARY: range token present ─────────────────────────────
     if ~has_cost_fn
@@ -78,7 +78,7 @@ for i_feat = 1:numel(fn)
         end
         if ~isempty(range_tok)
             [lb, ub] = parseRange(range_tok);
-            plotSingleBoundaryTile(ax, feat_y, lb, ub, feats_cell, cost_str);
+            plotSingleBoundaryTile(ax, feat_y, sel_y, lb, ub, feats_cell, cost_str);
             hold(ax, 'off');
             continue;
         end
@@ -95,7 +95,7 @@ for i_feat = 1:numel(fn)
     for di = 1:nDS
         fs = feats_cell{di};
         if isempty(fs) || ~isfield(fs, feat_y); continue; end
-        vy = fs.(feat_y);
+        vy = applyFeatSelector(fs.(feat_y), sel_y);
         if ~isnumeric(vy) || isempty(vy); continue; end
 
         if isempty(feat_x)
@@ -148,28 +148,36 @@ end
 
 
 % ── Single boundary tile ──────────────────────────────────────────────────
-function plotSingleBoundaryTile(ax, feat_y, lb, ub, feats_cell, cost_str)
+function plotSingleBoundaryTile(ax, feat_y, sel_y, lb, ub, feats_cell, cost_str)
 % Bar chart: one bar per sim value, colored by in/out of [lb, ub].
 % Uses only the first non-empty dataset that has the field (typically sim).
+% If sel_y is non-empty, the per-segment vector is reduced to a scalar first,
+% rendering a single bar.
 fs = [];
 for di = 1:numel(feats_cell)
     fc = feats_cell{di};
     if ~isempty(fc) && isfield(fc, feat_y)
-        v = double([fc.(feat_y)]);
-        if ~isempty(v)
+        v = applyFeatSelector(double([fc.(feat_y)]), sel_y);
+        if ~isempty(v) && ~all(isnan(v))
             fs = v;
             break;
         end
     end
 end
 
+if isempty(sel_y)
+    disp_name = feat_y;
+else
+    disp_name = sprintf('%s[%s]', feat_y, sel_y);
+end
+
 cla(ax); hold(ax, 'on');
 if isempty(fs)
-    text(ax, 0.5, 0.5, sprintf('%s\n(no data)', strrep(feat_y,'_','\_')), ...
+    text(ax, 0.5, 0.5, sprintf('%s\n(no data)', strrep(disp_name,'_','\_')), ...
         'Units', 'normalized', 'HorizontalAlignment', 'center', ...
         'Color', [0.6 0.6 0.6]);
     axis(ax, 'off');
-    title(ax, [strrep(feat_y,'_','\_') cost_str], 'Interpreter', 'none');
+    title(ax, [strrep(disp_name,'_','\_') cost_str], 'Interpreter', 'none');
     return;
 end
 
@@ -193,8 +201,8 @@ yline(ax, ub, '--', 'Color', [0.1 0.6 0.1], 'LineWidth', 1.2, ...
     'FontSize', 7);
 
 xlabel(ax, 'Segment', 'FontSize', 8);
-ylabel(ax, strrep(feat_y,'_','\_'), 'Interpreter', 'none', 'FontSize', 8);
-title(ax, sprintf('%s  [%.3g – %.3g]%s', strrep(feat_y,'_','\_'), lb, ub, cost_str), ...
+ylabel(ax, strrep(disp_name,'_','\_'), 'Interpreter', 'none', 'FontSize', 8);
+title(ax, sprintf('%s  [%.3g – %.3g]%s', strrep(disp_name,'_','\_'), lb, ub, cost_str), ...
     'Interpreter', 'none', 'FontSize', 9);
 box(ax, 'on');
 hold(ax, 'off');
@@ -221,7 +229,7 @@ for pi = 1:numel(parts)
     tokens = split(part, '|');
     tokens = tokens(~cellfun(@isempty, tokens));
     if isempty(tokens); continue; end
-    feat  = tokens{1};
+    [feat, sel] = parseFeatSelector(tokens{1});
     range_tok = '';
     for ti = 2:numel(tokens)
         if isRangeToken(tokens{ti})
@@ -230,17 +238,22 @@ for pi = 1:numel(parts)
         end
     end
 
-    % Gather sim values (use first dataset that has the field)
+    % Gather sim values (use first dataset that has the field with non-NaN values)
     val = NaN;
     for di = 1:numel(feats_cell)
         fc = feats_cell{di};
         if ~isempty(fc) && isfield(fc, feat)
-            v = double([fc.(feat)]);
-            if ~isempty(v); val = v; break; end
+            v = applyFeatSelector(double([fc.(feat)]), sel);
+            if ~isempty(v) && ~all(isnan(v)); val = v; break; end
         end
     end
 
-    sub_names{end+1} = feat; %#ok<AGROW>
+    if isempty(sel)
+        disp_name = feat;
+    else
+        disp_name = sprintf('%s[%s]', feat, sel);
+    end
+    sub_names{end+1} = disp_name; %#ok<AGROW>
     sub_vals{end+1}  = val;  %#ok<AGROW>
     if ~isempty(range_tok)
         [lb, ub] = parseRange(range_tok);

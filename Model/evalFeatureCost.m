@@ -77,7 +77,7 @@ for i_feat = 1:length(fn)
 
     tokens = split(prefix, '|');
     tokens = tokens(~cellfun(@isempty, tokens));
-    feat_y = tokens{1};
+    [feat_y, sel_y] = parseFeatSelector(tokens{1});
 
     % === BOUNDARY CHECK mode: a 'lb-ub' range token is present ===
     if isempty(cost_fn)
@@ -104,7 +104,7 @@ for i_feat = 1:length(fn)
                 cost(i_feat) = MISSING_FEATURE_COST;
                 continue;
             end
-            fs = double([feats_sim.(feat_y)]);
+            fs = applyFeatSelector(double([feats_sim.(feat_y)]), sel_y);
 
             [lb, ub] = parseRange(range_tok);
             span = ub - lb;
@@ -129,8 +129,8 @@ for i_feat = 1:length(fn)
         continue;
     end
 
-    fd = double([feats_data.(feat_y)]);
-    fs = double([feats_sim.(feat_y)]);
+    fd = applyFeatSelector(double([feats_data.(feat_y)]), sel_y);
+    fs = applyFeatSelector(double([feats_sim.(feat_y)]), sel_y);
 
     % Determine x-axis field for XY plots (second non-numeric token, no @)
     feat_x = '';
@@ -168,7 +168,7 @@ for pi = 1:numel(parts)
     tokens = split(part, '|');
     tokens = tokens(~cellfun(@isempty, tokens));
     if isempty(tokens); continue; end
-    feat = tokens{1};
+    [feat, sel] = parseFeatSelector(tokens{1});
 
     sub_weight = 1;
     range_tok  = '';
@@ -187,7 +187,7 @@ for pi = 1:numel(parts)
         jcost = jcost + sub_weight * MISSING_FEATURE_COST;
         continue;
     end
-    fs = double([feats_sim.(feat)]);
+    fs = applyFeatSelector(double([feats_sim.(feat)]), sel);
 
     if ~isempty(range_tok)
         [lb, ub] = parseRange(range_tok);
@@ -200,7 +200,7 @@ for pi = 1:numel(parts)
             jcost = jcost + sub_weight * MISSING_FEATURE_COST;
             continue;
         end
-        fd   = double([feats_data.(feat)]);
+        fd   = applyFeatSelector(double([feats_data.(feat)]), sel);
         n_F  = mean(fd, 'omitnan');
         if n_F == 0; n_F = 1; end
         sub_cost = sum(abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
