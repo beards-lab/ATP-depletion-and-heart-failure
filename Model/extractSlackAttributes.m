@@ -1,4 +1,4 @@
-function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, features, out, plotResults, useSmoothing)
+function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytable, features, out, plotResults, useSmoothing, datatable)
 % EXTRACTSLACKATTRIBUTES  Extract force/SL features from a slack-release protocol.
 %
 %   FEATURES = EXTRACTSLACKATTRIBUTES(DATA_T, DATA_Y, DATA_SL, VELOCITYTABLE,
@@ -42,6 +42,9 @@ MARKER_SIZE           = 12;    % plot marker size
     end
     if nargin < 8 || isempty(useSmoothing)
         useSmoothing = false;
+    end
+    if nargin < 9
+        datatable = [];
     end
     % Smoothing window in samples — estimated so that 1 window ≈ 5 ms,
     % which is enough to suppress high-frequency noise without distorting
@@ -96,6 +99,7 @@ MARKER_SIZE           = 12;    % plot marker size
         % set 1
         velocity_segment = velocitytable(segments(i_seg):segments(i_seg)+4, :);
         t_seg = velocity_segment(1); 
+        feats.t_seg = t_seg;
 
         % win = data_t > velocity_segment(2) & data_t < velocity_segment(3);
         % t = data_t(win); y = data_y(win);
@@ -105,17 +109,18 @@ MARKER_SIZE           = 12;    % plot marker size
         t = data_t(win); y = data_y(win); SL = data_SL(win);
         t = t - t_seg;
     
-        F0 = min(y);
+        % F0 = min(y);
+        F0 = 0;
         init_tail = 0:0.001:0.15;
 
         % ── Fit 1: single exponential (original) ─────────────────────────
         % F(τ) = F0 + A·(1 − exp(−k·τ)),  τ = max(t−t0, 0)
-        y_exp = @(A, k, t0, x) F0 + A .* (1 - exp(-k .* max(x - t0, 0)));
+        y_exp = @(A, k, t0, a, x) F0 + A .* (1 - exp(-k .* max(x - t0, 0))) + 0*a*(x-t0);
         try
             [ae, gof_e] = fit(t, y, y_exp, ...
-                'StartPoint', [100, 50, 0.01], ...
-                'Lower',      [10,  0.01, 0.0], ...
-                'Upper',      [200, 500,  0.1 ]);
+                'StartPoint', [100, 50, 0.01, 0], ...
+                'Lower',      [10,  0.01, 0.0, -100], ...
+                'Upper',      [200, 500,  0.1 , 100]);
 
             if plotResults
                 plot(init_tail + t_seg, ae(init_tail), '-', t + t_seg, ae(t), 'LineWidth', 1.5);
@@ -179,6 +184,55 @@ MARKER_SIZE           = 12;    % plot marker size
             feats.ktr2_rmse     = NaN;
             feats.ktr2_overshoot = NaN;
         end
+
+        % comparing data slack to model slack by leasts squares
+        % this does not work
+        if false && ~isempty(datatable)
+            %%
+            mdatay = datatable(:, 3); mdatat = datatable(:, 1);
+            win = mdatat > velocity_segment(2) & mdatat < velocity_segment(3);
+            mt = mdatat(win); my = mdatay(win); 
+            mt = mt - t_seg;
+            
+            mys = smooth(my, length(my)/30);
+            [mds]  = downsample([mt, mys], 1);
+            mtds = mds(:, 1);myds = mds(:, 2);
+            yds = interp1(t, y, mtds);
+            plot(mt, my, mt, mys, mtds, myds, '|-', ...
+                t, y, '-', mtds-tau_opt, yds, '|-', LineWidth=2);
+
+% tic
+            maxShiftTime = 0.10;  % 20 ms physiological bound — tune this
+            shiftFun = @(tau) mean((interp1(mtds, yds, mtds + tau, 'linear', NaN) - myds).^2, 'omitnan');
+            tau_opt = fminbnd(shiftFun, -maxShiftTime, maxShiftTime);
+            cost = shiftFun(tau_opt);
+            % toc
+            % feats.ktrSqrDiff      = cost;
+            % feats.ktrTimeShift    = tau_opt;            
+            %%
+            clf;
+            st = (-10:100)/1000;
+            ost = [];
+            for ist = 1:length(st)
+                ost(ist) = shiftFun(st(ist));
+            end
+            plot(st, ost)
+
+            %%
+            dsN = length(yds);
+            sh = 1;
+            shift = 1:dsN + sh;
+            costs = (yds(max(1, min(dsN, shift))) - myds).^2;
+            cost = nansum(costs)
+            plot(mt, my, mt, mys, mtds, myds, '|-', ...
+                t, y, '-', mtds, yds, '|-', mtds, costs, LineWidth=2);
+
+
+
+        else
+            feats.ktrSqrDiff = NaN;
+        end
+
 
         if isempty(y)
             y = NaN;
@@ -349,16 +403,17 @@ MARKER_SIZE           = 12;    % plot marker size
 
             % t0_crossing: time from shortening start to when LXB first crosses SL
             % (i.e., LSE → 0, force → 0). Extends search back to shortening onset.
-            t_short_start = velocity_segment(1);  % row 1 col 1 of 5×4 segment matrix
+            % we start from end of slack instead of start - that gives it enough time to buckle
+            t_short_start = velocity_segment(2);  % row 2 col 1 of 5×4 segment matrix
             mask_cross = t_out >= t_short_start & t_out <= t_rstr;
             if any(mask_cross) && isfield(out, 'LXB') && isfield(out, 'SL')
                 LXB_c = out.LXB(mask_cross);
                 SL_c  = out.SL(mask_cross);
                 t_c   = t_out(mask_cross);
                 % First point where LXB ≥ SL (crossed from below: LSE ≤ 0, force ≤ 0)
-                cross_idx = find(LXB_c >= SL_c, 1, 'first');
+                cross_idx = find(LXB_c <= SL_c, 1, 'first');
                 if ~isempty(cross_idx)
-                    feats.t0_crossing = t_c(cross_idx) - t_short_start;
+                    feats.t0_crossing = t_c(cross_idx) - t_seg;
                 else
                     feats.t0_crossing = NaN;
                 end
@@ -366,7 +421,7 @@ MARKER_SIZE           = 12;    % plot marker size
                 feats.t0_crossing = NaN;
             end
         else
-            feats.XTOR        = 10;
+            feats.XTOR        = NaN;
             feats.SRX_ss      = NaN;
             feats.attached_ss = NaN;
             feats.PT_ss       = NaN;

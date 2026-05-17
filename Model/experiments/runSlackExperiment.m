@@ -47,6 +47,8 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
     datatable = datastruct.datatable;
     if isfield(datastruct, 'features_data')
         features_data = datastruct.features_data;
+        % fill in missing parts
+        features_data.t0_crossing = features_data.t0;
     end
 
     
@@ -199,10 +201,11 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
     end
 
     if ~isempty(parple)
+        outs{1} = out_init;
         for j = 1:N
             if ~isempty(futures{j})
                 [~, out_chunk] = fetchOutputs(futures{j});
-                outs{j} = out_chunk;
+                outs{j+1} = out_chunk;
             end
         end
     end
@@ -327,7 +330,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 
     if params.EvalFeatures
         if isempty(features_data) && recalculateDataFeats
-            features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], false);
+            features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], true);
             % Print extracted values to console so they can be pasted into the else branch below
             fieldNames = fieldnames(features_data);
             for k = 1:numel(fieldNames)
@@ -369,5 +372,6 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             features_data.t0_crossing        = features_data.t0;
         end
     end
+    % params0.PlotFeatureFitting = true;
     features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting);
 end
