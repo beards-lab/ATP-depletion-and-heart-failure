@@ -128,16 +128,16 @@ for i_feat = 1:numel(fn)
     if has_cost_fn
         fn_disp = fn_body;
         if numel(fn_disp) > 42; fn_disp = [fn_disp(1:42) '...']; end
-        title(ax, {[strrep(feat_y,'_','\_') cost_str], fn_disp}, 'Interpreter', 'none');
+        title(ax, {[trunc(feat_y) cost_str], fn_disp}, 'Interpreter', 'none');
         xlabel(ax, 'Segment');
     elseif isempty(feat_x)
-        title(ax, [strrep(fn_str,'_','\_') cost_str], 'Interpreter', 'none');
+        title(ax, [trunc(fn_str) cost_str], 'Interpreter', 'none');
         xlabel(ax, 'Segment');
     else
-        title(ax, sprintf('%s vs %s%s', feat_y, feat_x, cost_str), 'Interpreter', 'none');
-        xlabel(ax, strrep(feat_x,'_','\_'), 'Interpreter', 'none');
+        title(ax, [trunc(sprintf('%s vs %s', feat_y, feat_x)) cost_str], 'Interpreter', 'none');
+        xlabel(ax, feat_x, 'Interpreter', 'none');
     end
-    ylabel(ax, strrep(feat_y,'_','\_'), 'Interpreter', 'none');
+    ylabel(ax, feat_y, 'Interpreter', 'none');
     box(ax, 'on');
     if i_feat == 1
         legend(ax, 'Location', 'best', 'FontSize', 7);
@@ -173,11 +173,11 @@ end
 
 cla(ax); hold(ax, 'on');
 if isempty(fs)
-    text(ax, 0.5, 0.5, sprintf('%s\n(no data)', strrep(disp_name,'_','\_')), ...
+    text(ax, 0.5, 0.5, sprintf('%s\n(no data)', disp_name), ...
         'Units', 'normalized', 'HorizontalAlignment', 'center', ...
         'Color', [0.6 0.6 0.6]);
     axis(ax, 'off');
-    title(ax, [strrep(disp_name,'_','\_') cost_str], 'Interpreter', 'none');
+    title(ax, [trunc(disp_name) cost_str], 'Interpreter', 'none');
     return;
 end
 
@@ -201,8 +201,8 @@ yline(ax, ub, '--', 'Color', [0.1 0.6 0.1], 'LineWidth', 1.2, ...
     'FontSize', 7);
 
 xlabel(ax, 'Segment', 'FontSize', 8);
-ylabel(ax, strrep(disp_name,'_','\_'), 'Interpreter', 'none', 'FontSize', 8);
-title(ax, sprintf('%s  [%.3g – %.3g]%s', strrep(disp_name,'_','\_'), lb, ub, cost_str), ...
+ylabel(ax, disp_name, 'Interpreter', 'none', 'FontSize', 8);
+title(ax, sprintf('%s  [%.3g – %.3g]%s', trunc(disp_name), lb, ub, cost_str), ...
     'Interpreter', 'none', 'FontSize', 9);
 box(ax, 'on');
 hold(ax, 'off');
@@ -286,9 +286,9 @@ for pi = 1:numel(sub_names)
     nm = sub_names{pi};
     for ei = 1:numel(v)
         if numel(v) > 1
-            bar_labels{end+1} = sprintf('%s(%d)', strrep(nm,'_','\_'), ei); %#ok<AGROW>
+            bar_labels{end+1} = sprintf('%s(%d)', nm, ei); %#ok<AGROW>
         else
-            bar_labels{end+1} = strrep(nm,'_','\_'); %#ok<AGROW>
+            bar_labels{end+1} = nm; %#ok<AGROW>
         end
         bar_vals(end+1) = v(ei); %#ok<AGROW>
         bar_lbs(end+1)  = lb;    %#ok<AGROW>
@@ -329,6 +329,7 @@ for bi = 1:n
         sprintf('%.3g', v), 'FontSize', 6, 'HorizontalAlignment', 'center');
 end
 
+ax.TickLabelInterpreter = 'none';
 set(ax, 'XTick', 1:n, 'XTickLabel', bar_labels, 'FontSize', 7);
 ylabel(ax, 'Value', 'FontSize', 8);
 
@@ -337,7 +338,7 @@ seen = {};
 for pi = 1:numel(sub_names)
     if ~ismember(sub_names{pi}, seen); seen{end+1} = sub_names{pi}; end %#ok<AGROW>
 end
-title(ax, [strjoin(cellfun(@(s) strrep(s,'_','\_'), seen, 'UniformOutput', false), ', ') cost_str], ...
+title(ax, [trunc(strjoin(seen, ', ')) cost_str], ...
     'Interpreter', 'none', 'FontSize', 9);
 box(ax, 'on');
 hold(ax, 'off');
@@ -345,6 +346,12 @@ end
 
 
 % ── Helpers (mirrors of evalFeatureCost helpers) ──────────────────────────
+function s = trunc(s, n)
+if nargin < 2; n = 30; end
+if numel(s) > n; s = [s(1:n-3) '...']; end
+end
+
+
 function cs = buildCostStr(costMap, key)
 cs = '';
 if isempty(costMap) || ~isa(costMap, 'containers.Map') || ~isKey(costMap, key)
