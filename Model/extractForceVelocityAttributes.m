@@ -44,4 +44,4 @@ features.FV_expFit_f = fvfit(features.FV_expFit_v);
 features.FV_v = FV_x;
 features.FV_f = F_active(win)';
 % force normalized
-features.FV_fnorm = FV_y;
+features.FV_fnorm = features.FV_f./features.FV_f(1);

@@ -29,7 +29,7 @@ vel = (-Data_ATP(:,1)); % ML/s
 %% plot the datasets together
 % plot(Data_ATP(:, [2 3 4]), Data_ATP(:, 1), 'o-', Data_ATP_AB2021(:, [2 3]), Data_ATP_AB2021(:, 1), 'o--', LineWidth=2, MarkerSize=8);hold off;
 % legend('8mM','4mM', '2mM','8mM AB2021','2mM AB2021')
-% plot(Data_ATP(:, [2 4]), Data_ATP(:, 1), 'o-', Data_ATP_AB2021(:, [2 3]), Data_ATP_AB2021(:, 1), 'o--', LineWidth=2, MarkerSize=8);hold off;
+% plot(Data_ATP(:, [2 4])./Data_ATP(1, [2 4]), Data_ATP(:, 1), 'o-', Data_ATP_AB2021(:, [2 3])./Data_ATP_AB2021(1, [2 3]), Data_ATP_AB2021(:, 1), 'o--', LineWidth=2, MarkerSize=8);hold off;
 % legend('8mM','2mM','8mM AB2021','2mM AB2021')
 
 %% Fmax (normalized.) versus [MgATP] (mM) from Ebus et al.(2001)
