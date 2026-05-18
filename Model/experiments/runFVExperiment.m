@@ -122,7 +122,11 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
         else
             % Hardcoded Baker lab 8 mM reference values (avoids re-extracting each iteration)
             AllVelocities = -[0, 0.5, 1, 2, 3, 4, 5, 6, 7];
-            AllForces     = [56.40, 51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
+            if strcmp(params0.FV_dataset, 'Baker2022')
+                AllForces     = [56.40, 51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
+            elseif strcmp(params0.FV_dataset,'IsovelocityForFilip2021')
+                AllForces = [67.3942   60.9885   42.7059   18.8539 12.5956    6.4426    3.5136    1.8556];
+            end
             vsel = find(ismember(AllVelocities, FV_velocities));
             features_data.FV_v     = -AllVelocities(vsel)';
             features_data.FV_f     = AllForces(vsel)';
