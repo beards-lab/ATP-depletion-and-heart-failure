@@ -281,12 +281,109 @@ params0.PieceWiseStrainDep2X        = R2_X_v3;
 params0.PieceWiseStrainDep2Params   = R2_P_v3;
 
 % --- Run FV + slack with v3 shapes ---
+%% ============================================================
+%  v5: tackle multimodal force redevelopment after slack
+% ============================================================
+%
+% Diagnosis (v3/v4 results were dominated by failure to fit a single-
+% exponential force redevelopment): force redevelopment after slack rises
+% with at least two distinct time scales. Three candidate causes ranked:
+%
+%   (A) R12 peak is OFFSET from where new bridges land.
+%       Current R12 peak at s = -8.3 nm × 10.8.
+%       At s = 0 (where fresh P1 lives after slack-induced reattachment),
+%       R12 multiplier ≈ 1-2.
+%       → fresh bridges power-stroke slowly (k1 × R12(0) ≈ 800 s⁻¹);
+%         bridges that drift to negative s power-stroke fast (≈5860 s⁻¹).
+%       Two cohorts → bimodal rise.
+%
+%   (B) Strain-dep functions are TOO NARROW.
+%       R12 transition spans only ~5 nm; R2 minimum is ~1-2 nm wide.
+%       PCHIP through clustered breakpoints amplifies peakiness.
+%       Cohort behaviour from narrow rates → distinct time scales.
+%
+%   (C) A1AttachmentWidth = 4 nm — newly attached bridges in tight strain
+%       window → cohort dynamics.
+%
+% Strategy: layered probes. v5a tests SRX initial fractions alone.
+% v5b adds R12 broadening. v5c adds A1 kernel broadening.
+% We start from the v2 shapes (re-applied) so v4's frozen-SRX / deep-R2
+% changes do not contaminate.
+
+% --- restore v2 baseline (undo v4 freezes / well deepening) ---
+params0.UseSuperRelaxed    = 1;
+params0.UseSuperRelaxedADP = 1;
+params0.PieceWiseStrainDep2X      = R2_X_v2;
+params0.PieceWiseStrainDep2Params = R2_P_v2;
+params0.k2                        = k2_v2;
+
+% --- v5a: SRX initial conditions ---
+% Park 20% in SRX-T (ATP-bound parked) and 20% in SRX-D (ADP·Pi parked).
+% Total OFF ≈ 40% at t=0; force-dependent kinetics still active.
+params0.SRXT_0 = 0.2;
+params0.SRXD_0 = 0.2;
+
+% --- v5b: broaden R12 (P1→P2 power stroke) ---
+% Original: 5 breakpoints, peak 10.8× at -8.3 nm, falls to ~1× by s=0.
+% v5b   : plateau ≈ 6× across s ∈ [-10, 0] nm; smooth decay positive side.
+% Rationale: any P1 bridge in the cycling-relevant strain range should be
+% able to power-stroke at a similar rate, instead of only those near the
+% Huxley-Simmons optimum. This collapses two cohorts into one.
+R12_X_v5 = [-1,    -0.010, -0.005, -0.002,  0,      0.005,  0.021];
+R12_P_v5 = [10,     6.0,    6.0,    6.0,    6.0,    2.0,    0.015];
+
+% --- v5c: broaden A1 attachment kernel ---
+A1_width_v5 = 0.012;   % 4 nm → 12 nm (3× wider)
+
+% --- comparison plot: R12 v2 vs v5b ---
+figure(208); clf; hold on;
+plot(s_nm, params0.k1 * ppval(pchip(R12_X_v2,   R12_P_v2),   s_ev), ...
+    'g-', 'LineWidth', 2, 'DisplayName', sprintf('v2 (peak at -8.3 nm, k1=%.0f)', params0.k1));
+plot(s_nm, params0.k1 * ppval(pchip(R12_X_v5,   R12_P_v5),   s_ev), ...
+    'm-', 'LineWidth', 2, 'DisplayName', sprintf('v5b (plateau across [-10,0] nm)'));
+xline(0, 'k--', 'attach'); xline(-dr_nm, 'b:', 'P2 nat. len.');
+set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
+xlabel('Strain s (nm)'); ylabel('Effective k1 rate (s⁻¹)');
+title('R12: v2 vs v5b — broadened power-stroke plateau');
+legend('Location', 'southeast', 'FontSize', 9);
+
+%% v5a — SRX initial conditions only
+disp('=== v5a: SRXT_0 = SRXD_0 = 0.2 (v2 shapes otherwise) ===');
+params0.SkipParametersInBounds = true;
+params0.PieceWiseStrainDepX      = R12_X_v2;
+params0.PieceWiseStrainDepParams = R12_P_v2;
+params0.A1AttachmentWidth        = 0.004;   % unchanged
+params0.SRXD_0 = 0.1;
+params0.SRXT_0 = 0.1;
 params0.RunForceVelocity = true;
-params0.FV_velocities = [0 -0.5 -1 -2 -4];
-figure(205); clf;
-disp('=== v3 shapes: FV + slack experiment ===');
+params0.FV_velocities = -[0, 0.5, 1, 2, 4];
+params0.FV_dataset = 'Baker2022';
+params0.UseSuperRelaxed = false;
+params0.UseSuperRelaxedADP = false;
+
+
+params0.fn = {
+    'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
+    'ktr_rmse|0-0.2|.1', ...
+    'XTOR[1]|2-8,XTOR_vmax[1]|4-30,SRX_ss[1]|0.1-0.8,attached_ss[1]|0.2-0.6', ...
+    't0_crossing|SLdiff|2', ...
+    'restretchSlopeStart|0.1',  ...
+    'peak1_y|10', 'peak1_dSL|0.2', ...
+    'vall_y|10', 'vall_t|0.2', 'peak2|5', ...
+    'steady|50', 'vall2_dy|0.1', 'ovrsht_dy|0.1', ...
+    'AssertParams|1'...
+};
+
+params0.RunSlack = false;
+params0.RunForceVelocity = false;
+params0.SkipParametersInBounds = true;
+params0.ka = 317*100;
+params0.k1 = 543*100;
+figure(209); clf;
 tic; RunBakersExp; toc
+%
 
 if params0.EvalFeatures
-    plotFeatures(features_data, features_model, [], params0.fn);
+    cost_v5a = plotFeatures(features_data, features_model, [], params0.fn);
+    fprintf('v5a total cost = %.3f\n', sum(cost_v5a));
 end

@@ -37,7 +37,7 @@ for i = 1:numel(names)
     end
 
     % Resolve param value: either direct field, or indexed via __N suffix
-    val = resolveParam(params, nm);
+    val = resolveModelParam(params, nm);
     if isnan(val)  % param not present
         continue;
     end
@@ -69,24 +69,3 @@ for i = 1:numel(names)
 end
 end
 
-
-function val = resolveParam(params, name)
-% Return the numeric value for a parameter name. Supports both direct
-% fields and the `field__index` notation used by the `mods` machinery.
-val = NaN;
-if isfield(params, name) && isnumeric(params.(name)) && isscalar(params.(name))
-    val = params.(name);
-    return;
-end
-
-% Try field__index split (e.g. PieceWiseStrainDepParams__3)
-sep = strfind(name, '__');
-if ~isempty(sep)
-    base = name(1:sep(1)-1);
-    idx  = str2double(name(sep(1)+2:end));
-    if isfield(params, base) && ~isnan(idx) && isnumeric(params.(base)) ...
-            && idx >= 1 && idx <= numel(params.(base))
-        val = params.(base)(idx);
-    end
-end
-end

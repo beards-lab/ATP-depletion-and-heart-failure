@@ -144,17 +144,66 @@ if params0.RunForceLengthEstim
     E(end+1) = Es*1e0;
 end
 
+%% PARAMETER BOUNDS AUTO-FN (value registration only — fn is unchanged)
+% Populate features_model with the current value of every resolvable Tier A–C param.
+% This guarantees that any boundary-check entry the user places in params0.fn
+% (e.g. 'ka|50-500|10') can find features_model.ka without triggering a 100-penalty.
+% params0.fn is NOT modified here; 'AssertParams|XX' expansion is handled below.
+if params0.EvalFeatures
+    bounds = parameterBounds();
+    bn     = fieldnames(bounds);
+    for i = 1:numel(bn)
+        b   = bounds.(bn{i});
+        if b.weight == 0; continue; end          % skip Tier D
+        val = resolveModelParam(params0, bn{i});
+        if isnan(val);   continue; end           % absent / inapplicable param
+        features_model.(bn{i}) = val;
+        features_data.(bn{i})  = nan;
+    end
+end
+
+%% ASSERT ACTIVE PARAMS EXPANSION
+% Replace any 'AssertParams|XX' placeholders in params0.fn with a single
+% grouped assertion string built from the current parametrisation switches
+% (see assertActiveParams.m).  XX is a weight scale multiplier.
+%
+% Example: params0.fn = {'ktr', 'A', 'AssertParams|1'};
+% After expansion, 'AssertParams|1' becomes e.g.
+%   'ka|50-500|10,kd|5-200|10,kstiff1|2000-30000|10,...'
+% which evalFeatureCost renders as one joint-cost tile.
+%
+% Using 'AssertParams|0.1' lowers global physiology pressure by 10×.
+if params0.EvalFeatures && isfield(params0, 'fn')
+    keep = true(1, numel(params0.fn));
+    for i = 1:numel(params0.fn)
+        tok = regexp(params0.fn{i}, '^AssertParams\|(\S+)$', 'tokens', 'once');
+        if isempty(tok); continue; end
+        sc = str2double(tok{1});
+        [fn_grouped, feat_assert] = assertActiveParams(params0, sc);
+        if isempty(fn_grouped)
+            keep(i) = false;            % nothing active — drop the placeholder
+        else
+            params0.fn{i} = fn_grouped; % replace placeholder with grouped string
+        end
+        % fn_assert = fieldnames(feat_assert);
+        % for j = 1:numel(fn_assert)
+        %     features_model.(fn_assert{j}) = feat_assert.(fn_assert{j});
+        %     features_data.(fn_assert{j})  = nan;
+        % end
+    end
+    params0.fn = params0.fn(keep);
+end
+
 %% FEATURE-BASED COST
 if params0.EvalFeatures && isfield(params0, 'fn') && ~isempty(params0.fn)
     E_feat = evalFeatureCost(features_data, features_model, params0.fn, 1);
     E = [E, E_feat];
 end
 
-%% PHYSIOLOGY-BOUND COST
-% Adds a single scalar penalty term to E if w_phys > 0. The bounds are
-% applied universally to all params in parameterBounds.m, regardless of
-% whether they are in `mods` — so a wrong frozen value still registers.
-if isfield(params0, 'w_phys') && params0.w_phys > 0
+%% PHYSIOLOGY-BOUND COST (fallback — only when EvalFeatures is off)
+% When EvalFeatures=true, bounds cost flows via fn entries + evalFeatureCost above.
+% This block exists purely for backward compatibility when EvalFeatures=false.
+if ~params0.EvalFeatures && isfield(params0, 'w_phys') && params0.w_phys > 0
     if ~isfield(params0, 'physiologyBounds') || isempty(params0.physiologyBounds)
         params0.physiologyBounds = parameterBounds();
     end

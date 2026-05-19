@@ -56,16 +56,18 @@ plotMultipleFeatures(feats_cell, labels, colors, markers, fn, [], [], cmap);
 nexttile();
 plotCostCulprits(fn, cost, gca);
 
-% Append a "bound violations" tile if params provided: which physiology
-% bounds are out, with their individual penalty contributions and the sum.
-if nargin >= 5 && ~isempty(params)
-    params = getParams(params, params.g, false, true);
-    [~, violations] = evalPhysiologyCost(params, parameterBounds());
+% Append a "bound violations" tile when RunBakersExp has pre-computed
+% violations and stored them in features_model.phys_violations.
+% No params arg needed; avoids a duplicate evalPhysiologyCost call.
+if isstruct(feats_sim) && isfield(feats_sim, 'phys_violations') ...
+        && ~isempty(feats_sim.phys_violations)
     nexttile();
-    plotBoundViolators(violations, gca);
+    plotBoundViolators(feats_sim.phys_violations, gca);
+end
 
-    % Full physiology dashboard goes into a separate figure so it doesn't
-    % squeeze the feature tile layout.
+% Full physiology dashboard in a separate figure — only when params is
+% explicitly provided (bonus diagnostic, does not affect the tile layout).
+if nargin >= 5 && ~isempty(params)
     figure(80086); clf;
     plotPhysiologyDashboard(params, [], gca);
 end
