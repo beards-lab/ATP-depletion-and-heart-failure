@@ -192,7 +192,7 @@ for pi = 1:numel(parts)
     if ~isempty(range_tok)
         [lb, ub] = parseRange(range_tok);
         span     = ub - lb;
-        viol     = max(0, (lb - fs) / span) .^ 2 + max(0, (fs - ub) / span) .^ 2;
+        viol     = max(0, (lb - fs) / lb) .^ 2 + max(0, (fs - ub) / ub) .^ 2;
         sub_cost = mean(viol, 'omitnan') + sum(isnan(fs)) * NAN_COST;
     else
         % Plain feature in group: compare to data

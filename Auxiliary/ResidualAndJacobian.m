@@ -19,7 +19,7 @@ function [Residuals, Jacobian] = ResidualAndJacobian(g, params0, ignoreJac)
     params0.PlotEachSeparately = false;
     params0.BreakOnODEUnstable = true;
     params0.MaxRunTime = 60;
-    params0.FV_velocities = -[0.5, 1, 3, 4];
+    params0.FV_velocities = -[0, 0.5, 1, 3, 4];
     
     assert(length(params0.g) == length(params0.mods), "The params and g, woe");
 

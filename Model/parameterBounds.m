@@ -226,14 +226,14 @@ bounds.vmax.lb = 4; bounds.vmax.ub = 25; bounds.vmax.weight = 10;
 %     not directly pN/nm; the mapping depends on model-level scaling factors.
 %   REMOVED: Veigel 2003 (PMID:12695826) was myosin V — WRONG PROTEIN.
 %   REMOVED: Mehta 1999 cross-reference — also myosin V, wrong protein.
-bounds.kstiff1.lb = 2000; bounds.kstiff1.ub = 30000; bounds.kstiff1.weight = 10;
+bounds.kstiff1.lb = 2000; bounds.kstiff1.ub = 100000; bounds.kstiff1.weight = 1;
 
 % P2 cross-bridge stiffness. Post-stroke stiffness higher than pre-stroke by ~1.5-3x.
 %   Kaya & Higuchi 2010 https://doi.org/10.1126/science.1191484    PMID:20689019
 %     Rabbit skeletal myosin II; nonlinear stiffness; post-stroke state stiffer than
 %     pre-stroke. Directly motivates kstiff2 > kstiff1. Bound is wider than the
 %     measured ratio to accommodate model-level scaling.
-bounds.kstiff2.lb = 5000; bounds.kstiff2.ub = 100000; bounds.kstiff2.weight = 10;
+bounds.kstiff2.lb = 5000; bounds.kstiff2.ub = 100000; bounds.kstiff2.weight = 1;
 
 % Serial elastic element stiffness kSE [kPa/um] and exponent ekSE.
 % The model kSE captures TOTAL series compliance: experimental rig + myofilament
@@ -342,8 +342,8 @@ bounds.s_threshold_R.lb = 0.001; bounds.s_threshold_R.ub = 0.015; bounds.s_thres
 % Bounded loosely to flag extreme asymmetry; ratio kstiff_n/kstiff should
 % typically be > 0.05 (< 20x asymmetry) to remain physically plausible.
 % [NO-CITE] No primary measurement of negative-strain XB stiffness in cardiac.
-bounds.kstiff1_n.lb = 100; bounds.kstiff1_n.ub = 5000; bounds.kstiff1_n.weight = 1;
-bounds.kstiff2_n.lb = 100; bounds.kstiff2_n.ub = 5000; bounds.kstiff2_n.weight = 1;
+bounds.kstiff1_n.lb = 100; bounds.kstiff1_n.ub = 50000; bounds.kstiff1_n.weight = 1;
+bounds.kstiff2_n.lb = 100; bounds.kstiff2_n.ub = 50000; bounds.kstiff2_n.weight = 1;
 
 % P3 stiffness (when UseKstiff3=1; otherwise model uses kstiff2). [NO-CITE]
 bounds.kstiff3.lb = 5000; bounds.kstiff3.ub = 100000; bounds.kstiff3.weight = 1;
