@@ -12,8 +12,11 @@ clear; clc;
 root = fullfile(fileparts(mfilename('fullpath')), '..');
 d1 = dir(fullfile(root, 'params',         'ModelParams*.m'));
 d2 = dir(fullfile(root, 'params',         'ModelOptParams*.m'));
-d3 = dir(fullfile(root, 'ModelOptParams', 'Model*.m'));
-d  = [d1; d2; d3];
+d3 = dir(fullfile(root, 'params',         'ModelExtractedParams*.m'));
+d3 = dir(fullfile(root, 'params',         'ModelExtractedParams_Ghost*.m'));
+
+d4 = dir(fullfile(root, 'ModelOptParams', 'Model*.m'));
+d  = [d3];
 
 mask = [d.datenum] >= datenum(2026, 1, 1);
 d = d(mask);
@@ -46,7 +49,7 @@ for i = 1:numel(d)
 end
 
 %% Output folder
-out_dir = fullfile(fileparts(mfilename('fullpath')), 'batch_output_passive');
+out_dir = fullfile(fileparts(mfilename('fullpath')), 'batch_output_extracted_v1');
 mkdir(out_dir);
 fprintf('\nOutput → %s\n\n', out_dir);
 
@@ -65,9 +68,12 @@ for i = 1:numel(d)
         continue;
     end
 
-
+%%
+ModelParamsSlackKtrOpt;
+ModelParams_Passive;
     params0.PlotEachSeparately           = true;
     params0.RunForceVelocity             = true;
+    params0.RunSlack = true;
     params0.justPlotStateTransitionsFlag = false;
     params0.BreakOnODEUnstable           = false;
     params0.ghostSave                    = '';
@@ -75,22 +81,58 @@ for i = 1:numel(d)
     params0.FV_velocities                = [0 -0.5 -1 -2 -4];
     params0.MaxRunTime                   = 120;
     params0.fn = {'FV_f|FV_v', 'ktr|2', 'A|50', 't0|5', 'ktr_rmse|0-0.05', 'restretchSlopeStart|0.1', 'restretchSlopeEnd|0.1', 'peak1_y|10', 'peak1_dSL|0.2', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|0.1', 'ovrsht_dy|0.1', 'XTOR|2-8'};
+params0.fn = {
+    'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
+    'ktr_rmse|0-0.2|.1', ...
+    'XTOR[1]|2-8,XTOR_vmax[1]|4-30,SRX_ss[1]|0.1-0.8,attached_ss[1]|0.2-0.6', ...
+    't0_crossing|SLdiff|2', ...
+    'restretchSlopeStart|0.1',  ...
+    'peak1_y|10', 'peak1_dSL|0.2', ...
+    'vall_y|10', 'vall_t|0.2', 'peak2|5', ...
+    'steady|50', 'vall2_dy|0.1', 'ovrsht_dy|0.1', ...
+    'AssertParams|1'...
+};    
 params0.OptimizeOn = 'Feats';    
 params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
-params0.RunSlackSegments = 'All';
+params0.RunSlackSegments = 'AllPar';
 params0.ShowStatePlots = false;
 
     features_data  = struct();
     features_model = struct();
-    ModelParams_Passive;
-
+    % ModelParams_Passive;
+    params0.xrate = 0.6;    
+%%
     figure(1); clf;
     try
+        if length(params0.kamh) > 1
+            params0.kamh = 0;
+        end
         RunBakersExp;
     catch e
         warning('RunBakersExp failed for %s: %s', name, e.message);
     end
+    %%
+    cost_vec = evalFeatureCost(features_data, features_model, params0.fn);
+    annotation('textbox', [0 0.96 1 0.04], ...
+            'String', sprintf('Total cost: %.3f', sum(cost_vec)), ...
+            'HorizontalAlignment', 'center', 'EdgeColor', 'none', 'FontSize', 11);
     exportgraphics(figure(1), fullfile(out_dir, [name '_Fig1.png']), 'Resolution', 150);
+
+    % Fig1Zoom: delete tile 1, zoom tile 2 to [0, 0.5] s, save as _Fig1Zoom.png.
+    % _Fig1.png is already saved above, so modifying figure(1) in-place is safe.
+    % In-place avoids copyobj failure on yyaxis (multi-coordinate-system) axes.
+    try
+        figure(1);
+        ax2 = nexttile(2);
+        xl = xlim(ax2);
+        xlim(ax2, [xl(1) xl(1) + 0.5]);
+        delete(nexttile(1));
+        exportgraphics(figure(1), fullfile(out_dir, [name '_Fig1Zoom.png']), 'Resolution', 150);
+    catch ex
+        warning('Fig1Zoom failed for %s: %s', name, ex.message);
+    end
+
+    save(fullfile(out_dir, [name '_simout.m']), "features_model", "features_data");
 
     %% Step B: feature cost figure with total cost
     cost_vec = [];

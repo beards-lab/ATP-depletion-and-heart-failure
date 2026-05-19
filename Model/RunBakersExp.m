@@ -152,6 +152,7 @@ end
 if params0.EvalFeatures
     bounds = parameterBounds();
     bn     = fieldnames(bounds);
+    params = getParams(params0, params0.g, false, true);
     for i = 1:numel(bn)
         b   = bounds.(bn{i});
         if b.weight == 0; continue; end          % skip Tier D

@@ -208,79 +208,72 @@ if params0.EvalFeatures
 end
 
 %% ============================================================
-%  v3: ATP turnover reduction + FV flattening
+%  v4: freeze SRX as fixed pool + deepen R2 well at force-generating zone
 % ============================================================
 %
-% ATP TURNOVER ISSUE:
-%   Total ATP consumption = kah × PT  (DRX) + ksr2srd × P_SR  (SRX).
-%   With ksr2srd = 49.58 s⁻¹ and P_SR ≈ 0.5, the SRX arm alone contributes
-%   ~25 s⁻¹, dominating over DRX. Reducing ksr2srd × 5 preserves the
-%   SRX-T/SRX-D equilibrium (same ratio ksr2srd/ksrd2sr) and does not
-%   affect force, since SRX heads are non-force-generating.
-%   Also reduce kah/kamh × 5 (same logic for DRX arm; check transient dynamics).
+% Post-critique strategy (see plan file):
+%   1. Disable SRX dynamics → no force-dependent SRX↔DRX confounding while
+%      we probe the R2-well effect. With both flags off, all SRX fluxes
+%      (RSR2PT, RPT2SR, RSRD2SR, RSR2SRD, RSRD2PD, RPD2SRD) are zero, so
+%      P_SR and P_SRD stay at their initial values for the whole run.
+%   2. Deepen R2 well at X=0 (= s2=0 in P-list frame ≈ s=+0.5 nm physical,
+%      i.e. where bulk-P2 mass sits at isometric and force per bridge =
+%      kstiff·(s+dr) is at its peak ≈ +11 nm spring extension).
+%   3. Add flanking shoulders at X=±0.002 (P=0.5) to widen the well and
+%      avoid PCHIP pinching.
+%   4. ka, kah, kamh, k1, k_1, kd, k2 base — all UNTOUCHED.
+%      (ka÷5 would re-introduce biphasic ktr at ~63 vs ~12 s⁻¹;
+%       kah÷5 moves hydrolysis into the ktr band. Both broke v3.)
 %
-% FV FLATTENING:
-%   Add breakpoint at s = -2 nm to R2 left flank to enforce a flat shoulder
-%   between s = -2 and 0 nm (slow shortening zone). This keeps more P2 heads
-%   attached at low shortening velocities → higher force near F0 → flatter FV.
-%   Vmax is unaffected (−5.55 nm corner is unchanged).
+% This is a probe to isolate the R2-well effect, not a final calibration.
 
-% --- ATP rates: 5× reduction (proportional in each pair) ---
-ksr2srd_v3 = params0.ksr2srd / 5;   % 49.58 → 9.92 s⁻¹
-ksrd2sr_v3 = params0.ksrd2sr / 5;   % 3.50  → 0.70 s⁻¹
-kah_v3     = params0.kah     / 5;   % 49.67 → 9.93 s⁻¹
-kamh_v3    = params0.kamh    / 5;   % 3.50  → 0.70 s⁻¹
+% --- 1. Freeze SRX as fixed parked pool
+params0.UseSuperRelaxed    = 0;
+params0.UseSuperRelaxedADP = 0;
+% Split matches v2 internal SRX ratio P_SRD/P_SR = ksr2srd/ksrd2sr ≈ 14.2
+params0.SRXT_0 = 0.033;   % ATP-bound parked head (minor)
+params0.SRXD_0 = 0.467;   % ADP·Pi-bound parked head (bulk of OFF state)
+% Total OFF = 0.5 → cycling pool = 0.5 throughout the run.
 
-fprintf('v3 ATP rates: ksr2srd=%.2f (was %.2f), ksrd2sr=%.2f (was %.2f)\n', ...
-    ksr2srd_v3, params0.ksr2srd, ksrd2sr_v3, params0.ksrd2sr);
-fprintf('              kah=%.2f (was %.2f), kamh=%.2f (was %.2f)\n', ...
-    kah_v3, params0.kah, kamh_v3, params0.kamh);
+% --- 2. R2 well: deepen at X=0, add ±2 nm shoulders
+R2_X_v4 = sort([R2_X_v2, -0.002, +0.002]);            % insert shoulder breakpoints
+R2_P_v4 = ppval(pchip(R2_X_v2, R2_P_v2), R2_X_v4);    % interp existing values
+R2_P_v4(R2_X_v4 == -0.002) = 0.5;   % left shoulder
+R2_P_v4(R2_X_v4 ==  0)     = 0.2;   % well bottom (was ≈ 1.0 → 5× deeper)
+R2_P_v4(R2_X_v4 ==  0.002) = 0.5;   % right shoulder
 
-% --- R2 left flank: add shoulder at −2 nm ---
-% Start from v2 shape (already set in params0 after %% Apply v2 shapes block)
-% Insert new breakpoint at X = -0.002 (−2 nm), P = 1.2×
-R2_X_v3 = sort([-0.002, params0.PieceWiseStrainDep2X]);   % insert -2 nm pt
-% Build P_v3 by interpolating existing v2 shape at new breakpoints
-R2_P_v3 = ppval(pchip(params0.PieceWiseStrainDep2X, params0.PieceWiseStrainDep2Params), R2_X_v3);
-% Override the new breakpoint value (flat shoulder)
-R2_P_v3(R2_X_v3 == -0.002) = 1.2;
+params0.PieceWiseStrainDep2X      = R2_X_v4;
+params0.PieceWiseStrainDep2Params = R2_P_v4;
 
-% --- R2 v3 vs v2 comparison figure ---
-figure(204); clf;
-tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+% --- 3. Comparison plot
+s_ev4  = linspace(-0.015, 0.020, 1000)';
+s_nm4  = s_ev4 * 1000;
+dr_s4  = params0.dr2 - params0.dr;
 
-s_ev3  = linspace(-0.015, 0.020, 1000)';
-s_nm3  = s_ev3 * 1000;
-dr_s3  = params0.dr2 - params0.dr;
-
-nexttile; hold on;
-plot(s_nm3, k2_v2 * ppval(pchip(params0.PieceWiseStrainDep2X,  params0.PieceWiseStrainDep2Params),  s_ev3 + dr_s3), ...
-    'g-',  'LineWidth', 2, 'DisplayName', sprintf('v2 (k2=%.0f)',k2_v2));
-plot(s_nm3, k2_v2 * ppval(pchip(R2_X_v3, R2_P_v3), s_ev3 + dr_s3), ...
-    'm-',  'LineWidth', 2, 'DisplayName', 'v3 (shoulder at -2 nm)');
-xline(0, 'k--'); xline(-2, 'k:', '-2 nm');
+figure(206); clf; hold on;
+plot(s_nm4, k2_v2 * ppval(pchip(R2_X_v2, R2_P_v2), s_ev4 + dr_s4), ...
+    'g-', 'LineWidth', 2, 'DisplayName', sprintf('v2 (k2=%.0f, well min≈1.0)', k2_v2));
+plot(s_nm4, k2_v2 * ppval(pchip(R2_X_v4, R2_P_v4), s_ev4 + dr_s4), ...
+    'm-', 'LineWidth', 2, 'DisplayName', 'v4 (well min=0.2, shoulders=0.5)');
+xline(0, 'k--', 'attach'); xline(-2, 'k:'); xline(+2, 'k:');
 set(gca, 'YScale', 'log'); xlim([-15 20]); grid on; box on;
 xlabel('Strain s (nm)'); ylabel('Effective k2 rate (s⁻¹)');
-title('R2: v2 vs v3 (FV shoulder)');
-legend('Location', 'northeast', 'FontSize', 8);
+title('R2: v2 vs v4 — deepened well at force-generating zone');
+legend('Location', 'southeast', 'FontSize', 9);
 
-nexttile; hold on;
-% FV curve comparison will be generated by RunBakersExp with FV enabled
-title('FV curve will appear after RunBakersExp');
-text(0.5, 0.5, 'Run section below first', 'Units','normalized', 'HorizontalAlignment','center');
+% --- 4. Run slack + FV with v4
+params0.RunForceVelocity = true;
+params0.FV_velocities = [0 -0.5 -1 -2 -4];
+figure(207); clf;
+disp('=== v4: frozen SRX (50% OFF) + R2 well deepened ===');
+tic; RunBakersExp; toc
 
-sgtitle('v3 shapes: FV shoulder + ATP rate check');
+if params0.EvalFeatures
+    total_cost = plotFeatures(features_data, features_model, [], params0.fn);
+end
 
-% --- Apply v3 shapes ---
-params0.ksr2srd                     = ksr2srd_v3;
-params0.ksrd2sr                     = ksrd2sr_v3;
-params0.kah                         = kah_v3;
-params0.kamh                        = kamh_v3;
+sum(total_cost)
 
-params0.PieceWiseStrainDep2X        = R2_X_v3;
-params0.PieceWiseStrainDep2Params   = R2_P_v3;
-
-% --- Run FV + slack with v3 shapes ---
 %% ============================================================
 %  v5: tackle multimodal force redevelopment after slack
 % ============================================================
@@ -387,3 +380,29 @@ if params0.EvalFeatures
     cost_v5a = plotFeatures(features_data, features_model, [], params0.fn);
     fprintf('v5a total cost = %.3f\n', sum(cost_v5a));
 end
+
+%% v5b — v5a + broadened R12
+disp('=== v5b: v5a + R12 broadened plateau ===');
+params0.PieceWiseStrainDepX      = R12_X_v5;
+params0.PieceWiseStrainDepParams = R12_P_v5;
+figure(210); clf;
+tic; RunBakersExp; toc
+if params0.EvalFeatures
+    cost_v5b = plotFeatures(features_data, features_model, [], params0.fn);
+    fprintf('v5b total cost = %.3f\n', sum(cost_v5b));
+end
+
+%% v5c — v5b + broadened A1 attachment kernel
+disp('=== v5c: v5b + A1AttachmentWidth = 12 nm ===');
+params0.A1AttachmentWidth = A1_width_v5;
+figure(211); clf;
+tic; RunBakersExp; toc
+if params0.EvalFeatures
+    cost_v5c = plotFeatures(features_data, features_model, [], params0.fn);
+    fprintf('v5c total cost = %.3f\n', sum(cost_v5c));
+end
+
+fprintf('\n=== v5 cost comparison ===\n');
+fprintf('  v5a (SRX init only)             : %.3f\n', sum(cost_v5a));
+fprintf('  v5b (+R12 broadened)            : %.3f\n', sum(cost_v5b));
+fprintf('  v5c (+A1 kernel broadened)      : %.3f\n', sum(cost_v5c));

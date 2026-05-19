@@ -198,7 +198,7 @@ bounds.kamh.lb = 1; bounds.kamh.ub = 20; bounds.kamh.weight = 10;
 
 % xrate global multiplier — should be 1 in a well-parameterised model.
 % Wide bound to allow legacy fits; narrow target encourages re-anchoring of base rates.
-bounds.xrate.lb = 0.5; bounds.xrate.ub = 2; bounds.xrate.weight = 10;
+bounds.xrate.lb = 0.5; bounds.xrate.ub = 2; bounds.xrate.weight = 0;
 
 % Maximum unloaded shortening velocity vmax [um/s per half-sarcomere].
 %   McDonald 1998 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2231141/ PMID:9700185

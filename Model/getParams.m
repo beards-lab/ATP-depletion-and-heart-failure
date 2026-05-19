@@ -181,6 +181,7 @@ end
         'UseSafeSRReset', false, ...
         'ShowArrayShiftWarnings', true, ...
         'LegacyStrainFlipping', false, ...
+        'UsePieceWiseStrainDep', false, ...
         'PieceWiseStrainDepParams', [1 1], ...
         'PieceWiseStrainDepX', [-0.1 0.1],...
         'UseA1AttachmentKernel', false,...
@@ -211,7 +212,7 @@ end
         'Srd_max', 0, ...          % max SRD→PD transition rate; used when UseLimitedSRDTransition
         'Srd_n', 1, ...
         'UseJPattern', false, ...  % precompute Jacobian sparsity pattern for ode15s (default off)
-        'UseFastPPval', false, ... % replace ppval with precomputed table lookup (default off)
+        'UseFastPPval', true, ... % replace ppval with precomputed table lookup (default)
         'UseCompiledMex', false, ...  % use compiled C MEX for ODE RHS (requires compileMex.m; config-specific)
         'PieceWiseStrainDepR21X_logOffset', 1, ...
         'PieceWiseStrainDepR1DX_logOffset', 1, ...
@@ -403,26 +404,32 @@ end
     % params.PieceWiseStrainDepFun = @(x)pchip(pwsdX, pwsdP, x);   
     params.PieceWiseStrainDep = pchip(pwsdX, pwsdP);
 
+    % R2: own piecewise if provided, otherwise fall back to PieceWiseStrainDep shape
     if isfield(params, 'PieceWiseStrainDep2X') && isfield(params, 'PieceWiseStrainDep2Params') ...
-            && ~isempty(params.PieceWiseStrainDep2X) && ~isempty(params.PieceWiseStrainDep2Params) 
+            && ~isempty(params.PieceWiseStrainDep2X) && ~isempty(params.PieceWiseStrainDep2Params)
         params.PieceWiseStrainDep2 = pchip(params.PieceWiseStrainDep2X + log(params.PieceWiseStrainDep2X_logOffset)/10, params.PieceWiseStrainDep2Params);
     else
-        params.PieceWiseStrainDep2 = [];
+        params.PieceWiseStrainDep2 = params.PieceWiseStrainDep;
     end
 
-    if isfield(params, 'PieceWiseStrainDepR1DX') && isfield(params, 'PieceWiseStrainDepR1DParams') ...
-            && ~isempty(params.PieceWiseStrainDepR1DX) && ~isempty(params.PieceWiseStrainDepR1DParams) 
+    % R1D: Gaussian decay, own piecewise, or flat 1 (no strain dependence)
+    if isfield(params, 'UseStrainDep4R1D') && params.UseStrainDep4R1D
+        params.PieceWiseStrainDepR1D = pchip(pwsdX, exp(-(pwsdX.^2) / (2*params.kd_sigma^2)));
+    elseif isfield(params, 'PieceWiseStrainDepR1DX') && isfield(params, 'PieceWiseStrainDepR1DParams') ...
+            && ~isempty(params.PieceWiseStrainDepR1DX) && ~isempty(params.PieceWiseStrainDepR1DParams)
         params.PieceWiseStrainDepR1D = pchip(params.PieceWiseStrainDepR1DX + log(params.PieceWiseStrainDepR1DX_logOffset)/10, params.PieceWiseStrainDepR1DParams);
     else
-        params.PieceWiseStrainDepR1D = [];
+        params.PieceWiseStrainDepR1D = pchip(pwsdX, ones(size(pwsdX)));
     end
 
+    % R21: own piecewise if provided, otherwise zero (no reverse P2→P1 transition)
     if isfield(params, 'PieceWiseStrainDepR21X') && isfield(params, 'PieceWiseStrainDepR21Params') ...
-            && ~isempty(params.PieceWiseStrainDepR21X) && ~isempty(params.PieceWiseStrainDepR21Params) 
+            && ~isempty(params.PieceWiseStrainDepR21X) && ~isempty(params.PieceWiseStrainDepR21Params)
         params.PieceWiseStrainDepR21 = pchip(params.PieceWiseStrainDepR21X + log(params.PieceWiseStrainDepR21X_logOffset)/10, params.PieceWiseStrainDepR21Params);
     else
-        params.PieceWiseStrainDepR21 = [];
+        params.PieceWiseStrainDepR21 = pchip(pwsdX, zeros(size(pwsdX)));
     end
+
     %% Step 6b (optional): Pre-unpack pchip structs for inline polynomial evaluation
     % Enabled by params.UseFastPPval = true. Requires UsePieceWiseStrainDep = true.
     % Stores raw breaks + coefficients from unmkpp so the ODE RHS can evaluate
