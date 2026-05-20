@@ -242,6 +242,7 @@ fprintf('Initial Cost: %.4f\n', initCost);
 %% 4. Optimization
 disp('Starting fminsearch Optimization...');
 options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 15, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 60);
+options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 30, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 90);
 g_opt = params0.g; 
 iter_num = 0;
 fval = initCost;
@@ -250,14 +251,14 @@ fval = initCost;
 
 for iter_num = 1:100    
     try
-        params0 = draw10(params0, g_opt, active_groups, 12, compulsory_params);
+        params0 = draw10(params0, g_opt, active_groups, 8, compulsory_params);
         % Define objective function using internal Jacobian handling to prevent wasteful finite differences
         costFun = @(g) sum(ResidualAndJacobian(g, params0, true));
         fval_pre = fval;
         [g_opt, fval, a, optim_outputs] = fminsearch(costFun, params0.g, options);
-        save("envOptIter3.mat", 'params0', 'g_opt');
+        save("envOptIter4.mat", 'params0', 'g_opt');
         params0.g = g_opt;
-        writeParamsToMFile(sprintf('../params/ModelOptParams_TL2_iter_%g.m', iter_num), params0, [], ...
+        writeParamsToMFile(sprintf('../params/ModelOptParams_TL3_iter_%g.m', iter_num), params0, [], ...
         sprintf("Iteration cost: %0.1f (from %0.1f) \r\n%% params0.mods = {'%s'};\r\n%% params0.g = [%s]", fval,fval_pre, strjoin(params0.mods, "', '"), num2str(g_opt)));
     catch e
         disp(e)
@@ -304,7 +305,8 @@ params0.PlotEachSeparately = 1;
 params0.justPlotStateTransitionsFlag = false;
 % params0.PieceWiseStrainDepR1DX_logOffset = 1;
 % params0.PieceWiseStrainDep2X_logOffset = 1;
-
+params0.PlotFeatureFitting = true;
+params0.fn = {'ktr_rmse', 'AssertParams|1'};
 tic
 RunBakersExp;
 toc

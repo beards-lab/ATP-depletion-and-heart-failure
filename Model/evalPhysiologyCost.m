@@ -23,6 +23,10 @@ if nargin < 2 || isempty(bounds)
     bounds = parameterBounds();
 end
 
+if ~isempty(params.g)
+    params = getParams(params, params.g, false, true);
+end
+
 names = fieldnames(bounds);
 E_phys = 0;
 violations = struct('name', {}, 'value', {}, 'lb', {}, 'ub', {}, ...

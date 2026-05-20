@@ -156,7 +156,7 @@ if params0.EvalFeatures
     for i = 1:numel(bn)
         b   = bounds.(bn{i});
         if b.weight == 0; continue; end          % skip Tier D
-        val = resolveModelParam(params0, bn{i});
+        val = resolveModelParam(params, bn{i});
         if isnan(val);   continue; end           % absent / inapplicable param
         features_model.(bn{i}) = val;
         features_data.(bn{i})  = nan;
