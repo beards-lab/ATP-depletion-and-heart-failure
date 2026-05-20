@@ -205,6 +205,7 @@ end
 % When EvalFeatures=true, bounds cost flows via fn entries + evalFeatureCost above.
 % This block exists purely for backward compatibility when EvalFeatures=false.
 if ~params0.EvalFeatures && isfield(params0, 'w_phys') && params0.w_phys > 0
+    %%
     if ~isfield(params0, 'physiologyBounds') || isempty(params0.physiologyBounds)
         params0.physiologyBounds = parameterBounds();
     end

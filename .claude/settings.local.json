@@ -14,7 +14,8 @@
       "Bash(\"/mnt/c/Program Files/MATLAB/R2025b/bin/matlab.exe\" -batch \"disp\\('hello'\\)\")",
       "Bash(cmd.exe /c \"dir \\\\\"C:\\\\Program Files\\\\MATLAB\\\\\"\")",
       "Bash(powershell.exe -Command \"Test-Path 'C:\\\\Program Files\\\\MATLAB\\\\R2023a\\\\bin\\\\matlab.exe'\")",
-      "Bash(wsl python3 *)"
+      "Bash(wsl python3 *)",
+      "Bash(cd /mnt/c/home/git/ATP-depletion-and-heart-failure && \"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe\" -batch \"addpath\\(genpath\\('.'\\)\\); TestSRXParameters\" 2>&1 | head -200)"
     ]
   }
 }

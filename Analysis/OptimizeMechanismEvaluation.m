@@ -19,7 +19,7 @@ params0.PlotEachSeparately = 1;
 params0.RunSlackSegments = 'AllPar';
 params0.RunSlack = true;
 params0.RunForceVelocity = true;
-params0.FV_velocities = -[0.5, 1, 2, 4];
+params0.FV_velocities = -[0 0.5, 1, 2, 4];
 params0.RunForceLengthEstim = false;
 params0.BreakOnODEUnstable = true;
 params0.UseFastPPval = true;
@@ -28,10 +28,11 @@ params0.UseFastPPval = true;
 params0.fn = {'ktr|SLslack', 'A|SLslack', 't0|SLslack', 'peak1_y', 'peak1_dSL', 'peak2', 'steady', 'XTOR|0.1', 'vall_y', 'restretchSlopeStart', 'vall2_dy'};
 params0.MaxRunTime = 10;
 params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
-%%
+%% Define the output metrics
 params0 = getParams();
 ModelParams_tuesdayLunch;
-ModelOptParams_TL_iter_4
+% ModelOptParams_TL_iter_4
+ModelOptParams_TL3_iter_17
 
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
@@ -41,23 +42,24 @@ params0.SRXT_0 = 0.08;
 params0.fn = {
     'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
     'ktr_rmse|0-0.2|.1', ...
-    'XTOR[1]|2-8|10,XTOR_vmax[1]|4-30,SRX_ss[1]|0.1-0.8,attached_ss[1]|0.2-0.6|10', ...
+    'XTOR[1]|2-8|10,XTOR_vmax[1]|4-30,SRX_ss[1]|0.1-0.8,attached_ss[1]|0.3-0.6|10', ...
     't0_crossing|SLdiff|2', ...
     'restretchSlopeStart|0.1',  ...
     'peak1_y|10', 'peak1_dSL|0.2', ...
     'vall_y|10', 'vall_t|0.2', 'peak2|5', ...
     'steady|50', 'vall2_dy|0.1', 'ovrsht_dy|0.1', ...
+    'ovrsht_dy|0-2|1','ovrsht_t|0.4-1|100' ...
     'AssertParams|1'...
 };  
-
+%%
 params0.MaxRunTime = 100;
 params0.justPlotStateTransitionsFlag = false;
 tic;RunBakersExp;
 toc
-%
-plotFeatures(features_data, features_model, features_ghost, params0.fn);
 %%
-features_ghost= features_model;
+plotFeatures(features_data, features_model, [], params0.fn);
+features_ghost = features_model;
+
 %% old ghost
             % features_ghost.ktr                 = [39.76 34.18 31.63 28.36 27.6];
             % features_ghost.A                   = [68.4 65.47 58.92 52.2 43.51];
@@ -202,28 +204,6 @@ params0.mods = {'ka', 'kd', 'k2', 'kstiff2', 'slope', 's_threshold_R', 'PieceWis
 params0.g = ones(1, length(params0.mods)); 
 
 
-%% Define the output metrics
-ModelOptParams_SRXTD_iter_9
-params0.fn = {'FV_f|FV_v|@(x,y)10*sum((x/65 - y/56.4).^2)', ...
-'ktr|SLslack|10' , ...               
-'A|SLslack|100' , ...                 
-'t0|SLdiff|5' , ...                
-'ktr_rmse|0' , ...          
-'restretchSlopeStart|v_restretch|0.1', ...
-'restretchSlopeEnd|0.01' , ... 
-'peak1_y|10' , ...   
-'peak1_dSL|SLdiff|0.2' , ...                    
-'vall_y|10' , ...            
-'vall_t|0.2' , ...            
-'peak2|5' , ...             
-'steady|50' , ...            
-'vall2_dy|0.1' , ...          
-'ovrsht_dy|0.1' , ...              
-'XTOR|@(X, Y_data) 0.001*sum((max(0, 2 - X) + max(0, X - 8)).^2)'}          
-
-% c = @(X, Y_data) 0.1*sum((max(0, 2 - X) + max(0, X - 8)).^2);
-plotFeatures(features_data, features_model, features_ghost, params0.fn)
-features_ghost = features_model;
 %% 3. Run Initial Evaluation
 disp('Evaluating Pre-Optimization Baseline...');
 params0.OptimizeOn = 'Feats';
@@ -306,7 +286,11 @@ params0.justPlotStateTransitionsFlag = false;
 % params0.PieceWiseStrainDepR1DX_logOffset = 1;
 % params0.PieceWiseStrainDep2X_logOffset = 1;
 params0.PlotFeatureFitting = true;
-params0.fn = {'ktr_rmse', 'AssertParams|1'};
+% params0.fn = {'ktr_rmse|0-0.2', 'AssertParams|1'};
+ModelOptParams_TL3_iter_17_SRXstart
+params0.UseSuperRelaxed = 0;
+params0.UseSuperRelaxedADP = 0;
+
 tic
 RunBakersExp;
 toc
@@ -322,14 +306,14 @@ ModelOptParams_iter_27
 params0.PlotEachSeparately = 1;
 params0.RunForceVelocity = false;
 
-params0.justPlotStateTransitionsFlag = true;
+params0.justPlotStateTransitionsFlag = false;
 % params0.PieceWiseStrainDepR1DX_logOffset = 1;
 % params0.PieceWiseStrainDep2X_logOffset = 1;
 
 tic
 RunBakersExp;
 toc
-% ResidualAndJacobian(g_opt, params0, true);
+%% ResidualAndJacobian(g_opt, params0, true);
 
 
 sum(plotFeatures(features_data, features_model, features_ghost, params0.fn))
