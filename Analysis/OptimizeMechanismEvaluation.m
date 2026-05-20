@@ -8,7 +8,19 @@ if isempty(gcp('nocreate'))
     p = parpool('threads', 5);
 end
 figure(102);clf;
+%%
 
+% Get the parent directory of your current folder
+parentDir = fileparts(pwd); 
+
+% Generate the path string for the parent and all its subfolders
+allPaths = genpath(parentDir); 
+
+% Add these paths to the MATLAB search path
+addpath(allPaths);
+
+% Optional: Save these changes for future sessions
+% savepath; 
 %% 1. Initialize Baseline Model
 params0 = getParams();
 ModelParamsWPassive_PreOpt
@@ -31,7 +43,7 @@ params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
 %%
 params0 = getParams();
 ModelParams_tuesdayLunch;
-ModelOptParams_TL_iter_4
+ModelOptParams_TL3_iter_17
 
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
@@ -54,8 +66,8 @@ params0.MaxRunTime = 100;
 params0.justPlotStateTransitionsFlag = false;
 tic;RunBakersExp;
 toc
-%
-plotFeatures(features_data, features_model, features_ghost, params0.fn);
+%%
+plotFeatures(features_data, features_model, features_ghost, params0.fn)
 %%
 features_ghost= features_model;
 %% old ghost
@@ -258,7 +270,7 @@ for iter_num = 1:100
         [g_opt, fval, a, optim_outputs] = fminsearch(costFun, params0.g, options);
         save("envOptIter4.mat", 'params0', 'g_opt');
         params0.g = g_opt;
-        writeParamsToMFile(sprintf('../params/ModelOptParams_TL3_iter_%g.m', iter_num), params0, [], ...
+        writeParamsToMFile(sprintf('../params/ModelOptParams_TL4_iter_%g.m', iter_num), params0, [], ...
         sprintf("Iteration cost: %0.1f (from %0.1f) \r\n%% params0.mods = {'%s'};\r\n%% params0.g = [%s]", fval,fval_pre, strjoin(params0.mods, "', '"), num2str(g_opt)));
     catch e
         disp(e)
