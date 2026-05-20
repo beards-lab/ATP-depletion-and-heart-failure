@@ -311,8 +311,8 @@ bounds.ksrd.lb = 0.1; bounds.ksrd.ub = 20; bounds.ksrd.weight = 1;
 bounds.kmsrd.lb = 0.1; bounds.kmsrd.ub = 20; bounds.kmsrd.weight = 1;
 bounds.ksr2srd.lb = 1; bounds.ksr2srd.ub = 100; bounds.ksr2srd.weight = 1;
 bounds.ksrd2sr.lb = 0.1; bounds.ksrd2sr.ub = 50; bounds.ksrd2sr.weight = 1;
-bounds.sigma_srd1.lb = 5; bounds.sigma_srd1.ub = 100; bounds.sigma_srd1.weight = 1;
-bounds.sigma_srd2.lb = 5; bounds.sigma_srd2.ub = 100; bounds.sigma_srd2.weight = 1;
+bounds.sigma_srd1.lb = 5; bounds.sigma_srd1.ub = 1000; bounds.sigma_srd1.weight = 1;
+bounds.sigma_srd2.lb = 5; bounds.sigma_srd2.ub = 1000; bounds.sigma_srd2.weight = 1;
 
 % Internal viscous drag mu (shortening), mu_neg (lengthening) [model units].
 %   Tombe & ter Keurs 1991 https://doi.org/10.1113/jphysiol.1991.sp018682 PMID:1758129
