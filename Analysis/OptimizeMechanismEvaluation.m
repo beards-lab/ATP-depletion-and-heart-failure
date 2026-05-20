@@ -33,6 +33,7 @@ params0 = getParams();
 ModelParams_tuesdayLunch;
 % ModelOptParams_TL_iter_4
 ModelOptParams_TL3_iter_17
+ModelOptParams_TL3_iter_17_SRXstart_v5
 
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
@@ -201,7 +202,8 @@ compulsory_params = {};
 % Top identifiable parameters from previous sensitivity analysis:
 % 1: k2, 2: kSE, 3: kstiff2, 4: k_pas, 5: dr, 6: k1, 7: sigma1, 8: kd
 params0.mods = {'ka', 'kd', 'k2', 'kstiff2', 'slope', 's_threshold_R', 'PieceWiseStrainDepR21X_logOffset', 'PieceWiseStrainDepR1DX_logOffset', 'PieceWiseStrainDep2X_logOffset'};
-params0.g = ones(1, length(params0.mods)); 
+params0.g = ones(1, length(params0.mods));
+optimTag = 'ModelOptParams_TL3';
 
 
 %% 3. Run Initial Evaluation
@@ -222,10 +224,11 @@ fprintf('Initial Cost: %.4f\n', initCost);
 %% 4. Optimization
 disp('Starting fminsearch Optimization...');
 options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 15, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 60);
-options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 30, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 90);
+options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 1, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 1);
 g_opt = params0.g; 
 iter_num = 0;
 fval = initCost;
+optimTag = 'TL5'
 % compulsory_params = {'ksr0', 'kmsr', 'sigma1', 'sigma2', 'ksrd', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
 % compulsory_params = {'ksr0', 'kmsr'};
 
@@ -238,8 +241,9 @@ for iter_num = 1:100
         [g_opt, fval, a, optim_outputs] = fminsearch(costFun, params0.g, options);
         save("envOptIter4.mat", 'params0', 'g_opt');
         params0.g = g_opt;
-        writeParamsToMFile(sprintf('../params/ModelOptParams_TL3_iter_%g.m', iter_num), params0, [], ...
+        writeParamsToMFile(sprintf('../params/ModelOptimParam_%s_iter_%g.m', optimTag, iter_num), params0, [], ...
         sprintf("Iteration cost: %0.1f (from %0.1f) \r\n%% params0.mods = {'%s'};\r\n%% params0.g = [%s]", fval,fval_pre, strjoin(params0.mods, "', '"), num2str(g_opt)));
+        captureOptimIter(params0, iter_num, fval, fval_pre, optimTag);
     catch e
         disp(e)
         disp("Going on...")
@@ -266,7 +270,7 @@ xxx([1 2 3], [4 5 6])
 StatesInTime
 %% Test it 
 figure(1); clf;
-% params0 = getParams();
+params0 = getParams();
 % ModelOptParams_iter_27
 % ModelOptParams_NonLinKstiff_iter_4
 % ModelOptParams_SRXTD_iter_3
@@ -287,16 +291,18 @@ params0.justPlotStateTransitionsFlag = false;
 % params0.PieceWiseStrainDep2X_logOffset = 1;
 params0.PlotFeatureFitting = true;
 % params0.fn = {'ktr_rmse|0-0.2', 'AssertParams|1'};
-ModelOptParams_TL3_iter_17_SRXstart
-params0.UseSuperRelaxed = 0;
-params0.UseSuperRelaxedADP = 0;
+ModelOptParams_TL3_iter_17
+ModelOptParams_TL3_iter_17_SRXstart_v5
+
+params0.UseSuperRelaxed = 1;
+params0.UseSuperRelaxedADP = 1;
 
 tic
 RunBakersExp;
 toc
 % ResidualAndJacobian(g_opt, params0, true);
 
-
+% features_ghost = features_model;
 sum(plotFeatures(features_data, features_model, features_ghost, params0.fn))
 disp('Done!');
 %% Experiment
