@@ -150,11 +150,12 @@ end
 % ── Single boundary tile ──────────────────────────────────────────────────
 function plotSingleBoundaryTile(ax, feat_y, sel_y, lb, ub, feats_cell, cost_str)
 % Bar chart: one bar per sim value, colored by in/out of [lb, ub].
-% Uses only the first non-empty dataset that has the field (typically sim).
+% Iterates feats_cell from last to first so that the simulation dataset
+% (always appended last by plotFeatures) is preferred over data.
 % If sel_y is non-empty, the per-segment vector is reduced to a scalar first,
 % rendering a single bar.
 fs = [];
-for di = 1:numel(feats_cell)
+for di = numel(feats_cell):-1:1
     fc = feats_cell{di};
     if ~isempty(fc) && isfield(fc, feat_y)
         v = applyFeatSelector(double([fc.(feat_y)]), sel_y);
@@ -238,9 +239,10 @@ for pi = 1:numel(parts)
         end
     end
 
-    % Gather sim values (use first dataset that has the field with non-NaN values)
+    % Gather sim values — iterate last-to-first so sim (appended last by
+    % plotFeatures) is preferred over data for boundary tiles.
     val = NaN;
-    for di = 1:numel(feats_cell)
+    for di = numel(feats_cell):-1:1
         fc = feats_cell{di};
         if ~isempty(fc) && isfield(fc, feat)
             v = applyFeatSelector(double([fc.(feat)]), sel);
@@ -345,7 +347,10 @@ hold(ax, 'off');
 end
 
 
-% ── Helpers (mirrors of evalFeatureCost helpers) ──────────────────────────
+% ── Local helpers ─────────────────────────────────────────────────────────
+% hasTopLevelComma, splitTopLevelComma, isRangeToken, parseRange are standalone
+% .m files in Auxiliary/ and are called directly (no local copy needed).
+
 function s = trunc(s, n)
 if nargin < 2; n = 30; end
 if numel(s) > n; s = [s(1:n-3) '...']; end
@@ -365,49 +370,4 @@ elseif isnan(c)
 else
     cs = sprintf(' [%.2f]', c);
 end
-end
-
-
-function tf = hasTopLevelComma(s)
-depth = 0;
-for k = 1:numel(s)
-    c = s(k);
-    if c == '('; depth = depth + 1; end
-    if c == ')'; depth = depth - 1; end
-    if c == ',' && depth == 0; tf = true; return; end
-end
-tf = false;
-end
-
-
-function parts = splitTopLevelComma(s)
-parts = {};
-depth = 0;
-start = 1;
-for k = 1:numel(s)
-    c = s(k);
-    if c == '('; depth = depth + 1; end
-    if c == ')'; depth = depth - 1; end
-    if c == ',' && depth == 0
-        parts{end+1} = s(start:k-1); %#ok<AGROW>
-        start = k + 1;
-    end
-end
-parts{end+1} = s(start:end);
-end
-
-
-function tf = isRangeToken(tok)
-dash = regexp(tok, '(?<=\d)-', 'once');
-if isempty(dash); tf = false; return; end
-lb = str2double(tok(1:dash-1));
-ub = str2double(tok(dash+1:end));
-tf = isfinite(lb) && isfinite(ub);
-end
-
-
-function [lb, ub] = parseRange(tok)
-dash = regexp(tok, '(?<=\d)-', 'once');
-lb   = str2double(tok(1:dash-1));
-ub   = str2double(tok(dash+1:end));
 end

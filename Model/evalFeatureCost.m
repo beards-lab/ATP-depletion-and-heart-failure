@@ -10,16 +10,16 @@ function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn,
 %
 %     'field'                   plain feature, weight=1
 %     'field|weight'            plain feature with explicit weight
-%     'field_y|field_x'         X-Y scatter (normalized by mean(data_y))
+%     'field_y|field_x'         X-Y scatter (normalised by mean(data_y))
 %     'field_y|field_x|weight'  X-Y scatter with weight
 %     'field|lb-ub'             boundary check: cost=0 inside [lb,ub], quadratic outside
-%     'field|weight|lb-ub'      boundary check with explicit weight
+%     'field|lb-ub|weight'      boundary check with explicit weight
 %     'f1|w1|lb1-ub1,f2|lb2-ub2'  grouped boundary check: one joint cost, one bar tile
 %     'field|@(X,Y_data) expr'  custom cost function (escape hatch)
 %
 %   Boundary check cost (per element):
-%     viol = max(0,(lb-x)/span)^2 + max(0,(x-ub)/span)^2   where span = ub-lb
-%   Cost = 0 inside [lb,ub], rises to 1 at one span outside.
+%     viol = max(0,(lb-x)/lb)^2 + max(0,(x-ub)/ub)^2
+%   Cost = 0 inside [lb,ub]; rises to 1 when x reaches 0 (lower) or 2*ub (upper).
 %   feats_data is NOT accessed for boundary entries.
 %
 %   Grouped entries (comma at top level, outside any parentheses):
@@ -67,9 +67,8 @@ for i_feat = 1:length(fn)
     % Split off custom cost function at '@'
     at_pos = strfind(fn_str, '@');
     if ~isempty(at_pos)
-        prefix         = fn_str(1:at_pos(1)-1);
-        cost_fn        = str2func(strtrim(fn_str(at_pos(1):end)));
-        weight(i_feat) = 1;
+        prefix  = fn_str(1:at_pos(1)-1);
+        cost_fn = str2func(strtrim(fn_str(at_pos(1):end)));
     else
         prefix  = fn_str;
         cost_fn = [];
@@ -79,76 +78,22 @@ for i_feat = 1:length(fn)
     tokens = tokens(~cellfun(@isempty, tokens));
     [feat_y, sel_y] = parseFeatSelector(tokens{1});
 
-    % === BOUNDARY CHECK mode: a 'lb-ub' range token is present ===
-    if isempty(cost_fn)
-        range_tok = '';
-        for ti = 2:numel(tokens)
-            if isRangeToken(tokens{ti})
-                range_tok = tokens{ti};
-                break;
-            end
+    if ~isempty(cost_fn)
+        % === CUSTOM COST FUNCTION mode ===
+        weight(i_feat) = 1;
+        if ~isfield(feats_data, feat_y) || ~isfield(feats_sim, feat_y)
+            cost(i_feat) = MISSING_FEATURE_COST; continue;
         end
-
-        if ~isempty(range_tok)
-            % Parse optional weight (numeric token that is not the range)
-            for ti = 2:numel(tokens)
-                if ~isRangeToken(tokens{ti})
-                    w = str2double(tokens{ti});
-                    if ~isnan(w)
-                        weight(i_feat) = w;
-                    end
-                end
-            end
-
-            if ~isfield(feats_sim, feat_y)
-                cost(i_feat) = MISSING_FEATURE_COST;
-                continue;
-            end
-            fs = applyFeatSelector(double([feats_sim.(feat_y)]), sel_y);
-
-            [lb, ub] = parseRange(range_tok);
-            span = ub - lb;
-            viol = max(0, (lb - fs) / span) .^ 2 + max(0, (fs - ub) / span) .^ 2;
-            cost(i_feat) = mean(viol, 'omitnan') + sum(isnan(fs)) * NAN_COST;
-            continue;
-        end
-    end
-
-    % === NORMAL mode (existing logic) ===
-    if isempty(cost_fn)
-        w = str2double(tokens{end});
-        if ~isnan(w)
-            weight(i_feat) = w;
-        else
-            weight(i_feat) = 1;
-        end
-    end
-
-    if ~isfield(feats_data, feat_y) || ~isfield(feats_sim, feat_y)
-        cost(i_feat) = MISSING_FEATURE_COST;
+        fd = applyFeatSelector(double([feats_data.(feat_y)]), sel_y);
+        fs = applyFeatSelector(double([feats_sim.(feat_y)]), sel_y);
+        cost(i_feat) = cost_fn(fs, fd) + sum(isnan(fs)) * NAN_COST;
         continue;
     end
 
-    fd = applyFeatSelector(double([feats_data.(feat_y)]), sel_y);
-    fs = applyFeatSelector(double([feats_sim.(feat_y)]), sel_y);
-
-    % Determine x-axis field for XY plots (second non-numeric token, no @)
-    feat_x = '';
-    if isempty(cost_fn) && numel(tokens) >= 2 && isnan(str2double(tokens{2}))
-        feat_x = tokens{2};
-    end
-    if ~isempty(feat_x) && isfield(feats_sim, feat_x)
-        % XY mode: fd/fs are the y-values; we don't reindex but keep same normalization
-    end
-
-    if ~isempty(cost_fn)
-        cost(i_feat) = cost_fn(fs, fd) + sum(isnan(fs)) * NAN_COST;
-    else
-        n_F = mean(fd, 'omitnan');
-        if n_F == 0; n_F = 1; end
-        cost(i_feat) = sum(abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
-    end
-
+    % Delegate to shared sub-entry evaluator (handles boundary + normal modes)
+    [cost(i_feat), weight(i_feat)] = evalOneSubEntry( ...
+        feat_y, sel_y, tokens(2:end), feats_data, feats_sim, ...
+        NAN_COST, MISSING_FEATURE_COST, costExp);
 end
 
 cost_total = cost .* weight;
@@ -158,7 +103,7 @@ end
 % -----------------------------------------------------------------------
 function [jcost, jweight] = evalGroupedCost(fn_str, feats_data, feats_sim, ...
                                              NAN_COST, MISSING_FEATURE_COST, costExp)
-% Split on top-level commas and sum weighted sub-costs.
+% Split on top-level commas and sum weighted sub-costs into one slot.
 parts   = splitTopLevelComma(fn_str);
 jcost   = 0;
 jweight = 1;   % group slot always has weight=1; sub-weights applied internally
@@ -170,92 +115,59 @@ for pi = 1:numel(parts)
     if isempty(tokens); continue; end
     [feat, sel] = parseFeatSelector(tokens{1});
 
-    sub_weight = 1;
-    range_tok  = '';
-    for ti = 2:numel(tokens)
-        if isRangeToken(tokens{ti})
-            range_tok = tokens{ti};
-        else
-            w = str2double(tokens{ti});
-            if ~isnan(w)
-                sub_weight = w;
-            end
-        end
-    end
-
-    if ~isfield(feats_sim, feat)
-        jcost = jcost + sub_weight * MISSING_FEATURE_COST;
-        continue;
-    end
-    fs = applyFeatSelector(double([feats_sim.(feat)]), sel);
-
-    if ~isempty(range_tok)
-        [lb, ub] = parseRange(range_tok);
-        span     = ub - lb;
-        viol     = max(0, (lb - fs) / lb) .^ 2 + max(0, (fs - ub) / ub) .^ 2;
-        sub_cost = mean(viol, 'omitnan') + sum(isnan(fs)) * NAN_COST;
-    else
-        % Plain feature in group: compare to data
-        if ~isfield(feats_data, feat)
-            jcost = jcost + sub_weight * MISSING_FEATURE_COST;
-            continue;
-        end
-        fd   = applyFeatSelector(double([feats_data.(feat)]), sel);
-        n_F  = mean(fd, 'omitnan');
-        if n_F == 0; n_F = 1; end
-        sub_cost = sum(abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
-    end
-
+    [sub_cost, sub_weight] = evalOneSubEntry( ...
+        feat, sel, tokens(2:end), feats_data, feats_sim, ...
+        NAN_COST, MISSING_FEATURE_COST, costExp);
     jcost = jcost + sub_weight * sub_cost;
 end
 end
 
 
 % -----------------------------------------------------------------------
-function tf = hasTopLevelComma(s)
-% True if s contains a comma outside any parentheses.
-depth = 0;
-for k = 1:numel(s)
-    c = s(k);
-    if c == '('; depth = depth + 1; end
-    if c == ')'; depth = depth - 1; end
-    if c == ',' && depth == 0; tf = true; return; end
-end
-tf = false;
-end
+function [c, w] = evalOneSubEntry(feat, sel, tail_tokens, feats_data, feats_sim, ...
+                                   NAN_COST, MISSING_FEATURE_COST, costExp)
+% Evaluate cost for a single 'field[|weight][|lb-ub]' sub-entry.
+% FEAT/SEL come from parseFeatSelector on the first token.
+% TAIL_TOKENS is the remaining tokens (everything after the first pipe).
+%
+% Returns:
+%   C  - unweighted cost scalar
+%   W  - weight (default 1)
 
+w         = 1;
+range_tok = '';
 
-function parts = splitTopLevelComma(s)
-% Split s on commas that are not inside parentheses.
-parts = {};
-depth = 0;
-start = 1;
-for k = 1:numel(s)
-    c = s(k);
-    if c == '('; depth = depth + 1; end
-    if c == ')'; depth = depth - 1; end
-    if c == ',' && depth == 0
-        parts{end+1} = s(start:k-1); %#ok<AGROW>
-        start = k + 1;
+for ti = 1:numel(tail_tokens)
+    tok = tail_tokens{ti};
+    if isRangeToken(tok)
+        range_tok = tok;
+    else
+        wv = str2double(tok);
+        if ~isnan(wv)
+            w = wv;
+        end
+        % Non-numeric, non-range tokens are X-axis field names (XY plots) — ignored for cost.
     end
 end
-parts{end+1} = s(start:end);
+
+if ~isempty(range_tok)
+    % --- BOUNDARY CHECK: cost against sim only ---
+    if ~isfield(feats_sim, feat)
+        c = MISSING_FEATURE_COST; return;
+    end
+    fs   = applyFeatSelector(double([feats_sim.(feat)]), sel);
+    [lb, ub] = parseRange(range_tok);
+    viol = max(0, (lb - fs) / lb) .^ 2 + max(0, (fs - ub) / ub) .^ 2;
+    c    = mean(viol, 'omitnan') + sum(isnan(fs)) * NAN_COST;
+else
+    % --- NORMAL: normalised difference vs data ---
+    if ~isfield(feats_data, feat) || ~isfield(feats_sim, feat)
+        c = MISSING_FEATURE_COST; return;
+    end
+    fd  = applyFeatSelector(double([feats_data.(feat)]), sel);
+    fs  = applyFeatSelector(double([feats_sim.(feat)]),  sel);
+    n_F = mean(fd, 'omitnan');
+    if n_F == 0; n_F = 1; end
+    c = sum(abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
 end
-
-
-function tf = isRangeToken(tok)
-% True if tok matches 'lb-ub' where lb and ub parse as finite numbers.
-% Uses lookbehind to find the separator dash (preceded by a digit).
-dash = regexp(tok, '(?<=\d)-', 'once');
-if isempty(dash); tf = false; return; end
-lb = str2double(tok(1:dash-1));
-ub = str2double(tok(dash+1:end));
-tf = isfinite(lb) && isfinite(ub);
-end
-
-
-function [lb, ub] = parseRange(tok)
-dash = regexp(tok, '(?<=\d)-', 'once');
-lb   = str2double(tok(1:dash-1));
-ub   = str2double(tok(dash+1:end));
 end
