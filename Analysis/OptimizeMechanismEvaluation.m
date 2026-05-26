@@ -45,12 +45,20 @@ params0 = getParams();
 ModelParams_tuesdayLunch;
 % ModelOptParams_TL_iter_4
 ModelOptParams_TL3_iter_17
-ModelOptParams_TL3_iter_17_SRXstart_v5
+ModelOptimParam_TL5_iter_81
+% ModelOptParams_TL3_iter_17_SRXstart_v5
+
+params0.UseA2AttachmentShift = 1;
+params0.slope = 100;
+
+params0.UseStretchActivation = 1;
+params0.k_SA = .1;
 
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
 params0.SRXD_0 = 0.08;
 params0.SRXT_0 = 0.08;
+params0.RunForceVelocity = true;
 
 params0.fn = {
     'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
@@ -61,16 +69,17 @@ params0.fn = {
     'peak1_y|10', 'peak1_dSL|0.2', ...
     'vall_y|10', 'vall_t|0.2', 'peak2|5', ...
     'steady|50', 'vall2_dy|0.1', 'ovrsht_dy|0.1', ...
-    'ovrsht_dy|0-2|1','ovrsht_t|0.4-1|100' ...
+    'ovrsht_dy|0-2|1','ovrsht_t|0.4-100|100' ...
     'AssertParams|1'...
 };  
-%%
+%
 params0.MaxRunTime = 100;
 params0.justPlotStateTransitionsFlag = false;
+figure(1);clf;
 tic;RunBakersExp;
 toc
-%%
-plotFeatures(features_data, features_model, [], params0.fn);
+%
+sum(plotFeatures(features_data, features_model, [], params0.fn))
 features_ghost = features_model;
 
 %% old ghost
@@ -160,6 +169,13 @@ pw_k2_x = {};
         
 offsets  = {'PieceWiseStrainDep2X_logOffset', 'PieceWiseStrainDepR1DX_logOffset', 'PieceWiseStrainDepR21X_logOffset', 'PieceWiseStrainDepX_logOffset'};
 
+if params0.UseStretchActivation
+
+    stretchAct = {'k_SA'};
+else
+    stretchAct  = {};
+end
+
 if params0.UseLatticeSpacing 
     lattice = {'d10_ref', 'R_thick', 'R_thin', 'd_optimal'};
 else
@@ -193,11 +209,11 @@ othrs = {'MaxSlackNegativeForce', 'kah', 'kamh', 'xrate'};
 active_groups = [xb_rates, force, se, titin, a2, overlap, ...
                  pw_k1_vals, pw_k1_x, pw_kd_vals, pw_kd_x, ...
                  pw_k2_vals, pw_k2_x, offsets, ...
-                 sr, srd, othrs, nonlinKstiff, lattice];
+                 sr, srd, othrs, nonlinKstiff, lattice, stretchAct];
 active_groups = unique(active_groups, 'stable');
 compulsory_params = {'ksr0', 'kmsr', 'sigma1', 'sigma2', 'ksrd', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
 % compulsory_params = {'kstiff2_n', 'kstiff1_n', 'kstiff2', 'kstiff1', 'estiff'};
-compulsory_params = {};
+compulsory_params = {'k_SA', 'slope'};
 
 % initial setup
 % params0.kstiff1_n = params0.kstiff1;
@@ -215,7 +231,7 @@ compulsory_params = {};
 % 1: k2, 2: kSE, 3: kstiff2, 4: k_pas, 5: dr, 6: k1, 7: sigma1, 8: kd
 params0.mods = {'ka', 'kd', 'k2', 'kstiff2', 'slope', 's_threshold_R', 'PieceWiseStrainDepR21X_logOffset', 'PieceWiseStrainDepR1DX_logOffset', 'PieceWiseStrainDep2X_logOffset'};
 params0.g = ones(1, length(params0.mods));
-optimTag = 'ModelOptParams_TL3';
+optimTag = 'kSA-slope';
 
 
 %% 3. Run Initial Evaluation
@@ -236,17 +252,17 @@ fprintf('Initial Cost: %.4f\n', initCost);
 %% 4. Optimization
 disp('Starting fminsearch Optimization...');
 options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 15, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 60);
-options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 1, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 1);
+options = optimset('Display', 'iter', 'TolFun', 1e-3, 'TolX', 1e-2, 'MaxIter', 30, 'PlotFcns',@optimplotfval, 'MaxFunEvals', 90);
 g_opt = params0.g; 
 iter_num = 0;
 fval = initCost;
-optimTag = 'TL5'
+% optimTag = 'TL6';
 % compulsory_params = {'ksr0', 'kmsr', 'sigma1', 'sigma2', 'ksrd', 'kmsrd', 'sigma_srd1', 'sigma_srd2'};
 % compulsory_params = {'ksr0', 'kmsr'};
 
 for iter_num = 1:100    
     try
-        params0 = draw10(params0, g_opt, active_groups, 8, compulsory_params);
+        params0 = draw10(params0, g_opt, active_groups, 10, compulsory_params);
         % Define objective function using internal Jacobian handling to prevent wasteful finite differences
         costFun = @(g) sum(ResidualAndJacobian(g, params0, true));
         fval_pre = fval;
