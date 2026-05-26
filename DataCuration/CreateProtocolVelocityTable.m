@@ -12,6 +12,12 @@ fpath      = [dataDir '02_Merged_8mM_Active.txt'];
 outPath    = '../data/protocol_03_27_2026_8mM_slack.mat';
 % outPath    = '../data/protocol_03_27_2026_ActivePNBMava_slack.mat';
 
+fpath      = [dataDir '03_Merged_2mM_Active.txt'];
+outPath    = '../data/protocol_03_27_2026_2mM_slack.mat';
+
+fpath      = [dataDir '01_Merged_Relax.txt'];
+outPath    = '../data/protocol_03_27_2026_passive_slack.mat';
+
 % set #02
 % dataDir = '../data/04 03 2026 F/';
 % fpath = [dataDir '04_Merged_8mM_Active_PNB_Mava.txt'];

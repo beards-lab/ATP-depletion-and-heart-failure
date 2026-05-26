@@ -33,12 +33,12 @@ params0 = getParams();
 ModelParams_tuesdayLunch;
 % ModelOptParams_TL_iter_4
 ModelOptParams_TL3_iter_17
-ModelOptParams_TL3_iter_17_SRXstart_v5
+% ModelOptParams_TL3_iter_17_SRXstart_v5
 
 params0.UseSuperRelaxed = false;
 params0.UseSuperRelaxedADP = false;
-params0.SRXD_0 = 0.08;
-params0.SRXT_0 = 0.08;
+% params0.SRXD_0 = 0.08;
+% params0.SRXT_0 = 0.08;
 
 params0.fn = {
     'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
@@ -52,14 +52,34 @@ params0.fn = {
     'ovrsht_dy|0-2|1','ovrsht_t|0.4-1|100' ...
     'AssertParams|1'...
 };  
-%%
+%
 params0.MaxRunTime = 100;
 params0.justPlotStateTransitionsFlag = false;
+params0.PlotFeatureFitting = true;
 tic;RunBakersExp;
 toc
 %%
+
+figure(2);clf;
+set(gcf, 'Position',[488 242 340 270])
+t0 = 74.2090;
+plot(out.t-t0, out.SL/2, 'k', LineWidth=2);
+title('Simulated slack-restretch protocol')
+xlim([74.2090-t0  77.7546-t0]);
+xlabel('Time (s)');
+ylabel('Muscle length (-)');
+
+figure(3);clf;
+set(gcf, 'Position',[488 242 340 270])
+plot(out.t-t0, out.Force, 'k', LineWidth=2);
+title('Simulated muscle force')
+xlim([74.2090-t0  77.7546-t0]);
+xlabel('Time (s)');
+ylabel('Force (kPa)');
+
+%%
 plotFeatures(features_data, features_model, [], params0.fn);
-features_ghost = features_model;
+% features_ghost = features_model;
 
 %% old ghost
             % features_ghost.ktr                 = [39.76 34.18 31.63 28.36 27.6];

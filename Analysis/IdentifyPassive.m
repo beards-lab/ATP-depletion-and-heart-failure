@@ -71,6 +71,22 @@ params0.UseSuperRelaxedADP = 0;
 clf;
 tic;RunBakersExp;
 toc
+
+%%
+matr = readmatrix('../data/03 27 2026 M/01_Merged_Relax.txt');
+plot(matr(:, 1), matr(:, 3), '-r', LineWidth=2)
+%%
+title('Ca-sensitive passive force')
+h = findobj(gca, 'Type', 'Line');   % only existing lines
+lgd = legend;
+strs = lgd.String;                  % current legend text
+legend([h(1) h(2) h(6) h(4)], 'ML*', 'data:relaxed', 'data:active+PNB', 'model', Orientation='horizontal', Location='north');        % match handles to first N strings
+yyaxis left;
+xlabel('Time (s)');ylabel('Force (kPa)');
+ylim([0, 30])
+yyaxis right
+ylabel('ML (-)');ylim([0.5, 1.3]);
+set(gcf, "Position", [220.2000 332.2000 975.2000/3*2 270.4000])
 %%
 features_data = extractSlackAttributes(out.datatable(:, 1), out.datatable(:, 3), out.datatable(:, 2)*2, velocitytable, struct(), out, true);
 features_model = extractSlackAttributes(out.t, out.Force, out.SL, velocitytable, struct(), out, true);
