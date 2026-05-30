@@ -297,6 +297,15 @@ if params.UseStretchActivation && vel > 0
 else
     ka_eff = params.ka;
 end
+% H5: 1-Gaussian velocity-dependent attachment modifier.
+% At isometric (v=0): target zone congestion reduces available sites.
+% At shortening velocities: old heads clear sites -> recovery toward full ka.
+% Formula: f = 1 - amplitude * exp(-(|v| - center)^2 / (2*sigma^2))
+if params.UseVelGaussAttachment
+    v_abs = abs(velHS);
+    f_vel_gauss = 1 - params.v_att_amplitude * exp(-(v_abs - params.v_att_center).^2 / (2 * params.v_att_sigma^2));
+    ka_eff = ka_eff * max(0, f_vel_gauss);
+end
 RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
 
 if params.UsePassiveForSR

@@ -148,6 +148,10 @@ end
         'UseVernierVelocity', false, ...     % Velocity-dependent vernier test (alternative to UseTargetZoneSaturation)
         'alpha_vernier', 0.3, ...            % Max fractional increase in ka at high velocity [-]
         'v_ref_vernier', 1.0, ...            % Half-saturation velocity [um/s]
+        'UseVelGaussAttachment', false, ...  % 1-Gaussian dip in ka: congestion at isometric, recovery at shortening
+        'v_att_sigma', 2.0, ...             % Gaussian width [um/s]; width of isometric congestion dip
+        'v_att_amplitude', 0.4, ...         % Depth of dip at v=0 [0-1]; 0.4 = 40% reduction at isometric
+        'v_att_center', 0.0, ...            % Center of Gaussian [um/s]; 0 = dip at isometric, >0 = shifted peak
         'UseLatticeSpacing', false, ... % Lattice spacing correction on attachment rate
         'd10_ref', 37e-3, ...          % Reference (1,0) lattice spacing [um] (37 nm, Irving 2017)
         'SL_ref_lattice', 2.0, ...     % SL at which d10_ref was measured [um]
