@@ -105,6 +105,9 @@ end
         'UseP31Shift', false, ... % Shifts the s by dr in p3_1
         'F_act_UseP31', false, ... Use kstiff2*p3_1 instead of p3_0*dr
         'UseAtpOnUNR', false, ... Enables ATP effect via g4 from SR to NR
+        'UseAtpK2', false, ...    % Direct [ATP] dependence on k2: k2_eff = k2*[ATP]/([ATP]+K_T1). Low ATP -> slower detachment -> higher F0, lower Vmax.
+        'UseAtpKah', false, ...   % Direct [ATP] dependence on kah: kah_eff = kah*[ATP]/([ATP]+K_T_kah). Low ATP -> fewer PD heads ready to attach -> lower Ktr.
+        'K_T_kah', 4.0, ...       % Km(ATP) for hydrolysis step [mM]. Larger than K_T1: kah more sensitive -> decouples Ktr from Vmax.
         'UseTORNegShift', false, ... XB TOR uses s - s3 instead of s + s3
         'UseMutualPairingAttachment', false, ... % Pu to P1 state transient relative to Pu^2
         'UseSpaceDiscretization', false, ...

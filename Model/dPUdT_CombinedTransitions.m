@@ -282,13 +282,25 @@ end
 %% Transition rates
 % quasi-equilibrium binding factor functions
 % TODO move to evalModel for optim
-% MgATP = params.MgATP;
-% Pi = params.Pi;
-% MgADP = params.MgADP;
+MgATP = params.MgATP;
+MgADP = params.MgADP;
+Pi    = params.Pi;
 
-g1 = 1; g2 = 1; f1 = 0; f2 = 1;
+% Michaelis-Menten competition: ATP/ADP control hydrolysis and attachment;
+% Pi controls power-stroke reversal (f1) and ADP release rate (f2).
+% At Baker lab conditions (Pi=0, MgADP=0): g1=0, g2≈1, f1=0, f2=1 — identical to old hard-coded values.
+denom_g = MgADP/params.K_D + MgATP/params.K_T1;
+if denom_g > 0
+    g1 = (MgADP/params.K_D) / denom_g;  % ADP competition factor (slows cycling)
+    g2 = (MgATP/params.K_T1) / denom_g; % ATP availability factor (scales hydrolysis)
+else
+    g1 = 0; g2 = 0;
+end
+f1 = (Pi/params.K_Pi) / (1 + Pi/params.K_Pi); % Pi promotes reverse power stroke (P2→P1)
+f2 = 1 / (1 + Pi/params.K_Pi);                 % Pi inhibits forward ADP release (P2→PD)
 
-RTD = g2*params.kah*PT;
+kah_eff = params.kah * (params.UseAtpKah * MgATP/(MgATP + params.K_T_kah) + ~params.UseAtpKah);
+RTD = g2*kah_eff*PT;
 RDT = g2*params.kamh*PD;
 
 % H4: Stretch activation — boost ka during rapid restretch.
@@ -353,6 +365,11 @@ if params.UsePieceWiseStrainDep
         R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
         R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, s);
         R2  = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
+    end
+    % Direct [ATP] dependence on k2: ATP substrate for the P2->PD (ADP release + ATP binding) step.
+    % Low ATP -> slower k2 -> longer P2 dwell -> higher F0 but lower Vmax and power.
+    if params.UseAtpK2
+        R2 = R2 * (MgATP / (MgATP + params.K_T1));
     end
 
 elseif params.UseUniformTransitionFunc
@@ -434,13 +451,16 @@ else
     RPD2SRD = 0;
 end
 
-if params.UseSuperRelaxed     
-    RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*max(0, P_SR);
-	% RSR2PT = params.kmsr*(1 + log(max(1, F_SR))*params.sigma1)*P_SR;
+if params.UseSuperRelaxed
+    % g4: ATP-dependent SRX mobilisation. At low [ATP], SRX heads can't start cycling
+    % (need ATP hydrolysis to escape IHM) -> g4 gates RSR2PT (SRX->DRX), not RPT2SR.
+    % Low ATP -> g4 low -> fewer SRX heads mobilise -> larger SRX pool -> lower Ktr.
+    g4_sr = params.UseAtpOnUNR * MgATP/(MgATP + params.K_T3) + ~params.UseAtpOnUNR;
+    RSR2PT = g4_sr * params.kmsr*exp(F_SR/params.sigma1)*max(0, P_SR);
     RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*max(0, PT);
-else 
+else
     RSR2PT = 0;
-    RPT2SR = 0;    
+    RPT2SR = 0;
 end
 
 
