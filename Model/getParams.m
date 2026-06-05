@@ -376,13 +376,20 @@ end
         % ensure we delete the modifiers right after
         params.mods = {};
         params.g = [];
-        %% Step 2: Scale rates (if params.xrate is set, multiplies all turnover rates)
+        
+        %% Step 4: Resolve linked parameters (fields starting with '=')
+        params = resolveParams(params);
+        
+        %% Step 3a: Scale rates (if params.xrate is set, multiplies all turnover rates)
         params = updateRates(params);
+    else
+    %% Step 4: Resolve linked parameters (fields starting with '=')
+    params = resolveParams(params);
+
     end
 
 
-    %% Step 4: Resolve linked parameters (fields starting with '=')
-    params = resolveParams(params);
+    
 
     %% Step 5: Reconstruct arrays: fields like params.arr__2 = 3 -> params.arr(2) = 3
     paramsfn = fieldnames(params);

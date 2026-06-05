@@ -510,7 +510,8 @@ else
 end
 
 if params.justPlotStateTransitionsFlag    
-    plotStateTransitions_subpanels;
+    plotStateTransitions;
+    % plotStateTransitions_subpanels;
     error('Quitting after plotting states');
 end
 %% governing flows
