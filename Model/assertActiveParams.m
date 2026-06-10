@@ -1,4 +1,4 @@
-function [fn_grouped, feat_vals] = assertActiveParams(params0, scale)
+function [fn_grouped, feat_vals, active] = assertActiveParams(params0, scale)
 %ASSERTACTIVEPARAMS  Build fn assertions for parameters active in the current parametrisation.
 %
 %   [FN_GROUPED, FEAT_VALS] = ASSERTACTIVEPARAMS(PARAMS0) returns:
@@ -148,6 +148,10 @@ end
 % =========================================================
 if isfield(params0, 'UseCa') && params0.UseCa
     active = [active, {'K_coop', 'k_on', 'k_off'}];
+end
+
+if isfield(params0, 'UseVelGaussAttachment') && params0.UseVelGaussAttachment
+    active = [active, {'v_att_amplitude', 'v_att_center', 'v_att_sigma'}];
 end
 
 % =========================================================

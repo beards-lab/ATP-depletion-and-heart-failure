@@ -383,8 +383,8 @@ end
         %% Step 3a: Scale rates (if params.xrate is set, multiplies all turnover rates)
         params = updateRates(params);
     else
-    %% Step 4: Resolve linked parameters (fields starting with '=')
-    params = resolveParams(params);
+        %% Step 4: Resolve linked parameters (fields starting with '=')
+        params = resolveParams(params);
 
     end
 

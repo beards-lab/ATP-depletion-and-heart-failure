@@ -15,7 +15,10 @@
       "Bash(cmd.exe /c \"dir \\\\\"C:\\\\Program Files\\\\MATLAB\\\\\"\")",
       "Bash(powershell.exe -Command \"Test-Path 'C:\\\\Program Files\\\\MATLAB\\\\R2023a\\\\bin\\\\matlab.exe'\")",
       "Bash(wsl python3 *)",
-      "Bash(cd /mnt/c/home/git/ATP-depletion-and-heart-failure && \"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe\" -batch \"addpath\\(genpath\\('.'\\)\\); TestSRXParameters\" 2>&1 | head -200)"
+      "Bash(cd /mnt/c/home/git/ATP-depletion-and-heart-failure && \"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe\" -batch \"addpath\\(genpath\\('.'\\)\\); TestSRXParameters\" 2>&1 | head -200)",
+      "Bash(git --no-pager log --oneline -15)",
+      "mcp__matlab__evaluate_matlab_code",
+      "WebSearch"
     ]
   }
 }

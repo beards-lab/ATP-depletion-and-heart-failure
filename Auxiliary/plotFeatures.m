@@ -28,17 +28,19 @@ elseif nargin < 4
     fn = fieldnames(feats_data);
 end
 
+if isempty(feats_ghost)
 % Build the multi-dataset inputs
-feats_cell = {feats_data, feats_sim};
-labels     = {'data', 'sim'};
-colors     = [0.00 0.45 0.70; 0.84 0.10 0.11];
-markers    = {'o', 'x'};
+    feats_cell = {feats_data, feats_sim};
+    labels     = {'data', 'sim'};
+    colors     = [0.00 0.45 0.70; 0.84 0.10 0.11];
+    markers    = {'o', 'x'};
+else    
+    % Build the multi-dataset inputs with ghost
 
-if ~isempty(feats_ghost)
-    feats_cell{end+1} = feats_ghost;
-    labels{end+1}     = 'ghost';
-    colors(end+1, :)  = [0.50 0.50 0.50];
-    markers{end+1}    = '+';
+    feats_cell = {feats_data, feats_ghost, feats_sim};
+    labels     = {'data', 'ghost', 'sim'}; 
+    colors     = [0.00 0.45 0.70; 0.50 0.50 0.50;0.84 0.10 0.11];
+    markers    = {'o', '+', 'x'};
 end
 
 % Compute per-feature costs (data vs sim only) and build a lookup map for

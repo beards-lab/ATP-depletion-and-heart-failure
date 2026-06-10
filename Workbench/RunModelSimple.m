@@ -24,7 +24,7 @@ params0.ksr2srd = "=kah";   % SR→SRD mixing = kah (100)
 params0.ksr0    = 190;      % PT→SR parking rate  — sets pool to ~0.20 at max force
 params0.kmsrd   = 60;       % SRD→PD outflow      — shapes SR/SRD split
 
-% params0.kstiff2 = 6.9794e+04*0.95;
+params0.kstiff2 = 6.9794e+04*0.5;
 
 params0.RunForceVelocity = false;
 
@@ -36,9 +36,13 @@ params0.UseSuperRelaxedADP = true;
 
 params0.MaxRunTime = 100;
 params0.justPlotStateTransitionsFlag = false;
+params0.RunSlackSegments = 'First';
+figure(1);clf;
 tic
 RunBakersExp;
 toc
+figure(2);clf;
+StatesInTime
 %%
 if ~exist("features_ghost", 'var')
     features_ghost = features_model;
