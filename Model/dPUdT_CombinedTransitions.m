@@ -308,6 +308,22 @@ if params.UseVelGaussAttachment
 end
 RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
 
+% Global (mean-field) binding-site occupancy saturation of attachment.
+% The strain axis is not a site axis, so the only faithful occupancy proxy in
+% this strain-distribution model is the total bound fraction P_bound. Attenuate
+% the whole attachment flux as occupancy rises toward the physical ceiling
+% P_bound_max (rat-cardiac max-Ca isometric ~0.12-0.15). p1_0/p2_0/p3_0 are the
+% integrated bound fractions computed above.
+if params.UseGlobalOccupancySaturation
+    P_bound = p1_0 + p2_0 + p3_0;
+    if strcmpi(params.OccupancyForm, 'langmuir')
+        f_sat_global = 1 / (1 + P_bound / params.P_bound_max);
+    else
+        f_sat_global = max(0, 1 - P_bound / params.P_bound_max);
+    end
+    RD1 = RD1 * f_sat_global;
+end
+
 if params.UsePassiveForSR
     F_SR = F_passive;
 else
@@ -533,8 +549,14 @@ try
     % Vernier / target zone modulation of attachment (per-bin or velocity-based)
     f_sat = ones(size(p1)); % default: no modulation
     if params.UseTargetZoneSaturation
-        p_occ = (p1 + p2 + p3) * dS; % fraction of heads attached at each bin [-]
-        f_sat = max(0, 1 - p_occ / params.max_attached_per_bin);
+        % [DEPRECATED as site occupancy — see report] Per-strain-bin attachment
+        % modifier. dS-invariant: compare attached-head DENSITY (p1+p2+p3) [1/um]
+        % to a density cap rho_attach_max, so the grid spacing dS cancels. (The
+        % old form (p1+p2+p3)*dS / max_attached_per_bin was per-bin MASS and thus
+        % grid-dependent.) NOTE: this penalizes heads sharing a strain value, not
+        % heads sharing an actin site; use UseGlobalOccupancySaturation for the
+        % physically faithful occupancy term.
+        f_sat = max(0, 1 - (p1 + p2 + p3) / params.rho_attach_max);
     elseif params.UseVernierVelocity
         v_hs = abs(velHS);
         % f_sat_scalar = 1 + params.alpha_vernier * v_hs / (v_hs + params.v_ref_vernier);

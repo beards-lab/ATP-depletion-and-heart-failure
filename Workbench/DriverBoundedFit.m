@@ -33,10 +33,13 @@ addpath(genpath(root));
 
 %% -------- options --------------------------------------------------
 USE_SRX_OVERLAY = false;   % true => layer the 4-pool SRX overlay (v5) on top
-                           % of iter_17 so the SRX_ss output bound is exercised.
-                           % iter_17 itself has UseSuperRelaxed=0, so with the
-                           % overlay OFF, SRX_ss ~ 0 and will read as a low-side
-                           % violation of the [0.10,0.50] output bound BY DESIGN.
+                           % of iter_17. Note: SRX is also enabled inline below
+                           % (lines ~138-139), so this flag is for the overlay
+                           % rates only (ksr0, sigma etc from v5 file).
+USE_RESEEDED    = true;    % true => apply physiological rate reseed overlay
+                           % (kah=80, kd=100, k2=350, ka=375) to bring sub-floor
+                           % iter_17 rates up to alpha-MHC physiological starting
+                           % points before any optimization.
 USE_PARPOOL     = true;   % true => parallel slack segments (needs Parallel
                            % Computing Toolbox); false => serial ('All').
 
@@ -75,79 +78,80 @@ if USE_PARPOOL
     end
 end
 
-%% -------- OUTPUT boundaries (literature-grounded), in params0.fn ----
-% Boundary entries 'field|lb-ub|weight' score the SIMULATED output against a
-% literature range (cost 0 inside, quadratic outside). The grouped entry
-% (commas, one joint cost / one bar tile) collects the state-occupancy and
-% turnover outputs. Ranges updated 2026-06 (mouse/rat alpha-MHC, ~21-25 C,
-% maximal Ca, isometric pre-slack steady state):
-%
-%   XTOR        per-head ATPase, isometric     1.5-10 s^-1  (Rossmanith 1995;
-%                                                            Tanner/de Tombe 2007)
-%   XTOR_vmax   per-head ATPase at Vmax          4-20 s^-1  (Fenn x2-5; Stienen 2004)
-%   SRX_ss      SRX/OFF frac, ACTIVE state    0.10-0.50     (Reconditi 2017;
-%               (0.75 was the RESTING value -> lowered)      Brunello 2020; Ma 2022)
-%   attached_ss duty ratio (strong+weak)      0.05-0.30     (Pinzauti 2018;
-%               (0.2-0.6 was ~2-4x too high -> lowered)      Reconditi 2017)
-%   PT_ss       DRX available fraction         0.20-0.70    (residual/conservation)
-% [1] selects ATP/segment index 1 (8 mM), matching prior usage.
-%
-% Plain entries (e.g. 'ktr|2', 'peak1_y|10') and the X-Y entry 'FV_fnorm|FV_v|10'
-% are DATA-FIT features (sim vs experiment), not literature bounds — kept as in
-% the base parametrization. 'ktr_rmse|0-0.2|.1' is a fit-quality bound.
-% 'kstiff1|2000-30000|1' is an INPUT (parameter) bound expressed as a feature;
-% the full input-bound set is enforced separately via parameterBounds() below.
-params0.fn = {
-    'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
-    'ktr_rmse|0-0.2|.1', ...
-    ['XTOR[1]|1.5-10|15,' ...
-     'XTOR_vmax[1]|4-20,' ...
-     'SRX_ss[1]|0.05-0.50|5,' ...
-     'attached_ss[1]|0.3-0.60|10,' ...
-     'PT_ss[1]|0.20-0.70'], ...
-    't0_crossing|SLdiff|2', ...
-    'restretchSlopeStart|0.1', ...
-    'peak1_y|10', 'peak1_dSL|0.2', ...
-    'vall_y|10', 'vall_t|0.2', 'peak2|5', ...
-    'steady|50', 'vall2_dy|0.1', 'ovrsht_dy|0.1', ...
-    'AssertParams|0.001'...
-};
+%% -------- OUTPUT + input-guard feature set (params0.fn) -------------
+% The fn cell now lives in Model/boundedOutputFn.m — a reusable function that
+% returns the data-fit features + literature-grounded OUTPUT bounds (XTOR,
+% XTOR_vmax, SRX_ss, attached_ss, PT_ss; mouse/rat alpha-MHC) + the
+% 'AssertParams' input guard. All bound choices are cited in that file.
+% Edit boundedOutputFn.m to retune the bounds; the argument is the AssertParams
+% weight scale (0 to omit the input guard).
+params0.fn = boundedOutputFn(0.001);
 
 %% -------- run all configured protocols ------------------------------
-params0.RunSlack             = true;     % slack/restretch -> XTOR, SRX_ss, attached_ss, PT_ss
+params0.ksr2srd = "=kah";
+params0.ksrd2sr = "=kah/10";
+params0.kah = 100;
+params0.kamh = "=kah/10";
 
-params0.UseVelGaussAttachment = true;
-params0.v_att_amplitude = 0.3;
+
+% --- Parking (into SRX): sets the pool size via ratio to mobilization ---
+params0.ksr0  = 500;    % PT  -> SR
+params0.kmsr  = 0;   % SR  -> PT
+
+params0.kmsrd = 40;   % SRD -> PD
+params0.ksrd  = 0;    % PD  -> SRD
+
+params0.ksr2srd = "=kah";   % SR→SRD mixing = kah (100)
+params0.ksr0    = 190;      % PT→SR parking rate  — sets pool to ~0.20 at max force
+params0.kmsrd   = 60;       % SRD→PD outflow      — shapes SR/SRD split
+
+params0.kstiff2 = 6.9794e+04*0.5;
+
+params0.RunForceVelocity = true;
+params0.RunSlack = false;
+
+params0.UseSuperRelaxed = true;
+params0.UseSuperRelaxedADP = true;
+
+
+params0.RunSlack             = true;     % slack/restretch -> XTOR, SRX_ss, attached_ss, PT_ss
+params0.RunSlackSegments = 'AllPar';
+params0.RunForceVelocity = true;
+
+params0.UseVelGaussAttachment = false;
+params0.v_att_amplitude = 0.5; % 0.3
 params0.v_att_center = 0;
-params0.v_att_sigma = 0.5;
+params0.v_att_sigma = 0.15; % 0.5;
 
 params0.FV_velocities = - [0, 0.5, 1, 2, 4];
 features_data  = struct();
 features_model = struct();
+
+if USE_RESEEDED
+    run(fullfile(root, 'params', 'params_reseeded.m'));
+end
+
 fprintf('Running protocols (FV + slack)...\n'); tic
 
+params0.justPlotStateTransitionsFlag = false;
 params0.PlotFeatureFitting = false;
 figure(1);clf;
 RunBakersExp;          % populates E, features_model, features_data, out, outs
 fprintf('done in %.1f s. Protocol cost terms E = [%s]\n', toc, num2str(E, '%.3g '));
 
-% params0.fn = {
-%     'FV_fnorm|FV_v|10'};
-cost_vec = plotFeatures(features_data, features_model, features_ghost, params0.fn, params0)
 %% -------- OUTPUT-boundary report + figure (fig 80085 + dashboard) ---
 % plotFeatures(...,params0) also renders the INPUT-bound physiology dashboard
 % in figure 80086, so this single call shows both boundary layers.
-if ~exist("features_ghost", "var")
+if ~exist('features_ghost', 'var')
     features_ghost = features_model;
 end
-cost_vec = plotFeatures(features_data, features_model, features_ghost, params0.fn);
+cost_vec = plotFeatures(features_data, features_model, features_ghost, params0.fn, params0);
 fprintf('\nTotal OUTPUT feature cost: %.4f\n', sum(cost_vec, 'omitnan'));
 
-printOutBound('XTOR',        features_model, 1.5, 10);
-printOutBound('XTOR_vmax',   features_model, 4,   20);
-printOutBound('SRX_ss',      features_model, 0.10, 0.50);
-printOutBound('attached_ss', features_model, 0.25, 0.30);
-printOutBound('PT_ss',       features_model, 0.20, 0.70);
+% Detailed per-feature cost breakdown + raw data-vs-model physiology dump.
+% (cost_vec breakdown sorted by contribution; OUTPUT-bound sub-costs read
+%  straight from params0.fn so they can't drift from boundedOutputFn.)
+reportFeatureCost(features_data, features_model, params0.fn);
 
 % Conservation check: SRX + attached + PT (+ PuR + NP) should be ~1
 if all(isfield(features_model, {'SRX_ss','attached_ss','PT_ss'}))

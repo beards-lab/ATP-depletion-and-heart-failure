@@ -143,8 +143,12 @@ end
         'L_thick', 1.67, ... % Length of thick filament, um
         'L_hbare', 0.10,... % Length of bare region of thick filament, um
         'L_thin', 1.20, ... % Length of thin filament, um
-        'UseTargetZoneSaturation', false, ... % Target zone saturation on attachment (vernier/site count)
-        'max_attached_per_bin', 0.01, ...    % Max fraction of heads attached per strain bin [-]. Physical est ~dS*163/300. Tune to be influential.
+        'UseGlobalOccupancySaturation', false, ... % Global (mean-field) occupancy attenuation of attachment: RD1 *= (1 - P_bound/P_bound_max). Only faithful occupancy form here (strain axis is not a site axis). See Analysis/BindingSiteOccupancy/OccupancySaturation_Report.md
+        'P_bound_max', 0.30, ...             % Max total bound fraction P_bound=p1_0+p2_0+p3_0 [-]; rat-cardiac max-Ca isometric ~0.12-0.20, relaxed default (uncertain) up to ~0.3-0.4
+        'OccupancyForm', 'linear', ...       % 'linear' => 1-P_bound/P_bound_max ; 'langmuir' => 1/(1+P_bound/P_bound_max)
+        'UseTargetZoneSaturation', false, ... % [DEPRECATED as occupancy: per-strain-bin, treats strain as a site axis] phenomenological strain-modifier only
+        'max_attached_per_bin', 0.01, ...    % [DEPRECATED, dS-dependent] superseded by rho_attach_max
+        'rho_attach_max', 16.0, ...          % Max attached-head density [1/um strain] for dS-invariant per-bin form (Stewart/Baker 2021 K_M ~16-26 heads/um)
         'UseVernierVelocity', false, ...     % Velocity-dependent vernier test (alternative to UseTargetZoneSaturation)
         'alpha_vernier', 0.3, ...            % Max fractional increase in ka at high velocity [-]
         'v_ref_vernier', 1.0, ...            % Half-saturation velocity [um/s]

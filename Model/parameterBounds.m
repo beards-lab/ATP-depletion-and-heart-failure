@@ -78,9 +78,10 @@ bounds = struct();
 %   Sugiura 1998   https://doi.org/10.1161/01.RES.82.10.1029     PMID:9622155
 %     Rat cardiac V1(α) and V3(β) by optical trap: ~9–10 nm; no isoform
 %     difference in unitary displacement. Direct rat-α datum.
-%   Tyska 2000     https://doi.org/10.1161/01.RES.86.7.737       PMID:10764412
-%     Mouse α-cardiac myosin (single-molecule): ~6 nm single-head, ~10 nm two-head.
-%   Caremani 2016  https://doi.org/10.1073/pnas.1525057113       PMID:26976595
+%   Tyska 2000     https://doi.org/10.1161/01.RES.86.7.737       PMID:10764406
+%     Mouse α-cardiac single-molecule (R403Q HCM model vs WT); confirms fast
+%     mouse α (2.3x ATPase, 2.2x force vs WT); working stroke in the 6–10 nm range.
+%   Caremani 2016  https://doi.org/10.1073/pnas.1525057113       PMID:26984499
 %     Rat cardiac IN SITU: working stroke 3 nm/hs at high load → ~8 nm unloaded
 %     (apparent reduction under load = XB elasticity, not a smaller intrinsic stroke).
 %   Palmiter 1999  https://doi.org/10.1111/j.1469-7793.1999.0669n.x PMID:10457082
@@ -99,10 +100,13 @@ bounds.dr.lb = 0.006; bounds.dr.ub = 0.011; bounds.dr.weight = 100;
 %   Mijailovich/Walklate 2017 https://doi.org/10.1016/j.bpj.2017.01.021 PMID:28297657
 %     Full-cycle model fit: human α-S1 FORWARD hydrolysis kH = 77 s^-1 (β = 12.5),
 %     20 °C. Model default kah=80 ≈ this α forward value.
-%   Lymn & Taylor 1971 https://doi.org/10.1021/bi00727a037       PMID:4258637
+%   Lymn & Taylor 1971 https://doi.org/10.1021/bi00801a004       PMID:4258719
 %     Original skeletal burst ~100–150 s^-1, 20 °C — α-cardiac behaves like fast
 %     skeletal, confirming the α value (NOT the slow β-cardiac value).
 %   Bound [40,200] brackets the α-MHC forward step at 20–25 °C with Q10 headroom.
+%   NOTE: kah is the intrinsic HYDROLYSIS step rate, NOT the steady-state
+%   actin-activated ATPase per head (~4–8 s^-1 for mouse α; that is the XTOR
+%   model output, rate-limited downstream by Pi/ADP release — do not conflate).
 %   Promoted weight 10 -> 100: direct mouse-α measurement, high trust.
 bounds.kah.lb = 40; bounds.kah.ub = 200; bounds.kah.weight = 100;
 
@@ -154,7 +158,7 @@ bounds.SL0.lb = 1.8; bounds.SL0.ub = 2.4; bounds.SL0.weight = 100;
 
 % Bare zone half-length L_hbare [um] (thick filament anatomy; structural).
 % Total central bare zone ~160–170 nm -> half ~80–85 nm. Mouse-confirmed.
-%   Woodhead & Craig 2023 https://doi.org/10.1038/s41586-023-06690-5
+%   Woodhead & Craig 2023 https://doi.org/10.1038/s41586-023-06690-5  PMID:37914933
 %     Cryo-EM of NATIVE cardiac thick filament: 170 nm bare zone (half = 85 nm).
 %   Zoghbi 2008    https://doi.org/10.1073/pnas.0708912105        PMID:18272487
 %     3D structure of vertebrate cardiac myosin filament; bare-zone dimensions.
@@ -164,7 +168,7 @@ bounds.L_hbare.lb = 0.075; bounds.L_hbare.ub = 0.105; bounds.L_hbare.weight = 10
 
 % Thick filament length L_thick [um]. Robust vertebrate constant ~1.60 um,
 % directly confirmed in native cardiac. (Interpreted here as full bipolar length.)
-%   Woodhead & Craig 2023 https://doi.org/10.1038/s41586-023-06690-5
+%   Woodhead & Craig 2023 https://doi.org/10.1038/s41586-023-06690-5  PMID:37914933
 %     Cryo-EM native cardiac thick filament = 1.6 um.
 %   Al-Khayat 2013 https://doi.org/10.1073/pnas.1212708110       PMID:23169664
 %     Atomic model of human cardiac thick filament; 1600 nm.
@@ -202,11 +206,11 @@ bounds.L_thin.lb = 0.95; bounds.L_thin.ub = 1.15; bounds.L_thin.weight = 100;
 %   Beard 2022   https://doi.org/10.1016/j.bpj.2022.07.029       PMID:35918899
 %     [OK — same architecture] The parent model (this codebase's ancestor) fits
 %     ka = 373 s^-1 to rat cardiac FV/ktr data at 25 °C. Model default ka=373.23.
-%   Stelzer 2007 https://doi.org/10.1085/jgp.200709815           PMID:17923457
-%     [OK — rat α] ktr,max in rat skinned myocardium ~15–18 s^-1 at 22 °C,
-%     ~25–30 s^-1 at 30 °C (Q10 ~3.5); α-MHC ktr ~2.5–3× faster than β.
-%   Fitzsimons 1998 https://doi.org/10.1111/j.1469-7793.1998.171by.x PMID:9782168
-%     [OK — rat α] α-vs-β ktr comparison in rat myocardium, 15 °C.
+%   de Tombe 2007 https://doi.org/10.1113/jphysiol.2007.138693   PMID:17717017
+%     [OK — rat α] Temperature dependence of ktr in skinned rat myocardium:
+%     ktr,max rises with temperature (Q10 ~2.4–3.5); at 22–30 °C ktr ~15–30 s^-1,
+%     implying an attachment attempt rate of a few hundred s^-1 given the duty ratio.
+%     (Previously mis-cited here as "Stelzer 2007 / jgp.200709815" — wrong paper.)
 %   Bound widened to [50, 600] (was 50–500): ktr + duty-ratio arguments place
 %   the attachment attempt rate in the few-hundred range for α at 20–25 °C.
 bounds.ka.lb = 50; bounds.ka.ub = 600; bounds.ka.weight = 10;
@@ -215,7 +219,7 @@ bounds.ka.lb = 50; bounds.ka.ub = 600; bounds.ka.weight = 10;
 % Model-state mapping is genuinely ambiguous: the RAW mechanical power-stroke
 % rate is very fast, whereas ODE-lumped "k1" is much slower. Low weight + wide
 % bound reflects that we cannot pin which quantity this parameter represents.
-%   Caremani 2016 https://doi.org/10.1073/pnas.1525057113        PMID:26976595
+%   Caremani 2016 https://doi.org/10.1073/pnas.1525057113        PMID:26984499
 %     [OK — rat α] Rat cardiac IN SITU working-stroke SPEED 1,000–6,000 s^-1
 %     (load-dependent) — the raw mechanical transition.
 %   Land 2017    https://doi.org/10.1016/j.yjmcc.2017.03.008      PMID:28392437
@@ -293,12 +297,12 @@ bounds.xrate.lb = 0.5; bounds.xrate.ub = 2; bounds.xrate.weight = 0;
 % Maximum unloaded shortening velocity vmax [um/s per half-sarcomere].
 % Mouse/rat are α-MHC and FAST; Vmax also has an unusually strong temperature
 % dependence in cardiac (Q10 ≈ 4–5), so the plausible band is wide.
-%   de Tombe & ter Keurs 1990 https://doi.org/10.1161/01.RES.66.5.1239
+%   de Tombe & ter Keurs 1990 https://doi.org/10.1161/01.RES.66.5.1239  PMID:2335024
 %     [OK — rat α, intact] Vmax ~10 um/s/HS at 20 °C rising to ~25 um/s/HS at
 %     25 °C; Q10 ≈ 4.6. Directly supports model default vmax=10 at the cool end.
 %   McDonald 1998 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2231141/ PMID:9706028
 %     [OK — rat α, skinned] Vmax ~1.5 ML/s at 12 °C — sets the low-temperature floor.
-%   Tombe & ter Keurs 1991 https://doi.org/10.1113/jphysiol.1991.sp018682 PMID:1758129
+%   de Tombe & ter Keurs 1992 https://doi.org/10.1113/jphysiol.1992.sp019283 PMID:1474506
 %     [OK — rat α, 25 °C] FV-derived Vmax ~10 um/s/HS; mid-range anchor.
 %   Bound [4,30] (was 4–25): low-T floor 4; upper raised to 30 for warm rat-α
 %   (~25–30 um/s/HS at 25 °C). NB unit convention (per-HS vs ML/s) is the main
@@ -310,7 +314,7 @@ bounds.vmax.lb = 4; bounds.vmax.ub = 30; bounds.vmax.weight = 10;
 % Re-cited to CARDIAC: per-head stiffness of cardiac (α) myosin is ~1 pN/nm,
 % i.e. 2–3× SOFTER than fast skeletal (~2–3 pN/nm). Model units are not pN/nm,
 % so the mapping is indirect -> weight stays 1.
-%   Pinzauti 2018 https://doi.org/10.1113/JP275579               PMID:29644702
+%   Pinzauti 2018 https://doi.org/10.1113/JP275579   PMC6023834 (J Physiol 596:2581)
 %     [OK — rat α] Rat cardiac trabecula: per-head stiffness ~1 pN/nm; force
 %     ~6 pN/head at Tmax. Cardiac-specific.
 %   Kaya & Higuchi 2010 https://doi.org/10.1126/science.1191484  PMID:20689019
@@ -318,7 +322,7 @@ bounds.vmax.lb = 4; bounds.vmax.ub = 30; bounds.vmax.weight = 10;
 bounds.kstiff1.lb = 2000; bounds.kstiff1.ub = 100000; bounds.kstiff1.weight = 1;
 
 % P2 cross-bridge stiffness. Post-stroke stiffness > pre-stroke (state-dependent).
-%   Pinzauti 2018 (above) / Caremani 2016 PMID:26976595 — rat α cardiac stiffness.
+%   Pinzauti 2018 (above) / Caremani 2016 PMID:26984499 — rat α cardiac stiffness.
 %   Kaya & Higuchi 2010 PMID:20689019 — post-stroke state stiffer than pre-stroke
 %     (motivates kstiff2 > kstiff1). Model units indirect -> weight 1.
 bounds.kstiff2.lb = 5000; bounds.kstiff2.ub = 100000; bounds.kstiff2.weight = 1;
@@ -399,7 +403,7 @@ bounds.sigma_srd1.lb = 5; bounds.sigma_srd1.ub = 1000; bounds.sigma_srd1.weight 
 bounds.sigma_srd2.lb = 5; bounds.sigma_srd2.ub = 1000; bounds.sigma_srd2.weight = 1;
 
 % Internal viscous drag mu (shortening), mu_neg (lengthening) [model units].
-%   Tombe & ter Keurs 1991 https://doi.org/10.1113/jphysiol.1991.sp018682 PMID:1758129
+%   de Tombe & ter Keurs 1992 https://doi.org/10.1113/jphysiol.1992.sp019283 PMID:1474506
 %     [OK — rat cardiac, direct] Saponin-skinned rat trabeculae; an internal
 %     viscous element limits unloaded shortening velocity. Correct species/prep.
 bounds.mu.lb = 0.01; bounds.mu.ub = 5; bounds.mu.weight = 1;
@@ -511,7 +515,13 @@ bounds.Srd_n.lb   = 1; bounds.Srd_n.ub   = 4;   bounds.Srd_n.weight   = 0;
 % Vernier velocity / target-zone saturation tuning
 bounds.alpha_vernier.lb = 0; bounds.alpha_vernier.ub = 2; bounds.alpha_vernier.weight = 0;
 bounds.v_ref_vernier.lb = 0.1; bounds.v_ref_vernier.ub = 10; bounds.v_ref_vernier.weight = 0;
-bounds.max_attached_per_bin.lb = 0; bounds.max_attached_per_bin.ub = 1; bounds.max_attached_per_bin.weight = 0;
+bounds.max_attached_per_bin.lb = 0; bounds.max_attached_per_bin.ub = 1; bounds.max_attached_per_bin.weight = 0; % [DEPRECATED, dS-dependent]
+% Global occupancy ceiling: max total bound fraction. Upper bound = rat-cardiac
+% max-Ca isometric bound fraction (~0.12-0.15; range to ~0.20). Lower bound keeps
+% it from collapsing attachment entirely.
+bounds.P_bound_max.lb = 0.02; bounds.P_bound_max.ub = 0.40; bounds.P_bound_max.weight = 0;
+% Per-bin density cap (dS-invariant) for the deprecated per-strain-bin form.
+bounds.rho_attach_max.lb = 1; bounds.rho_attach_max.ub = 100; bounds.rho_attach_max.weight = 0;
 bounds.A1AttachmentWidth.lb = 0; bounds.A1AttachmentWidth.ub = 0.02; bounds.A1AttachmentWidth.weight = 0;
 
 % Lattice spacing fine-tuning (when UseLatticeSpacing=1)

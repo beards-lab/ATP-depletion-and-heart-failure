@@ -5,7 +5,7 @@ ModelOptParams_TL3_iter_17
 % ModelOptimParam_TL5_iter_81.m
 % ModelOptParams_TL3_iter_17_SRXstart_v5
 SRX_FastGentle;
-% addpath(genpath('../'));
+%% addpath(genpath('../'));
 
 params0.ksr2srd = "=kah";
 params0.ksrd2sr = "=kah/10";
@@ -36,6 +36,7 @@ params0.UseSuperRelaxedADP = true;
 
 params0.MaxRunTime = 100;
 params0.justPlotStateTransitionsFlag = false;
+params0.PlotFeatureFitting = true;
 params0.RunSlackSegments = 'First';
 figure(1);clf;
 tic
