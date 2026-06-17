@@ -198,4 +198,3 @@ function y = first(x)
     x = x(:); y = x(find(~isnan(x), 1));
     if isempty(y); y = NaN; end
 end
-                         

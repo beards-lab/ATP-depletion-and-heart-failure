@@ -1,6 +1,6 @@
 % ShowAllPlots.m
 % Regenerate every plot from the current bounded fit (params/params_reseeded.m,
-% iter 14) and export each open figure full-resolution to Analysis/fit_plots/.
+% iter 14) and export each open figure full-resolution to Figures/fit_plots/.
 %
 % Plot provenance (which code draws what):
 %   fig 1      Force-velocity (top) + Slack (bottom), data vs sim
@@ -14,7 +14,7 @@
 
 DriverBoundedFit;     % runs the fit + draws all figures (clears workspace internally)
 
-outDir = 'C:\home\git\ATP-depletion-and-heart-failure\Analysis\fit_plots';
+outDir = 'C:\home\git\ATP-depletion-and-heart-failure\Figures\fit_plots';
 if ~exist(outDir, 'dir'); mkdir(outDir); end
 
 figs = findall(0, 'Type', 'figure');

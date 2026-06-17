@@ -537,4 +537,13 @@ bounds.FudgeB.lb = 0; bounds.FudgeB.ub = 0; bounds.FudgeB.weight = 0;
 bounds.FudgeC.lb = 0; bounds.FudgeC.ub = 0; bounds.FudgeC.weight = 0;
 bounds.FudgeVmax.lb = 0; bounds.FudgeVmax.ub = 0; bounds.FudgeVmax.weight = 0;
 
-% --- PCHIP shape values (Tier D, weig
+% --- PCHIP shape values (Tier D, weight 0) ---
+% PCHIP central value should be ~1 by convention (§1b of fitting-strategy.md).
+% Boundary clamps (typically values ~50) are computational constraints, not
+% physiological measurements. Listed here for documentation; weight = 0.
+% The PieceWise* arrays are accessed by *__N indexing in the mods machinery,
+% so the bounds for individual shape values would need to be set on the
+% indexed names (e.g. bounds.PieceWiseStrainDepParams__3.weight = 0).
+% Not enumerated explicitly here.
+
+end

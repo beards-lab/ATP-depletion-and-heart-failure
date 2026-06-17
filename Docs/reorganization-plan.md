@@ -238,4 +238,137 @@ ignored.
 
 1. **SRXprobe home** — `Auxiliary/diagnostics/` (reusable) vs inside `Analyses/AttachedPool_vs_ATPase/`.
 2. **`SumATPSlackFitPlots.m` / `BatchRunAllParams.m`** — `Workbench/` vs a `Figures/`-generation analysis.
-3. Whether `_archive/` should eventua
+3. Whether `_archive/` should eventually be a **separate git-LFS or out-of-repo store** given it holds
+   the ~400 MB of dumps.
+
+---
+
+# Part B — Documentation Reorganization
+
+**The pain:** the project's *knowledge* is scattered — durable reference docs sit next to one-off prompts,
+analysis conclusions are buried in `Analysis/` subfolders, TODOs live in four different files, and `Docs/`
+mixes 24 markdown files with 38 presentations and 11 stale lock files. There's no single entry point, so
+the project feels overwhelming and finished findings are hard to build on.
+
+**The fix, in one line:** separate **durable knowledge you build on** from **transient working notes**,
+pull every analysis conclusion into its `Analyses/` bundle, consolidate all scattered TODOs into one
+roadmap, and add two `README.md` "start here" maps so nothing is hidden.
+
+## 13. Target `Docs/` structure
+
+```
+Docs/
+├── README.md            # NEW — START HERE: one-page map of all knowledge (links to everything below
+│                        #   + to Analyses/README.md). The single entry point that kills the overwhelm.
+├── ROADMAP.md           # NEW — consolidated TODOs / next-steps / open questions (see §15)
+├── reference/           # DURABLE knowledge — the docs you build on, rarely go stale
+│   ├── parameter-reference.md
+│   ├── mechanism-evaluation.md          (108 KB literature analysis — the big one)
+│   ├── fitting-strategy.md
+│   ├── RundownCorrection.md
+│   ├── passive-force-subtraction.md
+│   ├── sources.md
+│   └── update-mex.md                    (how-to guide)
+├── notes/               # TRANSIENT working notes & lab diaries (chronological, may go stale)
+│   ├── labdiary.md
+│   └── labdiary_boundedfit.md
+├── experiments/         # dated experimental result write-ups (pair with data/)
+│   └── results-0327.md
+├── presentations/       # all .pptx / .docx / posters / abstracts
+│   └── archive/         #   superseded versions (poster v1–v4, old meeting decks)
+└── (figures handled under top-level Figures/ — see §16)
+```
+
+## 14. Per-document disposition
+
+Every current doc, with where it goes and why:
+
+| Doc (current path) | Class | Destination |
+|---|---|---|
+| `Docs/parameter-reference.md` | durable reference | `Docs/reference/` |
+| `Docs/mechanism-evaluation.md` | durable reference | `Docs/reference/` |
+| `Docs/fitting-strategy.md` | durable reference | `Docs/reference/` |
+| `Docs/RundownCorrection.md` | durable reference | `Docs/reference/` |
+| `Docs/passive-force-subtraction.md` | durable reference | `Docs/reference/` |
+| `Docs/sources.md` | durable reference (lit links) | `Docs/reference/` |
+| `Docs/update-mex.md` | durable how-to | `Docs/reference/` |
+| `Docs/labdiary.md` | working note | `Docs/notes/` (TODOs extracted → ROADMAP) |
+| `Docs/labdiary_boundedfit.md` | working note | `Docs/notes/` |
+| `Docs/results-0327.md` | dated experiment result | `Docs/experiments/` |
+| `Docs/attached-pool-...` is in `Analysis/` | analysis conclusion | `Analyses/AttachedPool_vs_ATPase/conclusions.md` (Part A §4) |
+| `OccupancySaturation_Report.md` (in `Analysis/`) | analysis conclusion | `Analyses/BindingSiteOccupancy/conclusions.md` |
+| `Docs/restretch-analysis.md` + `restretch-discrepancy.md` | analysis conclusion | merge → `Analyses/RestretchMechanisms/conclusions.md` |
+| `sensitivity_analysis_explanation.md` (root) | analysis conclusion | `Analyses/SensitivityAnalysis/conclusions.md` |
+| `Docs/low-ATP-force-enhancement-analysis.md` | analysis findings (script TBD) | `Analyses/LowATP_ForceEnhancement/conclusions.md` (new bundle, seed) |
+| `problem_summary.md` (root) | temporary framing prompt | `_archive/` |
+| `literature_mechanism_evaluation_request.md` (root) | superseded by mechanism-evaluation.md | `_archive/` |
+| `Docs/2026 Myofilament-meeting-abstract.md` | publication draft | `Docs/presentations/` |
+| `Docs/*.pptx / *.docx / *.pdf` (38 files) | presentations | `Docs/presentations/` (+ `archive/` for old versions) |
+| `Docs/~$*` (11 lock files) | junk | delete (gitignored) |
+| `README.md`, `CLAUDE.md` | project entry / agent guide | **stay at root** |
+| `Docs/refactoring-plan.md`, `Docs/reorganization-plan.md` | meta/process | stay in `Docs/` (or `Docs/process/`) |
+
+This means **every analysis conclusion ends up in exactly one place** — its `Analyses/<Topic>/conclusions.md`
+— and `Docs/reference/` holds only the cross-cutting, durable knowledge. No more hunting.
+
+## 15. Consolidate scattered TODOs → `Docs/ROADMAP.md`
+
+TODOs and "next steps" are currently spread across at least four docs. Pull them into one prioritized
+backlog (and leave the source docs as historical record, with their TODO blocks replaced by a pointer to
+ROADMAP):
+
+| Source | Items to lift |
+|---|---|
+| `labdiary.md` → "Running TODOs" | 5 items (vernier effect test, 30% attached-pool target, single-slack timecourse fit, right-side rate-curve sensitivity, vall2_dy second-peak rise) |
+| `restretch-analysis.md` → "Next Steps" | 5 items (fill sweep table, fminsearch 10-param run, verify FV unaffected, write g to params file, update diary) |
+| `restretch-discrepancy.md` → "Recommended Next Step" | increase kSE 3–5×, then tune slope / s_threshold_R |
+| `2026 Myofilament-meeting-abstract.md` | "immediate next step": mechanistic ID of ATP-dependent differences |
+
+`ROADMAP.md` groups these by theme (e.g. *Attachment kinetics*, *Restretch shape*, *ATP-dependence*,
+*Housekeeping*) so you see the real shape of the work instead of fragments. This is the most direct
+antidote to the overwhelm.
+
+## 16. Figures (light touch)
+
+Figures are already semi-organized; the goal is only to make them findable, not to re-sort all 30+.
+
+- **`Figures/`** — keep as the figure store. Optionally split into `Figures/raw/` (`.fig` source) and
+  `Figures/exported/` (`.png`/`.svg`); keep existing `TransitionPanels/` and `proposal/` subfolders as-is.
+- **`Docs/figures/`** (the `fig403_*`, `fig420_*`, `fig46_*` report figures) — these pair with the
+  experiment/result write-ups, so move them alongside → `Docs/experiments/figures/` and keep the relative
+  links in `results-0327.md` working.
+- Loose result PNGs at the repo root (`XBBakersDataFit_*.png`, `param_*.png`, `Slack protocol.jpg`) →
+  `Figures/` (already noted in Part A §7).
+
+## 17. Two `README.md` maps (the anti-overwhelm layer)
+
+1. **`Docs/README.md`** — one page: "What do you want?" → links to reference docs, the roadmap, the
+   analyses index, presentations, and the experiment log. First thing anyone (you or an agent) opens.
+2. **`Analyses/README.md`** — the analyses index from Part A §4: one line + status + link per analysis,
+   then the rolled-up *Summaries & Recommendations* synthesizing across them.
+
+Together these mean the project has exactly **two front doors**, and every other document is one click away
+and in a predictable place.
+
+## 18. Docs execution steps (fold into Part A §10)
+
+After the Part A scaffold step, additionally:
+
+- a. Create `Docs/reference/`, `Docs/notes/`, `Docs/experiments/`, `Docs/presentations/archive/`.
+- b. Delete the 11 `Docs/~$*` lock files.
+- c. `git mv` the durable docs into `reference/`, working notes into `notes/`, `results-0327.md` into
+  `experiments/`, presentations into `presentations/` (old versions → `archive/`).
+- d. Move analysis conclusions into their `Analyses/<Topic>/conclusions.md` (renaming as needed); archive
+  the two superseded prompt docs.
+- e. Write `Docs/ROADMAP.md` (consolidated TODOs) and replace the source TODO blocks with a pointer.
+- f. Write `Docs/README.md` and `Analyses/README.md`.
+- g. Update `README.md` + `CLAUDE.md` to point at the new doc locations.
+
+## 19. Updated open judgment calls (Part B)
+
+4. **Analysis conclusions** — co-locate in `Analyses/<Topic>/conclusions.md` (recommended, chosen) vs keep
+   a mirror copy in `Docs/reference/`. Mirroring risks drift; a link from `Docs/README.md` is cleaner.
+5. **`low-ATP-force-enhancement-analysis.md`** — promote to its own `Analyses/LowATP_ForceEnhancement/`
+   bundle (it reads like a real analysis) vs file under `Docs/reference/` if you consider it settled.
+6. **Meta/process docs** (`refactoring-plan.md`, this file) — leave in `Docs/` vs a `Docs/process/` subfolder.
+```

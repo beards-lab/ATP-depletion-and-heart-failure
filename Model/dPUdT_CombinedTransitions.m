@@ -52,7 +52,7 @@ dS = params.dS; % step size
 
 p1 = PU(1:ss); p1(p1<0) = 0;
 p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
-if length(PU) > 3*ss
+if params.NumberOfStates == 3
     p3 = PU(2*ss+1:3*ss);
     Ns = 3; % number of states
 else

@@ -62,34 +62,48 @@ RunBakersExp  % script in Model/, uses params0 from workspace
 
 ## Directory Structure
 
-- **`Model/`** — core model functions:
+> Reorganized 2026-06-16. Two front doors to the project's knowledge:
+> **`Docs/README.md`** (knowledge map) and **`Analyses/README.md`** (analyses index + synthesis).
+> See `Docs/reorganization-plan.md` for the rationale.
+
+- **`Model/`** — core model functions ONLY (model code, nothing else):
   - `Driver.m` — minimal entry point; canonical "how to run the model" example
   - `getParams.m` — central parameter management; call this to build/update any params struct
   - `evaluateModel.m` — runs the ODE integrator for one experimental condition
   - `RunBakersExp.m` — script that evaluates all experimental challenges (FV, Ktr, slack, stairs) and computes total error `E`
   - `dPUdT_CombinedTransitions.m` — **primary ODE function** (current default); set via `params0.modelFcn`
-  - `dPUdTCaSimpleAlternative2State.m`, `dPUdTCa.m`, etc. — alternative ODE variants
+  - `dPUdTCaSimpleAlternative2State.m`, `dPUdTCa.m` — alternative ODE variants (still present)
   - `resolveParams.m` — resolves param fields that are expressions (prefixed with `'='`)
   - `LoadBakersExp.m` — loads and plots experimental data
   - `extractSlackAttributes.m`, `extractForceVelocityAttributes.m`, `extractPerturbAttributes.m` — feature extraction from simulation output (called by experiment runners)
   - `evalFeatureCost.m` — feature-based cost function
   - `updateRates.m` — scales all turnover rates by a single `xrate` multiplier
+  - _Archived:_ dead ODE variants `dPUdTCaSimple`, `dPUdTCaSimpleAlternative`, `dPUdT_TransitionRates` moved to `_archive/dead_ode/` (no callers).
 - **`DataCuration/`** — raw data → model-ready data; all scripts use `../data/` paths:
   - See README for pipeline order (Baker legacy vs. 2026 driving-signal experiments)
-- **`Workbench/`** — driver scripts and optimization:
+- **`Analyses/`** — one self-contained folder per analysis (script(s) + `results/` + `conclusions.md`).
+  Start at `Analyses/README.md`. Replaces the former singular `Analysis/` folder. Topics:
+  `AttachedPool_vs_ATPase`, `BindingSiteOccupancy`, `RestretchMechanisms`, `SensitivityAnalysis`,
+  `LastSlackIdentification`, `PassiveForceID`, `LowATP_ForceEnhancement`.
+- **`Workbench/`** — the playground: driver scripts, hand-tuning, optimization, ad-hoc tests:
   - `RunOptim.m`, `RunOptimLakes.m` — optimization entry points
   - `HandtuneAlternativeModel.m` — manual parameter tuning workflow
   - `tunableParams.m` — lists which params are eligible for optimization
   - `DriverSimple.m`, `DriverSimple_Beard2022.m`, etc. — variant entry-point scripts (playground)
-- **`params/`** — saved parameter snapshots (complete `params0` structs as scripts)
-- **`Auxiliary/`** — generic reusable utilities:
+  - `Tests/` — `Test*.m` validation scripts
+- **`params/`** — active/current parameter snapshots (the working source of truth); also CSV/XLSX/TXT snapshots.
+- **`ModelOptParams/`** — historical named param gallery + QC plots (archive of past optima). Kept separate from `params/` by design.
+- **`Auxiliary/`** — generic reusable, non-critical utilities:
   - `animateStateProbabilities.m`, `plotStateFluxes.m`, `StatesInTime.m` — visualization
   - `calcSensitivities.m`, `ResidualAndJacobian.m` — sensitivity analysis tools
   - `fitRecovery.m`, `fitSlackForceOnset.m` — fitting utilities
   - `writeParamsToMFile.m` — serializes a params struct to a `.m` file
-- **`data/`** — experimental `.txt` data files (ATP concentrations, slack, Ktr, force-velocity); not tracked by git
-- **`Thrash/`** — obsolete/experimental code kept for reference
-- **`Docs/`** — presentations and model description documents
+  - `diagnostics/` — reusable diagnostic probes (`srxProbe`, `ktrProbe`, `mechProbe`, `isoProbe`)
+- **`data/`** — experimental `.txt`/`.mat` data files; not tracked by git
+- **`Docs/`** — knowledge base (start at `Docs/README.md`): `reference/` (durable), `notes/` (working),
+  `experiments/` (dated write-ups), `presentations/` (slides/posters), `ROADMAP.md`, and process docs.
+- **`scripts/`** — infrastructure (`setup-gh.sh`, `rol.sbatch`).
+- **`_archive/`** — disk-only graveyard for stale `.mat`/`.png` dumps, old optimizer envs, dead code (gitignored; "archive, don't delete").
 
 ## Architecture: Parameter System
 

@@ -496,8 +496,8 @@ end
         LXBpivot = params.SL0;
 
         % we have 2 half-sarcomeres, so the step is double
-        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - LXBpivot;        
-        if params.MaxStrainArraySize < length(SL_strain)
+        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - LXBpivot;
+        if params.MaxStrainArraySize > 0 && params.MaxStrainArraySize < length(SL_strain)
             % SL_strain = -LXBpivot/2:params.dS:params.MaxStrainArraySize/2;
             SL_strain = ((-(params.MaxStrainArraySize-1)/2 : (params.MaxStrainArraySize-1)/2)) * params.dS*2;
 
@@ -519,7 +519,6 @@ end
             % the xontraction direction is positive
             params.s = flipud(-SL_strain')/2;
         end
-
         params.ss = length(params.s);
 
 
@@ -548,7 +547,9 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit
+    expected_PU0 = params.NumberOfStates * params.ss + 7;
+    PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
+    if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
 
         p0 = zeros(1, params.ss);
