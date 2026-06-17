@@ -1,0 +1,241 @@
+# Project Reorganization Plan
+
+**Status:** EXECUTED 2026-06-16 (moves done with `mv`, not yet committed — review `git status` then `git add -A && git commit`). Originally proposed 2026-06-12.
+**Date:** 2026-06-12
+**Scope:** Folder/file *reorganization* (where things live). This is complementary to the existing
+`Docs/refactoring-plan.md`, which covers *in-file* code quality (help text, magic numbers, splitting big
+scripts). The two do not overlap and can be executed independently.
+
+---
+
+## 1. Guiding vision (from you)
+
+- **`Analyses/`** — one self-contained folder per analysis: the **script(s)** + its **results** (figures/.mat)
+  + its **conclusions** (a written `.md`). A top-level `Analyses/README.md` rolls these up into general
+  **summaries and recommendations**.
+- **`Model/`** — all necessary modeling files, nothing else.
+- **`Auxiliary/`** — supporting, non-critical functions.
+- **`Workbench/`** — the playground: new drivers, hand-tuning, optimization entry points, and tests.
+  *Not* a place where finished analyses with results live.
+
+## 2. Key facts that shape the plan
+
+- **The clutter is not in git.** `.gitignore` already excludes `*.mat`, `*.png`, `*.asv`, `*.pptx`,
+  `*.docx`, `*.fig`, `*.exe`, `data/`, `~*`. Only **384 files are tracked** (the `.m` code, `.md` docs,
+  `.c`, configs). The ~400 MB of loose `.mat`/`.png` at the root is on disk only → moving or deleting it
+  carries **zero git-history risk**.
+- **Decisions you confirmed:**
+  1. Clutter → **archive, don't delete** (sweep into `_archive/`, keep on disk, out of the way).
+  2. Cross-analysis summaries → **`Analyses/README.md`** index.
+  3. Param folders → **keep `params/` and `ModelOptParams/` separate**, document the distinction.
+
+---
+
+## 3. Target top-level structure
+
+```
+ATP-depletion-and-heart-failure/
+├── Model/                 # core model ONLY (ODE RHS, getParams, evaluateModel, RunBakersExp,
+│   └── experiments/       #   cost functions, feature extraction, data loaders, MEX, experiments/)
+├── Auxiliary/             # non-critical utilities (plotting, parsing, sensitivity/fit helpers,
+│   └── diagnostics/       #   serialization) + reusable diagnostic probes (SRXprobe)
+├── Workbench/             # drivers, hand-tuning, optimization entry points — the playground
+│   └── Tests/             # Test*.m scripts
+├── Analyses/              # NEW: one subfolder per analysis (script + results + conclusions.md)
+│   ├── README.md          #   index + rolled-up summaries & recommendations
+│   ├── AttachedPool_vs_ATPase/
+│   ├── BindingSiteOccupancy/
+│   ├── RestretchMechanisms/
+│   ├── SensitivityAnalysis/
+│   ├── LastSlackIdentification/
+│   └── PassiveForceID/
+├── params/                # active parameter snapshots (current source of truth)
+├── ModelOptParams/        # historical named param gallery + QC plots (archive of past optima)
+├── DataCuration/          # raw experimental data -> model-ready pipeline
+├── data/                  # raw experimental data (gitignored)
+├── Docs/                  # cross-cutting docs, presentations, notes
+│   ├── presentations/     #   .pptx / posters / abstracts
+│   └── notes/             #   loose working notes
+├── papers/                # reference literature PDFs
+├── Modelica/              # Modelica source models
+├── PassiveTitin/          # self-contained passive-titin sub-project
+├── Figures/               # publication-quality figures
+├── scripts/               # NEW: infra (setup-gh.sh, rol.sbatch)
+└── _archive/              # NEW: disk-only graveyard for stale dumps & generated output (gitignored)
+```
+
+New top-level folders: **`Analyses/`**, **`scripts/`**, **`_archive/`**. Everything else already exists.
+
+---
+
+## 4. The `Analyses/` design
+
+Each analysis folder follows one convention:
+
+```
+Analyses/<Topic>/
+├── <DriverScript>.m        # the analysis script(s)
+├── conclusions.md          # what it found + recommendation (rename existing report .md to this,
+│                           #   or create a stub to be filled in)
+└── results/                # .mat / .png outputs produced by the script
+```
+
+`Analyses/README.md` is the index: a one-line description + link per analysis, then a "Summaries &
+Recommendations" section synthesizing across them (the layer you asked for).
+
+### Proposed analysis bundles
+
+| `Analyses/` folder | Scripts (from) | Conclusions `.md` | Results to co-locate |
+|---|---|---|---|
+| **BindingSiteOccupancy** | already a bundle in `Analysis/BindingSiteOccupancy/` | `OccupancySaturation_Report.md` ✅ (rename → `conclusions.md`) | `fv_probe_results.mat`, `occupancy_AB_results.mat` ✅ already there |
+| **AttachedPool_vs_ATPase** | uses `SRXprobe/` probes (see §6) | `attached-pool-atpase-ktr-paradox.md` ✅ | root `Ghost_*.mat` fit snapshots referenced by it |
+| **RestretchMechanisms** | `AnalyseRestretchMechanisms.m`, `TuneRestretch.m`, `RunMechanismEvaluation.m`, `OptimizeMechanismEvaluation.m`, `RunPhase2.m` | merge `Docs/restretch-analysis.md` + `restretch-discrepancy.md` + `mechanism-evaluation.md` → `conclusions.md` | `AnalyseRestretchMechanisms_results.mat` |
+| **SensitivityAnalysis** | `SensitivityAllSlack.m` (current), `RunSensitivityAnalysis.m`, `FeatureCorrelation.m` | `sensitivity_analysis_explanation.md` (root) → `conclusions.md` | `SensitivityAllSlack_results.mat`, `SensitivityAnalysisResults.mat`, `ResidualsAndJacobian.mat`, `sensitivites.xlsx` |
+| **LastSlackIdentification** | `OptimLastSlackPieceWise.m` (workhorse), `IdentifyLastSlack.m` | create `conclusions.md` stub | `OptimLastSlackPieceWise_state*.mat`, `IdentifyLastSlack_state.mat` |
+| **PassiveForceID** | `IdentifyPassive.m` | `Docs/passive-force-subtraction.md` → `conclusions.md` | `batch_output_passive/` (or archive) |
+
+> Note: `Analysis/` (singular, current) is **renamed/absorbed into `Analyses/` (plural)**. The remaining
+> loose scripts in `Analysis/` that are *not* analyses are reclassified in §5.
+
+---
+
+## 5. Reclassifying the current `Analysis/` loose files
+
+| File | Verdict | Destination |
+|---|---|---|
+| `OptimLastSlackPieceWise.m`, `IdentifyLastSlack.m` | analysis | `Analyses/LastSlackIdentification/` |
+| `SensitivityAllSlack.m`, `RunSensitivityAnalysis.m`, `FeatureCorrelation.m` | analysis | `Analyses/SensitivityAnalysis/` |
+| `AnalyseRestretchMechanisms.m`, `TuneRestretch.m`, `RunMechanismEvaluation.m`, `OptimizeMechanismEvaluation.m`, `RunPhase2.m` | analysis | `Analyses/RestretchMechanisms/` |
+| `IdentifyPassive.m` | analysis | `Analyses/PassiveForceID/` |
+| `BatchRunAllParams.m` | utility/infra (batch-renders param sets) | `Workbench/` |
+| `SumATPSlackFitPlots.m` | one figure for an abstract | `Workbench/` (or `Figures/` generators) |
+| `ExperimentWAttachments.m`, `TestSinglePerturbation.m`, `TestNewOutputFeatures.m` | scratch/tests | `Workbench/Tests/` |
+| `ResidualOpt.m` | helper function (firstLowercase-style wrapper) | `Auxiliary/` |
+| `RunOptimPiecewise.m` | superseded (missing state file) | `_archive/` |
+| `analyzeSystemRHS.m` | dead end ("no difference") | `_archive/` |
+| `driverSA.m`, `runSA.m` | obsolete SA pipeline | `_archive/` |
+| `batch_output/`, `batch_output_extracted_v1/`, `batch_output_passive/`, `fit_plots/` | disposable generated PNGs (reproducible) | `_archive/` |
+| `*.asv` (5 files) | MATLAB autosaves | delete (gitignored junk) |
+
+---
+
+## 6. `Model/`, `Auxiliary/`, `Workbench/` — relocations
+
+These three dirs are mostly correct; the issue is **stray data files mixed in with code** and a few
+genuinely misplaced scripts.
+
+### Model/ — keep core, evict the rest
+
+| File | Action |
+|---|---|
+| Core: `getParams`, `resolveParams`, `evaluateModel`, `RunBakersExp`, `evaluateProblem`, `Driver`, cost fns (`evalFeatureCost`, `evalPhysiologyCost`, `parameterBounds`, `boundedOutputFn`…), feature extractors, data loaders, `experiments/` | **stay** |
+| `dPUdT_CombinedTransitions.m` (+ `_mex`, `_mex_flat`), `dPUdTCa.m`, `dPUdTCaSimpleAlternative2State.m` | **stay** (active or still-referenced) |
+| `dPUdTCaSimple.m`, `dPUdTCaSimpleAlternative.m`, `dPUdT_TransitionRates.m` | → `_archive/` (dead ODE variants, no callers) |
+| `ModelParams_tuesdayLunch.m` | → `params/` (param snapshot, not model code) |
+| `Ghost_oujaDouble*.mat`, `envOpt*.mat` | → `_archive/` (stale workspace dumps) |
+| `dPUdT_core_mex.mexw64` | leave on disk; add `*.mexw64` to `.gitignore` |
+| `*.asv` (5 files) | delete |
+| `experiments/runFVTimecourseExperiment.m` | → `Auxiliary/` (plot-only, no cost return) — minor, optional |
+
+### Auxiliary/ — keep utilities, evict data
+
+| File | Action |
+|---|---|
+| All 28 utility `.m` files (plotting, parse/split helpers, `calcSensitivities`, `fitRecovery`, `writeParamsToMFile`, etc.) | **stay** |
+| `SimplestFVOptim`, `SimplestFVOptim2` (no extension) | → `params/` (add `.m`; confirmed param scripts) |
+| `SA_all.mat`, `SA_pwsd.mat`, `env_SA.mat`, `env_fmin*.mat`, `last_env.mat`, `optim_hist_feats.mat`, `Ghost_SimplestOptim_FV.mat` | → `_archive/` |
+| `preprocessDrivingSignal.asv` | delete (and note: `preprocessDrivingSignal.m` itself lives correctly in `DataCuration/`) |
+
+### Workbench/ — keep drivers/tests, evict data
+
+| File | Action |
+|---|---|
+| All driver/optim/tuning/test `.m` (`RunModel`, `RunOptim*`, `Handtune*`, `DriverSimple*`, `Compare*`, SRX validation scripts, `Tests/`) | **stay** |
+| `ModelParamsInitNiceSlack_prescribedSR`, `SimplestFVOptim3` (no ext) | → `params/` (add `.m`) |
+| `Ghost_*.mat`, `env*.mat`, `sens*.mat`, `_params.mat`, `testenv.mat` | → `_archive/` |
+| `XBBakersDataFit_*.png` | → `Figures/` (or `_archive/`) |
+| `sensitivites.xlsx` | → `Analyses/SensitivityAnalysis/results/` |
+| `*.asv` (incl. `LoadAndPlotLogs.asv`) | delete |
+
+**Diagnostic probes:** `Analysis/SRXprobe/` (`srxProbe`, `ktrProbe`, `mechProbe`, `isoProbe`) is a reusable
+library used by both the AttachedPool analysis *and* Workbench scripts. Proposed home: **`Auxiliary/diagnostics/`**
+(reusable, non-critical functions). Alternative: keep inside `Analyses/AttachedPool_vs_ATPase/` if you
+consider them single-purpose. Flagging as a judgment call.
+
+---
+
+## 7. Root-level cleanup
+
+| Group | Examples | Action |
+|---|---|---|
+| **Scratch/junk** | `tmp.mat`, `tmp.txt`, `done.mat`, `Unnamed.mat`, `modeltesting*.mat`, `*_smoke.png`, `*.asv`, empty `.mat` | → `_archive/` (per your "archive, don't delete") |
+| **Optimizer dumps** | `env*.mat` (~248 MB, incl. 118 MB `env_fmin9.mat`), `tmpOpt*.mat` (~52 MB), `forcevelocity_out.mat` (63 MB), `out.mat`, `x2/x3.mat` | → `_archive/` |
+| **Result `.mat` tied to an analysis** | `*_results.mat`, `*_state*.mat`, `ResidualsAndJacobian.mat`, `Ghost_*.mat` referenced by a report | → that analysis's `results/` where identifiable, else `_archive/` |
+| **Result PNGs** | `XBBakersDataFit_*.png`, `param_parallel.png`, `param_ranges_strip.png`, `Slack protocol.jpg` | → `Figures/` |
+| **Param snapshots** | `params.csv`, `modifierstbl.csv`, `gaOutparams.csv`, `all params.txt`, `PARAMETERS.xlsx`, `*_params.mat`, `ModelParamsInitNiceSlack_dr01`, `SimplestFVOptim` | → `params/` |
+| **Loose notes** | `problem_summary.md`, `sensitivity_analysis_explanation.md`, `literature_mechanism_evaluation_request.md` | → `Docs/notes/` (or the matching analysis) |
+| **Dymola build artifacts** | `dsmodel.c`, `dsfinal/dsin/dslog.txt`, `buildlog.txt`, `dymosim.exe`, `Xbmodel.prj` | → `_archive/` (or `Modelica/`); ensure gitignored |
+| **Infra** | `setup-gh.sh`, `rol.sbatch` | → `scripts/` |
+
+---
+
+## 8. Secondary-directory tidy (light touch)
+
+- **`Docs/`** — sound; add `presentations/` (the `.pptx`/poster/abstract files) and `notes/` subfolders;
+  delete all `~$*` Office lock files; consider archiving superseded poster versions (`v1`–`v4`, keep `v5`).
+- **`params/` vs `ModelOptParams/`** — keep both. Add a one-paragraph header to each (and to `README.md`)
+  stating the roles: `params/` = active/current snapshots; `ModelOptParams/` = historical named optima + QC
+  plots. No file moves between them.
+- **`resources/`** — empty → delete.
+- **`tools/`** — single 18 MB `.exe`; add to `.gitignore` (leave on disk).
+- **`PassiveTitin/`** — keep as sub-project; internal pruning (its `*.asv`, `tmp.mat`, `SoHot.mat`, old
+  `DataStruct*` snapshots) is out of scope for this pass — flag for a later dedicated cleanup.
+- **`Modelica/`** — keep as-is.
+
+---
+
+## 9. `.gitignore` additions
+
+Add: `*.mexw64`, `_archive/`, and (if not implicitly covered) `tools/*.exe`. Everything else is already
+ignored.
+
+---
+
+## 10. Proposed execution order (each step independently verifiable)
+
+1. **Create empty scaffold** — `Analyses/`, `Analyses/README.md`, `_archive/`, `scripts/`,
+   `Docs/presentations/`, `Docs/notes/`, `Auxiliary/diagnostics/`. (No risk.)
+2. **Delete `.asv` autosaves** everywhere (gitignored junk, ~36 files). (No risk.)
+3. **Sweep clutter → `_archive/`** (root dumps, generated image folders, stray `.mat` in code dirs).
+   Disk-only, not in git.
+4. **Relocate tracked `.m` files** with `git mv` to preserve history: the Analyses bundles (§4–5), param
+   snapshots → `params/`, probes → `Auxiliary/diagnostics/`, dead ODE variants → `_archive/`.
+5. **Move/rename conclusion `.md`s** into their `Analyses/<Topic>/conclusions.md`; write `Analyses/README.md`.
+6. **Tidy `Docs/`** (lock files, presentations/, notes/) and update `.gitignore`.
+7. **Update `CLAUDE.md` + `README.md`** to reflect new paths (notably the `Analyses/` directory and the
+   `Analysis/` → `Analyses/` rename).
+8. **Verify**: run the smoke test and confirm nothing broke —
+   ```matlab
+   params = getParams([], []);
+   [force, out] = evaluateModel(@dPUdT_CombinedTransitions, [0 1], params);
+   RunBakersExp   % E should match pre-move baseline
+   ```
+   MATLAB resolves functions by name on the path, so moving files within `addpath(genpath('.'))` scope is
+   safe — but the smoke test confirms it.
+
+---
+
+## 11. Out of scope (flagged for later)
+
+- In-file refactors in `Docs/refactoring-plan.md` (help text, magic numbers, splitting `RunBakersExp.m`).
+- Internal pruning of `PassiveTitin/`.
+- Merging `params/` and `ModelOptParams/` (you chose to keep them separate).
+- Deleting anything — this plan **archives**; a later pass can purge `_archive/` once you're confident.
+
+---
+
+## 12. Open judgment calls for your call
+
+1. **SRXprobe home** — `Auxiliary/diagnostics/` (reusable) vs inside `Analyses/AttachedPool_vs_ATPase/`.
+2. **`SumATPSlackFitPlots.m` / `BatchRunAllParams.m`** — `Workbench/` vs a `Figures/`-generation analysis.
+3. Whether `_archive/` should eventua
