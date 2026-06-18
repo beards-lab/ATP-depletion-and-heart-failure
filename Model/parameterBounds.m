@@ -371,8 +371,8 @@ bounds.k_pas.lb = 1; bounds.k_pas.ub = 1e5; bounds.k_pas.weight = 1;
 %   regime used by some optimized param sets (kmsr~1) and the fast mechanosensing
 %   regime of the getParams default (kmsr~250). Weight kept 1 (timescale genuinely
 %   uncertain — exactly the case for a low weight).
-bounds.ksr0.lb = 0.1; bounds.ksr0.ub = 50;  bounds.ksr0.weight = 1;
-bounds.kmsr.lb = 0.1; bounds.kmsr.ub = 500; bounds.kmsr.weight = 1;
+bounds.ksr0.lb = 0.1; bounds.ksr0.ub = 50;  bounds.ksr0.weight = 0;
+bounds.kmsr.lb = 0.1; bounds.kmsr.ub = 500; bounds.kmsr.weight = 0;
 
 % Force sensitivity of IHM mechanosensing transitions sigma1, sigma2 [kPa].
 % Force scale over which recruitment occurs is ~10–40 kPa (threshold ~17 kPa,
@@ -386,8 +386,8 @@ bounds.kmsr.lb = 0.1; bounds.kmsr.ub = 500; bounds.kmsr.weight = 1;
 %   Bound [5,100] retained (model sigma1=33 in range). CAUTION: getParams default
 %   sigma2=1e6 is a "force-independent" sentinel and will read as a large penalty
 %   here — optimized param sets use sigma2~40; treat the sentinel as out-of-scope.
-bounds.sigma1.lb = 5; bounds.sigma1.ub = 100; bounds.sigma1.weight = 1;
-bounds.sigma2.lb = 5; bounds.sigma2.ub = 100; bounds.sigma2.weight = 1;
+bounds.sigma1.lb = 5; bounds.sigma1.ub = 100; bounds.sigma1.weight = 0;
+bounds.sigma2.lb = 5; bounds.sigma2.ub = 100; bounds.sigma2.weight = 0;
 
 % SRD (ADP-bound super-relaxed) state — kinetically uncharted in cardiac.
 % Structural plausibility from cryo-EM of ADP-stabilised IHM; no direct rate

@@ -111,7 +111,7 @@ end
 fn = {
     'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', ...
     'ktr_rmse|0-0.2|.1', ...
-    ['XTOR[1]|3-10|15,' ...          % per-head ATPase, isometric  (Ebus&Stienen 1996; Rossmanith 1995)
+    ['XTOR[1]|3-15|15,' ...          % per-head ATPase, isometric  (Ebus&Stienen 1996; Rossmanith 1995); ub relaxed 10->15 (mouse alpha plausible, FJ 2026)
      'XTOR_vmax[1]|5-15,' ...        % per-head ATPase at Vmax      (Fenn ~1.7x; Ebus&Stienen 1996; Fusi 2017)
      'SRX_ss[1]|0.10-0.40|5,' ...    % SRX/OFF fraction, active     (Reconditi 2017; Brunello 2020; Ma 2022)
      'attached_ss[1]|0.10-0.45|10,' ...% total attached (weak+strong)(Pinzauti 2018; Reconditi 2017)

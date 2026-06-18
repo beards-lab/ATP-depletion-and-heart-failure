@@ -25,7 +25,10 @@
 %     ktr), or lower inline kah, or increase SRX parking.
 % =========================================================================
 
-params0.ka = 50;      % attachment (floor 50) -- iter5: 75->50 (cut fapp further; XTOR/ktr down)
+% ka=250 test (reverted): did NOT flatten FV (FV_fnorm stayed 0.51) — only doubled force
+% and over-attached. FV shape is INVARIANT to ka/kstiff/occupancy; it's set by the
+% detachment-vs-strain during shortening (R2 shape), stuck ~0.5-0.65 all campaign.
+params0.ka = 50;      % back to the good p1-force config (ktr 50, A perfect, XTOR 9.9)
 params0.kd = 100;     % P1 detachment    (floor 20)
 
 % iter5: cut k2eff via the R2 detachment strain curve, keeping k2 base at floor (100)
@@ -38,21 +41,52 @@ params0.kd = 100;     % P1 detachment    (floor 20)
 % isometric detachment (ktr/XTOR down), but RESTORE knot5 (s2=0, the shortening-transition
 % region) to original 1.0475 so heads still detach during shortening -> FV not dragged.
 % iter_17: [50 15.97 3.006 1.029 1.0475 50.68 50 50]; iter5-8 over-cut knot5 to 0.629.
-params0.PieceWiseStrainDep2Params = [50 15.9726 1.80 0.617 1.0475 50.6847 50 50];
+% iter16: R2 ONSET-detachment reshape (the real FV lever, per Analyses/BindingSiteOccupancy
+% conclusions.md §7.3). Raise the knot at s2=0 (shortening onset) 1.0475->5 so heads release
+% EARLY, before being dragged into negative-force drag -> repairs the steep low-velocity FV
+% drop and raises Vmax. (Reducing deep-negative R2 alone backfires; raising onset is the fix.)
+% Route A.2 RESULT (reverted): lowering the isometric knots to [.. 1.12 0.38 5 ..] raised
+% duty 0.21->0.26 and NAILED ktr (->50, cost 0.06) — proving ktr is NOT an iron law in 2-state
+% — BUT re-steepened FV (cost 8.7->18.9): the isometric detachment cut that lifts duty also
+% lifts the isometric force/reference. ktr<->FV trade monotonically through duty in the
+% force-less-p1 model. Reverted to the iter-16 (FV-favoring) best below; the ktr corner is
+% reproducible by setting knots 3,4 -> 1.12, 0.38 + P_bound_max 0.80 + kstiff2 x1.0.
+% Phase C: low isometric R2 knots (3,4) -> high duty -> ktr~50 (the A.2 corner); the p1
+% force (dr1) above is meant to repair the FV that this isometric-detachment cut steepens.
+params0.PieceWiseStrainDep2Params = [50 15.9726 1.12 0.38 5 50.6847 50 50];
 
 % iter7 REVERTED: UseVelGaussAttachment=true fixed FV+XTOR (reduced isometric attach)
 % but DESTROYED ktr (velocity-gating corrupts the isometric force redevelopment ->
 % ktr 150, rmse 5.7, oscillatory). Structurally incompatible with clean ktr. Keep OFF.
 params0.UseVelGaussAttachment = false;
 
+% iter15: replace velocity-gated attachment with OCCUPANCY-gated attachment (the faithful
+% mechanism). Velocity is an instantaneous kinematic proxy that swings during the restretch
+% transient (-> oscillatory ktr); binding-site occupancy P_bound is a slow STATE variable
+% that suppresses attachment at isometric (congested target zones -> reduced isometric
+% force, flatter FV_fnorm) but recovers during sustained shortening (sliding refreshes
+% zones) AND does NOT swing during a fast restretch -> clean monotonic ktr. Langmuir =
+% finite-site binding isotherm (physiological, smooth, never zero). RD1 *= 1/(1+P_bound/P_bound_max).
+params0.UseGlobalOccupancySaturation = true;
+params0.OccupancyForm = 'linear';   % per report §7: linear cap is the identified form
+% Route A explored P_bound_max 0.80 (duty up -> ktr down) — see A.2 note below; reverted to
+% the iter-16 best (cap 0.30 + kstiff2 x1.6). XTOR cost bound left relaxed 10->15 (FJ).
+% Phase C (Route B test): HIGH-DUTY base (relaxed occupancy + low isometric R2 below) gives
+% ktr~50 but steep FV; add p1 pre-stroke FORCE (dr1>0) to carry force during shortening and
+% at isometric, so the high duty no longer needs the slow p2 detachment that steepens FV.
+params0.P_bound_max   = 0.80;            % relaxed -> high duty (ktr down)
+params0.dr1           = 0.004;           % p1 pre-stroke force offset (Route B); was 0
+params0.kstiff2       = 28000;           % lowered: p1 now contributes force, avoid overshoot
+params0.kstiff1       = 45000;           % p1 stiffness (force ~ kstiff1*dr1*p1_0)
+
 % iter10: lower viscous drag (mu) to flatten FV — drag subtracts force during shortening,
 % so less drag -> more force at velocity -> flatter FV_fnorm, without touching kinetics.
 params0.mu     = 0.015;   % was 0.0404
 params0.mu_neg = 0.015;
 
-% iter11: more FV datapoints for robustness (match Data_ATP velocities 0..6 ML/s,
-% was only [0 0.5 1 2 4]). Denser FV constraint guards against overfitting 5 points.
-params0.FV_velocities = -[0 0.5 1 2 3 4 5 6];
+% FV velocities: 5 points -[0 0.5 1 2 4] (FJ — enough, faster; parallelizes via parfeval
+% when the 5-worker pool is open before runFVExperiment).
+params0.FV_velocities = -[0 0.5 1 2 4];
 
 % iter12 REVERTED: sigma2 42->25 had the sign backwards — larger F/sigma2 => SMALLER
 % exp(-F/sigma2) => LESS parking at operating force => SRX collapsed to 0.03 (out of

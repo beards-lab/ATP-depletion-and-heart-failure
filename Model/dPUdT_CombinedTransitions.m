@@ -161,19 +161,23 @@ p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.
 p3_0 = dS*sum(p3);
 p3_1 = dS*sum((s+params.drp3).*p3);
 
+% Route B — p1 force offset: s1 = s + dr1 makes the PRE-stroke state p1 force-bearing
+% (dr1>0 = pre-stroke force; dr1<0 = back-force). dr1=0 (default) recovers the original
+% Σ(s·p1)≈0 exactly. Decouples force-duty (p1+p2) from the p2 detachment that welds ktr<->FV.
+s1 = s + params.dr1;
 if params.UseNegativeKstiff
-    p1_1_pos = dS*sum(s.*p1.*(s>=0));
-    p1_1_neg = dS*sum(s.*p1.*(s<=0));
+    p1_1_pos = dS*sum(s1.*p1.*(s1>=0));
+    p1_1_neg = dS*sum(s1.*p1.*(s1<=0));
     p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
     p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
-    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);     
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
     p1_1 = p1_1_neg + p1_1_pos;
     p2_1 = p2_1_pos + p2_1_neg;
 else
-    p1_1 = dS*sum(s.*p1);
+    p1_1 = dS*sum(s1.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
-    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
-    % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);     
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);
+    % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);
 end
 
 % non-hydrolized ATP in non-super relaxed state

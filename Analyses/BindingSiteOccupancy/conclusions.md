@@ -322,3 +322,38 @@ Poggesi & de Tombe 2008 (Pac Symp Biocomput) · Linari et al. 1998 (Biophys J) �
 Huxley 1957 (Prog Biophys) · Razumova, Bukatina & Campbell 1999 (J Appl Physiol)
 · Tewari et al. 2016 (J Mol Cell Cardiol) · Land et al. 2017 (J Mol Cell Cardiol)
 · Campbell et al. 2022 (FiberSim, Biophys J).
+
+---
+
+## 10. Addendum — occupancy vs velocity gating for FV, and live verification (2026, BoundedFit)
+
+**Why occupancy is the *faithful* "velocity-dependent attachment", and velocity-gating is not.**
+The FV flat-top shoulder needs attachment suppressed *more at isometric than during
+shortening*. Two ways to key that:
+- `UseVelGaussAttachment` gates on **instantaneous velocity**. In the quasi-steady FV
+  protocol, sustained shortening velocity correlates with low occupancy, so it "works"
+  there. But velocity is a kinematic variable that **swings during the restretch transient**
+  (fast stretch → abrupt hold): it over-attaches during the stretch and suppresses at the
+  v=0 hold → **oscillatory, multi-phase ktr** (observed: ktr→150, rmse 5.7). It is a
+  steady-state-only proxy.
+- `UseGlobalOccupancySaturation` gates on **P_bound**, a slow **state** variable
+  (integral of attachment flux). It *coincides* with velocity at steady state (so it
+  reproduces the FV benefit and caps attached at the physical ceiling) but **does not swing
+  during transients** (post-slack P_bound is low → fast monotonic redevelopment → clean
+  ktr). This is why occupancy is the correct mechanism and velocity the broken shadow of it.
+
+**Live verification against the current BoundedFit best (iter-14 basis, output cost 26.0):**
+
+| run | config | output cost | FV cost | XTOR | A | ktr | ktr clean? |
+|---|---|---:|---:|---:|---:|---:|---|
+| iter15 | occupancy langmuir cap0.15 **alone** | 83.6 | 15.7 | **7.9** | 45 (collapsed) | 80 | **yes (rmse 0.2-0.3)** |
+| **iter16** | occ linear cap0.30 + **kstiff2×1.6** + **R2 onset knot s2=0: 1.05→5** | **19.5** | **8.7** | 10.1 | 69.8 ✓ | 79 | yes-ish (rmse 0.5-1.1) |
+
+iter15 reproduces §7.1 exactly (occupancy alone collapses force; FV unmoved) **and** confirms
+the ktr-preservation prediction above (the decisive contrast with velGauss). iter16 reproduces
+§7.2 (output 26→19.5, FV −46%, force held) — now the live `params/params_reseeded.m` best.
+
+**Residual trade-off confirmed (§8):** ktr rose 61→79 (data ~49) — the iron-law tension
+([[mech-tradeoff]]). Closing FV **and** ktr together is not achievable in the 2-state topology
+and points to the 3rd low-force slow-detaching state. Scripts/figures via
+`Workbench/DriverBoundedFit.m` (USE_RESEEDED) + `Workbench/ShowAllPlots.m` → `Figures/fit_plots/`.

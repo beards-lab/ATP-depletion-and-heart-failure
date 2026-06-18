@@ -204,3 +204,108 @@ alpha). The last mile is a focused multi-objective optimization over the SIX ide
 knobs {ka, k1, k2, kah, R2-central-knots, mu} against params0.fn, reusing
 Auxiliary/ResidualAndJacobian.m + fminsearch (small, well-posed now that the landscape is
 mapped). FV likely also needs the shortening-only reattachment mechanism above.
+
+## PHASE 3 — FV via OCCUPANCY + R2 ONSET reshape (see Analyses/BindingSiteOccupancy)
+
+Proposed (correctly) that the FV "velocity-dependent attachment" should gate on
+binding-site OCCUPANCY (global P_bound), not instantaneous velocity. KEY mechanistic
+insight: velocity is an instantaneous kinematic variable that SWINGS during the restretch
+transient (fast stretch -> hold) -> velGauss mis-fires -> oscillatory ktr. Occupancy is a
+slow STATE variable: coincides with velocity at steady state (reproduces FV benefit) but
+does NOT swing during transients (preserves clean ktr). CONFIRMED below.
+
+Turned out Analyses/BindingSiteOccupancy/conclusions.md §7 had ALREADY done the full
+occupancy+FV investigation against THIS iter-14 basis (its §7.1 baseline = our 26.0 / XTOR
+12.9 / FV 16 exactly). Its verdict: occupancy ALONE collapses force (artifact, no kstiff
+recompensation); the real FV lever is the R2 ONSET-detachment reshape.
+
+### iter 15 (occupancy langmuir, P_bound_max=0.15, ALONE) — reproduces report §7.1
+ktr stayed CLEAN (rmse 0.18-0.30, NOT oscillatory) -> confirms occupancy preserves ktr
+where velGauss destroyed it. XTOR 13->7.9 (in bound). BUT A 70->45 (force collapsed,
+no kstiff comp), FV ~unchanged (15.7). Occupancy alone is not the FV fix.
+
+### iter 16 (occupancy linear cap0.30 + kstiff2 x1.6 + R2 onset knot s2=0: 1.05->5) — NEW BEST
+Output cost 26 -> 19.5. FV_fnorm cost 16 -> 8.7 (-46%); FV model [1 .64 .42 .23 .15 .11]
+vs data [1 .92 .66 .32 .20 .11]. A 69.8 (✓), steady 80.9 (✓), peak1 97.5 (✓), peak2 80.9
+(✓), XTOR 10.1 (bound edge). The R2 onset raise (heads detach EARLY before negative-force
+drag) repairs the low-v FV drop; occupancy flattens the high-v end + caps attached(0.15).
+TRADE: ktr 61 -> 79 (data 49; cost 3.7 + rmse 1.3) — iron-law (occupancy lowers attached
+-> ktr up). vall_y still deep (61 vs 77, cost 2.5).
+
+## CURRENT BEST = iter 16. params_reseeded.m adds (on top of iter14):
+##   UseGlobalOccupancySaturation=1, OccupancyForm='linear', P_bound_max=0.30,
+##   kstiff2 = 34897*1.6 = 55835, R2 PieceWiseStrainDep2Params=[50 15.97 1.80 0.617 5 50.68 50 50]
+## GRAND 31.5 (output 19.5 + phys 11.9=SRX bound violations ksr0/kmsrd, inline domain).
+## Open, by cost: FV 8.7 (diminishing; model still <data at v=0.5-1), ktr 79 vs 49 (NEEDS
+##   3rd low-force slow-detaching state per [[mech_tradeoff]] — can't close FV+ktr in 2-state),
+##   vall_y deep (restretch/catch-bond), XTOR at edge.
+
+## PHASE 4 — is ktr fixable in 2-state? (Route A, no p1 rewire) — YES, but it TRADES FV.
+
+XTOR cost bound relaxed 10->15 (boundedOutputFn.m, mouse-alpha plausible, FJ). Identity:
+ktr = XTOR / (r(1-r)). Current ktr is high ONLY because duty r is low; the identity binds
+because p1 is force-less (force ∝ s, centered at attachment ≈0; p2 force ∝ (s+dr) carries
+the working force) -> p2 is the sole force+cycling state. Verified each run: r(1-r)ktr ≈ XTOR.
+
+### iter17 / Route A.1 (P_bound_max 0.30->0.80, kstiff2 x1.6->x1.0)
+duty 0.15->0.21, ktr 79->70 (identity confirmed: higher duty lowers ktr). XTOR 10.8 (in
+[3,15]). But duty capped ~0.21 (ka floored at 50 + R2-onset detachment + residual occ).
+FV regressed 8.7->10.7 (occupancy was helping high-v). A/steady dropped (kstiff undershoot).
+
+### iter18 / Route A.2 (+ isometric R2 knots 3,4: 1.80,0.617 -> 1.12,0.38)
+duty 0.26, **ktr NAILED -> [48.9 49 52 51 56], cost 0.06** (data ~49). XTOR 10.4. PROVES ktr
+is NOT an iron law in 2-state. BUT FV cost 8.7->18.9 (FV_fnorm 0.53 vs data 0.92 @v=0.5) and
+A rose to 76: the isometric-detachment cut that lifts duty also lifts the isometric force/
+reference and re-steepens FV.
+
+### TRADE-OFF MAP (force-less-p1 2-state): ktr<->FV trade monotonically through DUTY
+| run | duty | ktr | ktr cost | FV cost | output |
+| iter16 | 0.15 | 79 | 3.7 | 8.7  | 19.5 |
+| A.1    | 0.21 | 70 | 1.9 | 10.7 | 24   |
+| A.2    | 0.26 | 50 | 0.06| 18.9 | 35   |
+Weighted-best standalone stays iter16 (FV weight 10 >> ktr weight 2). No 2-state sweet spot
+closes BOTH. REVERTED working file to iter16.
+
+## CORRECTED CONCLUSION (supersedes "needs 3rd state"):
+ktr alone IS fixable in 2-state (A.2). ktr AND FV together are not — they trade through duty
+because force comes only from p2, so the duty that sets ktr is the same p2 detachment that
+sets FV. **Route B = make p1 force-bearing** (force ∝ (s+dr1), dr1>0 weakly-bound pre-stroke
+force; or dr1<0 back-force): carries the high force-duty ktr needs WITHOUT the slow isometric
+p2-detachment that steepens FV -> decouples ktr from FV. This likely OBVIATES the 3rd state
+(does the same job with the existing p1). ~2-line code change in the force block (lines
+165-175) + dr1/kstiff1 retune. AWAITING greenlight (user: "do not rewire p1 yet").
+
+## PHASE 5 — manual FV wall, p1-force (Route B) IMPLEMENTED, FV structural limit
+
+XTOR cost bound relaxed to [3,15] (mouse-alpha, FJ). FV velocities -> 5pt -[0 0.5 1 2 4].
+
+### Manual FV wall confirmed
+Model FV F(0)=70 vs data 56 (FV-iso < slack-iso in DATA at same SL ≈ history-dependent force
+depression the steady-state model can't reproduce). Pushing harder occupancy (P_bound_max 0.18)
++ kstiff x2.4: F(0) went UP (kstiff overcomp), FV_fnorm STAYED ~0.65, ktr went oscillatory.
+**FV_fnorm is force-scale-INVARIANT** -> the relative isometric decrease cannot be set by
+occupancy/kstiff; it's kinetic (R2 detachment-vs-strain during shortening).
+
+### Route B IMPLEMENTED (dPUdT force block): p1 force ∝ Σ((s+dr1)·p1), reuse dr1 (default 0
+### = identical to before; backward-compatible). *** ktr DECOUPLED — works ***
+High-duty base (occ relaxed P_bound_max=0.80, R2 isometric knots [1.12 0.38 5], ka=50) + dr1=0.004,
+kstiff1=45000, kstiff2=28000: **ktr=[50.5 50 51 53 53] (cost 0.03!), A perfect (69.4 vs 69.6),
+XTOR 9.9** — ALL the things that were welded are now satisfied at high duty. The user's idea is
+CONFIRMED: force-bearing p1 breaks the ktr<->duty weld. BUT FV still steep (FV_fnorm 0.51, cost 9).
+
+### FV is the residual — and it is STRUCTURAL (invariant to every knob)
+Raising ka 50->250 (hypothesis: faster reattachment flattens FV): FV_fnorm STAYED 0.51, just
+doubled force + dropped ktr. FV_fnorm @v=0.5 has been ~0.5-0.65 across EVERY config all campaign
+(data 0.92). Force collapses ~2x at v=0.5 ML/s regardless of ka/kstiff/occupancy/dr1. The
+flat-shoulder FV is a structural limit of the model's shortening force (strain advection +
+point attachment + R2 slip), NOT a tuning target. Candidates left: R2 shortening-knot reshape
+(weak, tried), distributed attachment (UseA1AttachmentKernel), or the FV-iso history-depression
+being a genuine protocol effect (compare FV-protocol SL vs slack SL in the data).
+
+## CURRENT STATE: params_reseeded.m = p1-force config (dr1=0.004, ka50, P_bound_max0.80,
+## kstiff1 45000, kstiff2 28000, R2 [50 15.97 1.12 0.38 5 50.68 50 50]). Output ~18.4:
+## ktr/A/steady/XTOR all GOOD; residual = FV_fnorm 9.0 (structural) + vall_y/peak1 (restretch
+## transient degraded by high duty — catch-bond/c_SE_visc territory).
+## Optimizer PREPARED: Workbench/RunBoundedFit_Optim.m (free-set incl. dr1 + R2 shortening
+## knots; bounded fmincon multi-start over evaluateBakersExp). Run to refine FV/transient +
+## lock-proof. Net: p1-force solved ktr; FV flat-shoulder is the structural wall.

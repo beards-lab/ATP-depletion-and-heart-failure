@@ -34,8 +34,13 @@ try
     LoadData;
     lastwarn('', ''); 
     RunBakersExp;
-    Et = sum(E);
+    % Et = sum(E);
+    % use feature costs instead
+    [cost, ~, cost_raw] = evalFeatureCost(features_data, features_model, params0.fn);
+    Et = sum(cost);
+    
     if Et == 0
+        % sum fin wong
         Et = 1e3;
     end
 catch e
