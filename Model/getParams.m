@@ -199,6 +199,10 @@ end
         'EvalPeaks', false, ...
         'recalculateDataFeats', false, ...
         'MaxSpaceExtensionCount', Inf, ...
+        'UseRegistrationAvailability', false, ... % target-zone registration availability (FV "shoulder"); appends +1 scalar ODE state A_reg that gates attachment (ka_eff)
+        'A0', 0.7, ...             % isometric registration availability floor, A_reg in [A0,1]; A0=1 => mechanism neutral. Used when UseRegistrationAvailability
+        'v_ref_reg', 0.8, ...      % sliding speed (um/s, same units as Vums; ~0.4 ML/s) at which availability is half-recovered. Used when UseRegistrationAvailability
+        'tau_reg', 0.02, ...       % registration relaxation time (s, ~1/ktr) so ktr stays single-order. Used when UseRegistrationAvailability
         'UseMaxwellDashpot', false, ...
         'mu_neg', '=mu', ...
         'mu2', 0, ...
@@ -547,7 +551,7 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    expected_PU0 = params.NumberOfStates * params.ss + 7;
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability;
     PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
@@ -562,10 +566,18 @@ end
         x_dash = 0; % X_visc: initial viscous stress deviation is zero
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
+        % Registration-availability: append a single scalar state A_reg at the tail
+        % (index Ns*ss+8), initialized to the isometric floor A0. [] when the feature
+        % is off => nothing appended => byte-identical to the legacy state vector.
+        if params.UseRegistrationAvailability
+            A_reg0 = params.A0;
+        else
+            A_reg0 = [];
+        end
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
 		end
 		
 		if params.UseSuperRelaxedADP

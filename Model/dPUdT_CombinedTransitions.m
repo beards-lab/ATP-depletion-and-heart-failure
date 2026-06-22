@@ -111,6 +111,17 @@ else
     X_visc = 0; F_Maxwell = 0; dx_dash_dt = 0;
 end
 
+% Registration availability (target-zone registration; the FV "shoulder").
+% A_reg in [A0,1] is the single scalar state appended at the tail of PU
+% (index Ns*ss+8) that gates attachment availability. Relaxation ODE in the
+% assembly section; gate applied to ka_eff below. When the feature is off the
+% state is absent and A_reg=1 (identity -> byte-compatible with the legacy model).
+if params.UseRegistrationAvailability
+    A_reg = min(1, max(params.A0, PU(Ns*ss + 8)));
+else
+    A_reg = 1;
+end
+
 
 
 
@@ -309,6 +320,12 @@ if params.UseVelGaussAttachment
     v_abs = abs(velHS);
     f_vel_gauss = 1 - params.v_att_amplitude * exp(-(v_abs - params.v_att_center).^2 / (2 * params.v_att_sigma^2));
     ka_eff = ka_eff * max(0, f_vel_gauss);
+end
+% Registration-availability gate: multiply attachment by the slow availability
+% state A_reg. Driven by the IMPOSED vel (not velHS) so SE velocity ringing cannot
+% corrupt it -> ktr stays single-order. A_reg==1 when the feature is off (no change).
+if params.UseRegistrationAvailability
+    ka_eff = ka_eff * A_reg;
 end
 RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
 
@@ -633,6 +650,17 @@ if Ns == 2
 elseif Ns == 3
     f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD; dx_dash_dt];
     outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell, f_lattice, f_saturation];
+end
+
+% Registration-availability relaxation (FV shoulder). First-order approach to the
+% velocity-set target A_inf with time constant tau_reg (~1/ktr -> adds no new slow
+% mode; the isometric depression appears as a lower plateau, not a separate phase).
+% Driven by the IMPOSED vel (params.Vums). Appended as the final state (Ns*ss+8);
+% outputs/rates are deliberately left unchanged to avoid shifting downstream indices.
+if params.UseRegistrationAvailability
+    A_inf  = params.A0 + (1 - params.A0) * abs(vel) / (abs(vel) + params.v_ref_reg);
+    dA_reg = (A_inf - A_reg) / params.tau_reg;
+    f = [f; dA_reg];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];

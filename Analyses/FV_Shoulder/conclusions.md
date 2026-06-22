@@ -177,7 +177,7 @@ naturally fades when detachment dominates at low ATP), and it should be tested a
 or SE effect, it would *not* fade with ATP in this way — so the ATP behaviour is itself a
 discriminating test between the candidate mechanisms.
 
-## 9. Recommendations (do AFTER the running optimisation; no core-model edits now)
+## 9. Recommendations (status: item 3 IMPLEMENTED + validated — see §11)
 
 1. **Protocol (confirmed, read-only) — both FV points are at SL 2.0**: `runFVExperiment`
    integrates each shortening point for `t = 0.1/|v|` s from SL0=2.2; with `Vums = v·ML`,
@@ -189,10 +189,11 @@ discriminating test between the candidate mechanisms.
    between the two experimental protocols — worth confirming against the bench FV protocol.)
 2. **Lowest-risk first**: a controlled `kSE` sweep (compliance) and `UseA1AttachmentKernel`
    (compliant realignment) — both reuse existing machinery, no new state.
-3. **If those are insufficient**: implement the **registration-availability state** (§5) as a
-   new optional flag `UseRegistrationAvailability` with params `A0`, `v_ref_reg`, `tau_reg`,
-   gating `ka_eff` (and an extra ODE state `A_reg`). Default off → fully backward-compatible.
-   Drive it by imposed `vel` (or low-passed `velHS`), *never* raw `velHS`.
+3. **✅ DONE (§11)** — implemented the **registration-availability state** directly (it leapfrogged
+   items 1–2, which proved unnecessary): new flag `UseRegistrationAvailability` with params `A0`,
+   `v_ref_reg`, `tau_reg`, gating `ka_eff` via an extra scalar ODE state `A_reg` driven by imposed
+   `vel`. Default off → backward-compatible (proven `max|Δf|=0`). Validated: net cost 8.89 < 9.90,
+   FV shoulder flattened, ktr single-order.
 4. **Validate** against: FV shoulder (8 mM), clean single-order ktr, restretch peak1/valley
    retunable, A-vs-segment unchanged, and the **8-vs-2 mM shoulder fade** (mechanism test).
 
@@ -206,6 +207,48 @@ series elasticity corrupts into multi-phase ktr and a restretch spike. The fix i
 registration-availability state** (modest depth `A0`, narrow `v_ref`, protective `tau_reg`)
 on the *attachment* path — which produces the shoulder, preserves single-order ktr (charged by
 the preceding slack), leaves the restretch retunable, and *predicts* the low-ATP fade.
+
+## 11. Validated implementation result (2026-06-19) — IT WORKS
+
+The §5/§5b mechanism was implemented and validated; it **beats the force-less-p1 optimum**.
+
+**Implementation** (`Model/dPUdT_CombinedTransitions.m`, `Model/getParams.m`): one extra scalar
+ODE state `A_reg` appended at the tail of `PU` (index `Ns*ss+8`), gating attachment
+(`ka_eff *= A_reg`), driven by the IMPOSED velocity `params.Vums`:
+`A_inf = A0 + (1−A0)·|vel|/(|vel|+v_ref_reg)`, `dA_reg = (A_inf−A_reg)/tau_reg`. New flag
+`UseRegistrationAvailability` (default **off**), params `A0`/`v_ref_reg`/`tau_reg`. **Backward-
+compatibility proven**: flag-on with `A0=1` gives front derivatives byte-identical to flag-off
+(`max|Δf| = 0`), and the flag-off state vector is unchanged.
+
+**Validation** (`Workbench/ValidateRegistrationAvailability.m`, 8 mM FV+Ktr+Slack, on the
+optimiser-result basis `params/params_reseeded_opt.m`):
+
+| metric            | data  | OFF (optim) | ON, A0=0.6 | **ON + kstiff×1.28** |
+|-------------------|-------|-------------|------------|----------------------|
+| **TOTAL cost**    | —     | 9.90        | 37.2       | **8.89** ✅ (net better) |
+| FV_fnorm @ v=0.5  | 0.919 | 0.616       | 0.725      | **0.734**            |
+| FV_fnorm cost     | —     | 4.68        | 1.91       | **1.68 (−64%)**      |
+| A (isometric)     | 69.6  | 67.3        | 52.7       | **67.4** ✅ restored  |
+| steady            | 80.6  | 77.6        | 63.0       | **78.0** ✅ restored  |
+| ktr_rmse (single-order?) | — | 0.58   | 0.26       | 0.62 (single-order ✓)|
+| XTOR              | —     | 13.2        | 9.9        | **11.3** (in-bounds) |
+
+The mechanism behaves exactly as designed: `A_reg=A0` at isometric **depresses F(0)** (the
+shoulder reference); sliding recovers it (flatter `FV_fnorm`); `tau_reg≈1/ktr` keeps the
+redevelopment **single-order** (no velGauss-style oscillation). The isometric force the gate
+removes is restored by **kstiff recompensation** — which scales absolute force but NOT the
+`FV_fnorm` *ratio*, so the flattened shoulder survives. Net: **lower total cost than the optimiser
+found, with a markedly flatter FV shoulder** — the structural wall the campaign hit is breached.
+
+**Saved config**: `params/params_reseeded_regavail.m` (the ON+recomp config, cost 8.89).
+**Refiner**: `Workbench/RunRegAvailFit_Optim.m` (bounded multi-start; free-set `A0, v_ref_reg,
+ka, k2, kstiff1, kstiff2, R2 knots 5,6`).
+
+**Residuals (tuning, not structural)**: ktr still ≈64 vs 49 (the *pre-existing* high-ktr, untouched
+by this change — retune `ka`/`k2`); FV not yet fully flat (deeper `A0`); restretch `peak2`/`vall`
+fine-features shifted by the kstiff bump (retunable with the restretch knobs that don't touch FV).
+**Still to test**: the 8-vs-2 mM **shoulder fade** (mechanism prediction — at low ATP, detachment
+limits and availability should stop mattering).
 
 ## References
 Edman 1988 (J Physiol 404:301) · Edman, Mulieri & Scubon-Mulieri 1976 (Acta Physiol Scand 98:143)

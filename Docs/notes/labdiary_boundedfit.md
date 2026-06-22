@@ -309,3 +309,34 @@ being a genuine protocol effect (compare FV-protocol SL vs slack SL in the data)
 ## Optimizer PREPARED: Workbench/RunBoundedFit_Optim.m (free-set incl. dr1 + R2 shortening
 ## knots; bounded fmincon multi-start over evaluateBakersExp). Run to refine FV/transient +
 ## lock-proof. Net: p1-force solved ktr; FV flat-shoulder is the structural wall.
+
+## PHASE 6 — FV WALL BREACHED: registration-availability state (UseRegistrationAvailability)
+## *** the "structural" FV shoulder was NOT structural — it was a missing mechanism ***
+
+The optimizer (RunBoundedFit_Optim.m) ran to params/params_reseeded_opt.m (ka81 k2150 dr1.0047
+kstiff1 36298 kstiff2 24030 P_bound_max1.02 R2 knots5/6 9.4/16.0; output cost 9.9). FV_fnorm still
+stuck @v=0.5 = 0.616 (data 0.92). Per Analyses/FV_Shoulder: the flat shoulder = target-zone
+REGISTRATION availability (Edman 1988; Tanner/Daniel/Regnier 2007) — sub-maximal isometric
+attachment relieved by sliding. NOT reproducible by force-scale knobs (FV_fnorm is a ratio);
+needs a velocity-set availability that the OLD velGauss mis-keyed on instantaneous velHS (-> broke ktr).
+
+### Implemented (Model/dPUdT_CombinedTransitions.m + getParams.m): +1 SCALAR ODE state A_reg at
+### the tail (index Ns*ss+8), gates attachment ka_eff*=A_reg, driven by IMPOSED Vums (not velHS):
+###   A_inf = A0 + (1-A0)|vel|/(|vel|+v_ref_reg);  dA_reg = (A_inf - A_reg)/tau_reg
+### Flag UseRegistrationAvailability (default off). Backward-compat PROVEN: A0=1 -> max|Δf|=0 vs off.
+
+### RESULT (Workbench/ValidateRegistrationAvailability.m, on params_reseeded_opt basis, 8mM FV+Ktr+Slack):
+| config                  | FV_fnorm@.5 | FV cost | A    | steady | ktr_rmse | XTOR | TOTAL |
+| OFF (= the optimum)     | 0.616       | 4.68    | 67.3 | 77.6   | 0.58     | 13.2 | 9.90  |
+| ON A0=0.6 (no recomp)   | 0.725       | 1.91    | 52.7 | 63.0   | 0.26     | 9.9  | 37.2  |
+| ON A0=0.6 + kstiff x1.28| **0.734**   | **1.68**| 67.4 | 78.0   | 0.62     | 11.3 | **8.89** |
+A_reg=A0 depresses F(0) (shoulder reference); sliding recovers it (flatter ratio); tau_reg≈1/ktr
+keeps ktr single-order (no velGauss oscillation). kstiff x1.28 restores absolute A/steady WITHOUT
+un-flattening the ratio. **Net cost 8.89 < 9.90 — beats the force-less-p1 optimum AND flattens the
+shoulder.** The campaign-long "FV structural wall" is breached.
+
+## CURRENT STATE: params/params_reseeded_regavail.m (full snapshot, feature ON, A0=0.6, v_ref_reg=0.8,
+## tau_reg=0.02, kstiff x1.28; cost 8.89). Refiner: Workbench/RunRegAvailFit_Optim.m (free-set
+## A0, v_ref_reg, ka, k2, kstiff1/2, R2 knots 5/6). Residuals (tuning, not structural): ktr~64 vs 49
+## (PRE-EXISTING high-ktr — retune ka/k2); FV not fully flat (deeper A0); restretch peak2/vall (kstiff
+## bump — retunable). Still to test: 8-vs-2mM shoulder FADE (mechanism prediction).
