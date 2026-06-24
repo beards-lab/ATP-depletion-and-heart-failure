@@ -63,10 +63,12 @@ ub = [4.0 1.5 4.0 2.5 2.5 2.0 5.0 2.0];    % multiplier upper bounds
 %%
 params0.g = g0;
 params0.PlotEachSeparately = 1;
+features_ghost = features_model;
+params0.k2 = params0.k2/2;
 tic
 RunBakersExp;
 toc
-plotFeatures(features_data, features_model, [], params0.fn)
+plotFeatures(features_data, features_model, features_ghost, params0.fn)
 %%
 optimfun = @(g) evaluateBakersExp(g, params0);
 fprintf('Baseline cost (g=1): %.4f\n', optimfun(g0));

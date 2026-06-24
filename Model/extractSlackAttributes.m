@@ -30,6 +30,21 @@ FORCE_THRESHOLD_KPA   = 10;    % minimum force (kPa) to include in active-phase 
 PEAK_MIN_DISTANCE_S   = 0.01;  % minimum time between detected peaks (s)
 PEAK_MIN_PROMINENCE   = 0.5;   % minimum peak prominence for findpeaks (kPa)
 MARKER_SIZE           = 12;    % plot marker size
+% Smoothing windows (data path only, useSmoothing=true).
+% FAST:  Savitzky-Golay for the re-stretch peak section.  11 ms preserves
+%   peaks wider than ~5 ms (the physiological rapid overshoot) while
+%   removing sub-5 ms noise.  SG is preferred over Gaussian here because
+%   it fits a local polynomial and does not round off peak heights.
+% LIGHT: narrow movmedian used only to locate the undershoot minimum.
+%   The dip is several kPa deep and tens of ms wide, well above the noise
+%   floor, so a short window suffices to reject point noise without
+%   smearing the dip into the much longer recovery tail.
+% SLOW:  robust LOESS for the recovery/overshoot tail (from the located
+%   minimum onward).  Wider window is safe there because the dynamics are
+%   slow (50-200 ms); rloess handles occasional spikes without artefact.
+SMOOTH_WIN_FAST_S     = 0.011;  % SG window for rapid-peak region   (≈11 ms)
+SMOOTH_WIN_LIGHT_S    = 0.005;  % movmedian window for undershoot min (≈5 ms)
+SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
 
     if nargin < 5
         features = [];
@@ -46,10 +61,7 @@ MARKER_SIZE           = 12;    % plot marker size
     if nargin < 9
         datatable = [];
     end
-    % Smoothing window in samples — estimated so that 1 window ≈ 5 ms,
-    % which is enough to suppress high-frequency noise without distorting
-    % the ~10 ms peak timescale.
-    SMOOTH_WIN_S = 0.001;   % 1 ms
+    % (smoothing parameters are now named constants at the top of the function)
     if plotResults
         if ~isempty(get(gcf, 'Children'))
             figure(406); clf;
@@ -272,14 +284,13 @@ MARKER_SIZE           = 12;    % plot marker size
         % feats.Sl_V_restretch = (SL(end)-SL(1))/(t(end)-t(1));
         
 
-        % 1. Detect Peaks — optionally smooth before findpeaks
+        % 1. Detect Peaks — always use raw signal for the restretch section.
+        %    The rapid overshoot is only 2-5 ms wide; any smoothing window
+        %    wide enough to suppress noise also smears the peak into the
+        %    valley, making them indistinguishable.  Raw findpeaks with a
+        %    prominence threshold is already reliable here.
         feats.v_restretch = velocity_segment(3, 2);
-        if useSmoothing
-            smooth_win = max(3, round(SMOOTH_WIN_S / median(diff(t))));
-            y_sm = smoothdata(y, 'gaussian', smooth_win);
-        else
-            y_sm = y;
-        end
+        y_sm = y;   % raw — smoothing not applied to this fast section
         [peak1_y, peak1_t] = findpeaks(y_sm, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
 
         if ~isempty(peak1_y)
@@ -341,25 +352,46 @@ MARKER_SIZE           = 12;    % plot marker size
         win = data_t >= velocity_segment(4) & data_t <= velocity_segment(5);
         t = data_t(win); y = data_y(win);
         t = t - t_seg;
+
+        % 1. Locate the undershoot minimum with light, narrow smoothing only.
+        %    The dip is several kPa deep and tens of ms wide — well above the
+        %    noise floor — so it doesn't need the wide trendline window; using
+        %    the full SMOOTH_WIN_SLOW_S window here would blend the sharp early
+        %    dip with the much longer, flatter recovery tail and bias/shift the
+        %    detected minimum. A short movmedian only rejects single-sample
+        %    spikes without smearing the dip's shape or location.
         if useSmoothing
-            smooth_win2 = max(3, round(SMOOTH_WIN_S / median(diff(t))));
-            y_sm2 = smoothdata(y, 'gaussian', smooth_win2);
+            light_win = max(3, round(SMOOTH_WIN_LIGHT_S / median(diff(t))));
+            y_light = smoothdata(y, 'movmedian', light_win);
         else
-            y_sm2 = y;
+            y_light = y;
         end
-        [u_v, u_i] = min(y_sm2);
+        [u_v, u_i] = min(y_light);
         feats.vall2_dy = u_v - feats.steady;
         feats.vall2_t  = t(u_i) - t(1);
-        if plotResults
-            plot(t + t_seg, y_sm2, 'k-');
-            plot(t(u_i) + t_seg, u_v, 'rv', 'MarkerSize', ms, 'LineWidth', 2);
-        end
 
-        [o_v, o_i] = max(y_sm2(u_i:end));
+        % 2. Trendline-smooth only the tail FROM the minimum onward to find
+        %    the overshoot — this is the slow recovery phase, where the wide
+        %    robust-LOESS window belongs.  Cutting the smoothing here (rather
+        %    than across the whole undershoot+recovery window) keeps the
+        %    trendline from being dragged down by the sharp dip located above.
+        tail = u_i:numel(y);
+        if useSmoothing
+            rl_win = max(5, round(SMOOTH_WIN_SLOW_S / median(diff(t(tail)))));
+            y_sm2_tail = smoothdata(y(tail), 'rloess', rl_win);
+        else
+            y_sm2_tail = y(tail);
+        end
+        [o_v, o_i_rel] = max(y_sm2_tail);
+        o_i = tail(1) + o_i_rel - 1;
         feats.ovrsht_dy = o_v - feats.steady;
-        feats.ovrsht_t  = t(o_i + u_i - 1);
+        feats.ovrsht_t  = t(o_i);
+
         if plotResults
-            plot(feats.ovrsht_t + t_seg, o_v, 'r^', 'MarkerSize', ms, 'LineWidth', 2);
+            plot(t(1:u_i) + t_seg, y_light(1:u_i), 'k:');
+            plot(t(tail) + t_seg, y_sm2_tail, 'k-');
+            plot(t(u_i) + t_seg, u_v, 'rv', 'MarkerSize', ms, 'LineWidth', 2);
+            plot(t(o_i) + t_seg, o_v, 'r^', 'MarkerSize', ms, 'LineWidth', 2);
         end
 
         % ── Output-state features (from evaluateModel out struct) ─────────────
@@ -442,9 +474,7 @@ MARKER_SIZE           = 12;    % plot marker size
         
     
         if isempty(features)
-            fn = fieldnames(feats);
-            S = cell2struct(cell(size(fn)), fn, 1);  % struct with same fields, empty values
-            features = repmat(S, 0, 1);              % 0x1 struct array
+            features = struct();   % plain struct; fields accumulate as row vectors below
         end
 
         % features(i_seg) = feats;
