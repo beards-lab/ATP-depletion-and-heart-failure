@@ -146,8 +146,12 @@ end
         'L_thick', 1.67, ... % Length of thick filament, um
         'L_hbare', 0.10,... % Length of bare region of thick filament, um
         'L_thin', 1.20, ... % Length of thin filament, um
-        'UseTargetZoneSaturation', false, ... % Target zone saturation on attachment (vernier/site count)
-        'max_attached_per_bin', 0.01, ...    % Max fraction of heads attached per strain bin [-]. Physical est ~dS*163/300. Tune to be influential.
+        'UseGlobalOccupancySaturation', false, ... % Global (mean-field) occupancy attenuation of attachment: RD1 *= (1 - P_bound/P_bound_max). Only faithful occupancy form here (strain axis is not a site axis). See Analysis/BindingSiteOccupancy/OccupancySaturation_Report.md
+        'P_bound_max', 0.30, ...             % Max total bound fraction P_bound=p1_0+p2_0+p3_0 [-]; rat-cardiac max-Ca isometric ~0.12-0.20, relaxed default (uncertain) up to ~0.3-0.4
+        'OccupancyForm', 'linear', ...       % 'linear' => 1-P_bound/P_bound_max ; 'langmuir' => 1/(1+P_bound/P_bound_max)
+        'UseTargetZoneSaturation', false, ... % [DEPRECATED as occupancy: per-strain-bin, treats strain as a site axis] phenomenological strain-modifier only
+        'max_attached_per_bin', 0.01, ...    % [DEPRECATED, dS-dependent] superseded by rho_attach_max
+        'rho_attach_max', 16.0, ...          % Max attached-head density [1/um strain] for dS-invariant per-bin form (Stewart/Baker 2021 K_M ~16-26 heads/um)
         'UseVernierVelocity', false, ...     % Velocity-dependent vernier test (alternative to UseTargetZoneSaturation)
         'alpha_vernier', 0.3, ...            % Max fractional increase in ka at high velocity [-]
         'v_ref_vernier', 1.0, ...            % Half-saturation velocity [um/s]
@@ -198,6 +202,10 @@ end
         'EvalPeaks', false, ...
         'recalculateDataFeats', false, ...
         'MaxSpaceExtensionCount', Inf, ...
+        'UseRegistrationAvailability', false, ... % target-zone registration availability (FV "shoulder"); appends +1 scalar ODE state A_reg that gates attachment (ka_eff)
+        'A0', 0.7, ...             % isometric registration availability floor, A_reg in [A0,1]; A0=1 => mechanism neutral. Used when UseRegistrationAvailability
+        'v_ref_reg', 0.8, ...      % sliding speed (um/s, same units as Vums; ~0.4 ML/s) at which availability is half-recovered. Used when UseRegistrationAvailability
+        'tau_reg', 0.02, ...       % registration relaxation time (s, ~1/ktr) so ktr stays single-order. Used when UseRegistrationAvailability
         'UseMaxwellDashpot', false, ...
         'mu_neg', '=mu', ...
         'mu2', 0, ...
@@ -379,13 +387,20 @@ end
         % ensure we delete the modifiers right after
         params.mods = {};
         params.g = [];
-        %% Step 2: Scale rates (if params.xrate is set, multiplies all turnover rates)
+        
+        %% Step 4: Resolve linked parameters (fields starting with '=')
+        params = resolveParams(params);
+        
+        %% Step 3a: Scale rates (if params.xrate is set, multiplies all turnover rates)
         params = updateRates(params);
+    else
+        %% Step 4: Resolve linked parameters (fields starting with '=')
+        params = resolveParams(params);
+
     end
 
 
-    %% Step 4: Resolve linked parameters (fields starting with '=')
-    params = resolveParams(params);
+    
 
     %% Step 5: Reconstruct arrays: fields like params.arr__2 = 3 -> params.arr(2) = 3
     paramsfn = fieldnames(params);
@@ -488,8 +503,8 @@ end
         LXBpivot = params.SL0;
 
         % we have 2 half-sarcomeres, so the step is double
-        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - LXBpivot;        
-        if params.MaxStrainArraySize < length(SL_strain)
+        SL_strain = (params.Slim_l:2*params.dS:params.Slim_r) - LXBpivot;
+        if params.MaxStrainArraySize > 0 && params.MaxStrainArraySize < length(SL_strain)
             % SL_strain = -LXBpivot/2:params.dS:params.MaxStrainArraySize/2;
             SL_strain = ((-(params.MaxStrainArraySize-1)/2 : (params.MaxStrainArraySize-1)/2)) * params.dS*2;
 
@@ -511,7 +526,6 @@ end
             % the xontraction direction is positive
             params.s = flipud(-SL_strain')/2;
         end
-
         params.ss = length(params.s);
 
 
@@ -540,7 +554,9 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability;
+    PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
+    if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
 
         p0 = zeros(1, params.ss);
@@ -553,10 +569,18 @@ end
         x_dash = 0; % X_visc: initial viscous stress deviation is zero
         LSE = params.LSE0;
         % State variable vector concatenates p1, p2, p2, and U_NR
+        % Registration-availability: append a single scalar state A_reg at the tail
+        % (index Ns*ss+8), initialized to the isometric floor A0. [] when the feature
+        % is off => nothing appended => byte-identical to the legacy state vector.
+        if params.UseRegistrationAvailability
+            A_reg0 = params.A0;
+        else
+            A_reg0 = [];
+        end
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
 		end
 		
 		if params.UseSuperRelaxedADP

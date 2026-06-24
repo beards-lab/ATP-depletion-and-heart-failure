@@ -19,32 +19,51 @@ MATLAB codebase implementing a strain-discretized cardiac cross-bridge (sarcomer
 ATP-depletion-and-heart-failure/
 │
 ├── Model/              Core ODE engine, parameter system, experiment runners,
-│   │                   feature extraction and cost functions
+│   │                   feature extraction and cost functions — model code ONLY
 │   └── experiments/    Specialized protocol runners (FV, ktr, slack, stairs)
 │
 ├── DataCuration/       Raw data → model-ready data: log loading, resampling,
 │                       velocity-table construction, protocol building
 │
-├── Analysis/           Documented scientific investigations tied to specific
-│                       hypotheses or paper sections (sensitivity, mechanism
-│                       evaluation, restretch, piecewise optimization)
+├── Analyses/           One self-contained folder per analysis: script(s) +
+│   │                   results/ + conclusions.md. START AT Analyses/README.md
+│   ├── README.md       Index + cross-analysis summaries & recommendations
+│   ├── AttachedPool_vs_ATPase/   BindingSiteOccupancy/   RestretchMechanisms/
+│   ├── SensitivityAnalysis/      LastSlackIdentification/  PassiveForceID/
+│   └── LowATP_ForceEnhancement/
 │
-├── Workbench/          Interactive exploration: parameter tuning, optimization
-│   └── Tests/          campaigns, ad-hoc experiments
+├── Workbench/          The playground: drivers, hand-tuning, optimization entry
+│   └── Tests/          points, ad-hoc experiments and tests (not finished analyses)
 │
-├── Auxiliary/          Generic reusable tools: visualization, fitting utilities,
-│                       math helpers, sensitivity analysis functions
+├── Auxiliary/          Generic reusable, non-critical tools (plotting, fitting,
+│   └── diagnostics/    parsing); SRX/ktr/mech diagnostic probes live here
 │
-├── ModelOptParams/     Auto-generated parameter snapshots from optimization runs
-│
-├── params/             Hand-curated and validated parameter sets
+├── ModelOptParams/     Historical named param gallery + QC plots (past optima)
+├── params/             Active/current parameter snapshots (source of truth)
 │
 ├── PassiveTitin/       Passive titin characterization scripts and Modelica model
+├── Modelica/           Modelica source models
 │
-├── Docs/               Presentations, meeting notes, model descriptions
+├── Docs/               Knowledge base — START AT Docs/README.md
+│   ├── reference/      Durable reference docs you build on
+│   ├── notes/          Working notes / lab diaries (chronological)
+│   ├── experiments/    Dated experiment write-ups (+ figures/)
+│   ├── presentations/  Slides, posters, abstracts (old versions in archive/)
+│   ├── ROADMAP.md      Consolidated next-steps backlog
+│   └── *-plan.md       Process docs (reorganization / refactoring)
+│
 ├── Figures/            Generated and reference figures
-└── data/               Experimental data — not tracked by git
+├── scripts/            Infrastructure (setup-gh.sh, rol.sbatch)
+├── data/               Experimental data — not tracked by git
+└── _archive/           Disk-only graveyard for stale dumps (gitignored)
 ```
+
+> **Two front doors:** [`Docs/README.md`](Docs/README.md) maps all knowledge;
+> [`Analyses/README.md`](Analyses/README.md) indexes the analyses with rolled-up
+> recommendations. **`params/` vs `ModelOptParams/`:** `params/` holds the active,
+> current parameter snapshots (the working source of truth); `ModelOptParams/` is the
+> historical gallery of past named optima with their QC plots. Bulk generated output
+> (`.mat`/`.png` dumps, old optimizer envs) lives in the gitignored `_archive/`.
 
 ---
 
@@ -236,7 +255,8 @@ where `ss = numel(params.s)` = number of strain bins.
 | `updateRates.m` | Scale all turnover rates by `xrate` multiplier |
 | `handleAndRethrowCostException.m` | Error handling wrapper for cost evaluation |
 | `simulateForceLengthEstim.m` | Force-length estimation simulation |
-| `dPUdTCa*.m` | Legacy / alternative ODE variants (kept for reference) |
+| `dPUdTCa.m` | Legacy / alternative ODE variant (still referenced; kept) |
+| _(archived)_ | Dead ODE variants `dPUdTCaSimple`, `dPUdTCaSimpleAlternative`, `dPUdT_TransitionRates` moved to `_archive/dead_ode/` (no callers) |
 | `experiments/` | `runFVExperiment`, `runKtrExperiment`, `runSlackExperiment`, `runStairsExperiment` |
 
 ---
@@ -317,30 +337,43 @@ params0.velocitytableonfile = '../data/protocol_03_27_2026_velocitytable_slack.m
 
 ---
 
-## Analysis/ — Analysis & Tuning Campaigns
+## Analyses/ — Self-Contained Analyses
 
-| File | Role |
+Each analysis lives in its own folder under `Analyses/<Topic>/`: the script(s), a `results/`
+folder for its `.mat`/figure outputs, and a `conclusions.md` recording findings and next steps.
+**Start at [`Analyses/README.md`](Analyses/README.md)** for the index and the cross-analysis
+summaries & recommendations.
+
+| Folder | What it covers |
 |------|------|
-| `TuneRestretch.m` | Investigate restretch double-peak discrepancy |
-| `AnalyseRestretchMechanisms.m` | Systematic sweep of restretch mechanisms |
-| `RunMechanismEvaluation.m` / `OptimizeMechanismEvaluation.m` | Evaluate top-K mechanism candidates |
-| `RunSensitivityAnalysis.m` / `SensitivityAllSlack.m` | Parameter sensitivity analysis |
-| `IdentifyLastSlack.m` / `OptimLastSlackPieceWise.m` | Identify model parameters from last-slack segment |
-| `RunOptimPiecewise.m` | Piecewise block-coordinate-descent optimisation |
-| `driverSA.m` / `runSA.m` | Sensitivity analysis workflow |
+| `AttachedPool_vs_ATPase/` | Attached-pool / ATPase / k_tr / V_max reconciliation at baseline |
+| `BindingSiteOccupancy/` | Attachment-saturation audit (strain axis ≠ binding-site axis) |
+| `RestretchMechanisms/` | Last-slack restretch double-peak mechanism analysis (incl. `AnalyseRestretchMechanisms`, `TuneRestretch`, `RunMechanismEvaluation`, `OptimizeMechanismEvaluation`) |
+| `SensitivityAnalysis/` | 108-parameter sensitivity + SVD identifiability (`SensitivityAllSlack`, `RunSensitivityAnalysis`, `FeatureCorrelation`) |
+| `LastSlackIdentification/` | Piecewise strain-dependent detachment fit (`OptimLastSlackPieceWise`, `IdentifyLastSlack`) |
+| `PassiveForceID/` | Justifying direct subtraction of the high-Ca passive trace (`IdentifyPassive`) |
+| `LowATP_ForceEnhancement/` | Why low ATP raises isometric force (03/27/2026 data) |
+
+> Reorg note (2026-06-16): the former `Analysis/` (singular) folder was absorbed here. Loose
+> non-analysis scripts moved to `Workbench/` (e.g. `BatchRunAllParams`, `SumATPSlackFitPlots`),
+> `Workbench/Tests/`, or `Auxiliary/` (`ResidualOpt`); obsolete pipelines (`RunOptimPiecewise`,
+> `driverSA`, `runSA`, `analyzeSystemRHS`) were moved to `_archive/`.
 
 ---
 
 ## params/ — Parameter Sets
 
-Hand-curated and validated parameter configurations. Load a `.m` file to populate `params0` before running:
+Active, current parameter snapshots — the working source of truth. Load a `.m` file to
+populate `params0` before running:
 
 ```matlab
 params0 = getParams();
 ModelParamsInitNiceSlack_prescribedSR    % apply saved param set
 ```
 
-See `ModelOptParams/` for auto-generated snapshots from optimisation campaigns.
+Also holds non-`.m` snapshots consolidated during the reorg (`params.csv`, `modifierstbl.csv`,
+`gaOutparams.csv`, `PARAMETERS.xlsx`, `all params.txt`, `SimplestFVOptim*.m`). See
+`ModelOptParams/` for the historical gallery of named past optima and their QC plots.
 
 ---
 

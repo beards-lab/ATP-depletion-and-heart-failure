@@ -52,7 +52,7 @@ dS = params.dS; % step size
 
 p1 = PU(1:ss); p1(p1<0) = 0;
 p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
-if length(PU) > 3*ss
+if params.NumberOfStates == 3
     p3 = PU(2*ss+1:3*ss);
     Ns = 3; % number of states
 else
@@ -111,6 +111,17 @@ else
     X_visc = 0; F_Maxwell = 0; dx_dash_dt = 0;
 end
 
+% Registration availability (target-zone registration; the FV "shoulder").
+% A_reg in [A0,1] is the single scalar state appended at the tail of PU
+% (index Ns*ss+8) that gates attachment availability. Relaxation ODE in the
+% assembly section; gate applied to ka_eff below. When the feature is off the
+% state is absent and A_reg=1 (identity -> byte-compatible with the legacy model).
+if params.UseRegistrationAvailability
+    A_reg = min(1, max(params.A0, PU(Ns*ss + 8)));
+else
+    A_reg = 1;
+end
+
 
 
 
@@ -161,19 +172,23 @@ p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.
 p3_0 = dS*sum(p3);
 p3_1 = dS*sum((s+params.drp3).*p3);
 
+% Route B — p1 force offset: s1 = s + dr1 makes the PRE-stroke state p1 force-bearing
+% (dr1>0 = pre-stroke force; dr1<0 = back-force). dr1=0 (default) recovers the original
+% Σ(s·p1)≈0 exactly. Decouples force-duty (p1+p2) from the p2 detachment that welds ktr<->FV.
+s1 = s + params.dr1;
 if params.UseNegativeKstiff
-    p1_1_pos = dS*sum(s.*p1.*(s>=0));
-    p1_1_neg = dS*sum(s.*p1.*(s<=0));
+    p1_1_pos = dS*sum(s1.*p1.*(s1>=0));
+    p1_1_neg = dS*sum(s1.*p1.*(s1<=0));
     p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
     p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
-    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);     
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
     p1_1 = p1_1_neg + p1_1_pos;
     p2_1 = p2_1_pos + p2_1_neg;
 else
-    p1_1 = dS*sum(s.*p1);
+    p1_1 = dS*sum(s1.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
-    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);     
-    % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);     
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);
+    % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);
 end
 
 % non-hydrolized ATP in non-super relaxed state
@@ -318,7 +333,29 @@ if params.UseVelGaussAttachment
     f_vel_gauss = 1 - params.v_att_amplitude * exp(-(v_abs - params.v_att_center).^2 / (2 * params.v_att_sigma^2));
     ka_eff = ka_eff * max(0, f_vel_gauss);
 end
+% Registration-availability gate: multiply attachment by the slow availability
+% state A_reg. Driven by the IMPOSED vel (not velHS) so SE velocity ringing cannot
+% corrupt it -> ktr stays single-order. A_reg==1 when the feature is off (no change).
+if params.UseRegistrationAvailability
+    ka_eff = ka_eff * A_reg;
+end
 RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
+
+% Global (mean-field) binding-site occupancy saturation of attachment.
+% The strain axis is not a site axis, so the only faithful occupancy proxy in
+% this strain-distribution model is the total bound fraction P_bound. Attenuate
+% the whole attachment flux as occupancy rises toward the physical ceiling
+% P_bound_max (rat-cardiac max-Ca isometric ~0.12-0.15). p1_0/p2_0/p3_0 are the
+% integrated bound fractions computed above.
+if params.UseGlobalOccupancySaturation
+    P_bound = p1_0 + p2_0 + p3_0;
+    if strcmpi(params.OccupancyForm, 'langmuir')
+        f_sat_global = 1 / (1 + P_bound / params.P_bound_max);
+    else
+        f_sat_global = max(0, 1 - P_bound / params.P_bound_max);
+    end
+    RD1 = RD1 * f_sat_global;
+end
 
 if params.UsePassiveForSR
     F_SR = F_passive;
@@ -530,7 +567,8 @@ else
 end
 
 if params.justPlotStateTransitionsFlag    
-    plotStateTransitions_subpanels;
+    plotStateTransitions;
+    % plotStateTransitions_subpanels;
     error('Quitting after plotting states');
 end
 %% governing flows
@@ -552,8 +590,14 @@ try
     % Vernier / target zone modulation of attachment (per-bin or velocity-based)
     f_sat = ones(size(p1)); % default: no modulation
     if params.UseTargetZoneSaturation
-        p_occ = (p1 + p2 + p3) * dS; % fraction of heads attached at each bin [-]
-        f_sat = max(0, 1 - p_occ / params.max_attached_per_bin);
+        % [DEPRECATED as site occupancy — see report] Per-strain-bin attachment
+        % modifier. dS-invariant: compare attached-head DENSITY (p1+p2+p3) [1/um]
+        % to a density cap rho_attach_max, so the grid spacing dS cancels. (The
+        % old form (p1+p2+p3)*dS / max_attached_per_bin was per-bin MASS and thus
+        % grid-dependent.) NOTE: this penalizes heads sharing a strain value, not
+        % heads sharing an actin site; use UseGlobalOccupancySaturation for the
+        % physically faithful occupancy term.
+        f_sat = max(0, 1 - (p1 + p2 + p3) / params.rho_attach_max);
     elseif params.UseVernierVelocity
         v_hs = abs(velHS);
         % f_sat_scalar = 1 + params.alpha_vernier * v_hs / (v_hs + params.v_ref_vernier);
@@ -626,6 +670,17 @@ if Ns == 2
 elseif Ns == 3
     f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD; dx_dash_dt];
     outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell, f_lattice, f_saturation];
+end
+
+% Registration-availability relaxation (FV shoulder). First-order approach to the
+% velocity-set target A_inf with time constant tau_reg (~1/ktr -> adds no new slow
+% mode; the isometric depression appears as a lower plateau, not a separate phase).
+% Driven by the IMPOSED vel (params.Vums). Appended as the final state (Ns*ss+8);
+% outputs/rates are deliberately left unchanged to avoid shifting downstream indices.
+if params.UseRegistrationAvailability
+    A_inf  = params.A0 + (1 - params.A0) * abs(vel) / (abs(vel) + params.v_ref_reg);
+    dA_reg = (A_inf - A_reg) / params.tau_reg;
+    f = [f; dA_reg];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];

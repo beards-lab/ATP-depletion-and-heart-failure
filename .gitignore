@@ -27,3 +27,9 @@ params/ModelOptParams_TL5_iter_*.m
 /Analysis/batch_output_extracted_v1
 data/
 *.fig
+
+# --- Reorganization additions (2026-06-16) ---
+*.mexw64
+_archive/
+tools/*.exe
+/resources/
