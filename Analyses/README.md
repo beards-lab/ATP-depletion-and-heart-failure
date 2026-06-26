@@ -20,6 +20,7 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 | **LastSlackIdentification** | stub | Piecewise strain-dependent detachment fit to the last-slack transient. | [conclusions](LastSlackIdentification/conclusions.md) |
 | **PassiveForceID** | findings | Justifies direct subtraction of the high-Ca passive trace to isolate F_XB, from the mechanical topology. | [conclusions](PassiveForceID/conclusions.md) |
 | **LowATP_ForceEnhancement** | findings | 2 mM ATP gave ~32–44% more isometric force than 8 mM in the 03/27/2026 data; cross-referenced with literature. | [conclusions](LowATP_ForceEnhancement/conclusions.md) |
+| **LowATP_k2Frontier** | findings | Tests whether reducing `k2` alone reproduces the 2-vs-8 mM signature (relative-ratio scoring). It owns the kinetics (ktr/peak2 at k2×0.40) but over-produces isometric force ~2×; needs a second amplitude lever. | [conclusions](LowATP_k2Frontier/conclusions.md) |
 
 ## Summaries & recommendations (across analyses)
 
