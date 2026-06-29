@@ -76,6 +76,12 @@ MARKER_SIZE           = 12;    % plot marker size
     % smoothing window sizes and peak detection behaviour regardless of
     % acquisition rate.
     TARGET_FS = 1000;  % Hz
+    % Drop duplicate timestamps before any interpolation: interp1 requires
+    % strictly increasing sample points, and the parallel slack-chunk merge
+    % (mergeOutStructs) can leave duplicated times at chunk seams.
+    [data_t, iu] = unique(data_t);
+    data_y  = data_y(iu);
+    data_SL = data_SL(iu);
     actual_fs = 1 / median(diff(data_t));
     if actual_fs < TARGET_FS * 0.99
         t_rs    = (data_t(1) : 1/TARGET_FS : data_t(end))';

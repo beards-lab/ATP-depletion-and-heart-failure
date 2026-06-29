@@ -409,6 +409,24 @@ if params.UsePieceWiseStrainDep
         R2 = R2 * (MgATP / (MgATP + params.K_T1));
     end
 
+    % --- Low-ATP nucleotide mechanisms wired into the active (pchip) path ---------
+    % ADP/Pi dependences that were previously applied only in the legacy non-pchip
+    % branches. All baseline-preserving at (MgADP=0, Pi=0) so the 8 mM fit is
+    % unchanged when the flags are off. g1/g2/f1/f2 are computed at the top.
+    if params.UseAdpTrap
+        % Elevated [ADP] rebinds A.M.ADP and blocks ADP release (P2->P3): scale R2 by
+        % the ATP-ready fraction g2 (=1 at MgADP=0). Traps force-bearing P2 heads.
+        R2 = R2 .* g2;
+    end
+    if params.UsePiReversal
+        % Elevated [Pi] is a PRODUCT of the power stroke (P1->P2 releases Pi): by mass
+        % action it inhibits the forward stroke and drives the reverse, shifting heads
+        % P2->P1 and reducing the force-bearing post-stroke pool (Cooke & Pate: Pi lowers
+        % force). Baseline-preserving at Pi=0.  (f2 = 1/(1+Pi/K_Pi).)
+        R12 = R12 .* f2;                     % forward stroke inhibited by product Pi
+        R21 = R21 .* (1 + Pi/params.K_Pi);   % reverse stroke enhanced by Pi
+    end
+
 elseif params.UseUniformTransitionFunc
     % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
     % dPUdT_TransitionRates;
@@ -447,6 +465,12 @@ else
 end
 
 R3 = params.k3*p3;
+if params.UseAtpDetach
+    % ATP binding drives rigor (P3 = A.M) detachment; low [ATP] slows it -> rigor
+    % accumulates (force-bearing, stiff). Baseline k3 is re-fit with the gate active,
+    % so the 2mM/8mM ratio of effective k3 is set by K_T_detach (=1 only as MgATP->inf).
+    R3 = R3 .* (MgATP / (MgATP + params.K_T_detach));
+end
 R3m = params.k3m*p3;
 
 % to PT state directly

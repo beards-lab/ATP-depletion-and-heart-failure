@@ -21,6 +21,8 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 | **PassiveForceID** | findings | Justifies direct subtraction of the high-Ca passive trace to isolate F_XB, from the mechanical topology. | [conclusions](PassiveForceID/conclusions.md) |
 | **LowATP_ForceEnhancement** | findings | 2 mM ATP gave ~32–44% more isometric force than 8 mM in the 03/27/2026 data; cross-referenced with literature. | [conclusions](LowATP_ForceEnhancement/conclusions.md) |
 | **LowATP_k2Frontier** | findings | Tests whether reducing `k2` alone reproduces the 2-vs-8 mM signature (relative-ratio scoring). It owns the kinetics (ktr/peak2 at k2×0.40) but over-produces isometric force ~2×; needs a second amplitude lever. | [conclusions](LowATP_k2Frontier/conclusions.md) |
+| **LowATP_3rdState** | findings | A 3rd cross-bridge state (p3) breaks the restretch-transient wall (cost 0.70→0.39); but the config used (kstiff3<kstiff2 + ad-hoc ka) is physiologically unjustified — superseded by LowATP_Mechanisms. | [labdiary](LowATP_3rdState/labdiary.md) |
+| **LowATP_Mechanisms** | findings | Physiologically-justifiable nucleotide mechanisms wired into the active path; the coupled ↓ATP+↑ADP+↑Pi state reproduces the force signature incl. restretch transients (cost 0.555) from concentrations alone. Residual = kinetic timing (t0/ktr-slope). | [conclusions](LowATP_Mechanisms/conclusions.md) |
 
 ## Summaries & recommendations (across analyses)
 
