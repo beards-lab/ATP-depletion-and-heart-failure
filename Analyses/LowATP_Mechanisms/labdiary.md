@@ -71,3 +71,82 @@ a plausible energetic-stress state (elevated ADP/Pi from active ATPase under ATP
   pre-existing restretch-peak overshoot. The coupled metabolic mechanism is the settled answer to
   *which nucleotide effects drive the ATP difference* (force/amplitude); the *restretch kinetics*
   are a distinct, pre-existing model-fit frontier.
+
+### 2026-06-30 — Part A/B: restretch trade-off diagnosed (kSE / kstiff2 / A2-shift)
+8 mM baseline vs data: `restretchSlopeStart` 1256(2-state)/1285(rigor) vs **data 1588** (LOW → kSE
+under-set, confirmed — it's frozen during the `ka=0` passive fit); `peak1` 97/114 vs 89; `peak2`
+92/106 vs 78; `ktr` 66/62 vs 49.
+- **kSE sweep** (fig `results/restretch_tradeoff.png`): kSE×1.5 (≈4800) matches the data slope
+  (1611) BUT raises `peak1` (114→117) AND speeds `ktr` (66→79). kSE↑ fixes the slope, worsens
+  peak1 + ktr.
+- **kstiff2↓** reduces peak1 (the velHS lever) but drops `steady` (it is the force scale): ×0.70 →
+  peak1 87 ✓ but steady 60 (data 77).
+- **c_SE_visc** (`UseViscoelasticSE`) damps peak1 (88→74) + improves vall/ktr BUT **crashes
+  restretchSlope** (1504→268).
+- **`UseA2AttachmentShift` AMPLIFIES, not damps** — peak1 99→110, vall 86→102, peak2→119. The
+  implementation re-attaches strained heads at a lower-strain site (they stay bound) → traps force
+  (matches RestretchMechanisms "valley fills in"). The "hop off to relieve" intuition doesn't match
+  the code (it re-binds). RULED OUT as a damper.
+- **Verdict:** the restretch peak is a genuine 4-way trade-off (slope↑kSE, peak1↓kstiff2,
+  steady↑kstiff2, ktr) — no single lever fixes it. Needs the full `RestretchMechanisms`-style
+  bounded re-optimization (free ka/kd/k1/k2 to compensate) = scoped Part B-full. The pre-existing
+  **ktr-too-fast (66 vs 49)** is the deeper coupled residual underneath.
+
+### 2026-06-30 (cont) — restretch deep-dive: valley / overshoot / low-ATP kSE
+Zoom diagnostic — model restretch = a TALL spike (peak1 115@8mM / 163@2mM vs data ~76/95) + a
+RINGING 2nd bump that settles ABOVE steady; data = small spike + smooth recovery.
+
+![restretch zoom](results/zoom_restretch.png)
+
+**Thread 2 — the post-restretch peak (`ovrsht_dy`):** the visible artifact is the 2nd bump =
+`peak2` (106) **≫ `steady`** (80); the data has peak2≈steady (78≈77). It's a damped-oscillation
+overshoot from synchronized DRX reattachment after the high-strain-detachment valley. Feature-wise
+the model's `ovrsht_dy`/`vall2_dy` ≈ 0 (over-damped settle) while the data has real ± dynamics — but
+the dominant eye-catching error is peak2≫steady. Fix = bring the spike down + damp/spread the
+reattachment.
+
+**Thread 1 — k2-strain-dep + A2-shift (user is right):** my earlier "A2-shift amplifies" was tested
+WITHOUT first resolving the spike. The correct sequence: strong **high-strain k2-detachment** (the
+R2 / `PieceWiseStrainDep2` curve) removes the spike → deep valley; **A2-shift then fills the valley**
+(strained heads hop to a lower-strain site, STAY attached → sustained plateau) = trades the sharp
+peak for duration. NEXT EXPERIMENT: steepen `PieceWiseStrainDep2` at high +s (or a velocity-dependent
+R2 slip bond) to drop peak1 to ~data, then enable `UseA2AttachmentShift` (slope sweep,
+`s_threshold_R=0.0046` locked) to fill the valley; target peak1≈90, shallow valley, plateau≈steady.
+
+**Thread 3 — does low ATP change serial elasticity?** Data `restretchSlope` ratio 1.26 vs model
+1.10. Experiment = scale kSE at 2 mM: **kSE×1.2 matches restretchSlope (1.24≈1.26)** — but most
+likely this is *more attached rigor XBs* stiffening the series path (attached XBs sit in series),
+not a true kSE change. CRUCIALLY **t0 is DECOUPLED**: t0 ratio stays ~2.1 across all kSE (data 1.31).
+So "kSE influences t0" does NOT hold in the model — t0 is a rigor-onset/kinetic delay, not a
+compliance effect. The model under-stiffens at 2 mM (1.10 vs 1.26) → rigor pool/stiffness slightly
+under-represented; closing restretchSlope is easy, but t0 needs a kinetic fix.
+
+![low-ATP kSE vs t0](results/lowatp_kSE_t0.png)
+
+### 2026-06-30 (cont) — Thread 1 result: R2-strain-dep can't isolate the restretch peak
+Steepening `PieceWiseStrainDep2` at the restretch zone (knot3, s≈0.026) drops peak1 (114→83) BUT
+**crashes steady (80→56→42) and explodes ktr (62→157)** — raising R2 anywhere speeds the whole
+cycle, and the restretch-peak strain **overlaps the isometric force-bearing strain**. A2-shift can't
+rescue a crashed baseline. ⇒ R2-strain-dependence does NOT isolate peak1 from steady/ktr. With
+kSE/kstiff2/c_SE_visc/A2-shift/R2-strain-dep ALL trading off, **no single lever fixes the restretch
+peak → it is structural (mean-field synchrony)**. Full synthesis written to `SYNTHESIS.md`.
+
+### 2026-07-01 — Pi without the ktr artifact (user: "Pi pulls it the wrong direction")
+Confirmed: the model's Pi wiring (R12↓ forward + R21↑ reverse stroke) tempers steady but **SPEEDS
+ktr** (0.55→0.63) — a spurious kinetic side effect (the reverse stroke fast-equilibrates P1↔P2).
+Tries:
+- **Pi-FREE (ADP+rigor rebalanced):** steady overshoots 1.24–1.35 (ADP-trap iron law, nothing
+  tempers); ktr nailed 0.54 at MgADP=1.4; cost 1.03. Key: **rigor does NOT slow ktr** (0.95) — the
+  ktr slowdown comes ENTIRELY from ADP-trap, so it can't be decoupled from steady without a temper.
+- **FIX 1 — ktr-neutral Pi** (new flag `UsePiReverseStroke=false`, now default): Pi via forward-
+  stroke inhibition only (R12↓). ktr stays honest (0.56 not 0.63) but tempers steady weakly (1.23);
+  cost 1.07.
+- **FIX 2 — Pi-as-force** (new flag `UsePiForce`): Pi weakens P2 binding force
+  (kstiff2_eff = kstiff2/(1+Pi/K_Pi)), ktr-neutral, spares P3 rigor. At **MgADP=1.6, Pi=0.8: steady
+  1.20 ✓, ktr 0.56 ✓ (BOTH honest), cost 0.98.** Residual now = vall/peak1/t0 (the structural
+  restretch / rigor-onset walls) — no longer MASKED as the old Pi did. (Pi≥3 over-tempers: steady
+  crashes <1.0, since fPi=0.57 at Pi=3.)
+**Conclusion:** user was right — the old Pi faked ktr. The honest Pi (force reduction) fits
+steady+ktr cleanly; the higher cost vs 0.555 is because it exposes rather than masks the restretch/
+timing residuals. New flags: `UsePiReverseStroke` (default off = ktr-neutral), `UsePiForce` (P2
+force reduction). Best HONEST coupled = ADP-trap + rigor + `UsePiForce` (MgADP 1.6, Pi 0.8).

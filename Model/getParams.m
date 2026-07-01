@@ -109,7 +109,9 @@ end
         'UseAtpKah', false, ...   % Direct [ATP] dependence on kah: kah_eff = kah*[ATP]/([ATP]+K_T_kah). Low ATP -> fewer PD heads ready to attach -> lower Ktr.
         'K_T_kah', 4.0, ...       % Km(ATP) for hydrolysis step [mM]. Larger than K_T1: kah more sensitive -> decouples Ktr from Vmax.
         'UseAdpTrap', false, ...   % ADP-trapping (active path): R2 (ADP release P2->P3) *= g2 (=1 at MgADP=0). Elevated [ADP] traps force-bearing P2 -> force up, ktr down.
-        'UsePiReversal', false, ... % Pi power-stroke reversal (active path): R21 *= (1+Pi/K_Pi), R2 *= 1/(1+Pi/K_Pi). No effect at Pi=0. Elevated [Pi] lowers force.
+        'UsePiReversal', false, ... % Pi power-stroke inhibition (active path): R12 *= 1/(1+Pi/K_Pi). No effect at Pi=0. Elevated [Pi] lowers force (Cooke&Pate).
+        'UsePiReverseStroke', false, ... % if true, ALSO enhance reverse stroke R21 *= (1+Pi/K_Pi) — lowers force more but SPEEDS ktr (spurious). Default off = ktr-neutral Pi.
+        'UsePiForce', false, ...   % Pi weakens strong (P2) binding force: kstiff2_eff = kstiff2/(1+Pi/K_Pi). ktr-neutral force reduction; spares P3 rigor. No effect at Pi=0.
         'UseAtpDetach', false, ...  % ATP-limited rigor detachment: R3 (P3->PD) *= MgATP/(MgATP+K_T_detach). Low [ATP] -> rigor (P3) accumulates -> force/stiffness up, ktr down.
         'K_T_detach', 4.0, ...     % Km(ATP) [mM] for rigor detachment; sets the 2mM/8mM ratio of effective k3 (with K_T_detach=4: ratio ~0.5).
         'UseTORNegShift', false, ... XB TOR uses s - s3 instead of s + s3

@@ -176,18 +176,26 @@ p3_1 = dS*sum((s+params.drp3).*p3);
 % (dr1>0 = pre-stroke force; dr1<0 = back-force). dr1=0 (default) recovers the original
 % Σ(s·p1)≈0 exactly. Decouples force-duty (p1+p2) from the p2 detachment that welds ktr<->FV.
 s1 = s + params.dr1;
+% Pi weakens strong (P2) binding force WITHOUT changing kinetics (ktr-neutral): Pi rebinds
+% A.M.ADP -> A.M.ADP.Pi (pre-stroke, low force) while the head stays attached. Scales the P2
+% (strong) force by fPi = 1/(1+Pi/K_Pi); spares P3 rigor force. fPi=1 (off) at Pi=0.
+kf2 = params.kstiff2;  kf2n = params.kstiff2_n;
+if params.UsePiForce
+    fPi = 1/(1 + params.Pi/params.K_Pi);
+    kf2 = kf2*fPi;  kf2n = kf2n*fPi;
+end
 if params.UseNegativeKstiff
     p1_1_pos = dS*sum(s1.*p1.*(s1>=0));
     p1_1_neg = dS*sum(s1.*p1.*(s1<=0));
     p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
     p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
-    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
+    F_active = params.kstiff3*(p3_1) + kf2*(p2_1_pos) + kf2n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
     p1_1 = p1_1_neg + p1_1_pos;
     p2_1 = p2_1_pos + p2_1_neg;
 else
     p1_1 = dS*sum(s1.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
-    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);
+    F_active = params.kstiff3*(p3_1) + kf2*(p2_1) + params.kstiff1*(p1_1);
     % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);
 end
 
@@ -424,7 +432,12 @@ if params.UsePieceWiseStrainDep
         % P2->P1 and reducing the force-bearing post-stroke pool (Cooke & Pate: Pi lowers
         % force). Baseline-preserving at Pi=0.  (f2 = 1/(1+Pi/K_Pi).)
         R12 = R12 .* f2;                     % forward stroke inhibited by product Pi
-        R21 = R21 .* (1 + Pi/params.K_Pi);   % reverse stroke enhanced by Pi
+        if params.UsePiReverseStroke
+            % Enhancing the reverse stroke (P2->P1) also lowers force, but it SPEEDS the
+            % P1<->P2 equilibration -> raises ktr (a spurious kinetic side effect). Off by
+            % default so Pi lowers force via forward-stroke inhibition only (~ktr-neutral).
+            R21 = R21 .* (1 + Pi/params.K_Pi);
+        end
     end
 
 elseif params.UseUniformTransitionFunc
