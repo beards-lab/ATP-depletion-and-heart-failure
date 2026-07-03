@@ -53,7 +53,7 @@ dS = params.dS; % step size
 p1 = PU(1:ss); p1(p1<0) = 0;
 p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
 if params.NumberOfStates == 3
-    p3 = PU(2*ss+1:3*ss);
+    p3 = PU(2*ss+1:3*ss); p3(p3<0) = 0;  % clamp negatives like p1/p2 (prevents 3-state solver stalls)
     Ns = 3; % number of states
 else
     p3 = 0;

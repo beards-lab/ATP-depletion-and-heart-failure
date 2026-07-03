@@ -4,6 +4,52 @@ Goal: best feature-cost match (evalFeatureCost) with emphasis on the **restretch
 features** (`Am`, `peak1_y`, `peak1_dSL`, `vall_y`, `peak2`, `vall2_dy`) without
 degrading FV or the physiology output bounds. Base = `params/params_reseeded_regavail_opt2.m`.
 
+## 2026-07-03 — Wall-breaking + redundancy (USER fn, ovrsht|1 & ktr|2 at full weight)
+Wall status (all tested, not asserted): ovrsht_dy → k2-coupled, reaches ~1.3 (data). FV →
+FIXED by velocity mechanisms. ktr → k2-driven, pushable 81→~57 but ktr=49 needs k2≈50
+(below the physiological floor 100) AND deepens vall2 — a QUANTIFIED tradeoff, not a wall.
+peak1_y (119 vs 96) = fast ~2 ms elastic spike, kstiff-coupled to steady, NOT detachment-
+fixable (R1D too slow). Best velGauss-both config = 9.72 (params_restretch_best.m).
+
+REDUNDANCY (velGauss vs registration-availability, both flatten FV):
+- regavail OFF, velGauss only → FV steepens [1 .52], steady balloons to 128 (A0 floor was
+  holding isometric down), cranking velGauss to compensate CRASHES the ODE (stiff).
+- velGauss OFF, regavail only → FV recovers to [1 .92 .60] (shoulder MATCHES data) with
+  A0+ka tuning, no crashes. Best regavail-only = 11.02.
+DECISION: **keep registration-availability, DROP velGauss.** velGauss is redundant, ODE-
+unstable (the optimizer's timeouts), less defensible (arbitrary Gaussian vs target-zone
+story). ~1.3 gap vs 9.72 is unoptimized hand-tuning; the stable surface should close it.
+=> Clean 2-state seed saved: `params/params_2state_seed.m` (velGauss OFF, cost 11.02,
+   FV=[1 .92 .60 .30 .11], ktr 69, peak1y 106).
+
+NEXT: (a) 3-state variant `params/params_3state_seed.m` (low-force slow-detaching 3rd state
+to break ktr/peak1/vall_y walls at the source); (b) parameterized optimizer `optimizeFeatures.m`
++ RunOptim2State.m / RunOptim3State.m (distinct tag outputs) to run 2-state & 3-state opt in
+two MATLAB instances. NOTE: prior RunRestretchOptim saved a diverged snapshot (174 > seed
+9.72) — accept/save logic being fixed to never persist worse-than-incumbent.
+
+## 3-state investigation (topology + collapse diagnosis)
+Topology (NS=3): p1 --k1--> p2 --k2(R2 shape)--> p3 --k3--> (PT algebraic) --> PD --ka--> p1.
+So p2's ONLY exit is via p3 (no direct p2->detach). alpha3/s3/dr3 are DEAD in the active ODE
+(dPUdT_CombinedTransitions); real p3 knobs = k3, k3m, kstiff3(=14000, low-force), drp3.
+- Naive flip / ka=160 -> NaN (force fit fails). Feasibility sweep: as k2,k3 rise it runs but
+  **FV tail collapses to 0** (force->0 by v=2). ktr=49 reachable (k2=90,k3=200) but FV=[1 .81 .22 0 0].
+- ROOT CAUSE: the R2 strain shape (PieceWiseStrainDep2, ramps up at NEGATIVE/shortening strain)
+  was tuned as 2-state DETACHMENT; as the p2->p3 FEED it drains force-bearing p2 during shortening
+  -> no force at velocity -> FV tail = 0. FIX = flatten R2 neg-strain knots (__5/6/7). Was testing
+  this when the MCP MATLAB session STALLED (a 3-state config hung the integrator).
+CODE FIXES APPLIED (offline, need MATLAB to validate):
+  1. dPUdT_CombinedTransitions.m: added p3 negativity clamp `p3(p3<0)=0` (p1/p2 had it, p3 didn't
+     -> likely the stall/NaN source).
+  2. optimizeFeatures.m: ENABLED surrogateopt (was commented out -> was only fminsearch-from-g=1!);
+     production SURR_EVALS default 0->100; fminsearch headless (no plot) for parallel instances.
+  3. RunOptim3State.m pool: dropped dead s3, added drp3 + R2 feed-shape knots __5/6/7 (the FV-tail
+     lever); kstiff3 added to compulsory.
+STATUS: 2-state optim READY (params_2state_seed.m 11.02 + optimizeFeatures + RunOptim2State).
+3-state seed NOT yet saved — params_3state_DRAFT.m still collapses; must first hand-find a
+non-collapsed config (flatten R2 __5/6/7) and save as params/params_3state_seed.m before RunOptim3State.
+
+
 Ground rules (from PI): may relax parameter/physiology bounds if justified; may
 manipulate piecewise strain X (knot positions) and Params (knot values)
 separately; may reweight `params0.fn`. Primary cost = features.

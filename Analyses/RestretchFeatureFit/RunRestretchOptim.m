@@ -37,9 +37,9 @@ root = fullfile(fileparts(mfilename('fullpath')), '..', '..');
 addpath(genpath(root));
 LoadData;
 
-STATE_FILE = fullfile(root, 'params', 'restretchopt_state.mat');
-SNAP_BEST  = fullfile(root, 'params', 'params_restretch_opt.m');
-optimTag   = 'restretchopt';
+STATE_FILE = fullfile(root, 'params', 'restretchopt2_state.mat');
+SNAP_BEST  = fullfile(root, 'params', 'params_restretch_opt2.m');
+optimTag   = 'restretchopt2';
 
 % ---- tunables of the OPTIMIZER itself ----
 DEBUG = false;              % <<< true = ~10 min smoke test; false = production run >>>
@@ -52,9 +52,9 @@ else
     % Production: TIME_BUDGET_HRS is the real stopper — N_ROUNDS is just a
     % high cap so the wall-clock budget governs.
     N_ROUNDS        = 1000;
-    TIME_BUDGET_HRS = 8;   % <<< set the wall-clock budget here (hours) >>>
+    TIME_BUDGET_HRS = 28;   % <<< set the wall-clock budget here (hours) >>>
     SURR_EVALS      = 0;
-    SIMPLEX_EVALS   = 120;
+    SIMPLEX_EVALS   = 60;
 end
 N_DRAW         = 12;        % params optimised per round (incl. compulsory)
 STALL_LIMIT    = 2;        % non-improving rounds before a random kick
@@ -81,6 +81,7 @@ params0.EvalFeatures = true; params0.BreakOnODEUnstable = false; params0.MaxRunT
 params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
 params0.RunSlackSegments = 'AllPar';
 params0.FV_velocities = -[0 0.5 1 2 4];
+params0.MaxRunTime = 30;
 
 % --- feature list: hardcoded per spec (verbatim from params_restretch_best) ---
 params0.fn = {'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', 'ktr_rmse|0-.5|.1', ...
@@ -136,11 +137,13 @@ bounds = struct();
 %% -------- incumbent state -------------------------------------------------
 if RESUME && exist(STATE_FILE, 'file')
     S = load(STATE_FILE); state = S.state;
-    params0 = state.params;            % already baked
+    if ~isfield(state,'best_params'); state.best_params = state.params; end
+    params0 = state.best_params;        % resume from the BEST, not a kicked point
     fprintf('Resumed at round %d, best cost %.4f\n', state.round, state.best_cost);
 else
     state = struct();
-    state.params    = params0;
+    state.params      = params0;   % working point (may be kicked)
+    state.best_params = params0;   % the incumbent BEST (only updated on accept)
     tic
     state.best_cost = evaluateBakersExp(ones(1,1), setMods(params0, {}), true, true);
     toc
@@ -207,9 +210,10 @@ for r = state.round+1 : N_ROUNDS
         pr.g = g_round;
         state.params    = getParams(pr, g_round, false, true);   % bake in
         state.params.mods = {}; state.params.g = [];
+        state.best_params = state.params;   % <-- persist the BEST (survives kicks)
         state.best_cost = f_round;
         state.stall     = 0;
-        writeParamsToMFile(SNAP_BEST, state.params);
+        writeParamsToMFile(SNAP_BEST, state.best_params);
         if exist('captureOptimIter','file')
             try; captureOptimIter(setMods(state.params,{}), r, f_round, state.best_cost, optimTag); catch; end
         end
@@ -218,12 +222,13 @@ for r = state.round+1 : N_ROUNDS
         state.stall = state.stall + 1;
         fprintf('  no improvement (%.4f >= %.4f), stall=%d\n', f_round, state.best_cost, state.stall);
         if state.stall >= STALL_LIMIT
-            % random kick the incumbent within bounds, then continue
-            kp = state.params;
+            % Random-kick a copy of the BEST (never the best itself) to escape
+            % the basin. state.best_params is left untouched.
+            kp = state.best_params;
             kmods = pool(randperm(numel(pool), min(N_DRAW, numel(pool))));
             kp.mods = kmods;
             kp.g = 1 + KICK_FRAC*(2*rand(1,numel(kmods)) - 1);
-            state.params = getParams(kp, kp.g, false, true);
+            state.params = getParams(kp, kp.g, false, true);   % working point only
             state.params.mods = {}; state.params.g = [];
             state.stall = 0;
             fprintf('  >> STALL kick applied to: %s\n', strjoin(kmods, ', '));
@@ -235,9 +240,9 @@ for r = state.round+1 : N_ROUNDS
     save(STATE_FILE, 'state');
 end
 
-% Always leave a usable result on disk (a run must produce a snapshot even
-% if no round improved on the seed).
-writeParamsToMFile(SNAP_BEST, state.params);
+% Always leave the BEST result on disk (NEVER state.params, which may be a
+% kicked/exploratory working point that is worse than the incumbent).
+writeParamsToMFile(SNAP_BEST, state.best_params);
 save(STATE_FILE, 'state');
 fprintf('\n=== Done. Best cost %.4f. Snapshot: %s ===\n', state.best_cost, SNAP_BEST);
 
