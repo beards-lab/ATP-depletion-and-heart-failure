@@ -658,7 +658,15 @@ end
 % Driven by the IMPOSED vel (params.Vums). Appended as the final state (Ns*ss+8);
 % outputs/rates are deliberately left unchanged to avoid shifting downstream indices.
 if params.UseRegistrationAvailability
-    A_inf  = params.A0 + (1 - params.A0) * abs(vel) / (abs(vel) + params.v_ref_reg);
+    % Speed that drives availability. Default: |vel| (symmetric). Shortening-only
+    % (max(0,-vel)) means restretch/lengthening does NOT boost attachment, so the
+    % post-restretch undershoot is preserved while the FV (shortening) shoulder is kept.
+    if isfield(params, 'RegAvailShorteningOnly') && params.RegAvailShorteningOnly
+        vreg = max(0, -vel);
+    else
+        vreg = abs(vel);
+    end
+    A_inf  = params.A0 + (1 - params.A0) * vreg / (vreg + params.v_ref_reg);
     dA_reg = (A_inf - A_reg) / params.tau_reg;
     f = [f; dA_reg];
 end
