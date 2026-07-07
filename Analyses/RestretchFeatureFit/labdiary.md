@@ -49,6 +49,32 @@ STATUS: 2-state optim READY (params_2state_seed.m 11.02 + optimizeFeatures + Run
 3-state seed NOT yet saved — params_3state_DRAFT.m still collapses; must first hand-find a
 non-collapsed config (flatten R2 __5/6/7) and save as params/params_3state_seed.m before RunOptim3State.
 
+## Handoff state (execution infra)
+Optimizer mode set to USER spec: cfg.SURR_EVALS=0 (surrogate OFF, pure fminsearch on random-drawn
+subsets), cfg.KICK_FRAC=0 (no stall-kick; non-improving round just draws a fresh subset). Files:
+- Analyses/RestretchFeatureFit/optimizeFeatures.m  (function optimizeFeatures(cfg); accept/save fixed:
+  never persists worse-than-incumbent; final write from state.best_params with assert)
+- RunOptim2State.m (tag opt2state, seed params_2state_seed.m)  -- READY
+- RunOptim3State.m (tag opt3state, seed params_3state_seed.m [MISSING], pool incl. R2 __5/6/7 + k3/k3m/kstiff3/drp3)
+- costOfSnap.m (helper: eval a snapshot+override struct -> total cost)
+PARALLEL: confirmed safe -- every write is tag-derived (opt2state_* vs opt3state_*), figures per-process,
+seeds/data/code read-only. Two `matlab -batch RunOptim2State` / `RunOptim3State` in separate instances
+are isolated. CPU caveat: 2x parpool('Threads',5)=10 threads; drop to 4 each if <10 cores.
+EXECUTION NOTE: MCP matlab session stalls repeatedly (esp. on 3-state stiff ODE); agents that launch
+background matlab tend to END before it finishes. RELIABLE PATTERN = launch `matlab -batch <driver>` as a
+detached process and read the OUTPUT FILES (params/<tag>_opt.m, <tag>_state.mat) -- NOT the .log
+(-batch buffers stdout). 2-state DEBUG launched as bg task; awaiting opt2state_* files.
+
+## 3-state: deeper diagnosis (why seed-search keeps failing)
+The FV collapse AND the ODE stiffness both trace to ONE thing: the p2->p3 feed uses R2 = k2 x
+PieceWiseStrainDep2(strain), and that SAME shape/code path is the 2-state DETACHMENT profile (ramps to
+50 at strain extremes). As a feed it (a) drains force-bearing p2 during shortening -> FV tail=0, and
+(b) creates fast/stiff transients at strain extremes -> slow integrator. Flattening only __5/6/7 (neg
+knots) was not enough in the timed-out run. NEXT IDEAS (need a working matlab): (i) flatten the ENTIRE
+PieceWiseStrainDep2 to ~1 (strain-independent p2->p3 feed) so FV is shaped only by regavail/R1D/k3;
+(ii) or a code change giving p2->p3 its OWN gentle strain shape separate from detachment. 3-state is a
+genuine R&D effort (ODE stiffness makes each iter slow), not a quick seed search.
+
 
 Ground rules (from PI): may relax parameter/physiology bounds if justified; may
 manipulate piecewise strain X (knot positions) and Params (knot values)

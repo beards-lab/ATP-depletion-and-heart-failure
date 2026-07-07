@@ -41,6 +41,6 @@ cfg.KICK_FRAC  = 0;   % no stall-kick; a non-improving round just draws a fresh 
 
 % <<< true = ~10 min smoke test; false = production run (set DEBUG=false
 %     for production) >>>
-cfg.DEBUG = true;
+cfg.DEBUG = false;
 
 optimizeFeatures(cfg);
