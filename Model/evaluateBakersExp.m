@@ -1,6 +1,9 @@
-function [Et E] = evaluateBakersExp(g, params0, limitNegative)
+function [Et E] = evaluateBakersExp(g, params0, limitNegative, plotDebug)
 if nargin < 3
     limitNegative = true;
+end
+if nargin < 4
+    plotDebug = false;
 end
 % Evaluate Bakers' problem
 if limitNegative && any(g<0)% || ...
@@ -10,7 +13,12 @@ if limitNegative && any(g<0)% || ...
     return;
 end
 
-params0.PlotEachSeparately = false;
+if ~plotDebug
+    params0.PlotEachSeparately = false;
+    params0.PlotFeatureFitting = false;
+else
+    params0.PlotEachSeparately = true;
+end
 % important to start with the g!!
 % params0 = getParams(params0, g, true, true);
 params0.g = g;
@@ -38,6 +46,10 @@ try
     % use feature costs instead
     [cost, ~, cost_raw] = evalFeatureCost(features_data, features_model, params0.fn);
     Et = sum(cost);
+    if plotDebug
+        plotFeatures(features_data, features_model, [], params0.fn);
+        disp(Et);
+    end
     
     if Et == 0
         % sum fin wong

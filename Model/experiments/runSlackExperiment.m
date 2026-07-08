@@ -330,7 +330,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 
     if params.EvalFeatures
         if isempty(features_data) && recalculateDataFeats
-            features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], true);
+            features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], true, true);
             % Print extracted values to console so they can be pasted into the else branch below
             fieldNames = fieldnames(features_data);
             for k = 1:numel(fieldNames)

@@ -53,7 +53,7 @@ dS = params.dS; % step size
 p1 = PU(1:ss); p1(p1<0) = 0;
 p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
 if params.NumberOfStates == 3
-    p3 = PU(2*ss+1:3*ss);
+    p3 = PU(2*ss+1:3*ss); p3(p3<0) = 0;  % clamp negatives like p1/p2 (prevents 3-state solver stalls)
     Ns = 3; % number of states
 else
     p3 = 0;
@@ -715,7 +715,15 @@ end
 % Driven by the IMPOSED vel (params.Vums). Appended as the final state (Ns*ss+8);
 % outputs/rates are deliberately left unchanged to avoid shifting downstream indices.
 if params.UseRegistrationAvailability
-    A_inf  = params.A0 + (1 - params.A0) * abs(vel) / (abs(vel) + params.v_ref_reg);
+    % Speed that drives availability. Default: |vel| (symmetric). Shortening-only
+    % (max(0,-vel)) means restretch/lengthening does NOT boost attachment, so the
+    % post-restretch undershoot is preserved while the FV (shortening) shoulder is kept.
+    if isfield(params, 'RegAvailShorteningOnly') && params.RegAvailShorteningOnly
+        vreg = max(0, -vel);
+    else
+        vreg = abs(vel);
+    end
+    A_inf  = params.A0 + (1 - params.A0) * vreg / (vreg + params.v_ref_reg);
     dA_reg = (A_inf - A_reg) / params.tau_reg;
     f = [f; dA_reg];
 end

@@ -252,7 +252,7 @@ bounds.k_1.lb = 0; bounds.k_1.ub = 500; bounds.k_1.weight = 1;
 %   to isolated-S1 α biochemistry (~350 to >1000). Model default k2≈419.
 %   Weight kept at 10 (Tier B) ONLY because the P2->P3 state ↔ measurable mapping
 %   is ambiguous (biochemical ADP release vs effective fibre detachment).
-bounds.k2.lb = 100; bounds.k2.ub = 1500; bounds.k2.weight = 10;
+bounds.k2.lb = 50; bounds.k2.ub = 1500; bounds.k2.weight = 10;
 
 % k2 reverse k_2 [s^-1] (P2 re-attachment / ADP rebinding to post-stroke state).
 % Second-order ADP on-rate k+AD ≈ 2.8–3.5 uM^-1 s^-1 for mouse/rat α (Lowey

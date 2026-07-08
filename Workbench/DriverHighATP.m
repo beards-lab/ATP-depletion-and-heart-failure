@@ -21,7 +21,7 @@ PARAM_FILE = 'params_reseeded_regavail_opt2';     % <-- the high-ATP best
 
 % loadParams sandboxes the file's internal `params0`, so the variable name here is safe.
 params0 = getParams(loadParams(PARAM_FILE), [], true, false);
-params0.RunForceVelocity=false; params0.RunKtr=false; params0.RunStairs=false;
+params0.RunForceVelocity=true; params0.RunKtr=false; params0.RunStairs=false;
 params0.RunForceVelocityTime=false; params0.RunForceLengthEstim=false; params0.RunSlack=true;
 params0.EvalFeatures=true; params0.recalculateDataFeats=false;
 params0.velocitytableonfile='protocol_03_27_2026_8mM_slack.mat';
@@ -39,14 +39,16 @@ RunBakersExp;
 sgtitle('High-ATP (8 mM) best: model vs data (slack-restretch)');
 
 figure(232);
-if ~exist(features_ghost)
+if ~exist('features_ghost', 'var')
     features_ghost = features_model;
 end
 cost = plotFeatures(features_data, features_model, features_ghost, params0.fn)
 
 
-% feature comparison vs 8 mM data
-f8 = load(fullfile(root,'data','protocol_03_27_2026_8mM_slack.mat')).features_data;
+%% feature comparison vs 8 mM data
+% f8 = load(fullfile(root,'data','protocol_03_27_2026_8mM_slack.mat')).features_data;
+f8 = features_data;
+fm = features_model;
 m  = @(x) mean(double(x),'omitnan');
 fprintf('\n%-20s %10s %10s\n','feature','model','data');
 for f = {'steady','A','Am','ktr','peak1_y','vall_y','peak2','restretchSlopeStart','t0'}
