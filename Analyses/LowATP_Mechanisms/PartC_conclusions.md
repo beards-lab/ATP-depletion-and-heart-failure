@@ -51,6 +51,38 @@ mechanism captures the isometric/steady force gain physiologically; what it gets
   slope + t0 slope together).
 - **D. ktr side quest (classic vs slack)** still pending — SRX timescale separation test.
 
+## Part A (2026-07-08) — constant fit + the decisive force↔onset weld
+
+**Correction to Part C attribution:** `opt2state_v2_opt.m` is **NumberOfStates=2** — there is NO rigor
+(P3) state, so `UseAtpDetach` (scales R3=k3·p3) is **completely inert** (a K_T_detach grid gave identical
+cost at 4/6/8/12). The low-ATP mechanism here is therefore **`UseAdpTrap` (slows P2 detachment R2 by
+g2=(MgATP/K_T1)/(MgADP/K_D+MgATP/K_T1)) + `UsePiForce`**. The peak1/t0 residuals are the ADP-trap, NOT
+rigor. `UseAdpTrap` at g2=0.33 ≈ a **physiological k2×0.33** → it inherits the k2-frontier bimodality.
+
+**K_D × K_Pi grid (`results/partA_force_t0_weld.png`, `RunAdpTrapSweep.m`):** best compromise cost
+**0.69** (K_D=0.35, K_Pi=6), down from 1.34. But the sweep exposes the wall (K_Pi=4 slice):
+
+| K_D | steady ratio (force) | t0 ratio (onset) | peak1 ratio |
+|---|---|---|---|
+| 0.10 | 1.28 | 4.2 | 1.9 |
+| **0.194** | **1.18 ✓** | 2.75 | 1.57 |
+| 0.35 | 1.09 | 2.0 | 1.35 |
+| 0.60 | 1.02 | 1.55 | 1.19 |
+| **1.0** | 0.96 | **1.29 ✓** | 1.09 |
+
+*(targets: force 1.18, onset ~1.26)*. **Force and onset are welded to one knob and anti-correlate.**
+The trap strength that gives +18% force (K_D≈0.19) forces onset to 2.75× (data 1.26); the K_D that fixes
+onset (≈1.0) gives ZERO force gain. They want K_D **5× apart** — no constant combo satisfies both.
+
+**Structural conclusion (the headline).** A 2-state cross-bridge cycle uses the SAME detachment step (R2)
+to (a) hold force and (b) gate redevelopment onset — so raising low-ATP force via ADP-trapping *necessarily*
+over-slows onset. Data demands force UP with onset only mildly changed → the cycle cannot do both. The
+resolution is a **3rd low-force, slow-detaching state** (rigor/A.M-like) that bears force WITHOUT gating
+the P1↔P2 turnover, decoupling force from onset. This is [[mech-tradeoff]]'s "3rd slow-detaching state",
+now proven necessary from the ATP data itself (not just the 8 mM iron law). Next: build/fit a 3-state
+baseline (`params/params_3state_DRAFT.m`) and re-run the coupled ATP with rigor engaged (UseAtpDetach live).
+
 ## Reproduce
 `cd(root); addpath(genpath('.'))`, run `Analyses/LowATP_Mechanisms/RunCoupledCleanBaseline.m`
 (needs `data/protocol_03_27_2026_{2,8}mM_slack.mat`). Outputs `results/lowatp_partC.mat`.
+Part A sweep: `RunAdpTrapSweep.m` → `results/partA_force_t0_weld.png`.
