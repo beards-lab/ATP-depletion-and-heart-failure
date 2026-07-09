@@ -8,18 +8,40 @@ MATLAB codebase implementing a cardiac cross-bridge (sarcomere) model to study A
 
 ## Running MATLAB
 
-MATLAB is installed on Windows and accessible from WSL via interop. Use this command:
+**Use the MATLAB MCP server — it is the primary, reliable execution path.** The MCP tools run against
+`C:\Program Files\MATLAB\R2023a` in `nodesktop` mode and keep the MATLAB session alive between calls:
 
-```bash
-"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe" -batch "your_matlab_code_here"
+- `mcp__matlab__run_matlab_file` — run a `.m` script/function file (preferred for anything non-trivial).
+- `mcp__matlab__evaluate_matlab_code` — run inline commands / snippets.
+- `mcp__matlab__check_matlab_code` — static analysis of a `.m` file.
+- `mcp__matlab__run_matlab_test_file` — run a MATLAB unit-test file.
+
+The MCP does **not** guarantee a persistent path/workspace across calls, and its parpool workers cache
+compiled code — so edits to model files are silently ignored until the pool is refreshed. At the start of a
+fresh session, and after editing any model/param file, run:
+
+```matlab
+cd('C:\home\git\ATP-depletion-and-heart-failure'); addpath(genpath('.'));
+refreshPool(5);   % clears stale compiled code + (re)starts a fresh pool of 5 workers
 ```
 
-To run a script with the repo on the MATLAB path:
-```bash
-"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe" -batch "cd('C:\home\git\ATP-depletion-and-heart-failure'); addpath(genpath('.')); your_script_or_command"
+Load parameter snapshots with `loadParams` — **never** `run`/`eval` a snapshot in the base workspace, or a
+stale `params0` leaks fields and default values silently override the snapshot:
+
+```matlab
+params0 = getParams(loadParams('params_2state_seed'), [], true, false);
 ```
 
-Note: MATLAB startup takes ~10–20 seconds. `-batch` mode runs non-interactively and exits when done. R2025b is also installed but R2023a is confirmed working.
+Both helpers live in `Auxiliary/`.
+
+**Shell fallback only (the Bash tool is unreliable in this environment — prefer the MCP).** MATLAB can also
+be launched non-interactively from a shell; startup takes ~10–20 s and `-batch` exits when done:
+
+```bash
+"/mnt/c/Program Files/MATLAB/R2023a/bin/matlab.exe" -batch "cd('C:\home\git\ATP-depletion-and-heart-failure'); addpath(genpath('.')); your_command"
+```
+
+R2025b is also installed; R2023a is the configured/confirmed version.
 
 ## Running the Model
 

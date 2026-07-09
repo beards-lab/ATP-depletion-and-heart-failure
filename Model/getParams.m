@@ -266,7 +266,11 @@ end
     params0.k1  = 40.116;%
     params0.k_1 = 17.103;%
     params0.k2  = 419.39;
-    params0.k_2 = 2.7901; 
+    params0.k_2 = 2.7901;
+    params0.kA2re = 0;   % A2 re-attachment rate: direct PT->p2 flux during restretch (UseA2Reattaching). 0 = off/inert.
+    params0.dA2re = 0;   % landing strain (um) for A2-re-attached heads; 0 = attach at zero strain, carried +ve by the ongoing stretch.
+    params0.kA2hop = 0;  % A2 strained-head HOP rate [1/(um.s)]: high-strain p2 heads detach and re-land at dA2re during restretch (peak relief). 0 = off.
+    params0.sA2hop = 0.005; % strain threshold (um) above which p2 heads hop (only used when kA2hop>0).
     params0.k3  = 44.255;%;
     params0.k3m = 0;
     params0.drp3 = 0.01;

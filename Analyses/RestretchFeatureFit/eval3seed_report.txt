@@ -1,0 +1,15 @@
+3-state seedB: NoS=3 UseKstiff3=1 alpha3=120 s3=0 k3=44.3 kstiff3=22000 drp3=0.020
+RAN OK: cost=7355.2392  elapsed=63s
+ktr      = [26.5   60.2  129.8   55.7   56.0]  (data ~49)
+FV_fnorm = [1.000 0.671 0.413 0.152 0.043]  (data [1 .92 .66 .32 .11]; COLLAPSE if tail ~0)
+peak1_y  = [NaN    NaN    NaN    NaN    NaN]  (data ~[96 94 90 89 77])
+vall_y   = [NaN    NaN    NaN    NaN    NaN]  (data ~[77 75 72 70 61])
+steady   = [393.2  469.2  535.5  597.7  241.7]  (data ~[80 80 81 81 64])
+XTOR=10.70 XTOR_vmax=27.49 SRX_ss=-0.323 att_ss(p1+p2)=0.128
+top residuals:
+  steady|50                                  6311.0505
+  peak2|5                                    670.5795
+  A|50                                       141.5728
+  ktr_rmse|0-.5|.1                           91.0143
+  peak1_y|10                                 50.0000
+  vall_y|10                                  50.0000
