@@ -477,13 +477,23 @@ else
     end
 end
 
-R3 = params.k3*p3;
-if params.UseAtpDetach
-    % ATP binding drives rigor (P3 = A.M) detachment; low [ATP] slows it -> rigor
-    % accumulates (force-bearing, stiff). Baseline k3 is re-fit with the gate active,
-    % so the 2mM/8mM ratio of effective k3 is set by K_T_detach (=1 only as MgATP->inf).
-    R3 = R3 .* (MgATP / (MgATP + params.K_T_detach));
-end
+% p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).
+% The factor is FLOORED at 1: base turnover k3 at/above s3 (so force-bearing p3
+% at positive operating strain still detaches at k3 and cannot accumulate), and
+% ENHANCED (fast detachment) for s<s3 -- post-stroke heads dragged back during
+% shortening, providing the velocity-dependent FV force drop that R2 gave in
+% 2-state. It never suppresses turnover below k3. alpha3==0 => factor==1 =>
+% legacy flat R3 = k3*p3 exactly (backward compatible).
+
+% older code
+%if params.UseAtpDetach
+%    % ATP binding drives rigor (P3 = A.M) detachment; low [ATP] slows it -> rigor
+%    % accumulates (force-bearing, stiff). Baseline k3 is re-fit with the gate active,
+%    % so the 2mM/8mM ratio of effective k3 is set by K_T_detach (=1 only as MgATP->inf).
+%    R3 = params.k3*p3; .* (MgATP / (MgATP + params.K_T_detach));
+%end
+R3 = params.k3*p3 .* min(MAX_RATE, max(1, exp(-params.alpha3*(s - params.s3))));
+
 R3m = params.k3m*p3;
 
 % to PT state directly
@@ -585,17 +595,9 @@ else
 end
 
 
-if params.UseA2Reattaching
-    [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) + params.dr, params.dS, params.ss);
-    RT2 = params.k_2*PT;
-    dp2(s_i0_a2) = dp2(s_i0_a2) + s_i0k*(RT2/dS); % attachment
-    dp2(s_i1_a2) = dp2(s_i1_a2) + (1-s_i0k_a2)*(RT2/dS); % attachment    
-    % PT state is calculated as a complement of all states to 1, so we do
-    % not have to specify the outflow
-    % PT = ...
-else
-    RT2 = 0;
-end
+% UseA2Reattaching flux is applied BELOW, after dp2 is defined (the original
+% in-place version here referenced dp2 and s_i0k before either existed, so the
+% mechanism could never actually run). See the governing-flows section.
 
 if params.UseA2MechanicalRecocking
     R2D = params.k2d*p2.*(s > params.drmr);
@@ -617,6 +619,39 @@ dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 dp3 = - R3 + R3m + R2;
+
+% A2 re-attachment during restretch (UseA2Reattaching): ATP-cocked heads (PT)
+% bind DIRECTLY into the strong post-stroke state p2 at strain dA2re (default 0)
+% and are then carried to positive strain by the ongoing stretch -- adding force
+% through the restretch/valley phase. A "jump to the next available actin site"
+% during lengthening. Unlike catch bond (which freezes existing strained bridges,
+% coupling valley<->peak), this adds NEW low-strain heads. Gated to lengthening
+% (vel>0) so isometric / FV / shortening behaviour is byte-identical when off or
+% contracting; fully inert when kA2re=0. RT2 = kA2re*PT is the PT->p2 flux (PT is
+% the complementary pool, so no explicit outflow term is needed).
+RT2 = 0;
+if params.UseA2Reattaching && vel > 0
+    % landing bin for re-attached / hopped heads (strain dA2re, default 0)
+    [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) - params.dA2re, params.dS, params.ss);
+    % (a) VALLEY FILL: unattached ATP-cocked heads (PT) bind directly into p2 at
+    %     low strain, then are carried +ve by the stretch.
+    if params.kA2re > 0
+        RT2 = params.kA2re * PT;
+        dp2(s_i0_a2) = dp2(s_i0_a2) + s_i0k_a2       * (RT2/dS);
+        dp2(s_i1_a2) = dp2(s_i1_a2) + (1 - s_i0k_a2) * (RT2/dS);
+    end
+    % (b) PEAK RELIEF (the hop / "jump to next site"): high-strain p2 heads
+    %     detach FASTER as strain grows past sA2hop (rate ramps with s), and
+    %     re-appear at the low-strain landing bin -> caps the restretch spike
+    %     (peak1_y/peak1_dSL) while conserving p2 mass. Only during lengthening.
+    if params.kA2hop > 0
+        R_hop   = min(MAX_RATE, params.kA2hop * max(0, s - params.sA2hop)) .* p2;
+        dp2     = dp2 - R_hop;                         % leave high strain
+        hopmass = sum(R_hop) * dS;                     % total hopped mass
+        dp2(s_i0_a2) = dp2(s_i0_a2) + s_i0k_a2       * (hopmass/dS);
+        dp2(s_i1_a2) = dp2(s_i1_a2) + (1 - s_i0k_a2) * (hopmass/dS);
+    end
+end
 
 
 % if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation

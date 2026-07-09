@@ -1,38 +1,55 @@
-function refreshPool(nThreads)
-%REFRESHPOOL Restart the parallel pool so workers pick up current code.
+function refreshPool(n)
+%REFRESHPOOL  Clear stale compiled code and (re)start a fresh parallel pool.
 %
-%   Thread-based parpool workers ('Threads') cache function code in memory.
-%   After editing a Model function mid-session, existing workers keep running
-%   the OLD code -- there is no automatic invalidation, and functions
-%   dispatched via parfeval (e.g. Model/experiments/runSlackExperiment.m) will
-%   silently use stale logic until the pool is restarted.
+%   REFRESHPOOL() clears the client-side compiled-code cache so that edits to
+%   model files (e.g. dPUdT_CombinedTransitions.m or a param snapshot) take
+%   effect, then deletes any existing parallel pool and starts a fresh one with
+%   the default local profile size. Parpool workers keep their own copy of
+%   compiled code, so without restarting them, edits made during a session are
+%   silently ignored — a recurring foot-gun in this project.
 %
-%   REFRESHPOOL deletes any existing pool and starts a fresh 'Threads' pool,
-%   and calls rehash so the client session also sees any new/changed files.
+%   REFRESHPOOL(N) starts the fresh pool with N workers.
+%   REFRESHPOOL(0) clears the code cache and shuts the pool down without
+%   starting a new one.
 %
-%   Usage:
-%       refreshPool();      % default 5 threads
-%       refreshPool(8);
+%   Requires the Parallel Computing Toolbox for the pool steps; without it, the
+%   code cache is still cleared and the function returns quietly.
 %
-%   Call this at the top of run scripts, after addpath/genpath, any time you
-%   may have edited Model code since the pool was last started.
-%
-%   See also: parpool, gcp, rehash
+%   See also: loadParams, parpool, gcp, pctRunOnAll
 
-    if nargin < 1 || isempty(nThreads)
-        nThreads = 5;
+if nargin < 1 || isempty(n)
+    n = -1;   % sentinel: use the default local pool size
+end
+
+% (1) Clear client-side compiled code so edits to .m files take effect.
+clear functions %#ok<CLFUNC>
+rehash
+
+% No Parallel Computing Toolbox -> nothing further to do.
+if exist('parpool', 'file') ~= 2
+    return;
+end
+
+% (2) Delete any existing pool; its workers cache their own stale code.
+existing = gcp('nocreate');
+if ~isempty(existing)
+    delete(existing);
+end
+
+if isequal(n, 0)
+    return;   % caller asked for no pool
+end
+
+% (3) Start a fresh *process*-based pool. Process pools (not thread pools) are
+%     required for UseParallel optimizers, which silently no-op on a thread pool.
+try
+    if n < 0
+        parpool('local');
+    else
+        parpool('local', n);
     end
-
-    try
-        p = gcp('nocreate');
-        if ~isempty(p)
-            delete(p);
-        end
-        parpool('Threads', nThreads);
-    catch ME
-        warning('refreshPool:noParallel', ...
-            'Could not (re)start parallel pool (%s). Continuing without it.', ME.message);
-    end
-
-    rehash;
+catch err
+    warning('refreshPool:parpoolFailed', ...
+        'Could not start parpool: %s', err.message);
+end
 end

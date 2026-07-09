@@ -33,3 +33,5 @@ data/
 _archive/
 tools/*.exe
 /resources/
+*.log
+*.err

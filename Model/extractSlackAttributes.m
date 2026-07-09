@@ -415,7 +415,9 @@ SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
                 SRD_ss = zeros(size(out.SR(mask_ss)));
                 if isfield(out, 'SRD'); SRD_ss = out.SRD(mask_ss); end
                 feats.SRX_ss      = mean(out.SR(mask_ss) + SRD_ss, 'omitnan');
-                feats.attached_ss = mean(out.p1_0(mask_ss) + out.p2_0(mask_ss), 'omitnan');
+                p3_ss = 0;  % 3-state: include the post-stroke p3 population in attached fraction
+                if isfield(out, 'p3_0') && ~isempty(out.p3_0); p3_ss = out.p3_0(mask_ss); end
+                feats.attached_ss = mean(out.p1_0(mask_ss) + out.p2_0(mask_ss) + p3_ss, 'omitnan');
                 feats.PT_ss       = mean(out.PuATP(mask_ss), 'omitnan');
             else
                 feats.SRX_ss      = NaN;
