@@ -176,24 +176,18 @@ p3_1 = dS*sum((s+params.drp3).*p3);
 % (dr1>0 = pre-stroke force; dr1<0 = back-force). dr1=0 (default) recovers the original
 % Σ(s·p1)≈0 exactly. Decouples force-duty (p1+p2) from the p2 detachment that welds ktr<->FV.
 s1 = s + params.dr1;
-% Pi weakens strong (P2) binding force (ktr-neutral): fPi=1/(1+Pi/K_Pi); =1 at Pi=0. Guarded.
-kf2 = params.kstiff2; kf2n = params.kstiff2_n;
-if params.UsePiForce
-    fPi = 1/(1 + params.Pi/params.K_Pi);
-    kf2 = kf2*fPi; kf2n = kf2n*fPi;
-end
 if params.UseNegativeKstiff
     p1_1_pos = dS*sum(s1.*p1.*(s1>=0));
     p1_1_neg = dS*sum(s1.*p1.*(s1<=0));
     p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
     p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
-    F_active = params.kstiff3*(p3_1) + kf2*(p2_1_pos) + kf2n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
     p1_1 = p1_1_neg + p1_1_pos;
     p2_1 = p2_1_pos + p2_1_neg;
 else
     p1_1 = dS*sum(s1.*p1);
     p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
-    F_active = params.kstiff3*(p3_1) + kf2*(p2_1) + params.kstiff1*(p1_1);
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);
     % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);
 end
 
@@ -441,6 +435,15 @@ if params.UseAdpTrap
     denom_g2 = params.MgADP/params.K_D + params.MgATP/params.K_T1;
     if denom_g2 > 0; g2trap = (params.MgATP/params.K_T1)/denom_g2; else; g2trap = 1; end
     R2 = R2 .* g2trap;
+end
+
+% Low-ATP Pi inhibition of the power stroke (P1->P2): Pi is a PRODUCT of the stroke
+% (A.M.ADP.Pi -> A.M.ADP + Pi), so elevated [Pi] inhibits it by mass action -> heads shift back to
+% the pre-stroke, low-force state -> isometric force falls via the POPULATION (not per-head
+% stiffness), and forward kinetics slow. f2Pi=1 at Pi=0 (inert). Guarded.
+if params.UsePiReversal
+    f2Pi = 1/(1 + params.Pi/params.K_Pi);
+    R12 = R12 .* f2Pi;
 end
 
 % p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).

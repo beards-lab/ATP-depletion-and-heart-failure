@@ -1,55 +1,58 @@
 # Best 2-state low-ATP parametrization (on the Further-optim baseline)
 
 **Date:** 2026-07-09 · worktree `ATP-wt-lowatp`, branch `lowatp-2state` (off `Further-optim` b399eb9).
-**Deliverable:** `params/params_2state_lowATP.m` — the best 2-state low-ATP fit we can get now.
+**Deliverable:** `params/params_2state_lowATP.m` — the best 2-state low-ATP fit, PHYSICAL mechanisms only.
 
 ## What it is
-- **Baseline:** `params/optfull_opt.m` (your newest global optim, 2-state, high-ATP feature cost **2.82**).
-- **Mechanism (2-state, physiological):** low-ATP condition = **ADP-trap** (`UseAdpTrap`: R2 P2-detachment × g2(MgADP,K_D)) + **Pi-force** (`UsePiForce`: kstiff2 × 1/(1+Pi/K_Pi)). No rigor/3rd state.
-- **Tuned constants:** `K_D = 0.35`, `K_Pi = 6`; concentrations `MgATP=2, MgADP=1.6, Pi=0.8`.
-- **ONE file, both conditions:** as-is → low-ATP; set `MgATP=8, MgADP=0, Pi=0` → high-ATP.
-  The mechanism is **identically inert at 8 mM** (g2=1, fPi=1) → **high-ATP unaffected, verified max|Δ|=0**.
+- **Baseline:** `params/optfull_opt.m` (newest global optim, 2-state, high-ATP feature cost **2.82**).
+- **Mechanism: ADP-trap ONLY** (`UseAdpTrap`): elevated [ADP] blocks ADP-release/detachment, so the
+  P2→detachment rate is scaled `R2 × g2(MgADP,K_D)`. Physically well-established (Cooke & Pate; Dantzig).
+- **Tuned constant:** `K_D = 0.7`; concentrations `MgATP=2, MgADP=1.6, Pi=0.8`.
+- **ONE file, both conditions:** as-is → low-ATP; set `MgATP=8, MgADP=0` → high-ATP.
+  ADP-trap is `g2=1` (inert) at MgADP=0 → **high-ATP identical to optfull, verified max|Δ|=0**.
 - Driver: `Workbench/DriverLowATP_2State.m`.
 
-## Fit: relative-ratio cost 0.47 (default constants 1.29)
+## Fit: relative-ratio cost 0.47
 
 | feature | model 2/8 | data 2/8 | verdict |
 |---|---|---|---|
-| steady | 1.159 | 1.179 | ✅ |
-| A | 1.187 | 1.182 | ✅ |
-| Am | 1.201 | 1.176 | ✅ |
-| peak2 | 1.135 | 1.180 | ✅ |
-| vall_y | 1.176 | 1.200 | ✅ |
-| ktr (mean) | 0.67 | 0.54 | ~ high, slope flat |
-| **peak1_y** | **1.375** | 1.252 | ✗ over |
-| **t0 (mean)** | **1.90** | 1.26 | ✗ onset over-delayed |
+| steady | 1.177 | 1.179 | ✅ |
+| A | 1.201 | 1.182 | ✅ |
+| Am | 1.209 | 1.176 | ✅ |
+| **peak1_y** | 1.255 | 1.252 | ✅ (now exact) |
+| peak2 | 1.096 | 1.180 | ~ slightly under |
+| vall_y | 1.115 | 1.200 | ~ slightly under |
+| t0 (mean) | 1.50 | 1.26 | ~ closer |
+| **ktr (mean)** | **0.774** | 0.536 | ✗ the residual |
 
-**Force amplitude is solved** (all ~+18% from physiological [ADP]/[Pi]). The residual is the **restretch
-transient**: onset (t0) over-delayed and peak1 over-lifted — the 2-state force↔onset weld (R2 gates both).
-`K_D×K_Pi` sweep confirms the weld: any K_D giving correct force forces t0 ≥ 1.9× (data 1.26).
+Force amplitude is captured; the dominant residual is now **ktr** (kinetics too fast at low ATP).
 
-## Plan to tune further (2-state, physiologically justified)
+## Why NOT a Pi force-trim (correcting the earlier version)
+The earlier file scaled `kstiff2 × 1/(1+Pi/K_Pi)` — **unphysical**: stiffness is the mechanical spring
+constant of an attached head; [Pi] cannot soften an attached bridge. Pi's real action is **mass action on
+the power stroke** (`A·M·ADP·Pi → A·M·ADP + Pi` releases Pi), so it belongs on the **rate `R12`**, not the
+stiffness. I wired the honest version (`UsePiReversal`: `R12 × 1/(1+Pi/K_Pi)`, shifts p2→p1, force falls via
+POPULATION). **Result: it does not improve the fit** — the K_D×K_Pi grid drives K_Pi→∞ (Pi off) and prefers
+a weaker ADP-trap alone (cost 0.473 either way). At [Pi]=0.8 mM the stroke-inhibition is small. So the
+best PHYSICAL config is ADP-trap alone; `UsePiReversal` stays wired and available (e.g. for higher [Pi]).
+The `UsePiForce` kstiff2 scaling is removed/inert.
 
-**1. ATP-dependent SRX return `kmsrd` — the answer to "will SRX-ATP help?"** *(most promising for the residual)*
-   - Current config: `kmsr=0`, `UseAtpOnUNR=0` (ATP→SRX mobilization inert); the live SRX lever is
-     `kmsrd=20.87` (SRX-ADP return), which moves **ktr while holding force** (max-Ca SRX pool is
-     mechanosensitively suppressed, so it barely touches force). That is exactly the *kinetic-only*
-     lever the ADP-trap lacks.
-   - Test: make `kmsrd` (and/or `ksrd` parking) **[ADP]/[ATP]-dependent** (e.g. `kmsrd_eff = kmsrd·h([ADP])`),
-     physiologically grounded (SRX/DRX equilibrium is nucleotide-set). Target: pull t0 & the ktr slope
-     toward data **without disturbing the solved force**. This is the one lever that can break the weld
-     on the kinetic side inside a 2-state model.
-   - Caveat: the *naïve* SRX-ATP (more parking at low ATP) lowers force and slows onset further — wrong
-     way. Use the return-rate/mechanosensitivity, not the pool size.
+## The 2-state weld (why ktr can't also be fit here)
+ADP-trap strength (K_D) sets BOTH force and ktr, oppositely: strong trap (K_D≈0.2) → ktr≈0.65 (good) but
+force overshoots ~1.4; weak trap (K_D=0.7) → force≈1.18 (good) but ktr≈0.77. The old kstiff2 hack faked a
+way around this (strong trap for ktr + fake softening for force). Physically you can't — R2 gates both.
+**This is the structural floor (~0.47) for a single-lever 2-state model.**
 
-**2. Strain-dependent ADP-trap.** Make g2 act only where P2 bears force (operating-strain window), so it
-   traps force without gating the near-zero-strain heads that set onset — decouples force from t0 in 2-state.
-
-**3. peak1 damping** (shared with the high-ATP residual): kstiff2 strain-shape / c_SE_visc so accumulated
-   P2 contributes steady force but less transient first-peak.
-
-**4. Classic-vs-slack ktr side quest** (SRX timescale separation) — an extra constraint if useful.
+## Plan to tune further (physical)
+**1. ATP-dependent SRX return `kmsrd` — the dedicated kinetic knob** *(fixes the ktr residual)*.
+   `kmsr=0`, `UseAtpOnUNR=0` here, so ATP→SRX mobilization is inert; the live lever is `kmsrd` (SRX-ADP
+   return). At max-Ca the SRX pool is mechanosensitively suppressed, so `kmsrd` moves **ktr while holding
+   force**. Make `kmsrd` [ADP]/[ATP]-dependent (SRX/DRX equilibrium is nucleotide-set) → pull ktr 0.77→0.54
+   without disturbing the solved force. This is the one physical lever that breaks the weld in 2-state.
+**2. Strain-dependent ADP-trap** — let g2 act only in the force-bearing strain window, decoupling force
+   from the near-zero-strain heads that set ktr/onset.
+**3. Pin K_D** — 0.7 vs literature 0.194 (Yamashita). The fit wants a weak trap to keep force realistic;
+   the "correct" K_D over-traps. That gap is itself the weld — relieved by lever 1, not by K_D.
 
 ## Reproduce
 `cd(root); addpath(genpath('.')); DriverLowATP_2State`  (needs `data/protocol_03_27_2026_{2,8}mM_slack.mat`).
-Fit/verify scripts logged in the session scratchpad; the ADP-trap+Pi wiring is committed to `Model/`.

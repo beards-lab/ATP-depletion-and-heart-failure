@@ -256,12 +256,12 @@ params0.OptimizeOn = 'Feats';
 params0.mods = {};
 params0.g = [];
 
-%% ---- Low-ATP condition: 2-state ADP-trap + Pi-force (best K_D/K_Pi) ----
-%% High-ATP = this file with MgATP=8, MgADP=0, Pi=0 (identical to optfull_opt, cost 2.82).
-params0.UseAdpTrap = 1;   % scale R2 (P2 detachment) by g2(MgADP,K_D)
-params0.UsePiForce = 1;   % scale kstiff2 (P2 force) by 1/(1+Pi/K_Pi)
-params0.K_D = 0.35;
-params0.K_Pi = 6;
+%% ---- Low-ATP condition: 2-state ADP-trap (physical; no Pi stiffness hack) ----
+%% High-ATP = this file with MgATP=8, MgADP=0 (identical to optfull_opt, cost 2.82).
+params0.UseAdpTrap = 1;     % R2 (P2 detachment) x g2(MgADP,K_D): ADP-trap -> force up, kinetics down
+params0.UsePiReversal = 0;  % available (Pi inhibits stroke R12); off - negligible/no help at Pi=0.8
+params0.UsePiForce = 0;     % removed (was an unphysical kstiff2 scaling)
+params0.K_D = 0.7;
 params0.MgATP = 2;
 params0.MgADP = 1.6;
 params0.Pi = 0.8;
