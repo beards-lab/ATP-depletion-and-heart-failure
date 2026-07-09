@@ -45,8 +45,14 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
 
     % this is disabled ATM
     % for a = params.EvalAtp
-    a = 1;
-    params.MgATP = ATP_c(a);
+    % params.MgATP = ATP_c(i_atp);
+    LoadData;
+    if params0.MgATP == 8
+        i_atp = 1;
+    elseif params0.MgATP == 2
+        i_atp = 3;
+    end
+    
     N = length(FV_velocities);
 
     if isempty(gcp('nocreate')) || params.justPlotStateTransitionsFlag
@@ -67,7 +73,7 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
             params.Slim_l = 2.0 - dsl - params.A1AttachmentWidth - params.dS;
 
             if isempty(parple)
-                [F_active(a, j), out_fv] = evaluateModel(modelFcn, t_ss, params);
+                [F_active(i_atp, j), out_fv] = evaluateModel(modelFcn, t_ss, params);
                 outs(j) = out_fv;
             else
                 futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_ss, params);
@@ -88,7 +94,7 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
             end
             params.Velocity = FV_velocities(j);
             if isempty(parple)
-                [F_active(a, j), out_fv] = evaluateModel(modelFcn, t_sl0/abs(FV_velocities(j)), params);
+                [F_active(i_atp, j), out_fv] = evaluateModel(modelFcn, t_sl0/abs(FV_velocities(j)), params);
                 outs(j) = out_fv;
             else
                 futures{j} = parfeval(parple, @evaluateModel, 2, modelFcn, t_sl0/abs(FV_velocities(j)), params);
@@ -102,37 +108,42 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
     if ~isempty(parple)
         for j = 1:N
             if ~isempty(futures{j})
-                [F_active(a, j), out_fv] = fetchOutputs(futures{j});
+                [F_active(i_atp, j), out_fv] = fetchOutputs(futures{j});
                 outs(j) = out_fv;
             end
         end
     end
 
+    % we do eval for a 1 atp level only this time
+    % atp_levels = params.EvalAtp;
+    atp_levels = i_atp;
+
+
     % cost function
     [found, idx_ATP] = ismember(-FV_velocities, Data_ATP(:,1));
     valid_idx = idx_ATP(found);
-
-    E_fv = sum((F_active(params.EvalAtp,found)./Data_ATP(valid_idx,params.EvalAtp+1)' - 1).^2, 'all');
+    
+    E_fv = sum((F_active(atp_levels,found)./Data_ATP(valid_idx,atp_levels+1)' - 1).^2, 'all');
     % normalize by number of data points
-    E_fv = E_fv / size(valid_idx, 2) / length(params.EvalAtp);
+    E_fv = E_fv / size(valid_idx, 2) / length(atp_levels);
 
     if params.EvalFeatures
         if recalculateDataFeats
-            features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,a+1)', struct(), FV_velocities);
+            features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,i_atp+1)', struct(), FV_velocities);
         else
             % Hardcoded Baker lab 8 mM reference values (avoids re-extracting each iteration)
             AllVelocities = -[0, 0.5, 1, 2, 3, 4, 5, 6, 7];
             if strcmp(params0.FV_dataset, 'Baker2022')
-                AllForces     = [56.40, 51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
+                AllForces     = Data_ATP(:, i_atp + 1)';
             elseif strcmp(params0.FV_dataset,'IsovelocityForFilip2021')
-                AllForces = [67.3942   60.9885   42.7059   18.8539 12.5956    6.4426    3.5136    1.8556];
+                AllForces = Data_ATP_AB2021(:, i_atp + 1)';
             end
             vsel = find(ismember(AllVelocities, FV_velocities));
             features_data.FV_v     = -AllVelocities(vsel)';
             features_data.FV_f     = AllForces(vsel)';
             features_data.FV_fnorm = AllForces(vsel)'/AllForces(1);
         end
-        features_model = extractForceVelocityAttributes(FV_velocities, F_active(a, :), features_model, FV_velocities);
+        features_model = extractForceVelocityAttributes(FV_velocities, F_active(i_atp, :), features_model, FV_velocities);
     end
 
     better = false;
@@ -162,13 +173,13 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
         end
 
         ls = []; ld = [];
-        for a = params.EvalAtp
-            set(gca,'ColorOrderIndex',a);
-            ld = [ld plot(Data_ATP(:,a+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1])]; %#ok<AGROW>
+        for ea = atp_levels
+            set(gca,'ColorOrderIndex',ea);
+            ld = [ld plot(Data_ATP(:,ea+1),Data_ATP(:,1),'o','linewidth',1.5,'Markersize',8,'markerfacecolor',[1 1 1])]; %#ok<AGROW>
         end
-        for a = params.EvalAtp
-            set(gca,'ColorOrderIndex',a);
-            ls = [ls plot(F_active(a, :), -FV_velocities,'x-','linewidth',2, 'MarkerSize', 20)]; %#ok<AGROW>
+        for ea = atp_levels
+            set(gca,'ColorOrderIndex',ea);
+            ls = [ls plot(F_active(ea, :), -FV_velocities,'x-','linewidth',2, 'MarkerSize', 20)]; %#ok<AGROW>
         end
         ylabel('Velocity (ML/s)','interpreter','latex','fontsize',16);
         xlabel('Force (kPa)','interpreter','latex','fontsize',16);

@@ -17,26 +17,35 @@ addpath(genpath(root)); LoadData;
 %%
 params0 = getParams(); run(fullfile(root,'params','params_2state_lowATP.m'));
 params0 = getParams(params0, [], true, false);
-params0.RunForceVelocity=false; params0.RunKtr=false; params0.RunSlack=true;
+params0.RunForceVelocity=true; params0.RunKtr=false; params0.RunSlack=true;
 params0.RunStairs=false; params0.RunForceVelocityTime=false;
 params0.EvalFeatures=true; params0.BreakOnODEUnstable=false; params0.RunSlackSegments='AllPar';
 params0.MaxRunTime=120; params0.velocitytableonfile='protocol_03_27_2026_2mM_slack.mat';
 params0.PlotEachSeparately=1; params0.ShowStatePlots=0; params0.PlotFeatureFitting=0;
+params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
 
+params0.UsePiForce = false;
+params0.FV_dataset = 'Baker2022'; %IsovelocityForFilip2021';
 tic
-[~,~,fm2,~] = runSlackExperiment(params0);                     % low-ATP (baked 2 mM)
+RunBakersExp;                     % low-ATP (baked 2 mM)
+fm2 = features_model;
+fd2 = features_data;
 toc
+%%
 ph=params0; ph.MgATP=8; ph.MgADP=0; ph.Pi=0; ph.velocitytableonfile='protocol_03_27_2026_8mM_slack.mat';
 tic
-[~,~,fm8,~] = runSlackExperiment(ph);                          % high-ATP (8 mM)
+params0 = ph;
+RunBakersExp;                     % high-ATP (baked 8 mM)
+fm8 = features_model;
+fd8 = features_data;
 toc
 
-f2d=load(fullfile(root,'data','protocol_03_27_2026_2mM_slack.mat')).features_data;
-f8d=load(fullfile(root,'data','protocol_03_27_2026_8mM_slack.mat')).features_data;
+% fd2=load(fullfile(root,'data','protocol_03_27_2026_2mM_slack.mat')).features_data;
+% fd8=load(fullfile(root,'data','protocol_03_27_2026_8mM_slack.mat')).features_data;
 ff={'steady','A','Am','peak2','peak1_y','vall_y'}; kf={'ktr','t0'};
 target=struct('scalar',struct(),'vector',struct());
-for i=1:numel(ff); target.scalar.(ff{i})=mean(double(f2d.(ff{i}))./double(f8d.(ff{i})),'omitnan'); end
-for i=1:numel(kf); target.vector.(kf{i})=double(f2d.(kf{i}))./double(f8d.(kf{i})); end
+for i=1:numel(ff); target.scalar.(ff{i})=mean(double(fd2.(ff{i}))./double(fd8.(ff{i})),'omitnan'); end
+for i=1:numel(kf); target.vector.(kf{i})=double(fd2.(kf{i}))./double(fd8.(kf{i})); end
 target.weights=struct('steady',50,'A',50,'Am',10,'peak2',5,'peak1_y',10,'vall_y',10, ...
                       'ktr',2,'t0',1,'restretchSlopeStart',0.1,'ktr2_overshoot',0.1);
 [c,det]=atpRatioCost(fm2,fm8,target);
@@ -50,11 +59,18 @@ for i=1:numel(vf); f=vf{i}; d=det.(f);
   fprintf('%-10s  model %s\n', f, num2str(d.ratio,'%5.2f '));
   fprintf('%-10s  data  %s  (w*cost %.3f)\n', '', num2str(d.target(:)','%5.2f '), d.cost);
 end
+%%
+sum(plotFeatures(fd8, fm8, [], params0.fn))
 
+%%
+if ~exist("fg2", "var")
+    fg2 = fm2;
+end
+sum(plotFeatures(fd2, fm2, fg2, params0.fn))
 %% 4-line feature comparison: low/high ATP x data/model, per slack segment.
 % Colour = ATP level (red=2mM, blue=8mM); style = source (solid+filled=data,
 % dashed+open=model). So the four lines are easily distinguishable in every tile.
-feats_cell = {f2d, fm2, f8d, fm8};
+feats_cell = {fd2, fm2, fd8, fm8};
 labels     = {'2mM data', '2mM model', '8mM data', '8mM model'};
 cRed = [0.85 0.16 0.16];  cBlu = [0.12 0.35 0.80];
 colors     = [cRed; cRed; cBlu; cBlu];
@@ -62,6 +78,7 @@ markers    = {'o', 's', 'o', 's'};        % data = o, model = s
 lineStyles = {'-', '--', '-', '--'};      % data = solid, model = dashed
 fillMarkers= [true false true false];     % data = filled, model = open
 fnPlot     = {'steady','A','Am','ktr','t0','peak1_y','vall_y','peak2'};
+fnPlot = params0.fn;
 figure('Name','Low-ATP vs High-ATP: data vs model','Color','w');
 plotMultipleFeatures(feats_cell, labels, colors, markers, fnPlot, lineStyles, fillMarkers);
 sgtitle(sprintf('Absolute features per slack segment   (2-state low-ATP ratio cost %.3f)', c));

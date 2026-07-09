@@ -445,6 +445,12 @@ if params.UsePiReversal
     f2Pi = 1/(1 + params.Pi/params.K_Pi);
     R12 = R12 .* f2Pi;
 end
+% Pi-driven REVERSE power stroke (P2->P1): elevated [Pi] rebinds A.M.ADP and drives the stroke
+% backward, keeping heads attached in the pre-stroke (low-force) state. R21 *= (1+Pi/K_Pi).
+% Guarded, inert at Pi=0. (Whether this speeds or slows ktr is tested empirically.)
+if params.UsePiReverseStroke
+    R21 = R21 .* (1 + params.Pi/params.K_Pi);
+end
 
 % p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).
 % The factor is FLOORED at 1: base turnover k3 at/above s3 (so force-bearing p3
