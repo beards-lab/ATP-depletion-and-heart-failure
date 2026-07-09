@@ -14,18 +14,22 @@
 clear; clc;
 root = fullfile(fileparts(mfilename('fullpath')), '..');
 addpath(genpath(root)); LoadData;
-
+%%
 params0 = getParams(); run(fullfile(root,'params','params_2state_lowATP.m'));
 params0 = getParams(params0, [], true, false);
 params0.RunForceVelocity=false; params0.RunKtr=false; params0.RunSlack=true;
 params0.RunStairs=false; params0.RunForceVelocityTime=false;
-params0.EvalFeatures=true; params0.BreakOnODEUnstable=false; params0.RunSlackSegments='All';
-params0.MaxRunTime=120; params0.velocitytableonfile='protocol_03_27_2026_8mM_slack.mat';
-params0.PlotEachSeparately=0; params0.ShowStatePlots=0; params0.PlotFeatureFitting=0;
+params0.EvalFeatures=true; params0.BreakOnODEUnstable=false; params0.RunSlackSegments='AllPar';
+params0.MaxRunTime=120; params0.velocitytableonfile='protocol_03_27_2026_2mM_slack.mat';
+params0.PlotEachSeparately=1; params0.ShowStatePlots=0; params0.PlotFeatureFitting=0;
 
+tic
 [~,~,fm2,~] = runSlackExperiment(params0);                     % low-ATP (baked 2 mM)
-ph=params0; ph.MgATP=8; ph.MgADP=0; ph.Pi=0;
+toc
+ph=params0; ph.MgATP=8; ph.MgADP=0; ph.Pi=0; ph.velocitytableonfile='protocol_03_27_2026_8mM_slack.mat';
+tic
 [~,~,fm8,~] = runSlackExperiment(ph);                          % high-ATP (8 mM)
+toc
 
 f2d=load(fullfile(root,'data','protocol_03_27_2026_2mM_slack.mat')).features_data;
 f8d=load(fullfile(root,'data','protocol_03_27_2026_8mM_slack.mat')).features_data;
@@ -46,3 +50,18 @@ for i=1:numel(vf); f=vf{i}; d=det.(f);
   fprintf('%-10s  model %s\n', f, num2str(d.ratio,'%5.2f '));
   fprintf('%-10s  data  %s  (w*cost %.3f)\n', '', num2str(d.target(:)','%5.2f '), d.cost);
 end
+
+%% 4-line feature comparison: low/high ATP x data/model, per slack segment.
+% Colour = ATP level (red=2mM, blue=8mM); style = source (solid+filled=data,
+% dashed+open=model). So the four lines are easily distinguishable in every tile.
+feats_cell = {f2d, fm2, f8d, fm8};
+labels     = {'2mM data', '2mM model', '8mM data', '8mM model'};
+cRed = [0.85 0.16 0.16];  cBlu = [0.12 0.35 0.80];
+colors     = [cRed; cRed; cBlu; cBlu];
+markers    = {'o', 's', 'o', 's'};        % data = o, model = s
+lineStyles = {'-', '--', '-', '--'};      % data = solid, model = dashed
+fillMarkers= [true false true false];     % data = filled, model = open
+fnPlot     = {'steady','A','Am','ktr','t0','peak1_y','vall_y','peak2'};
+figure('Name','Low-ATP vs High-ATP: data vs model','Color','w');
+plotMultipleFeatures(feats_cell, labels, colors, markers, fnPlot, lineStyles, fillMarkers);
+sgtitle(sprintf('Absolute features per slack segment   (2-state low-ATP ratio cost %.3f)', c));
