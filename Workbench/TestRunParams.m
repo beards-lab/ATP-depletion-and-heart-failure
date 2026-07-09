@@ -29,6 +29,7 @@ params0.FV_velocities = -[0, 0.5, 1, 2, 4];
 figure;
 
 tic
+params0.justPlotStateTransitionsFlag = true;
 RunBakersExp;
 toc
 

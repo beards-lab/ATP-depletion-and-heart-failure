@@ -247,7 +247,7 @@ for r = state.round+1 : N_ROUNDS
 
     % --- 2) fminsearch (local polish) seeded from surrogate best ---
     % Headless (Display off, no plot) so two parallel instances don't spawn windows.
-    fmOpts = optimset('Display','off', 'TolFun',1e-3, 'TolX',1e-2, 'MaxFunEvals', SIMPLEX_EVALS);
+    fmOpts = optimset('TolFun',1e-3, 'TolX',1e-2, 'MaxFunEvals', SIMPLEX_EVALS, 'Display','iter','PlotFcns', @optimplotfval);
     [g_l, f_l] = fminsearch(@(g) safeCostClamp(g, pr, glb, gub), g_s, fmOpts);
 
     if f_l <= f_s; g_round = g_l; f_round = f_l; else; g_round = g_s; f_round = f_s; end
