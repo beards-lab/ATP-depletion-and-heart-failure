@@ -308,6 +308,8 @@ end
 
     params0.K_T3 = 4; % (mM)
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
+    params0.UseAdpTrap = false;  % low-ATP: scale R2 (P2 detachment) by g2(MgADP,K_D); inert at MgADP=0.
+    params0.UsePiForce = false;  % low-ATP: scale kstiff2 (P2 force) by 1/(1+Pi/K_Pi); inert at Pi=0.
     
     % strain-associated parameters
     params0.alpha0 = 0;
