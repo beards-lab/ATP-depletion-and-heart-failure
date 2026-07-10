@@ -54,5 +54,21 @@ way around this (strong trap for ktr + fake softening for force). Physically you
 **3. Pin K_D** — 0.7 vs literature 0.194 (Yamashita). The fit wants a weak trap to keep force realistic;
    the "correct" K_D over-traps. That gap is itself the weld — relieved by lever 1, not by K_D.
 
+## R21 / Pi-reverse-stroke test (2026-07-09, empirical)
+Tested whether enhancing the reverse stroke R21 (Pi-driven, `UsePiReverseStroke`: R21 × (1+Pi/K_Pi))
+helps. **It does not — it is doubly wrong-direction.**
+- Direct `k_1` (R21) sweep @8mM: k_1 ×[0.5,1,2,4] → ktr [49, 53, 57, 63] (RISES) and steady [82,77,72,64]
+  (FALLS). So **higher R21 SPEEDS ktr and LOWERS force.** (ktr is an *equilibration* rate ≈ forward+reverse,
+  not a dwell time — faster p1⇌p2 exchange reaches steady state faster even though heads dwell attached longer.)
+- Pi-reverse-stroke @2mM (on ADP-trap K_D=0.7): adding it raised ktr 0.774→0.825 and lowered force
+  1.177→1.104 → cost 0.47→0.83. Low-ATP wants force UP + ktr DOWN, so reverse-stroke enhancement is the
+  wrong sign on both. Wired (`UsePiReverseStroke`) and available, but off. The honest force-lowering Pi is
+  forward-stroke inhibition (`UsePiReversal`, R12↓), which also doesn't improve this fit (see above).
+
+## Direct [ATP] effect (not yet in 2-state)
+The ADP-trap g2 is a competition ratio → at MgADP=0, lowering [ATP] alone does nothing. A separate,
+honest [ATP]-only mechanism (ATP-limited detachment, `R2 × MgATP/(MgATP+K_T)`) is NOT wired in 2-state
+(`UseAtpDetach` only gates the 3-state rigor P3). Add it if the ATP-only condition should respond.
+
 ## Reproduce
 `cd(root); addpath(genpath('.')); DriverLowATP_2State`  (needs `data/protocol_03_27_2026_{2,8}mM_slack.mat`).
