@@ -43,12 +43,23 @@ force overshoots ~1.4; weak trap (K_D=0.7) → force≈1.18 (good) but ktr≈0.7
 way around this (strong trap for ktr + fake softening for force). Physically you can't — R2 gates both.
 **This is the structural floor (~0.47) for a single-lever 2-state model.**
 
-## Plan to tune further (physical)
-**1. ATP-dependent SRX return `kmsrd` — the dedicated kinetic knob** *(fixes the ktr residual)*.
-   `kmsr=0`, `UseAtpOnUNR=0` here, so ATP→SRX mobilization is inert; the live lever is `kmsrd` (SRX-ADP
-   return). At max-Ca the SRX pool is mechanosensitively suppressed, so `kmsrd` moves **ktr while holding
-   force**. Make `kmsrd` [ADP]/[ATP]-dependent (SRX/DRX equilibrium is nucleotide-set) → pull ktr 0.77→0.54
-   without disturbing the solved force. This is the one physical lever that breaks the weld in 2-state.
+## BREAKTHROUGH: ATP-dependent SRX return `kmsrd` breaks the weld (2026-07-09, VALIDATED)
+The decoupling works. Grid (`RunSrxDecouple.m`): with `kmsrd` reduced at 2 mM (kept at 20.87 @8 mM, so
+high-ATP untouched) crossed with `K_D`, best = **K_D=0.70, kmsrd(2mM)=8 → cost 0.47 → 0.135**:
+force 1.168 (t1.18), **ktr 0.503 (t0.54)**, t0 1.15 (t1.26), peak1 1.235 (t1.25) — all near data.
+At fixed K_D=0.70, sweeping kmsrd 60→20.87→8 gives ktr 1.04→0.78→0.50 with **force pinned ~1.17** →
+pure kinetic decoupling: `kmsrd` (SRX-ADP return) sets the ktr timescale, but the SRX-ADP steady pool is
+small so force is untouched. (kmsrd=2 is too far — t0/peak1 break.) The 2-state force↔ktr weld IS broken
+on the kinetic side by a physical lever.
+
+**To bake it as a real one-file mechanism:** wire `kmsrd_eff = kmsrd · h([ADP]/[ATP])` (h=1 at 8 mM),
+then re-fit (K_D, kmsrd-drop). Currently the test SIMULATES the ATP-dependence by setting kmsrd per
+condition. Physiology: SRX/DRX (IHM) stability is nucleotide-set — slower SRX-ADP return at low ATP is
+plausible.
+
+## Other levers
+**Strain-dependent ADP-trap** — let g2 act only in the force-bearing strain window, decoupling force
+   from the near-zero-strain heads that set ktr/onset.
 **2. Strain-dependent ADP-trap** — let g2 act only in the force-bearing strain window, decoupling force
    from the near-zero-strain heads that set ktr/onset.
 **3. Pin K_D** — 0.7 vs literature 0.194 (Yamashita). The fit wants a weak trap to keep force realistic;
