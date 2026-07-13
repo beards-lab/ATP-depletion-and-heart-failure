@@ -1,0 +1,9 @@
+==== probeP1dSL on params/params_2state_a2hop.m ====
+Data: peak1_dSL~0.0256, peak1_y~89.3, vall_y~71, peak2~78, steady~77, ktr~49
+GOAL: peak1_dSL down toward 0.0256 while HOLDING ktr(~52) and steady.
+
+lever              pk1dSL  peak1y  vall_y   peak2  steady    ktr | FV(1,2)               COST
+BASE               0.0345    95.5    70.0    81.0    77.4   52.4 | 0.93 0.55            2.952
+kstiff1 x0.7       0.0280    84.4    54.7    66.5    74.0   52.2 | 0.95 0.55            9.748
+kstiff1 x0.5      ERROR: ODEslower took longer than MaxRunTime 90 s
+k_1 x0.6          ERROR: ODEslower took longer than MaxRunTime 90 s
