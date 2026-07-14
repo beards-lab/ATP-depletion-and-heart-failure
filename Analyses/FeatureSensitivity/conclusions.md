@@ -48,14 +48,37 @@ amplitude is already correct (A2 hop fixed valley/peak2). The residual is **shap
 (`peak1_dSL`) and **FV-tail**, not force magnitude. Only the *dissipative* Kelvin–Voigt element
 (which shapes without adding net force) helps, and only marginally.
 
-## 4. peak1_dSL via kstiff1 / k_1
+## 4. peak1_dSL is doubly-walled (probeP1dSL, probeP1dSLcomp)
 
-_[probeP1dSL pending — does kstiff1↓ / k_1↓ move peak1_dSL toward 0.0256 without the ktr
-penalty kSE carried?]_
+`kstiff1`↓ DOES fix `peak1_dSL` (0.0345→0.028) and `peak1_y`, and — unlike `kSE`↑ — it HOLDS ktr
+(52.2). So it escapes the `peak1_dSL`↔ktr wall. But it hits a *second* wall: it collapses `vall_y`
+(70→55) and `peak2` (81→66), because lowering p1 stiffness removes the force that holds the
+restretch trough. Compensation fails: even `kA2hop`×2.2 + `kstiff2`×1.12 lifts `vall_y` only to
+~59 (data 71) while `peak1_dSL` sits at 0.027 — best combined cost 6.8 vs base 2.95. (`k_1`↓ is
+worse: it inflates `peak1_y`.)
 
-## 5. Reweighting verdict
+**Verdict: `peak1_dSL` is doubly-welded** — to ktr (via `kSE`) AND to the valley/peak2 (via
+`kstiff1`/p1-force). No 2-state lever or compensation reduces the excursion without breaking a
+coupled feature. This is the cleanest structural case for the 3rd state.
 
-_[to finalize with §4]_ Reweighting helps only the **free** features (ovrsht; peaks IF kstiff1
-is clean). The **walled** dominant residual (FV mid-tail) cannot be improved by reweighting —
-it just relocates error onto the peaks/ktr. For literal timecourse fidelity, add a direct
-time-series residual term rather than reweighting landmarks.
+## 5. Answers to the user's questions
+
+**Reweighting the fn:** helps only *free* features. The two dominant residuals — FV mid-tail and
+`peak1_dSL` — are **walled**, so up-weighting them only relocates error (buy FV-tail with
+peaks/ktr; buy `peak1_dSL` with the valley/ktr). It changes which features look good in a figure
+(a legitimate presentation choice) but cannot lower the achievable cost. Only `ovrsht` (via
+Kelvin–Voigt `c_SE_visc`) is genuinely free, and it's already small.
+
+**Unused mechanisms:** only the dissipative Kelvin–Voigt series element helps (2.95→2.89); every
+force-adding mechanism overshoots because restretch amplitude is already correct.
+
+**Parameters:** the master levers are `dr`/`dr2` (strain offsets) — highest leverage but move
+everything. Fresh single-feature levers exist (`kstiff1` for the peaks, `eta_M`/`kSE_M` for
+`ovrsht`) but all the big ones are coupled.
+
+**Bottom line:** the 2-state fit is near its floor (~2.9); the two dominant residuals are
+structural 2-state walls. The one caveat is that these are *point-probe* couplings — the true
+floor test is a full high-dimensional re-optimization over `dr`/`dr2` + the PCHIP knot *positions*
+(not just their rate values), which can align the strain distribution in ways pairwise probes
+can't see. For literal timecourse fidelity (vs landmark features), add a direct time-series
+residual term. The durable fix for the walled residuals remains the 3rd state.

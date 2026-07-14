@@ -43,8 +43,8 @@ addpath(genpath(root));
 
 cfg = struct();
 cfg.baseSnap = 'params/params_2state_a2hop.m';   % <<< 2-state ~2.95. Switch to params/params_full3_seed.m for 3-state.
-cfg.baseSnap = 'params/optfull_opt.m';
-cfg.tag      = 'optfull2';
+cfg.baseSnap = 'params/optfull2_opt.m';
+cfg.tag      = 'optfull3';
 
 cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', 'ktr_rmse|0-.5|.1', ...
     'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70',...
@@ -111,7 +111,7 @@ cfg.MaxRunTime    = (NoS==3)*90 + (NoS==2)*60;   % generous ceiling: the A2-hop 
 cfg.SURR_EVALS    = 0;                           % pure fminsearch (no surrogate)
 cfg.KICK_FRAC     = 0;
 cfg.DEBUG           = false;
-cfg.TIME_BUDGET_HRS = 24;                        % long haul; raise/lower as desired
+cfg.TIME_BUDGET_HRS = 48;                        % long haul; raise/lower as desired
 cfg.RESUME          = false;%isfile(fullfile(root, 'params', 'optfull_state.mat'));
 
 fprintf('[RunOptimFull] model=%d-state | pool=%d | N_DRAW=%d | compulsory={%s}\n', ...

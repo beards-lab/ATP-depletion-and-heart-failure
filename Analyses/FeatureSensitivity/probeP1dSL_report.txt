@@ -7,3 +7,6 @@ BASE               0.0345    95.5    70.0    81.0    77.4   52.4 | 0.93 0.55    
 kstiff1 x0.7       0.0280    84.4    54.7    66.5    74.0   52.2 | 0.95 0.55            9.748
 kstiff1 x0.5      ERROR: ODEslower took longer than MaxRunTime 90 s
 k_1 x0.6          ERROR: ODEslower took longer than MaxRunTime 90 s
+k_1 x0.3           0.0307   102.7    56.7    70.5    84.3   46.6 | 0.87 0.51           14.804
+ks1x0.6 k_1x0.5    0.0272    90.4    45.4    58.2    79.0   48.5 | 0.88 0.51           19.416
+ks1x0.5 kSEx1.4   ERROR: ODEslower took longer than MaxRunTime 90 s

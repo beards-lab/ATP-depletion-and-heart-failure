@@ -1,0 +1,11 @@
+==== probeP1dSLcomp on params/params_2state_a2hop.m ====
+Data: peak1_dSL~0.0256, peak1_y~89.3, vall_y~71, peak2~78, steady~77, ktr~49
+GOAL: peak1_dSL~0.026 AND vall_y~71 AND peak2~78 AND ktr~52 together.
+
+lever                      pk1dSL  peak1y  vall_y   peak2  steady    ktr | FV(1,2)         COST
+BASE                       0.0345    95.5    70.0    81.0    77.4   52.4 | 0.93 0.55      2.952
+ks1x0.7                    0.0280    84.4    54.7    66.5    74.0   52.2 | 0.95 0.55      9.748
+ks1x0.7 hopx1.6            0.0279    84.1    56.2    67.5    74.0   52.3 | 0.95 0.55      9.123
+ks1x0.7 hopx1.6 ks2x1.08   0.0275    88.9    57.2    68.9    79.5   53.1 | 0.94 0.56      6.834
+ks1x0.7 hopx2.2 ks2x1.12   0.0274    91.2    59.1    70.6    81.9   52.9 | 0.95 0.57      7.484
+ks1x0.6 hopx2 ks2x1.1      0.0257    86.8    53.2    65.0    79.8   53.4 | 0.95 0.57     10.023
