@@ -122,6 +122,14 @@ else
     A_reg = 1;
 end
 
+% Forced-detachment parking pool PK (scalar, detached/ATP-depleted). Tail state, read AFTER A_reg
+% so its index shifts by UseRegistrationAvailability. PK=0 (absent) when the feature is off.
+if params.UseForcedDetachmentPark
+    PK = max(0, PU(Ns*ss + 8 + params.UseRegistrationAvailability));
+else
+    PK = 0;
+end
+
 
 
 
@@ -192,11 +200,11 @@ else
 end
 
 % non-hydrolized ATP in non-super relaxed state
-PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 
+PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD + PK)); % unattached permissive fraction - (PK = parked pool)
     
 
 if params.UseOverlapFactor
-    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
+    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD + PK); % overlap factor
 end    
 
 F_passive = 0;
@@ -465,6 +473,18 @@ R3m = params.k3m*p3;
 % to PT state directly
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
+% Forced-detachment parking (guarded): high-strain rip diverts p2 -> PK (detached, ATP-depleted,
+% off-cycle); ATP-gated return PK -> PT. Entry is STRAIN-gated only (tearing, both ATP levels); exit
+% is [ATP]-gated (fast at high ATP -> PK~0, near-transparent; slow at low ATP -> PK accumulates).
+% Force-neutral (rip ~0 at operating strain). R_park is a per-bin vector; dPK is the scalar pool rate.
+if params.UseForcedDetachmentPark
+    R_park   = params.kpark * p2 .* min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+    R_unpark = params.kunpark * (params.MgATP/(params.MgATP + params.K_T_park)) * PK;
+    dPK = sum(R_park)*dS - R_unpark;   % fill from rip; drain returns to PT by conservation
+else
+    R_park = 0; dPK = 0;
+end
+
 if params.UseStrictDetachmentAt > 0
     strictArea = s > params.UseStrictDetachmentAt | s < -params.UseStrictDetachmentAt;
     R2(strictArea) = p2(strictArea)*(10000);
@@ -580,7 +600,7 @@ end
 dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
 % dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
-dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp2 = + R12 - R21  - R2 - XB_Ripped - R_park + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet (-R_park = high-strain rip to parked pool)
 dp3 = - R3 + R3m + R2;
 
 % A2 re-attachment during restretch (UseA2Reattaching): ATP-cocked heads (PT)
@@ -724,6 +744,12 @@ if params.UseRegistrationAvailability
     A_inf  = params.A0 + (1 - params.A0) * vreg / (vreg + params.v_ref_reg);
     dA_reg = (A_inf - A_reg) / params.tau_reg;
     f = [f; dA_reg];
+end
+
+% Forced-detachment parking pool derivative, appended AFTER A_reg so the tail index matches the
+% read (Ns*ss + 8 + UseRegistrationAvailability). Off => nothing appended => legacy state vector.
+if params.UseForcedDetachmentPark
+    f = [f; dPK];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];

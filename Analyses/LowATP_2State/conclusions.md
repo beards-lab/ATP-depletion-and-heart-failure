@@ -76,6 +76,17 @@ helps. **It does not — it is doubly wrong-direction.**
   wrong sign on both. Wired (`UsePiReverseStroke`) and available, but off. The honest force-lowering Pi is
   forward-stroke inhibition (`UsePiReversal`, R12↓), which also doesn't improve this fit (see above).
 
+## kSE (serial elasticity) — tested and RULED OUT as the low-ATP mechanism (2026-07-09)
+Rationale for testing: low ATP could rigor-up serial sarcomeres (kSE↑) or leave them dead/compliant
+(kSE↓). Scan (kSE ×0.3..3 @8mM): kSE is **force-neutral** (0.94–1.03), a pure kinetic lever. BUT it moves
+**ktr and restretchSlopeStart in the SAME direction** (softer→both down, stiffer→both up). The data has
+them OPPOSITE — ktr↓ (0.54) WITH restretchSlope↑ (~1.3) — so **no kSE change reproduces the data**. The
+cross-bridge mechanism does: more attached heads → k_XB↑ (rSlope↑) AND slower cycling (ktr↓), opposite
+signs, naturally. So the low-ATP effect is cross-bridge, not serial elasticity — modeling it via the
+under-constrained kSE would be "outsourcing" a free fit, and the data actively rejects it anyway. (Also:
+`kmsrd` is a CLEANER ktr decoupler — it holds force AND doesn't touch restretchSlope, whereas kSE↓ breaks
+the slope.) At 2 mM (not µM) ATP full rigor is unlikely, weakening the physical basis further.
+
 ## Direct [ATP] effect (not yet in 2-state)
 The ADP-trap g2 is a competition ratio → at MgADP=0, lowering [ATP] alone does nothing. A separate,
 honest [ATP]-only mechanism (ATP-limited detachment, `R2 × MgATP/(MgATP+K_T)`) is NOT wired in 2-state

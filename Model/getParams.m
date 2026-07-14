@@ -312,6 +312,12 @@ end
     params0.UsePiReversal = false; % low-ATP: Pi inhibits the power stroke R12 (mass action) -> shifts p2->p1, force down via POPULATION; inert at Pi=0.
     params0.UsePiReverseStroke = false; % low-ATP: Pi drives the REVERSE stroke R21 *= (1+Pi/K_Pi) -> heads dwell in pre-stroke attached state; inert at Pi=0.
     params0.UsePiForce = false;    % REMOVED/inert: was an unphysical kstiff2 scaling (stiffness is mechanical, not [Pi]-set). Use UsePiReversal (rate-based) instead.
+    % Forced-detachment parking: high-strain rip p2->PK (detached, ATP-depleted, off-cycle) + ATP-gated return PK->PT.
+    params0.UseForcedDetachmentPark = false; % master flag; appends +1 scalar ODE state PK. Inert (zero-length) when off.
+    params0.kpark = 0;      % rip rate p2->PK, strain-gated by exp(alphaRip*(s+dr3)); 0 = off (both ATP levels).
+    params0.kunpark = 0;    % return rate PK->PT, gated by MgATP/(MgATP+K_T_park); fast at high ATP -> PK~0.
+    params0.K_T_park = 4;   % Km(ATP) [mM] for the PK->PT recharge/return.
+    params0.PARK_0 = 0;     % initial PK fraction.
     
     % strain-associated parameters
     params0.alpha0 = 0;
@@ -560,7 +566,7 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability;
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseForcedDetachmentPark;
     PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
@@ -583,10 +589,17 @@ end
         else
             A_reg0 = [];
         end
+        % Forced-detachment parking pool PK: append one scalar state at the tail (after
+        % A_reg), init PARK_0. [] when off => nothing appended => legacy state vector.
+        if params.UseForcedDetachmentPark
+            Park0 = params.PARK_0;
+        else
+            Park0 = [];
+        end
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, Park0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, Park0];
 		end
 		
 		if params.UseSuperRelaxedADP
