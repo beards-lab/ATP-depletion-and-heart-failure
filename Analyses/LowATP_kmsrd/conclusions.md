@@ -35,8 +35,17 @@ with F_SR force-sensitivity) already does the job. Residual: the model slope (Δ
 slope (Δ≈0.18) and sits slightly low on seg1–2 — a fine-tune target (kmsrd between 8–12, or a mild F_SR
 shape), not a missing mechanism.
 
-## TODO — make it a real one-file mechanism
-Currently the ATP-dependence is SIMULATED (set `kmsrd` per condition). Wire `kmsrd_eff = kmsrd·g([ATP])`
-into `dPUdT` (flag-gated, `g=1` at 8 mM), bake into `params/params_2state_kmsrd.m`, and confirm 0.135 +
-slope emerge from concentrations alone. Reproduce: `Analyses/LowATP_kmsrd/RunKmsrdSlope.m` →
-`results/kmsrd_slope.mat` + `results/kmsrd_slope.png`.
+## DONE — one-file ATP-dependent mechanism `UseAtpKmsrd` (2026-07-14)
+Wired `kmsrd_eff = kmsrd·gATP` into `dPUdT` (SRX-ADP return, ~line 513), flag `UseAtpKmsrd`, with
+`gATP = [MgATP/(MgATP+K_srx)] / [MgATP_ref/(MgATP_ref+K_srx)]` — **=1 at `MgATP_ref`=8 mM → 8 mM
+byte-identical**; `K_srx`=9.3 → `kmsrd_eff`(2 mM)≈8. Baked `params/params_2state_kmsrd.m`
+(= `params_2state_lowATP` + the flag), flag OFF by default so baseline is untouched.
+**Verified from concentrations alone (`RunBakeKmsrd.m`):** 8 mM `max|Δ steady| = 0`; 2 mM **cost 0.137**,
+ktr ratio **0.55 0.52 0.50 0.50 0.44** (slope ∥ data 0.64→0.46), steadyR 1.168, peak1R 1.235. The
+weld-break (ktr↓, force held) AND the per-segment slope now emerge from [ATP]=2 mM — no per-condition
+hand-setting. Reproduce: `RunKmsrdSlope.m` (the sweep) and `RunBakeKmsrd.m` (the baked one-file check).
+
+## Open follow-ups (small)
+- Residual: model ktr sits ~0.09 low on seg1–2 — fine-tune `K_srx` (7–11) or a mild `F_SR` shape.
+- The base R2-slowdown is still the [ADP]-trap (`MgADP=1.6`); recast to ATP-limited detachment (physiology
+  note in the parked-state plan) so the WHOLE low-ATP story is [ATP]-driven with `MgADP=0`.

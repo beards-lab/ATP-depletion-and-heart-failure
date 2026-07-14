@@ -510,7 +510,14 @@ end
 %% Super-relaxed (SRX/DRX) dynamics
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
-    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
+    % Low-ATP: the SRX-ADP return (P_SRD->PD) needs ATP to re-prime -> slower at low [ATP].
+    % kmsrd_eff = kmsrd * gATP, normalized so gATP=1 at MgATP_ref (8 mM) => 8 mM byte-identical. Guarded.
+    kmsrd_eff = params.kmsrd;
+    if params.UseAtpKmsrd
+        gATP = (params.MgATP/(params.MgATP+params.K_srx)) / (params.MgATP_ref/(params.MgATP_ref+params.K_srx));
+        kmsrd_eff = kmsrd_eff * gATP;
+    end
+    RSRD2PD = kmsrd_eff*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
     if params.UseLimitedSRDTransition
         RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)))*PD;
     else
