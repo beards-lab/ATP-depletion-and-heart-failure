@@ -45,7 +45,27 @@ ktr ratio **0.55 0.52 0.50 0.50 0.44** (slope ∥ data 0.64→0.46), steadyR 1.1
 weld-break (ktr↓, force held) AND the per-segment slope now emerge from [ATP]=2 mM — no per-condition
 hand-setting. Reproduce: `RunKmsrdSlope.m` (the sweep) and `RunBakeKmsrd.m` (the baked one-file check).
 
-## Open follow-ups (small)
-- Residual: model ktr sits ~0.09 low on seg1–2 — fine-tune `K_srx` (7–11) or a mild `F_SR` shape.
-- The base R2-slowdown is still the [ADP]-trap (`MgADP=1.6`); recast to ATP-limited detachment (physiology
-  note in the parked-state plan) so the WHOLE low-ATP story is [ATP]-driven with `MgADP=0`.
+## FINAL — both follow-ups closed (2026-07-14): `params/params_2state_final.m`
+1. **ATP-limited detachment recast** (replaces the ADP-trap): new flag `UseAtpDetachR2` in `dPUdT`
+   (~line 448) — `R2 × gATP_R2(MgATP,K_T2)`, normalized to the SAME `MgATP_ref` pattern as `kmsrd`
+   (`gATP_R2 = 1` at `MgATP_ref`=8 mM ⇒ 8 mM exactly invariant regardless of `K_T2`). `MgADP=0`
+   throughout — physiologically correct for the CK/CrP-buffered fiber (low ATP does not raise ADP).
+2. **`K_srx` fine-tune**, jointly with the new `K_T2`: grid `K_T2×K_srx` (20 configs) →
+   **best `K_T2=2.0, K_srx=7.0` → ratio cost 0.1188** (down from 0.135/0.137), better than the ADP-trap
+   version AND fully [ATP]-driven.
+
+**Final numbers** (`params_2state_final.m`, `MgATP=2, MgADP=0, Pi=0.8` [Pi inert — no active Pi
+mechanism]): 8 mM `max|Δ steady|=0` (verified); 2 mM force ratio **1.178** (target 1.179), peak1 ratio
+**1.249** (target 1.252), ktr ratio **0.56 0.54 0.52 0.52 0.47** (data **0.64 0.59 0.53 0.47 0.46**).
+
+**The complete low-ATP mechanism, purely [ATP]-driven, one file, two flags:**
+- `UseAtpDetachR2` (R2 detachment slowed by low [ATP]) → the force-amplitude engine.
+- `UseAtpKmsrd` (SRX-ADP return slowed by low [ATP]) → the ktr weld-breaker + per-segment slope.
+
+Both gates share the `MgATP_ref`-normalized form, so BOTH are exactly inert at the 8 mM reference by
+construction — no re-fitting of the high-ATP baseline was ever needed.
+
+Figures: `results/FINAL_2mM_trace.png` (5-cycle slack-restretch trace, model vs data) and
+`results/FINAL_2mM_features.png` (full feature-by-feature comparison, absolute 2 mM values — NOTE this
+absolute view also carries the 8 mM baseline's own imperfection (cost 2.82, not 0); the fair low-ATP
+score is the RATIO cost 0.1188 above). Reproduce: `RunFinalBake.m`.

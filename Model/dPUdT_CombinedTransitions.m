@@ -444,6 +444,14 @@ if params.UseAdpTrap
     if denom_g2 > 0; g2trap = (params.MgATP/params.K_T1)/denom_g2; else; g2trap = 1; end
     R2 = R2 .* g2trap;
 end
+% Low-ATP, ATP-LIMITED detachment (preferred physiology: CK/CrP-buffered fiber keeps [ADP]~0, so
+% the driver is low [ATP] directly, not high [ADP]). R2 (P2 detachment needs ATP binding) x gATP_R2,
+% normalized so gATP_R2=1 at MgATP_ref (8 mM) => 8 mM invariant regardless of K_T2. Guarded, additive
+% with UseAdpTrap (use one or the other, not both, in a given params file).
+if params.UseAtpDetachR2
+    gATP_R2 = (params.MgATP/(params.MgATP+params.K_T2)) / (params.MgATP_ref/(params.MgATP_ref+params.K_T2));
+    R2 = R2 .* gATP_R2;
+end
 
 % Low-ATP Pi inhibition of the power stroke (P1->P2): Pi is a PRODUCT of the stroke
 % (A.M.ADP.Pi -> A.M.ADP + Pi), so elevated [Pi] inhibits it by mass action -> heads shift back to

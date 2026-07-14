@@ -316,7 +316,9 @@ end
     params0.UseForcedDetachmentPark = false; % master flag; appends +1 scalar ODE state PK. Inert (zero-length) when off.
     params0.UseAtpKmsrd = false;   % low-ATP: SRX-ADP return kmsrd_eff = kmsrd*gATP; gATP=1 at MgATP_ref => 8mM invariant. Breaks force<->ktr weld (magnitude + per-seg slope).
     params0.K_srx = 9.3;           % Km(ATP) [mM] for the SRX-ADP return; gives kmsrd_eff(2mM)/kmsrd_eff(8mM) ~ 0.38.
-    params0.MgATP_ref = 8;         % reference [ATP] (mM) where gATP=1 (high-ATP baseline).
+    params0.MgATP_ref = 8;         % reference [ATP] (mM) where gATP=1 (high-ATP baseline). Shared by UseAtpKmsrd/UseAtpDetachR2.
+    params0.UseAtpDetachR2 = false; % low-ATP: R2 (P2 detachment) x gATP_R2, normalized to 1 at MgATP_ref. Preferred over UseAdpTrap: driven by low [ATP] directly (CK/CrP buffer keeps [ADP]~0), not [ADP].
+    params0.K_T2 = 2.5;             % Km(ATP) [mM] for R2's ATP-binding-detachment step.
     params0.kpark = 0;      % rip rate p2->PK, strain-gated by exp(alphaRip*(s+dr3)); 0 = off (both ATP levels).
     params0.kunpark = 0;    % return rate PK->PT, gated by MgATP/(MgATP+K_T_park); fast at high ATP -> PK~0.
     params0.K_T_park = 4;   % Km(ATP) [mM] for the PK->PT recharge/return.
