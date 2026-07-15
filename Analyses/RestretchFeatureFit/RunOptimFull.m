@@ -43,14 +43,14 @@ addpath(genpath(root));
 
 cfg = struct();
 cfg.baseSnap = 'params/params_2state_a2hop.m';   % <<< 2-state ~2.95. Switch to params/params_full3_seed.m for 3-state.
-cfg.baseSnap = 'params/optfull2_opt.m';
-cfg.tag      = 'optfull3';
+cfg.baseSnap = 'params/optfull3_opt.m';
+cfg.tag      = 'optfull4';
 
-cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', 'ktr_rmse|0-.5|.1', ...
+cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|4', 'A|50', 'ktr_rmse|0-.5|.1', ...
     'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70',...
     't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', ...
     'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', ...
-    'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001'};
+    'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05'};
 
 % ---- read the seed so the pool matches the model ----
 params0 = getParams(); run(cfg.baseSnap); p0 = params0;

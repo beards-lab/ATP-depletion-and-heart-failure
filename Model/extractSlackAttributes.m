@@ -27,8 +27,8 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
 
 % Named constants
 FORCE_THRESHOLD_KPA   = 10;    % minimum force (kPa) to include in active-phase window
-PEAK_MIN_DISTANCE_S   = 0.01;  % minimum time between detected peaks (s)
-PEAK_MIN_PROMINENCE   = 0.5;   % minimum peak prominence for findpeaks (kPa)
+PEAK_MIN_DISTANCE_S   = 0.001;  % minimum time between detected peaks (s)
+PEAK_MIN_PROMINENCE   = 0.1;   % minimum peak prominence for findpeaks (kPa)
 MARKER_SIZE           = 12;    % plot marker size
 % Smoothing windows (data path only, useSmoothing=true).
 % FAST:  Savitzky-Golay for the re-stretch peak section.  11 ms preserves
@@ -45,6 +45,9 @@ MARKER_SIZE           = 12;    % plot marker size
 SMOOTH_WIN_FAST_S     = 0.011;  % SG window for rapid-peak region   (≈11 ms)
 SMOOTH_WIN_LIGHT_S    = 0.005;  % movmedian window for undershoot min (≈5 ms)
 SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
+% Guardrail scale factors (calibrated at optfull3_opt baseline to sum ~0.5 and ~1)
+DOUBLEPEAK_SCALE      = 0.1;    % grading factor for spurious 2nd peak prominence penalty (×1: no 2nd peaks at baseline)
+COOLDOWN_LS_SCALE     = 0.15; % scaling factor for cool-down overshoot LS error (calibrated to sum ≈1)
 
     if nargin < 5
         features = [];
@@ -291,7 +294,7 @@ SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
         %    prominence threshold is already reliable here.
         feats.v_restretch = velocity_segment(3, 2);
         y_sm = y;   % raw — smoothing not applied to this fast section
-        [peak1_y, peak1_t] = findpeaks(y_sm, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
+        [peak1_y, peak1_t, ~, peak1_prom] = findpeaks(y_sm, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
 
         if ~isempty(peak1_y)
             p1_time_abs = peak1_t(1);
@@ -301,9 +304,19 @@ SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
             feats.peak1_SL  = SL(find(t >= p1_time_abs, 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
 
-            if plotResults                
+            % Guardrail: penalize spurious 2nd peak if present (graded by prominence)
+            if numel(peak1_prom) >= 2
+                feats.doublePeak = DOUBLEPEAK_SCALE * sum(peak1_prom(2:end));
+            else
+                feats.doublePeak = 0;
+            end
+
+            if plotResults
                 plot(t + t_seg, y_sm, 'k-');
                 plot(p1_time_abs + t_seg, peak1_y(1), 'b^', 'MarkerSize', ms, 'LineWidth', 2);
+                if numel(peak1_prom) >= 2
+                    plot(peak1_t(2:end) + t_seg, peak1_y(2:end), 'rx', 'MarkerSize', ms*2, 'LineWidth', 4);
+                end
             end
 
             % Valley: min after peak on (possibly smoothed) signal
@@ -328,6 +341,7 @@ SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
             feats.peak1_dSL = NaN;
             feats.vall_y    = NaN;
             feats.vall_t    = NaN;
+            feats.doublePeak = 0;
         end
 
         feats.peak2 = y(end);
@@ -387,11 +401,34 @@ SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
         feats.ovrsht_dy = o_v - feats.steady;
         feats.ovrsht_t  = t(o_i);
 
+        % Guardrail: least-squares error of cool-down window vs data
+        if ~isempty(datatable)
+            dwin = datatable(:,1) >= velocity_segment(4) & datatable(:,1) <= velocity_segment(5) & datatable(:,1) <= velocity_segment(4) + 0.15;
+            td = datatable(dwin,1);  yd = datatable(dwin,3);
+            if ~isempty(td)
+                % Downsample data to 1/10th sampling, interpolate sim onto data grid
+                td10 = td(1:10:end);  yd10 = yd(1:10:end);
+                % Use only strictly increasing times (matching sim interpolation approach)
+                nonrep = makeMonotonous(data_t);
+                ysim = interp1(data_t(nonrep), data_y(nonrep), td10, 'linear', 'extrap');
+                resid = yd10 - ysim;
+                feats.coolDownLS = COOLDOWN_LS_SCALE * mean(resid.^2, 'omitnan');
+            else
+                feats.coolDownLS = 0;
+            end
+        else
+            feats.coolDownLS = 0;
+        end
+
         if plotResults
             plot(t(1:u_i) + t_seg, y_light(1:u_i), 'k:');
             plot(t(tail) + t_seg, y_sm2_tail, 'k-');
             plot(t(u_i) + t_seg, u_v, 'rv', 'MarkerSize', ms, 'LineWidth', 2);
             plot(t(o_i) + t_seg, o_v, 'r^', 'MarkerSize', ms, 'LineWidth', 2);
+            if exist('ysim', 'var')
+                plot(td10, ysim, 'r-|', td10, yd10, 'b-|')
+                plot(td10, COOLDOWN_LS_SCALE*cumsum(resid.^2), 'r-');
+            end
         end
 
         % ── Output-state features (from evaluateModel out struct) ─────────────

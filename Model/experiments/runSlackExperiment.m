@@ -370,8 +370,19 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             features_data.attached_ss        = [0.12 0.12 0.12 0.12 0.12];
             features_data.PT_ss              = [NaN NaN NaN NaN NaN];
             features_data.t0_crossing        = features_data.t0;
+            % Guardrail references (zero — error-already-computed features)
+            features_data.doublePeak         = [0 0 0 0 0];
+            features_data.coolDownLS         = [0 0 0 0 0];
+        else
+            % Ensure guardrails are present even when features_data comes from .mat
+            if ~isfield(features_data, 'doublePeak')
+                features_data.doublePeak = [0 0 0 0 0];
+            end
+            if ~isfield(features_data, 'coolDownLS')
+                features_data.coolDownLS = [0 0 0 0 0];
+            end
         end
     end
     % params0.PlotFeatureFitting = true;
-    features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting);
+    features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting, [], out_slack.datatable);
 end
