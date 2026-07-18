@@ -78,7 +78,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         case 'Fourth'
             params.SL0 = 2.2;
             % only the pre-last slack
-            velocitytable = [datastruct.velocitytable(1, :); datastruct.velocitytable(15:19, :)];
+            velocitytable = [datastruct.velocitytable(1, :); datastruct.velocitytable(14:19, :)];
             % ramp-up and peak
             validZone = datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.1 & datatable(:, 1) < datastruct.velocitytable(19, 1) - 0.1;
         case 'FirstAndLast'
@@ -328,7 +328,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 
     %% Optional: extract features if missing
 
-    if params.EvalFeatures
+    if false && params.EvalFeatures
         if isempty(features_data) && recalculateDataFeats
             features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], true, true);
             % Print extracted values to console so they can be pasted into the else branch below

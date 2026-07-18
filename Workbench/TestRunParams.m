@@ -1,10 +1,19 @@
 params0 = getParams();
 opt2state_opt;
 %%
+optfull4_opt
+
 params0.PlotEachSeparately = 1;
 figure(231);clf;
-params0.MaxRunTime = 120;
+params0.MaxRunTime = 320;
 % params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
+params0.RunForceLengthEstim = false;
+params0.RunForceVelocityTime = false;
+params0.RunForceVelocity = false;
+params0.RunSlack = true;
+params0.RunSlackSegments = 'Fourth';
+params0.RunKtr = false;
+params0.RunStairs = false;
 tic
 RunBakersExp;
 toc

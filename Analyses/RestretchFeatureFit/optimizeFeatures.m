@@ -141,20 +141,10 @@ fprintf('[%s] state file : %s\n', cfg.tag, STATE_FILE);
 fprintf('[%s] snapshot   : %s\n', cfg.tag, SNAP_BEST);
 
 %% -------- base = the caller-supplied seed snapshot -----------------------
-params0 = getParams();
-run(cfg.baseSnap);
-params0 = getParams(params0, [], true, false);
-
-params0.RunForceVelocity = true; params0.RunKtr = false; params0.RunSlack = true;
-params0.RunStairs = false; params0.RunForceVelocityTime = false;
-params0.EvalFeatures = true; params0.BreakOnODEUnstable = false;
-params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
-params0.RunSlackSegments = 'AllPar';
-params0.FV_velocities = -[0 0.5 1 2 4];
-params0.MaxRunTime = cfg.MaxRunTime;
+params0 = cfg.params0;
 
 % --- feature list: caller-supplied, verbatim ---
-params0.fn = cfg.fn;
+% params0.fn = cfg.fn;
 
 % surrogateopt UseParallel=false: the model's slack sim parallelizes
 % internally over a THREAD pool ('All' segments run in one worker but the

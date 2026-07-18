@@ -43,8 +43,8 @@ addpath(genpath(root));
 
 cfg = struct();
 cfg.baseSnap = 'params/params_2state_a2hop.m';   % <<< 2-state ~2.95. Switch to params/params_full3_seed.m for 3-state.
-cfg.baseSnap = 'params/optfull3_opt.m';
-cfg.tag      = 'optfull4';
+cfg.baseSnap = 'params/optfull4_opt.m';
+cfg.tag      = 'optfull_FourthSlackTimebase';
 
 cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|4', 'A|50', 'ktr_rmse|0-.5|.1', ...
     'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70',...
@@ -53,8 +53,8 @@ cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|4', 'A|50', 'ktr_rmse|0-.5|.1', ...
     'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05'};
 
 % ---- read the seed so the pool matches the model ----
-params0 = getParams(); run(cfg.baseSnap); p0 = params0;
-NoS = p0.NumberOfStates;
+params0 = getParams(); run(cfg.baseSnap); 
+NoS = params0.NumberOfStates;
 
 % ---- COMPREHENSIVE candidate pool (everything with demonstrated leverage) ----
 cand = { ...
@@ -94,7 +94,7 @@ end
 
 % ---- drop degenerate candidates (0-valued in seed -> immovable by g) ----
 keep = true(1, numel(cand));
-for i = 1:numel(cand); keep(i) = (seedval(p0, cand{i}) ~= 0); end
+for i = 1:numel(cand); keep(i) = (seedval(params0, cand{i}) ~= 0); end
 dropped = cand(~keep);
 cfg.pool = cand(keep);
 if ~isempty(dropped)
@@ -114,6 +114,21 @@ cfg.KICK_FRAC     = 0;
 cfg.DEBUG           = false;
 cfg.TIME_BUDGET_HRS = 48;                        % long haul; raise/lower as desired
 cfg.RESUME          = false;%isfile(fullfile(root, 'params', 'optfull_state.mat'));
+
+params0.RunForceVelocity = false; params0.RunKtr = false; params0.RunSlack = true;
+params0.RunStairs = false; params0.RunForceVelocityTime = false;
+params0.EvalFeatures = false; params0.BreakOnODEUnstable = false;
+params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
+params0.RunSlackSegments = 'Fourth';
+params0.FV_velocities = -[0 0.5 1 2 4];
+params0.MaxRunTime = cfg.MaxRunTime;
+
+params0.OptimizeOn = 'timecourse';
+params0.RunForceVelocity = false;
+% p0.RunSlackSegments = 'Fourth';
+
+cfg.params0 = params0;
+
 
 fprintf('[RunOptimFull] model=%d-state | pool=%d | N_DRAW=%d | compulsory={%s}\n', ...
     NoS, numel(cfg.pool), cfg.N_DRAW, strjoin(cfg.compulsory, ','));
