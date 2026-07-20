@@ -1,7 +1,13 @@
+root = fullfile(fileparts(mfilename('fullpath')), '..');
+addpath(genpath(root));
+
 params0 = getParams();
-opt2state_opt;
+% opt2state_opt;
+
 %%
-optfull4_opt
+% optfull4_opt
+optfull_FourthSlackTimebase_opt
+ModelParamsWPassive_NewOpt3
 
 params0.PlotEachSeparately = 1;
 figure(231);clf;
@@ -11,9 +17,11 @@ params0.RunForceLengthEstim = false;
 params0.RunForceVelocityTime = false;
 params0.RunForceVelocity = false;
 params0.RunSlack = true;
-params0.RunSlackSegments = 'Fourth';
+params0.RunSlackSegments = 'All';
 params0.RunKtr = false;
 params0.RunStairs = false;
+% params0.velocitytableonfile = 'protocol_03_27_2026_ActivePNBMava_slack.mat';
+% params0.ka = 0;
 tic
 RunBakersExp;
 toc

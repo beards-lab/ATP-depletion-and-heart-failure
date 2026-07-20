@@ -103,6 +103,10 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
             velocitytable = datastruct.velocitytable(18:end, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(23, 1);
             velocitytable(1, 1) = -2;
+        case 'AllPassive'
+            % all + steady baseline before first slack
+            velocitytable = datastruct.velocitytable(1:end, :);
+            validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) - 0.3;            
         case 'All'
             % all
             velocitytable = datastruct.velocitytable(1:end, :);
@@ -228,8 +232,15 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         peaks_data =    [21.4488;   21.1131;    23.4577;   24.4631];
         peaks_model = findpeaks(out_slack.Force(nonrepeating), out_slack.t(nonrepeating), MinPeakProminence=10, MinPeakHeight=10, Annotate="peaks")';
         N = min(length(peaks_data), length(peaks_model));
-        E_p = 0.5*sum((peaks_data(1:N) - peaks_model(1:N)).^2);
-        E_slack = E_slack + E_p;
+        E_p = params0.FitPassivePeaksMultiplier*sum((peaks_data(1:N) - peaks_model(1:N)).^2);
+        
+
+        preSlack_model = mean(out_slack.Force(out_slack.t < 74.43 & out_slack.t > 20));
+        preSlack_data = mean(datatable(datatable(:, 1) < 74.43 & datatable(:, 1) > 74, 3));
+        E_2umBase = 10*(preSlack_data - preSlack_model)^2;
+
+        E_slack = E_slack + E_p + E_2umBase;
+
     end
 
     %% Plotting
