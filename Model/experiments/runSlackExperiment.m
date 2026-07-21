@@ -60,59 +60,80 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
     par_velocitytable = [];
     parple = [];
 
+    % Which of the full-protocol slacks this selection actually simulates &
+    % extracts. The file's data-feature arrays are length nSlackFull (one per
+    % slack); when only a subset is simulated the model features are shorter,
+    % so the length-nSlackFull data features are trimmed to slackIdx after the
+    % switch (kept in ONE place here rather than scattered). [] = don't trim
+    % (synthetic protocols with no per-slack data correspondence).
+    nSlackFull = numel(find(datastruct.velocitytable(:, 2) < -1));
+    slackIdx   = [];
+
     switch params.RunSlackSegments
         % first slack
         case 'First'
+            slackIdx = 1;
             velocitytable = datastruct.velocitytable(1:7, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1);
         case 'FirstTwo'
             % two slacks
+            slackIdx = [1 2];
             velocitytable = datastruct.velocitytable(1:11, :);
             validZone = datatable(:, 1) > 1;
         case 'Fourth-rampuponly'
+            slackIdx = [];   % extracts 0 full cycles (ramp-up only) — don't trim
             params.SL0 = 1.9194;
             % only the last slack
             velocitytable = [datastruct.velocitytable(1, :); datastruct.velocitytable(16:19, :)];
             % ramp-up and peak
             validZone = datatable(:, 1) > datastruct.velocitytable(17, 1) & datatable(:, 1) < datastruct.velocitytable(19, 1) - 0.1;
         case 'Fourth'
+            slackIdx = 4;
             params.SL0 = 2.2;
             % only the pre-last slack
             velocitytable = [datastruct.velocitytable(1, :); datastruct.velocitytable(14:19, :)];
             % ramp-up and peak
             validZone = datatable(:, 1) > datastruct.velocitytable(15, 1) - 0.1 & datatable(:, 1) < datastruct.velocitytable(19, 1) - 0.1;
         case 'FirstAndLast'
+            slackIdx = [1 5];
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(21, 1);
         case 'FirstAndLastShort'
+            slackIdx = [1 5];
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             velocitytable([5:6 9:10], 1) = velocitytable([5:6, 9:10], 1) + 1;
             validZone = datatable(:, 1) > datastruct.velocitytable(3, 1) - 0.1 & datatable(:, 1) < datastruct.velocitytable(3, 1)+0.04 ...
                 | datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(19, 1) + 0.04;
         case 'FirstAndLastExtended'
+            slackIdx = [1 5];
             velocitytable = datastruct.velocitytable([1:6 19:23], :);
             velocitytable([5:6 9:10], 1) = velocitytable([5:6, 9:10], 1) + 1;
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) ...
                 | datatable(:, 1) > datastruct.velocitytable(18, 1) & datatable(:, 1) < datastruct.velocitytable(21, 1);
         case 'AllButLast'
             % all but the last
+            slackIdx = 1:4;
             velocitytable = datastruct.velocitytable(1:19, :);
             validZone = datatable(:, 1) > 1;
         case 'Last'
             % only the last slack
+            slackIdx = nSlackFull;
             velocitytable = datastruct.velocitytable(18:end, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(19, 1)-.1 & datatable(:, 1) < datastruct.velocitytable(23, 1);
             velocitytable(1, 1) = -2;
         case 'AllPassive'
             % all + steady baseline before first slack
+            slackIdx = 1:nSlackFull;
             velocitytable = datastruct.velocitytable(1:end, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) - 0.3;            
         case 'All'
             % all
+            slackIdx = 1:nSlackFull;
             velocitytable = datastruct.velocitytable(1:end, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1);
         case 'AllPar'
             % all, but run all in parallel
+            slackIdx = 1:nSlackFull;
             velocitytable = datastruct.velocitytable(1:end, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1);
 
@@ -145,6 +166,7 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
 
         case 'AllNoBump'
             % all, but evaluate only force onset, not the restretch
+            slackIdx = 1:nSlackFull;
             velocitytable = datastruct.velocitytable(1:end, :);
             validZone = datatable(:, 1) > datastruct.velocitytable(2, 1) & datatable(:, 1) < datastruct.velocitytable(5, 1) |...
                 datatable(:, 1) > datastruct.velocitytable(7, 1) - 0.05 & datatable(:, 1) < datastruct.velocitytable(9, 1) |...
@@ -178,6 +200,20 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
                 velocitytable = [velocitytable; velocitytable(end, 1) + ramphold, rampvel/rampup; velocitytable(end, 1) + rampup+ramphold, 0]; %#ok<AGROW>
             end
             velocitytable = [velocitytable; velocitytable(end, 1) + ramphold*2, 0];
+    end
+
+    % Trim data features to the simulated slack subset so model (numel(slackIdx))
+    % and data (nSlackFull) feature arrays are element-comparable. Central: this
+    % is the ONLY place the length is reconciled; the switch above only records
+    % slackIdx. Only length-nSlackFull numeric fields are trimmed.
+    if ~isempty(slackIdx) && ~isempty(fieldnames(features_data))
+        ff = fieldnames(features_data);
+        for kf = 1:numel(ff)
+            v = features_data.(ff{kf});
+            if isnumeric(v) && numel(v) == nSlackFull
+                features_data.(ff{kf}) = v(slackIdx);
+            end
+        end
     end
 
     %% Run simulation (possibly in parallel chunks)
@@ -396,4 +432,14 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
     end
     % params0.PlotFeatureFitting = true;
     features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting, [], out_slack.datatable);
+
+    % 0-target guardrail features: the model's own value IS the penalty, so the
+    % data target is 0 by definition. The file's features_data omits them, which
+    % otherwise scores a 'doublePeak'/'coolDownLS'/'slackLSQE' fn entry as a
+    % missing-feature (100) penalty. Set each to the model feature's length.
+    for gf = {'doublePeak', 'coolDownLS', 'slackLSQE'}
+        if isfield(features_model, gf{1})
+            features_data.(gf{1}) = zeros(size(features_model.(gf{1})));
+        end
+    end
 end

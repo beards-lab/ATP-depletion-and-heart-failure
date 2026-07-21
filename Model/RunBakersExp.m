@@ -63,6 +63,19 @@ if params0.RunSlack
     out = out_slack;
 end
 
+%% PASSIVE (titin/SE mechanics; active attachment OFF — PNB/Mava condition)
+% Contributes FEATURES only (PS_restretchPeak, PS_rampupRMSE, PS_holdDecayRMSE,
+% PS_steady22, PS_steady20); the cost is taken by evalFeatureCost from params0.fn,
+% so the passive terms are weighted/selected exactly like every other feature.
+% This scores the separately-measured passive observations inside the joint
+% cost so the active data can resolve the passive fit's non-uniqueness.
+if isfield(params0, 'RunSlackPassive') && params0.RunSlackPassive
+    [fm_pas, fd_pas, out_pas] = runPassiveExperiment(params0);
+    features_model = mergeStructs(features_model, fm_pas);
+    features_data  = mergeStructs(features_data,  fd_pas);
+    out = out_pas;
+end
+
 %% MINIMAL STRETCH
 if isfield(params0, 'RunMinStretch') && params0.RunMinStretch
 

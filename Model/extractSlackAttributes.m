@@ -420,6 +420,23 @@ COOLDOWN_LS_SCALE     = 0.15; % scaling factor for cool-down overshoot LS error 
             feats.coolDownLS = 0;
         end
 
+        % Time-based LSQ error (RMSE) of the WHOLE slack cycle, model vs data,
+        % over [slack onset, steady end]. RMSE (not MSE) so RMSE^2 in the
+        % feature cost recovers the window MSE; data-vs-data self-error is 0.
+        if ~isempty(datatable)
+            sw = datatable(:, 1) >= velocity_segment(1) & datatable(:, 1) <= velocity_segment(5);
+            tsd = datatable(sw, 1); ysd = datatable(sw, 3);
+            if ~isempty(tsd)
+                nonrepS = makeMonotonous(data_t);
+                ysimS   = interp1(data_t(nonrepS), data_y(nonrepS), tsd, 'linear', 'extrap');
+                feats.slackLSQE = sqrt(mean((ysd - ysimS).^2, 'omitnan'));
+            else
+                feats.slackLSQE = NaN;
+            end
+        else
+            feats.slackLSQE = NaN;
+        end
+
         if plotResults
             plot(t(1:u_i) + t_seg, y_light(1:u_i), 'k:');
             plot(t(tail) + t_seg, y_sm2_tail, 'k-');
