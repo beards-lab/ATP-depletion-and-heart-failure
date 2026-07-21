@@ -23,6 +23,7 @@ addpath(genpath(root));
 %%
 cfg = struct();
 cfg.baseSnap = 'params/optfull_FourthSlackTimebase_opt.m';   % seed (active fit)
+cfg.baseSnap = 'params/passiveCoupling_opt.m';   % seed (active fit)
 cfg.tag      = 'passiveCoupling';                            % -> params/passiveCoupling_opt.m
 
 % ---- base params (sanctioned isolated load) ----
@@ -32,7 +33,7 @@ params0.mods = {}; params0.g = [];
 % ---- experiments: passive (whole) + active fourth slack, feature-scored ----
 params0.RunForceVelocity = false; params0.RunForceVelocityTime = false;
 params0.RunKtr = false; params0.RunStairs = false; params0.RunForceLengthEstim = false;
-params0.RunSlack = true;  params0.RunSlackSegments = 'Fourth';
+params0.RunSlack = true;  params0.RunSlackSegments = 'AllPar';
 params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat';
 params0.RunSlackPassive = true;
 params0.passive_velocitytableonfile = 'protocol_03_27_2026_ActivePNBMava_slack.mat';
@@ -45,7 +46,7 @@ params0.MaxRunTime = 60;
 
 % ---- feature groups (model<->data comparable after slack trimming) ----
 % PS_* = passive-slack features (runPassiveExperiment); slackLSQE = active Fourth slack.
-baseFn = {'PS_restretchPeak|2', 'PS_rampupRMSE|0.03', 'PS_holdDecayRMSE|0.04', 'PS_steady22|2', 'PS_steady20|1', 'slackLSQE'};
+baseFn = {'PS_restretchPeak|2', 'PS_rampupRMSE|0.03', 'PS_holdDecayRMSE|0.04', 'PS_steady22|2', 'PS_steady20|1', 'slackLSQE|0.2'};
 
 % ---- weight so each group contributes equally at the seed ----
 params0.fn = baseFn;
@@ -90,11 +91,13 @@ function [fn, w, c] = iWeightEqual(params0, baseFn)
 %IWEIGHTEQUAL Run the seed once and set weights so each feature-group's
 %   weighted cost == 1 at g=1 (comparable at initial). costExp=2 matches the
 %   'Feats' objective (evaluateBakersExp -> evalFeatureCost, 3-arg default).
+    params0.PlotEachSeparately = true;
     RunBakersExp;   % populates features_model / features_data at the seed
     c = evalFeatureCost(features_data, features_model, baseFn);
     w = 1 ./ max(c, 1e-6);
     fn = cell(1, numel(baseFn));
     for i = 1:numel(baseFn); fn{i} = sprintf('%s|%.6g', baseFn{i}, w(i)); end
+    plotFeatures(features_data, features_model, [], baseFn);
 end
 
 function v = iSeedVal(p, name)
