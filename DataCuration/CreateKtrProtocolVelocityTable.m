@@ -23,8 +23,13 @@ configs = {
     '../data/04 03 2026 F/2mM_stiff_ktr.txt', '../data/protocol_04_03_2026_velocitytable_ktr_2mM.mat';
 };
 
-ktrSegment = [1583, 1660];   % clip window around the ktr event
-tWarmStart = 1570;           % warm-start row prepended before protocol
+% stiff_ktr Time column is in MILLISECONDS (header "(ms)"); the merged/stairs
+% files are in seconds. Divide by 1000 so every protocol shares a seconds
+% time axis and the ktr event runs at its true (fast) timescale.
+ktrSegment  = [1.583, 1.660]; % clip window around the ktr event (s)
+warmupLead  = 5;              % isometric warm-up before shortening (s) — lets
+                              % the model reach steady state (the old 15 s
+                              % "warm-up" was an artifact of ms-as-seconds)
 
 for ci = 1:size(configs, 1)
     fpath   = configs{ci, 1};
@@ -32,12 +37,12 @@ for ci = 1:size(configs, 1)
 
     M = readmatrix(fpath);
     idx0 = find(M(:,1) >= -0.1, 1);
-    t = M(idx0:end, 1);
+    t = M(idx0:end, 1) / 1000;   % ms → s
     L = M(idx0:end, 2);
     F = M(idx0:end, 3);
 
     % ── Detect 6 key transition times ───────────────────────────────────────
-    L_base = median(L(t >= 1570 & t < ktrSegment(1)));
+    L_base = median(L(t >= 1.570 & t < ktrSegment(1)));
     thresh = 0.005;   % 0.5% ML — threshold for detecting transitions
 
     % 1. Shortening start: last sample at baseline before L drops
@@ -72,8 +77,9 @@ for ci = 1:size(configs, 1)
     v_return    = (L_base - L_max)  / (t_recov - t_ret);
 
     % ── 8-row velocitytable: [t, vel(ML/s), vel_um(µm/s), L(ML)] ────────────
+    %    Warm-start row leads shortening by warmupLead seconds of isometric hold.
     velocitytable = [
-        tWarmStart,    0,            0,              L_base;
+        t_ss - warmupLead, 0,        0,              L_base;
         t_ss,          v_short,      v_short*2,      L_base;
         t_hs,          0,            0,              L_min;
         t_rs,          v_restretch,  v_restretch*2,  L_min;
@@ -87,8 +93,8 @@ for ci = 1:size(configs, 1)
     dsf       = 5;
     datatable = [downsample(t, dsf), downsample(L, dsf), downsample(F, dsf)];
 
-    % Normalize force by pre-shortening Fss (2s window just before shortening)
-    i_pre = datatable(:,1) >= ktrSegment(1) & datatable(:,1) < ktrSegment(1) + 2;
+    % Normalize force by pre-shortening Fss (isometric baseline before t_ss)
+    i_pre = datatable(:,1) >= ktrSegment(1) & datatable(:,1) < t_ss;
     Fss   = mean(datatable(i_pre, 3));
     if Fss == 0; Fss = 1; end
     datatable(:, 3) = datatable(:, 3) / Fss;
