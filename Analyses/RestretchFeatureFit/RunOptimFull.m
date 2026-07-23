@@ -43,41 +43,48 @@ addpath(genpath(root));
 
 cfg = struct();
 cfg.baseSnap = 'params/params_2state_a2hop.m';   % <<< 2-state ~2.95. Switch to params/params_full3_seed.m for 3-state.
-cfg.tag      = 'optfull';
+cfg.baseSnap = 'params/optfull4_opt.m';
+cfg.tag      = 'optfull_FourthSlackTimebase';
 
-cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|2', 'A|50', 'ktr_rmse|0-.5|.1', ...
+cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|4', 'A|50', 'ktr_rmse|0-.5|.1', ...
     'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70',...
     't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', ...
     'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', ...
-    'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001'};
+    'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05'};
 
 % ---- read the seed so the pool matches the model ----
-params0 = getParams(); run(cfg.baseSnap); p0 = params0;
-NoS = p0.NumberOfStates;
+params0 = getParams(); run(cfg.baseSnap); 
+NoS = params0.NumberOfStates;
 
 % ---- COMPREHENSIVE candidate pool (everything with demonstrated leverage) ----
 cand = { ...
     ... % core cross-bridge cycle (force, ktr, FV, ATPase)
-    'ka','kd','k1','k_1','k2','k_2','kah', ...
+    'ka','kd','k1','k_1','k2','k_2','kah','kamh', ...   % +kamh: SRD-ADP->detach release (RDT=kamh*PD), active w/ UseSuperRelaxedADP
     ... % stiffness / force scale
-    'kstiff1','kstiff2','kstiff1_n','kstiff2_n','kSE', ...
+    'kstiff1','kstiff2','kstiff1_n','kstiff2_n','kSE','estiff', ...  % +estiff: p2 force-bearing strain exponent
     ... % series viscoelastic + restretch transient (peak1_dSL region)
-    'kSE_M','eta_M','mu_neg', ...
+    'kSE_M','eta_M','mu_neg','mu', ...                 % +mu: SE damping on extension (Force>F_total limb; mu_neg is the other limb)
     ... % power-stroke strain offsets
-    'dr','dr2', ...
+    'dr','dr1','dr2', ...                              % +dr1: p1 pre-stroke force offset (s1=s+dr1), active w/ UseNegativeKstiff
     ... % SRX / SRD manifold (ktr timescale + slow recovery)
     'ksr0','kmsrd','ksr2srd','ksrd2sr','sigma1','sigma2','sigma_srd1','sigma_srd2', ...
     ... % registration availability (FV shoulder + restretch undershoot)
     'A0','v_ref_reg','tau_reg', ...
-    ... % occupancy ceiling + passive titin (restretch force)
-    'P_bound_max','k_pas', ...
+    ... % occupancy ceiling (restretch force). Passive titin (k_pas, gamma) EXCLUDED -- identified separately.
+    'P_bound_max', ...
     ... % A2 restretch hop (valley / peak2)
     'kA2hop','sA2hop', ...
+    ... % sarcomere geometry: overlap (L_*) + lattice spacing (d10/R/d_optimal/sigma) + strain pivot
+    'L_thick','L_hbare','L_thin','LXBpivot', ...
+    'd10_ref','SL_ref_lattice','R_thick','R_thin','d_optimal','sigma_lattice', ...
     ... % strain-dependent rate knots (PCHIP interior knots; boundary clamps excluded)
     'PieceWiseStrainDep2X_logOffset', 'PieceWiseStrainDepR1DX_logOffset', 'PieceWiseStrainDepR21X_logOffset', ...
+    'PieceWiseStrainDepX__2','PieceWiseStrainDepX__3','PieceWiseStrainDepX__4', ...
+    'PieceWiseStrainDep2X__2','PieceWiseStrainDep2X__3','PieceWiseStrainDep2X__4','PieceWiseStrainDep2X__5', ...
+    'PieceWiseStrainDepR1DX__1','PieceWiseStrainDepR1DX__2','PieceWiseStrainDepR1DX__3','PieceWiseStrainDepR1DX__4', ...
+    'PieceWiseStrainDepR21X__2','PieceWiseStrainDepR21X__3','PieceWiseStrainDepR21X__4',...
     'PieceWiseStrainDepParams__2','PieceWiseStrainDepParams__3','PieceWiseStrainDepParams__4', ...
-    'PieceWiseStrainDep2Params__2','PieceWiseStrainDep2Params__3','PieceWiseStrainDep2Params__4', ...
-    'PieceWiseStrainDep2Params__2','PieceWiseStrainDep2Params__3','PieceWiseStrainDep2Params__4', 'PieceWiseStrainDep2Params__5',...
+    'PieceWiseStrainDep2Params__2','PieceWiseStrainDep2Params__3','PieceWiseStrainDep2Params__4','PieceWiseStrainDep2Params__5', ...
     'PieceWiseStrainDepR1DParams__1','PieceWiseStrainDepR1DParams__2','PieceWiseStrainDepR1DParams__3','PieceWiseStrainDepR1DParams__4', ...
     'PieceWiseStrainDepR21Params__2','PieceWiseStrainDepR21Params__3','PieceWiseStrainDepR21Params__4'};
 
@@ -87,7 +94,7 @@ end
 
 % ---- drop degenerate candidates (0-valued in seed -> immovable by g) ----
 keep = true(1, numel(cand));
-for i = 1:numel(cand); keep(i) = (seedval(p0, cand{i}) ~= 0); end
+for i = 1:numel(cand); keep(i) = (seedval(params0, cand{i}) ~= 0); end
 dropped = cand(~keep);
 cfg.pool = cand(keep);
 if ~isempty(dropped)
@@ -100,13 +107,28 @@ if NoS == 3; cfg.compulsory = [cfg.compulsory, {'k3','kstiff3'}]; end
 
 % ---- effective number + budgets ----
 cfg.N_DRAW        = 10;                          % Nelder-Mead-tractable block size
-cfg.SIMPLEX_EVALS = (NoS==3)*70 + (NoS==2)*120;  % ~7-12 evals/dim
-cfg.MaxRunTime    = (NoS==3)*90 + (NoS==2)*75;   % generous ceiling: the A2-hop config is stiffer and flaked at 45s under load
+cfg.SIMPLEX_EVALS = (NoS==3)*40 + (NoS==2)*60;  % ~7-12 evals/dim
+cfg.MaxRunTime    = (NoS==3)*90 + (NoS==2)*60;   % generous ceiling: the A2-hop config is stiffer and flaked at 45s under load
 cfg.SURR_EVALS    = 0;                           % pure fminsearch (no surrogate)
 cfg.KICK_FRAC     = 0;
 cfg.DEBUG           = false;
-cfg.TIME_BUDGET_HRS = 12;                        % long haul; raise/lower as desired
+cfg.TIME_BUDGET_HRS = 48;                        % long haul; raise/lower as desired
 cfg.RESUME          = false;%isfile(fullfile(root, 'params', 'optfull_state.mat'));
+
+params0.RunForceVelocity = false; params0.RunKtr = false; params0.RunSlack = true;
+params0.RunStairs = false; params0.RunForceVelocityTime = false;
+params0.EvalFeatures = false; params0.BreakOnODEUnstable = false;
+params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
+params0.RunSlackSegments = 'Fourth';
+params0.FV_velocities = -[0 0.5 1 2 4];
+params0.MaxRunTime = cfg.MaxRunTime;
+
+params0.OptimizeOn = 'timecourse';
+params0.RunForceVelocity = false;
+% p0.RunSlackSegments = 'Fourth';
+
+cfg.params0 = params0;
+
 
 fprintf('[RunOptimFull] model=%d-state | pool=%d | N_DRAW=%d | compulsory={%s}\n', ...
     NoS, numel(cfg.pool), cfg.N_DRAW, strjoin(cfg.compulsory, ','));

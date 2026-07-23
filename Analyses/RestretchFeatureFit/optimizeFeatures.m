@@ -116,7 +116,7 @@ TIME_BUDGET_HRS = cfg.TIME_BUDGET_HRS;
 RESUME          = cfg.RESUME;
 STALL_LIMIT     = 2;        % non-improving rounds before a random kick
 IMPROVE_TOL     = 1e-3;     % min cost drop to count as improvement
-KICK_FRAC       = 0.25;     % +-25% random multiplicative kick on stall
+KICK_FRAC       = 0.0;     % +-25% random multiplicative kick on stall
 
 root = fullfile(fileparts(mfilename('fullpath')), '..', '..');
 addpath(genpath(root));
@@ -141,20 +141,10 @@ fprintf('[%s] state file : %s\n', cfg.tag, STATE_FILE);
 fprintf('[%s] snapshot   : %s\n', cfg.tag, SNAP_BEST);
 
 %% -------- base = the caller-supplied seed snapshot -----------------------
-params0 = getParams();
-run(cfg.baseSnap);
-params0 = getParams(params0, [], true, false);
-
-params0.RunForceVelocity = true; params0.RunKtr = false; params0.RunSlack = true;
-params0.RunStairs = false; params0.RunForceVelocityTime = false;
-params0.EvalFeatures = true; params0.BreakOnODEUnstable = false;
-params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
-params0.RunSlackSegments = 'All';
-params0.FV_velocities = -[0 0.5 1 2 4];
-params0.MaxRunTime = cfg.MaxRunTime;
+params0 = cfg.params0;
 
 % --- feature list: caller-supplied, verbatim ---
-params0.fn = cfg.fn;
+% params0.fn = cfg.fn;
 
 % surrogateopt UseParallel=false: the model's slack sim parallelizes
 % internally over a THREAD pool ('All' segments run in one worker but the
@@ -187,7 +177,9 @@ else
     state = struct();
     state.params      = params0;   % working point (may be kicked)
     state.best_params = params0;   % the incumbent BEST (only updated on accept)
+    % params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
     tic
+    figure;
     state.best_cost = evaluateBakersExp(ones(1,1), setMods(params0, {}), true, true);
     toc
     state.round     = 0;
@@ -231,7 +223,7 @@ for r = state.round+1 : N_ROUNDS
     minPts = max(nv+1, min(20, SURR_EVALS-1));
     % Seed with the incumbent (g=1) so surrogateopt always knows the current
     % best point — a round can then never return worse than the seed.
-    soOpts = optimoptions('surrogateopt', 'Display','off', ...
+    soOpts = optimoptions('surrogateopt', 'Display','Iter', ...
         'MaxFunctionEvaluations', SURR_EVALS, 'UseParallel', false, ...
         'MinSurrogatePoints', minPts, 'InitialPoints', ones(1, nv), 'PlotFcn', []);
     if SURR_EVALS > 0
@@ -292,6 +284,15 @@ for r = state.round+1 : N_ROUNDS
 
     state.round   = r;
     state.history = [state.history; r, f_s, f_round, state.best_cost];
+    if ~isfield(state, 'paramsHistory')
+        phl = 1;
+    else
+        phl = lenght(state.paramsHistory);
+    end
+
+    state.paramsHistory(phl) = getParams(pr, g_round, false, true);
+    state.paramsCosts(phl) = f_round;
+
     save(STATE_FILE, 'state');
 end
 

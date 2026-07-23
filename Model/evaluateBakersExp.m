@@ -42,13 +42,17 @@ try
     LoadData;
     lastwarn('', ''); 
     RunBakersExp;
-    % Et = sum(E);
-    % use feature costs instead
-    [cost, ~, cost_raw] = evalFeatureCost(features_data, features_model, params0.fn);
-    Et = sum(cost);
-    if plotDebug
-        plotFeatures(features_data, features_model, [], params0.fn);
-        disp(Et);
+    if strcmp(params0.OptimizeOn, 'Feats')
+        % Et = sum(E);
+        % use feature costs instead
+        [cost, ~, cost_raw] = evalFeatureCost(features_data, features_model, params0.fn);
+        Et = sum(cost);
+        if plotDebug
+            plotFeatures(features_data, features_model, [], params0.fn);
+            disp(Et);
+        end
+    else
+        Et = sum(E);
     end
     
     if Et == 0

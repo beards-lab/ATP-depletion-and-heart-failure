@@ -23,7 +23,7 @@ function out = runFVTimecourseExperiment(params0, Data_ATP, FV_velocities, F_act
 
     modelFcn = str2func(params0.modelFcn);
 
-    isovelocity = load('../data/bakers_isovelocity.mat', 'datatable', 'velocitytable');
+    isovelocity = load('bakers_isovelocity.mat', 'datatable', 'velocitytable');
     datatable    = isovelocity.datatable;
     velocitytable = isovelocity.velocitytable;
 

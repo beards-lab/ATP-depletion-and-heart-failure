@@ -63,6 +63,19 @@ if params0.RunSlack
     out = out_slack;
 end
 
+%% PASSIVE (titin/SE mechanics; active attachment OFF — PNB/Mava condition)
+% Contributes FEATURES only (PS_restretchPeak, PS_rampupRMSE, PS_holdDecayRMSE,
+% PS_steady22, PS_steady20); the cost is taken by evalFeatureCost from params0.fn,
+% so the passive terms are weighted/selected exactly like every other feature.
+% This scores the separately-measured passive observations inside the joint
+% cost so the active data can resolve the passive fit's non-uniqueness.
+if isfield(params0, 'RunSlackPassive') && params0.RunSlackPassive
+    [fm_pas, fd_pas, out_pas] = runPassiveExperiment(params0);
+    features_model = mergeStructs(features_model, fm_pas);
+    features_data  = mergeStructs(features_data,  fd_pas);
+    out = out_pas;
+end
+
 %% MINIMAL STRETCH
 if isfield(params0, 'RunMinStretch') && params0.RunMinStretch
 
@@ -117,21 +130,21 @@ if isfield(params0, 'RunMinStretch') && params0.RunMinStretch
     params.UseSuperRelaxedADP = false;
     params.UseA2MechanicalRecocking = false;
 
-    [~, out] = evaluateModel(modelFcn, velocitytable(:, 1), params);
+    [~, out_rms] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
-    mask = out.t >= 0;
+    mask = out_rms.t >= 0;
     fmaxdataCurrent = {};
     fmaxdataCurrent{1} = datatable;
-    fmaxdataCurrent{end+1} = [out.t(mask)', out.SL(mask)', out.Force(mask)'];
+    fmaxdataCurrent{end+1} = [out_rms.t(mask)', out_rms.SL(mask)', out_rms.Force(mask)'];
     ProcessFmaxData;
 end
 
 %% FORCE VELOCITY RESIMULATION
 if params0.RunForceVelocityTime
     if exist('F_active', 'var')
-        runFVTimecourseExperiment(params0, Data_ATP, FV_velocities, F_active);
+        out_fvt = runFVTimecourseExperiment(params0, Data_ATP, params0.FV_velocities, F_active);
     else
-        runFVTimecourseExperiment(params0, Data_ATP, FV_velocities, []);
+        out_fvt = runFVTimecourseExperiment(params0, Data_ATP, [], []);
     end
 end
 
