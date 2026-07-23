@@ -29,9 +29,11 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
 
         [~, out_ktr] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
-        % Normalize model force by pre-shortening isometric
+        % Normalize model force by pre-shortening isometric force, taken at the
+        % onset of shortening (interpolated, not window-averaged, so the long
+        % quiet warm-up's initial force-buildup transient does not bias it).
         t_pre   = velocitytable(2, 1);   % first real protocol row (after warm-start)
-        Fm_ss   = mean(out_ktr.Force(out_ktr.t < t_pre));
+        Fm_ss   = interp1(out_ktr.t, out_ktr.Force, t_pre, 'linear', 'extrap');
         if Fm_ss == 0; Fm_ss = 1; end
         F_norm  = out_ktr.Force / Fm_ss;
 
@@ -77,7 +79,7 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
         if isfield(params, 'ktr_velocitytableonfile') && ~isempty(params.ktr_velocitytableonfile)
             % File-driven protocol: plot normalized force traces
             t_pre  = velocitytable(2, 1);
-            Fm_ss  = mean(out_ktr.Force(out_ktr.t < t_pre));
+            Fm_ss  = interp1(out_ktr.t, out_ktr.Force, t_pre, 'linear', 'extrap');
             if Fm_ss == 0; Fm_ss = 1; end
 
             yyaxis right;

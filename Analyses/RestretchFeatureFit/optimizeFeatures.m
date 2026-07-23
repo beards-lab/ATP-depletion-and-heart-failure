@@ -16,25 +16,42 @@ function state = optimizeFeatures(cfg)
 %   2. SURROGATEOPT (global, bounded) explores the drawn box.
 %   3. FMINSEARCH (local) polishes the surrogate's best point.
 %   4. If the round IMPROVES the incumbent, BAKE the multipliers into the
-%      running params and snapshot to disk. Otherwise count a STALL.
-%   5. On STALL_LIMIT consecutive non-improving rounds, RANDOM-KICK a
-%      WORKING COPY of the incumbent and force a fresh draw next round
-%      (escape local basins). The incumbent itself (state.best_params /
-%      state.best_cost) is NEVER touched by a kick.
+%      running params and snapshot to disk (SNAP_BEST + a numbered
+%      param_opt_iter snapshot). Otherwise count a STALL.
+%   5. On STALL_LIMIT consecutive non-improving rounds, ARM a KICK: a
+%      transient +-KICK_FRAC perturbation of a COPY of the incumbent, on the
+%      SAME draw that stalled, retried next round. The kick seed lives only
+%      in state.pendingKick; it NEVER mutates the running base
+%      (state.params/state.best_params) and is KEPT only if the retry beats
+%      the incumbent (the accept branch bakes it in). A kick that does not
+%      improve is discarded and the next round reverts to a fresh draw seeded
+%      from the incumbent BEST. KICK_FRAC=0 disables kicks entirely.
 %
-% ACCEPT/SAVE INVARIANT (the bug this refactor fixes): a prior run saved a
-% snapshot (cost 174) that was WORSE than its own seed (9.72) because the
-% final on-disk snapshot was written from the last *working* point, which
-% may have been a stalled/kicked excursion never validated against the
-% incumbent. Fix: the incumbent (state.best_params, state.best_cost) is
-% updated ONLY inside the "round improved" branch, immediately followed by
-% a disk write of THAT incumbent. The stall/kick branch only ever mutates
-% state.params (a working copy used to seed the NEXT round's draw) and
-% never writes to disk. The final write (after the loop, and at the top of
-% every improving round) is always writeParamsToMFile(SNAP_BEST,
-% state.best_params) — never state.params — with an assertion immediately
-% before the final write that the snapshot-file's cost matches
-% state.best_cost.
+% KICK INVARIANT (what the user asked to guarantee): the random kick is used
+% ONLY to re-seed a single retry of the same param draw, and is stored ONLY
+% if it produces a better fit. It can never leak into a later round's
+% starting point, because (a) normal rounds always seed from
+% state.best_params, (b) the kick seed is held in the separate transient
+% state.pendingKick, and (c) pendingKick is cleared on BOTH the accept and
+% the no-improvement branch.
+%
+% param_opt_iter GALLERY: every round's converged (params,cost) is appended
+% to state.optIter; every IMPROVED point is additionally written to
+% params/<tag>_iter/<tag>_iter_<k>.m via writeParamsToMFile. Analyse the
+% resulting cloud with analyzeOptIterUniqueness(<tag>) to see whether the
+% solutions around the best cost are unique (params reconverge) or degenerate
+% (different params, same cost).
+%
+% ACCEPT/SAVE INVARIANT (an earlier bug this design also fixes): a prior run
+% saved a snapshot (cost 174) that was WORSE than its own seed (9.72) because
+% the on-disk snapshot was written from the last *working* point, a
+% stalled/kicked excursion never validated against the incumbent. Fix: the
+% incumbent (state.best_params, state.best_cost) is updated ONLY inside the
+% "round improved" branch, immediately followed by a disk write of THAT
+% incumbent. No other branch writes SNAP_BEST. The final write (after the
+% loop) is always writeParamsToMFile(SNAP_BEST, state.best_params) — never a
+% working/kicked point — guarded by an assertion that the snapshot-file's
+% cost matches state.best_cost.
 %
 % Bounds: each drawn parameter's g-multiplier box is derived from
 % parameterBounds.m (absolute [lb,ub] -> multiplier around the current
@@ -106,6 +123,7 @@ if ~isfield(cfg, 'N_ROUNDS')        || isempty(cfg.N_ROUNDS);        cfg.N_ROUND
 if ~isfield(cfg, 'TIME_BUDGET_HRS') || isempty(cfg.TIME_BUDGET_HRS); cfg.TIME_BUDGET_HRS = 28; end
 if ~isfield(cfg, 'RESUME')          || isempty(cfg.RESUME);          cfg.RESUME = false; end
 if ~isfield(cfg, 'MaxRunTime')      || isempty(cfg.MaxRunTime);      cfg.MaxRunTime = 45; end
+if ~isfield(cfg, 'KICK_FRAC')       || isempty(cfg.KICK_FRAC);       cfg.KICK_FRAC = 0.1; end
 
 DEBUG           = cfg.DEBUG;
 N_DRAW          = cfg.N_DRAW;
@@ -116,7 +134,7 @@ TIME_BUDGET_HRS = cfg.TIME_BUDGET_HRS;
 RESUME          = cfg.RESUME;
 STALL_LIMIT     = 2;        % non-improving rounds before a random kick
 IMPROVE_TOL     = 1e-3;     % min cost drop to count as improvement
-KICK_FRAC       = 0.0;     % +-25% random multiplicative kick on stall
+KICK_FRAC       = cfg.KICK_FRAC;   % +-KICK_FRAC random multiplicative kick on stall (0 disables)
 
 root = fullfile(fileparts(mfilename('fullpath')), '..', '..');
 addpath(genpath(root));
@@ -127,6 +145,7 @@ LoadData;
 % instances started with different tags therefore never share a file.
 STATE_FILE = fullfile(root, 'params', [cfg.tag '_state.mat']);
 SNAP_BEST  = fullfile(root, 'params', [cfg.tag '_opt.m']);
+ITER_DIR   = fullfile(root, 'params', [cfg.tag '_iter']);   % param_opt_iter gallery
 optimTag   = cfg.tag;
 
 modeStr = 'PRODUCTION'; if DEBUG; modeStr = 'DEBUG'; end
@@ -175,8 +194,11 @@ if RESUME && exist(STATE_FILE, 'file')
     fprintf('[%s] Resumed at round %d, best cost %.4f\n', cfg.tag, state.round, state.best_cost);
 else
     state = struct();
-    state.params      = params0;   % working point (may be kicked)
+    state.params      = params0;   % running base (always tracks the incumbent BEST)
     state.best_params = params0;   % the incumbent BEST (only updated on accept)
+    state.pendingKick = [];        % transient same-draw kick seed (never the base)
+    state.optIter     = [];        % param_opt_iter cloud (one record per round)
+    state.featNames   = {};        % per-feature labels (set once; aligns with rec.featCost)
     % params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
     tic
     figure;
@@ -195,13 +217,25 @@ for r = state.round+1 : N_ROUNDS
         fprintf('\n[%s] == Time budget %.1f h reached after round %d — stopping. ==\n', cfg.tag, TIME_BUDGET_HRS, r-1);
         break;
     end
-    % --- draw subset ---
-    rng('shuffle');
-    extra = pool(~ismember(pool, compulsory));
-    k     = max(0, N_DRAW - numel(compulsory));
-    drawn = [compulsory, extra(randperm(numel(extra), min(k, numel(extra))))];
-
-    pr = state.params;          % start each round from the incumbent (baked)
+    % --- choose this round's draw + seed ---------------------------------
+    % A pending kick (armed on a prior stall) RETRIES THE SAME DRAW from a
+    % perturbed copy of the incumbent. It is a transient seed consumed by
+    % exactly this one round; it NEVER mutates the running base
+    % (state.params/state.best_params) and is kept only if this round
+    % improves (see accept branch). Otherwise a fresh subset is drawn and the
+    % round is seeded from the incumbent BEST -- so a stale kick can never
+    % leak into a later round's starting point.
+    isKickRound = isfield(state, 'pendingKick') && ~isempty(state.pendingKick);
+    if isKickRound
+        drawn = state.pendingKick.drawn;         % REPEAT the same draw
+        pr    = state.pendingKick.seed;          % seed from the kicked copy
+    else
+        rng('shuffle');
+        extra = pool(~ismember(pool, compulsory));
+        k     = max(0, N_DRAW - numel(compulsory));
+        drawn = [compulsory, extra(randperm(numel(extra), min(k, numel(extra))))];
+        pr    = state.best_params;               % ALWAYS seed from the incumbent BEST
+    end
     pr.mods = drawn; pr.g = ones(1, numel(drawn));
 
     % --- per-param multiplier box from physiology bounds ---
@@ -210,7 +244,9 @@ for r = state.round+1 : N_ROUNDS
         [glb(i), gub(i)] = gMultBox(drawn{i}, pr, bounds);
     end
 
-    fprintf('\n[%s] ===== Round %d/%d  (best %.4f, stall %d) =====\n', cfg.tag, r, N_ROUNDS, state.best_cost, state.stall);
+    kickTag = '';
+    if isKickRound; kickTag = sprintf('  [KICK retry +-%.0f%%]', 100*KICK_FRAC); end
+    fprintf('\n[%s] ===== Round %d/%d  (best %.4f, stall %d)%s =====\n', cfg.tag, r, N_ROUNDS, state.best_cost, state.stall, kickTag);
     fprintf('[%s]   drawn: %s\n', cfg.tag, strjoin(drawn, ', '));
 
     obj = @(g) safeCost(g, pr);
@@ -245,59 +281,79 @@ for r = state.round+1 : N_ROUNDS
     if f_l <= f_s; g_round = g_l; f_round = f_l; else; g_round = g_s; f_round = f_s; end
     fprintf('[%s]   surrogate %.4f -> simplex %.4f\n', cfg.tag, f_s, f_round);
 
+    % --- per-feature cost decomposition of the converged point --------------
+    % One evaluation at g_round returning the PER-FEATURE cost vector (one slot
+    % per params0.fn entry). Stored in the optIter record so we can later see
+    % which features got better/worse across the near-best cloud -- the run's
+    % objective stays scalar; this is a diagnostic decomposition alongside it.
+    try
+        [~, ~, featCostR, featNamesR] = evaluateBakersExp(g_round, pr, true);
+    catch
+        featCostR = []; featNamesR = {};
+    end
+
     % --- accept / stall ---
     if f_round < state.best_cost - IMPROVE_TOL
         % ACCEPT: this is the ONLY branch that may update the incumbent
         % (state.best_params / state.best_cost) and the ONLY branch that
-        % writes SNAP_BEST to disk.
+        % writes SNAP_BEST to disk. Works identically whether the winning
+        % point came from a normal round or a kick retry -- the perturbed
+        % seed is "kept" precisely by being baked into the new incumbent here.
         pr.g = g_round;
-        state.params    = getParams(pr, g_round, false, true);   % bake in
-        state.params.mods = {}; state.params.g = [];
-        state.best_params = state.params;   % <-- persist the BEST (survives kicks)
-        state.best_cost = f_round;
-        state.stall     = 0;
+        baked = getParams(pr, g_round, false, true);   % bake in
+        baked.mods = {}; baked.g = [];
+        state.params      = baked;          % running base tracks the incumbent
+        state.best_params = baked;          % <-- persist the BEST (survives kicks)
+        state.best_cost   = f_round;
+        state.stall       = 0;
+        state.pendingKick = [];             % a kick that paid off is consumed
         writeParamsToMFile(SNAP_BEST, state.best_params);
+        % ---- append to the param_opt_iter gallery (numbered snapshot) ----
+        state = recordOptIter(state, baked, f_round, r, drawn, isKickRound, true, ITER_DIR, cfg.tag, featCostR, featNamesR);
+        % Durable NOW: persist the incumbent + gallery index the moment the
+        % improvement is recorded, before the (slow) captureOptimIter re-sim --
+        % so a crash mid-visualisation can't lose this improving round.
+        save(STATE_FILE, 'state');
         if exist('captureOptimIter','file')
             try; captureOptimIter(setMods(state.params,{}), r, f_round, state.best_cost, optimTag); catch; end
         end
-        fprintf('[%s]   IMPROVED -> %.4f  (snapshot written)\n', cfg.tag, f_round);
+        srcTag = 'IMPROVED'; if isKickRound; srcTag = 'IMPROVED (via kick)'; end
+        fprintf('[%s]   %s -> %.4f  (snapshot #%d written)\n', cfg.tag, srcTag, f_round, state.optIter(end).iterIdx);
     else
-        % STALL: state.params is updated (a working copy for the NEXT
-        % round's draw) but state.best_params/state.best_cost and disk are
-        % left untouched. This is the branch that used to be the source of
-        % the "worse snapshot survives" bug when it was allowed to write.
+        % NO IMPROVEMENT. Record the converged point (for the uniqueness
+        % analysis), then DISCARD any pending kick so the running base is left
+        % exactly at the incumbent -- a kick that did not beat the incumbent
+        % is thrown away and never seeds a later round.
+        state = recordOptIter(state, getParams(pr, g_round, false, true), f_round, r, drawn, isKickRound, false, '', cfg.tag, featCostR, featNamesR);
+        state.pendingKick = [];
         state.stall = state.stall + 1;
         fprintf('[%s]   no improvement (%.4f >= %.4f), stall=%d\n', cfg.tag, f_round, state.best_cost, state.stall);
-        if state.stall >= STALL_LIMIT
-            % Random-kick a copy of the BEST (never the best itself) to escape
-            % the basin. state.best_params is left untouched.
+        if state.stall >= STALL_LIMIT && KICK_FRAC > 0
+            % ARM a kick: perturb a copy of the incumbent BEST on the SAME
+            % draw and retry it next round. state.best_params is NOT touched;
+            % the perturbed seed lives only in state.pendingKick and is
+            % accepted only if next round beats the incumbent.
             kp = state.best_params;
-            kmods = pool(randperm(numel(pool), min(N_DRAW, numel(pool))));
-            kp.mods = kmods;
-            kp.g = 1 + KICK_FRAC*(2*rand(1,numel(kmods)) - 1);
-            state.params = getParams(kp, kp.g, false, true);   % working point only
-            state.params.mods = {}; state.params.g = [];
+            kp.mods = drawn;
+            kp.g = 1 + KICK_FRAC*(2*rand(1, numel(drawn)) - 1);
+            seedK = getParams(kp, kp.g, false, true);
+            seedK.mods = {}; seedK.g = [];
+            state.pendingKick = struct('drawn', {drawn}, 'seed', seedK);
             state.stall = 0;
-            fprintf('[%s]   >> STALL kick applied to: %s\n', cfg.tag, strjoin(kmods, ', '));
+            fprintf('[%s]   >> STALL: kick armed (+-%.0f%%) to RETRY same draw next round: %s\n', ...
+                cfg.tag, 100*KICK_FRAC, strjoin(drawn, ', '));
         end
     end
 
     state.round   = r;
     state.history = [state.history; r, f_s, f_round, state.best_cost];
-    if ~isfield(state, 'paramsHistory')
-        phl = 1;
-    else
-        phl = lenght(state.paramsHistory);
-    end
-
-    state.paramsHistory(phl) = getParams(pr, g_round, false, true);
-    state.paramsCosts(phl) = f_round;
 
     save(STATE_FILE, 'state');
 end
 
-% Always leave the BEST result on disk (NEVER state.params, which may be a
-% kicked/exploratory working point that is worse than the incumbent).
+% Always leave the BEST result on disk (state.best_params, the single source
+% of truth -- never a working/kicked seed). Under this design state.params
+% already tracks the incumbent, but we still write best_params explicitly.
 % Guard with an assertion: the snapshot we are about to (re-)write must
 % correspond to state.best_cost, so a re-evaluation of it can never silently
 % diverge from what state.best_cost claims. The tolerance is noise-aware: the
@@ -322,12 +378,73 @@ assert(abs(verifyCost - state.best_cost) < verifyTol || ~isfinite(verifyCost) ||
     cfg.tag, verifyCost, state.best_cost, verifyTol);
 writeParamsToMFile(SNAP_BEST, state.best_params);
 save(STATE_FILE, 'state');
+nImpr = 0;
+if isfield(state, 'optIter') && ~isempty(state.optIter); nImpr = sum([state.optIter.isImproved]); end
 fprintf('\n[%s] === Done. Best cost %.4f. Snapshot: %s ===\n', cfg.tag, state.best_cost, SNAP_BEST);
+fprintf('[%s]     param_opt_iter: %d improved snapshot(s) in %s\n', cfg.tag, nImpr, ITER_DIR);
+fprintf('[%s]     uniqueness    : analyzeOptIterUniqueness(''%s'')\n', cfg.tag, cfg.tag);
 
 end % optimizeFeatures
 
 %% ======================= local helpers =================================
 function p = setMods(p, m); p.mods = m; p.g = ones(1, numel(m)); end
+
+function state = recordOptIter(state, p, cost, roundNo, drawn, isKick, isImproved, iterDir, tag, featCost, featNames)
+% RECORDOPTITER  Append one converged point to the param_opt_iter cloud.
+% Every round's converged params + scalar cost + PER-FEATURE cost vector land in
+% STATE.OPTITER (the point cloud the uniqueness analysis reads:
+% analyzeOptIterUniqueness). FEATCOST (one weighted slot per params0.fn entry,
+% labelled by FEATNAMES stored once in STATE.FEATNAMES) lets the analysis show
+% which features got better/worse across the cloud without re-simulating.
+% IMPROVED points are ALSO persisted as a numbered writeParamsToMFile snapshot
+% in ITERDIR, so each near-optimal solution is independently loadable via
+% loadParams -- the collection used to check whether the solutions around the
+% best cost are unique (params converge back) or degenerate (same cost,
+% different params).
+    if nargin < 10; featCost = []; end
+    if nargin < 11; featNames = {}; end
+    p.mods = {}; p.g = [];
+
+    rec = struct();
+    rec.params     = p;
+    rec.cost       = cost;
+    rec.round      = roundNo;
+    rec.isKick     = logical(isKick);
+    rec.isImproved = logical(isImproved);
+    rec.drawn      = drawn;          % cellstr of params optimised this round
+    rec.snapshot   = '';
+    rec.iterIdx    = NaN;
+    rec.featCost   = featCost(:).';  % per-feature weighted cost (row; [] if unavailable)
+
+    if isImproved && ~isempty(iterDir)
+        nImp = 0;
+        if isfield(state, 'optIter') && ~isempty(state.optIter)
+            nImp = sum([state.optIter.isImproved]);
+        end
+        rec.iterIdx = nImp + 1;      % 1-based index over IMPROVED snapshots only
+        if ~exist(iterDir, 'dir'); mkdir(iterDir); end
+        snapFile = fullfile(iterDir, sprintf('%s_iter_%03d.m', tag, rec.iterIdx));
+        if isKick; src = 'via-kick'; else; src = 'direct'; end
+        cmt = sprintf('param_opt_iter #%d | cost %.4f | round %d | %s', rec.iterIdx, cost, roundNo, src);
+        try
+            writeParamsToMFile(snapFile, p, [], cmt);
+            rec.snapshot = snapFile;
+        catch ME
+            fprintf('[%s]   (recordOptIter: snapshot write failed: %s)\n', tag, ME.message);
+        end
+    end
+
+    % Feature labels are constant across the run -> store once at state level.
+    if (~isfield(state, 'featNames') || isempty(state.featNames)) && ~isempty(featNames)
+        state.featNames = featNames;
+    end
+
+    if ~isfield(state, 'optIter') || isempty(state.optIter)
+        state.optIter = rec;
+    else
+        state.optIter(end+1) = rec;
+    end
+end
 
 function c = safeCost(g, pr)
     % try/catch: a 3-state ODE timeout/instability throws in evaluateModel
