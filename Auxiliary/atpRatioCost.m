@@ -25,9 +25,15 @@ function [cost, detail] = atpRatioCost(fm2, fm8, target)
         r  = double(fm2.(f)) ./ double(fm8.(f));
         tv = double(target.vector.(f));
         n  = min(numel(r), numel(tv));
-        c  = getW(W,f) * mean((log(r(1:n)) - log(tv(1:n))).^2, 'omitnan');
+        r  = r(1:n); tv = tv(1:n);
+        ok = isfinite(r) & isfinite(tv) & r>0 & tv>0;   % log needs strictly-positive ratios
+        if any(ok)
+            c = getW(W,f) * mean((log(r(ok)) - log(tv(ok))).^2, 'omitnan');
+        else
+            c = 0;
+        end
         cost = cost + c;
-        detail.(f) = struct('ratio',r(1:n),'target',tv(1:n),'cost',c);
+        detail.(f) = struct('ratio',r,'target',tv,'cost',c);
     end
 end
 function w = getW(W,f)

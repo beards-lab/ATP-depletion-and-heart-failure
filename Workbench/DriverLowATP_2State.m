@@ -17,7 +17,7 @@ addpath(genpath(root)); LoadData;
 %%
 params0 = getParams(); run(fullfile(root,'params','params_2state_lowATP.m'));
 params0 = getParams(params0, [], true, false);
-params0.RunForceVelocity=true; params0.RunKtr=false; params0.RunSlack=true;
+params0.RunForceVelocity=false; params0.RunKtr=false; params0.RunSlack=true;
 params0.RunStairs=false; params0.RunForceVelocityTime=false;
 params0.EvalFeatures=true; params0.BreakOnODEUnstable=false; params0.RunSlackSegments='AllPar';
 params0.MaxRunTime=120; params0.velocitytableonfile='protocol_03_27_2026_2mM_slack.mat';
@@ -27,6 +27,7 @@ params0.FV_velocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
 params0.UsePiForce = false;
 params0.FV_dataset = 'Baker2022'; %IsovelocityForFilip2021';
 tic
+figure(1);clf;
 RunBakersExp;                     % low-ATP (baked 2 mM)
 fm2 = features_model;
 fd2 = features_data;
