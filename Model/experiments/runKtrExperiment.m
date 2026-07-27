@@ -10,11 +10,16 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
 %   Inputs:
 %     params0   - Base parameter struct. Must include params0.modelFcn (string).
 %     Ktr_mean  - Scalar (or vector) of target Ktr values (s^-1) from data.
+%                 Optional: only the hardcoded-protocol fallback uses it, since
+%                 the file-driven path scores against the data trace instead.
 %
 %   Outputs:
-%     E_ktr   - Scalar cost: squared deviation of simulated Ktr from Ktr_mean(1).
+%     E_ktr   - Scalar cost: MSE vs the data trace (file-driven protocol), or
+%               squared deviation of simulated Ktr from Ktr_mean(1) (fallback).
 %     out_ktr - Output struct from evaluateModel (time-shifted so t=0 at
 %               the start of force redevelopment).
+
+    if nargin < 2; Ktr_mean = []; end
 
     modelFcn = str2func(params0.modelFcn);
     params = params0;
@@ -44,6 +49,11 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
         Ktr = NaN;   % not extracted for file-driven protocol
     else
         % Fallback: hardcoded rapid ktr protocol, scalar Ktr cost
+        if isempty(Ktr_mean)
+            error('runKtrExperiment:missingKtrMean', ...
+                ['The hardcoded ktr fallback needs Ktr_mean (run LoadData first), ' ...
+                 'or set params0.ktr_velocitytableonfile to use a protocol file.']);
+        end
         v = 500; % ML/s
         pos_ML = [1   , 1, 0.8, 0.8, 1.05, 1.05, 1, 1];
         times = cumsum([0, 1.0004, 0.2/v, 0.01005 - 0.2/v, 0.25/v, 0.0045 - 0.25/v, 0.05/v, 1]);

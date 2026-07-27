@@ -278,7 +278,24 @@ Force = Force + params.mu2*vel;
 
 if params.UseMaxwellDashpot
     dSLc = vel - dLSEdt;
-    dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
+    if params.UseMaxwellTensionOnly
+        % Titin pulls but cannot push. Charging is unchanged, but any shortening
+        % pays out slack and releases the stored unfolding stress, with a slack
+        % LENGTH constant x_M_slack: X decays as exp(-shortening/x_M_slack), so
+        % tension is gone after a fraction of a percent ML and can only be
+        % rebuilt by lengthening again. Behavioural stand-in for domain
+        % refolding. Written as one continuous expression (the release term
+        % vanishes smoothly as dSLc -> 0) so the solver sees no switch: a hard
+        % branch here chatters around dSLc = 0 and stalls ode15s.
+        % This is what stops a stretch-then-release (ktr restretch to 105% then
+        % return to 100%) leaving a force floor across the redevelopment window;
+        % passive cycles restretch monotonically and hold, so they are untouched.
+        dx_dash_dt = params.kSE_M * max(0, dSLc) ...
+                   - X_visc / params.eta_M ...
+                   - X_visc * max(0, -dSLc) / params.x_M_slack;
+    else
+        dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
+    end
 end
 
 %% TRANSITIONS

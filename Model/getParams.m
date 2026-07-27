@@ -217,6 +217,8 @@ end
         'd_actin', 0.0055, ...     % actin site repeat distance (um)
         'kSE_M', 500, ...          % Maxwell dashpot spring stiffness; used when UseMaxwellDashpot
         'eta_M', 1.0, ...          % Maxwell dashpot viscosity; used when UseMaxwellDashpot
+        'UseMaxwellTensionOnly', false, ... % titin pulls but cannot push: shortening slackens the filament and releases the stored unfolding stress at once (tau_M_slack), instead of the default rectifier which only ever charges. Used when UseMaxwellDashpot
+        'x_M_slack', 0.01, ...     % slack length constant (um): stored stress decays as exp(-shortening/x_M_slack); used when UseMaxwellTensionOnly
         'FudgeA', 0, ...           % quadratic SL coeff for slack velocity; used when FudgeVmax
         'FudgeB', 0, ...           % linear SL coeff for slack velocity
         'FudgeC', 0, ...           % constant SL coeff for slack velocity
