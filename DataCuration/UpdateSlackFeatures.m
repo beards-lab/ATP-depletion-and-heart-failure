@@ -1,7 +1,13 @@
-% UpdateSlackFeatures0327.m
-% Re-extract slack features for the 03/27/2026 protocol data files using
+% UpdateSlackFeatures.m
+% Re-extract slack features for the protocol data files using
 % extractSlackAttributes with trendline smoothing (useSmoothing=true), and
 % write the result back into features_data in each .mat file.
+%
+% CreateProtocolVelocityTable already writes a features_data at build time, but
+% WITHOUT smoothing. These recordings are noisy enough that the unsmoothed
+% extraction misplaces the peak/valley features, so this pass redoes it with the
+% trendline and overwrites what the builder wrote. Run it after
+% CreateProtocolVelocityTable, once per protocol day.
 %
 % This is the noisier "new" data referenced by params0.velocitytableonfile
 % (e.g. params0.velocitytableonfile = 'protocol_03_27_2026_8mM_slack.mat').
@@ -10,17 +16,27 @@
 %
 % Also exports a feature-extraction figure per file to Docs/figures/ for
 % visual QC of the fit.
+%
+% (Was UpdateSlackFeatures0327.m; generalised to a file list when the 04/10
+%  protocol day was added.)
 
 addpath(genpath('..'));
 
 DATA_FILES = { ...
     '../data/protocol_03_27_2026_8mM_slack.mat', ...
-    '../data/protocol_03_27_2026_2mM_slack.mat'};
+    '../data/protocol_03_27_2026_2mM_slack.mat', ...
+    '../data/protocol_04_10_2026_8mM_slack.mat', ...
+    '../data/protocol_04_10_2026_2mM_slack.mat', ...
+    '../data/protocol_04_10_2026_ActivePNBMava_slack.mat'};
+
+% Which files to re-extract. Defaults to the 04/10 rows so a re-run does not
+% silently rewrite the earlier protocol days' feature sets.
+if ~exist('featRunIdx', 'var'); featRunIdx = 3:5; end
 
 figDir = '../Docs/figures/';
 if ~exist(figDir, 'dir'), mkdir(figDir); end
 
-for i_file = 1:numel(DATA_FILES)
+for i_file = featRunIdx(:)'
     DATA_FILE = DATA_FILES{i_file};
     [~, baseName] = fileparts(DATA_FILE);
 

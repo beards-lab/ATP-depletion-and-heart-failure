@@ -11,17 +11,32 @@
 % Note: 04/03 files have 4 columns (t, L, F, SL); only cols 1-3 are used.
 %
 % Produces:
-%   data/protocol_03_27_2026_velocitytable_ktr.mat      (8mM ATP)
-%   data/protocol_03_27_2026_velocitytable_ktr_2mM.mat  (2mM ATP)
-%   data/protocol_04_03_2026_velocitytable_ktr.mat      (8mM ATP)
-%   data/protocol_04_03_2026_velocitytable_ktr_2mM.mat  (2mM ATP)
+%   data/protocol_03_27_2026_velocitytable_ktr.mat          (8mM ATP)
+%   data/protocol_03_27_2026_velocitytable_ktr_2mM.mat      (2mM ATP)
+%   data/protocol_04_03_2026_velocitytable_ktr.mat          (8mM ATP)
+%   data/protocol_04_03_2026_velocitytable_ktr_2mM.mat      (2mM ATP)
+%   data/protocol_04_10_2026_velocitytable_ktr.mat          (8mM ATP)
+%   data/protocol_04_10_2026_velocitytable_ktr_2mM.mat      (2mM ATP)
+%   data/protocol_04_10_2026_velocitytable_ktr_PNBMava.mat  (8mM + PNB/Mava)
+%
+% CAVEAT on the PNB/Mava row: force is normalised by the pre-shortening
+% isometric Fss, which under blebbistatin+mavacamten is only a few kPa. The
+% normalised trace is therefore noise-dominated and is useful as a passive
+% mechanics reference, not as a force-redevelopment measurement.
 
 configs = {
-    '../data/03 27 2026 M/8mM_stiff_ktr.txt', '../data/protocol_03_27_2026_velocitytable_ktr.mat';
-    '../data/03 27 2026 M/2mM_stiff_ktr.txt', '../data/protocol_03_27_2026_velocitytable_ktr_2mM.mat';
-    '../data/04 03 2026 F/8mM_stiff_ktr.txt', '../data/protocol_04_03_2026_velocitytable_ktr.mat';
-    '../data/04 03 2026 F/2mM_stiff_ktr.txt', '../data/protocol_04_03_2026_velocitytable_ktr_2mM.mat';
+    '../data/03 27 2026 M/8mM_stiff_ktr.txt',                    '../data/protocol_03_27_2026_velocitytable_ktr.mat';
+    '../data/03 27 2026 M/2mM_stiff_ktr.txt',                    '../data/protocol_03_27_2026_velocitytable_ktr_2mM.mat';
+    '../data/04 03 2026 F/8mM_stiff_ktr.txt',                    '../data/protocol_04_03_2026_velocitytable_ktr.mat';
+    '../data/04 03 2026 F/2mM_stiff_ktr.txt',                    '../data/protocol_04_03_2026_velocitytable_ktr_2mM.mat';
+    '../data/04 10 2026 Male 2-8/8mM_stiff_ktr.txt',             '../data/protocol_04_10_2026_velocitytable_ktr.mat';
+    '../data/04 10 2026 Male 2-8/2mM_stiff_ktr.txt',             '../data/protocol_04_10_2026_velocitytable_ktr_2mM.mat';
+    '../data/04 10 2026 Male 2-8/8mM_stiff_ktr_PNB_Mava.txt',    '../data/protocol_04_10_2026_velocitytable_ktr_PNBMava.mat';
 };
+
+% Which rows to build. Defaults to the 04/10 rows so a re-run does not silently
+% rewrite the earlier protocol days.
+if ~exist('ktrRunIdx', 'var'); ktrRunIdx = 5:7; end
 
 % stiff_ktr Time column is in MILLISECONDS (header "(ms)"); the merged/stairs
 % files are in seconds. Divide by 1000 so every protocol shares a seconds
@@ -31,7 +46,7 @@ warmupLead  = 5;              % isometric warm-up before shortening (s) — lets
                               % the model reach steady state (the old 15 s
                               % "warm-up" was an artifact of ms-as-seconds)
 
-for ci = 1:size(configs, 1)
+for ci = ktrRunIdx(:)'
     fpath   = configs{ci, 1};
     outPath = configs{ci, 2};
 

@@ -9,6 +9,7 @@
 %
 %   03/27 (t≈72.47–73.18): 8 steps of +0.01 ML  → levels 1.01 … 1.07, 1.10
 %   04/03 (t≈72.53–73.15): 4 steps (+0.01,+0.03,+0.03,+0.03) → 1.01,1.04,1.07,1.10
+%   04/10 (t≈72.56–73.18): 4 steps (+0.01,+0.03,+0.03,+0.03) → 1.01,1.04,1.07,1.10
 %
 % Steps are detected generically from the (smoothed) length velocity, so the
 % same code adapts to either step count. Force in datatable is normalized by
@@ -19,14 +20,20 @@
 % Produces:
 %   data/protocol_03_27_2026_velocitytable_stairs.mat
 %   data/protocol_04_03_2026_velocitytable_stairs.mat
+%   data/protocol_04_10_2026_velocitytable_stairs.mat
 
 % {file, clip window [s], warm-start t [s], pre-stretch Fss window [s], output}
 configs = {
-  '../data/03 27 2026 M/02_Merged_8mM_Active.txt', [72.3 73.6], 67.0, [72.30 72.45], '../data/protocol_03_27_2026_velocitytable_stairs.mat';
-  '../data/04 03 2026 F/02_Merged_8mM_Active.txt', [72.3 73.6], 67.0, [72.30 72.50], '../data/protocol_04_03_2026_velocitytable_stairs.mat';
+  '../data/03 27 2026 M/02_Merged_8mM_Active.txt',        [72.3 73.6], 67.0, [72.30 72.45], '../data/protocol_03_27_2026_velocitytable_stairs.mat';
+  '../data/04 03 2026 F/02_Merged_8mM_Active.txt',        [72.3 73.6], 67.0, [72.30 72.50], '../data/protocol_04_03_2026_velocitytable_stairs.mat';
+  '../data/04 10 2026 Male 2-8/03_Merged_8mM_Active.txt', [72.3 73.6], 67.0, [72.30 72.50], '../data/protocol_04_10_2026_velocitytable_stairs.mat';
 };
 
-for c = 1:size(configs, 1)
+% Which rows to build. Defaults to the 04/10 row so a re-run does not silently
+% rewrite the earlier protocol days.
+if ~exist('stairsRunIdx', 'var'); stairsRunIdx = 3; end
+
+for c = stairsRunIdx(:)'
     fpath = configs{c,1}; seg = configs{c,2}; t_ws = configs{c,3};
     prewin = configs{c,4}; outp = configs{c,5};
 

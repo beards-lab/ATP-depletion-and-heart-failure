@@ -24,12 +24,19 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
     modelFcn = str2func(params0.modelFcn);
     params = params0;
     params.SL0 = 2.0;
-    params = getParams(params, params.g, true);
 
     if isfield(params, 'ktr_velocitytableonfile') && ~isempty(params.ktr_velocitytableonfile)
         datastruct    = load(['data/' params.ktr_velocitytableonfile]);
         datatable     = datastruct.datatable;
         velocitytable = datastruct.velocitytable;
+
+        % Start at the length the protocol actually starts from, rather than
+        % assuming 2.0 um. The ktr files begin at L=1.0 ML so this is a no-op
+        % for them, but the FV2 ramp files begin at L=1.1 ML (SL 2.2) and the
+        % fixed 2.0 offset the whole simulated trajectory by -0.2 um.
+        % (col 4 is the length in ML; SL = 2 x ML.)
+        params.SL0 = 2 * velocitytable(1, 4);
+        params = getParams(params, params.g, true);
         params.Velocity = velocitytable(:, 2);
 
         [~, out_ktr] = evaluateModel(modelFcn, velocitytable(:, 1), params);
@@ -48,6 +55,7 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
 
         Ktr = NaN;   % not extracted for file-driven protocol
     else
+        params = getParams(params, params.g, true);
         % Fallback: hardcoded rapid ktr protocol, scalar Ktr cost
         if isempty(Ktr_mean)
             error('runKtrExperiment:missingKtrMean', ...
