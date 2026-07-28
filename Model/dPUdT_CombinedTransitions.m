@@ -122,6 +122,18 @@ else
     A_reg = 1;
 end
 
+% Nucleotide-free detached pool D0 (index Ns*ss+8+UseRegistrationAvailability,
+% i.e. appended AFTER A_reg). A cross-bridge torn off the thin filament under
+% strain (XB_Ripped) never completed the ATP-binding step that normally
+% terminates the stroke, so it is detached but apo: it cannot re-prime until
+% ATP binds. D0 holds those heads; they leave only via RD0T below. When the
+% feature is off the state is absent and D0=0 (identity -> byte-compatible).
+if params.UseD0State
+    D0 = max(0, PU(Ns*ss + 8 + params.UseRegistrationAvailability));
+else
+    D0 = 0;
+end
+
 
 
 
@@ -192,7 +204,7 @@ else
 end
 
 % non-hydrolized ATP in non-super relaxed state
-PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD)); % unattached permissive fraction - 
+PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD + D0)); % unattached permissive fraction - (D0 is 0 unless UseD0State)
     
 
 if params.UseOverlapFactor
@@ -446,6 +458,22 @@ else
     end
 end
 
+% Series ATP-binding ceiling on strong-bridge detachment.
+% Strain legitimately accelerates the ADP-release / isomerisation step, but the
+% head still has to bind ATP before it can let go, and THAT step has a finite
+% maximal rate. The strain-dependent R2(s) above grows without bound (it reaches
+% 2000-4600 /s at restretch strains), which is chemically impossible and is why
+% every stretched bridge is annihilated in <1 ms. Combine the two steps in
+% SERIES (resistances add), so low strain is untouched and high strain saturates:
+%     1/R2_eff = 1/R2_strain(s) + 1/R2max,   R2max = k2max*[ATP]/(K_T2c+[ATP])
+% Inert when UseR2Ceiling is false. R2 here is a FLUX (rate*p2), so the per-head
+% rate is recovered before the ceiling is applied.
+if params.UseR2Ceiling
+    R2max  = params.k2max * params.MgATP / (params.K_T2c + params.MgATP);
+    r2rate = R2 ./ max(p2, 1e-12);
+    R2     = R2 .* (R2max ./ (R2max + r2rate));
+end
+
 % p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).
 % The factor is FLOORED at 1: base turnover k3 at/above s3 (so force-bearing p3
 % at positive operating strain still detaches at k3 and cannot accumulate), and
@@ -456,8 +484,17 @@ end
 R3 = params.k3*p3 .* min(MAX_RATE, max(1, exp(-params.alpha3*(s - params.s3))));
 R3m = params.k3m*p3;
 
-% to PT state directly
+% to PT state directly (or to the apo pool D0 when UseD0State — see below)
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+
+% D0 -> PT: the torn head binds ATP and rejoins the cycle. Saturating in
+% [MgATP] so k_D0T is the ATP-saturated ceiling and K_D0T sets where the step
+% becomes ATP-limited. This is what makes the refractory pool [ATP]-dependent.
+if params.UseD0State
+    RD0T = params.k_D0T * params.MgATP/(params.K_D0T + params.MgATP) * D0;
+else
+    RD0T = 0;
+end
 
 if params.UseStrictDetachmentAt > 0
     strictArea = s > params.UseStrictDetachmentAt | s < -params.UseStrictDetachmentAt;
@@ -576,6 +613,20 @@ dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
 dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 dp3 = - R3 + R3m + R2;
+
+% Apo pool balance. Both inflows already leave their source state above; PT is
+% the complementary pool, so adding mass to D0 automatically withholds it from
+% PT — no explicit PT term is needed (or possible).
+%   (a) XB_Ripped: torn off under strain, never bound ATP  -> always via D0
+%   (b) D0FromR2 : optionally route that share of the normal p2->PT flux
+%                  through D0 too, making the whole cycle ATP-gated in one place
+dD0 = 0;
+if params.UseD0State
+    dD0 = sum(XB_Ripped)*dS - RD0T;
+    if params.D0FromR2 > 0
+        dD0 = dD0 + params.D0FromR2 * sum(R2)*dS;
+    end
+end
 
 % A2 re-attachment during restretch (UseA2Reattaching): ATP-cocked heads (PT)
 % bind DIRECTLY into the strong post-stroke state p2 at strain dA2re (default 0)
@@ -718,6 +769,11 @@ if params.UseRegistrationAvailability
     A_inf  = params.A0 + (1 - params.A0) * vreg / (vreg + params.v_ref_reg);
     dA_reg = (A_inf - A_reg) / params.tau_reg;
     f = [f; dA_reg];
+end
+
+% Apo pool, appended LAST so its index is Ns*ss+8+UseRegistrationAvailability.
+if params.UseD0State
+    f = [f; dD0];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];

@@ -464,8 +464,11 @@ end
         out.LSE(i) = PU(j, Ns*params.ss+4);
         out.PuR(i) = PU(j, Ns*params.ss+5);
         out.SRD(i) = PU(j, Ns*params.ss+6);
-        
-        % get the XB force from the dpudt directly        
+        if params.UseD0State
+            out.D0(i) = PU(j, Ns*params.ss + 8 + params.UseRegistrationAvailability);
+        end
+
+        % get the XB force from the dpudt directly
         [~, outputs, rates] = fcn(T(j), PU(j, :)', params); 
         out.Force(i) = outputs(1);
         out.FXB(i) = outputs(2);

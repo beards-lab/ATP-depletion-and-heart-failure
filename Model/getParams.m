@@ -207,6 +207,13 @@ end
         'v_ref_reg', 0.8, ...      % sliding speed (um/s, same units as Vums; ~0.4 ML/s) at which availability is half-recovered. Used when UseRegistrationAvailability
         'tau_reg', 0.02, ...       % registration relaxation time (s, ~1/ktr) so ktr stays single-order. Used when UseRegistrationAvailability
         'RegAvailShorteningOnly', false, ... % if true, availability tracks SHORTENING speed only (max(0,-vel)); restretch/lengthening does not boost attachment -> preserves post-restretch undershoot while keeping the FV shoulder
+        'UseD0State', false, ...   % nucleotide-free detached state D0. A head torn off under strain (XB_Ripped) never bound ATP, so it cannot re-prime until it does: it lands in D0 and leaves only via ATP binding. Appends +1 scalar ODE state at the tail (after A_reg). false => nothing appended, byte-identical to the legacy state vector
+        'k_D0T', 500, ...          % [ATP]-saturated ceiling on D0 -> PT (s^-1); used when UseD0State
+        'K_D0T', 0.15, ...         % MgATP half-saturation of the D0 -> PT step (mM); used when UseD0State
+        'D0FromR2', 0, ...         % fraction of the normal R2 (p2 -> PT) flux routed via D0 instead of straight to PT. 0 = only torn bridges transit D0. Used when UseD0State
+        'UseR2Ceiling', false, ... % series ATP-binding ceiling on strong-bridge detachment: 1/R2_eff = 1/R2_strain(s) + 1/R2max. Caps the unbounded strain acceleration of R2 so stretched bridges cannot vanish in <1 ms
+        'k2max', 1500, ...         % [ATP]-saturated ceiling on the p2 detachment rate (s^-1); used when UseR2Ceiling
+        'K_T2c', 0.15, ...         % MgATP half-saturation of that ceiling (mM); used when UseR2Ceiling
         'UseMaxwellDashpot', false, ...
         'mu_neg', '=mu', ...
         'mu2', 0, ...
@@ -561,7 +568,7 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability;
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseD0State;
     PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
@@ -584,10 +591,17 @@ end
         else
             A_reg0 = [];
         end
+        % Nucleotide-free detached pool: empty at rest (nothing has been torn
+        % off yet). Appended AFTER A_reg, so its index is Ns*ss+8+UseRegistrationAvailability.
+        if params.UseD0State
+            D0_0 = 0;
+        else
+            D0_0 = [];
+        end
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0];
 		end
 		
 		if params.UseSuperRelaxedADP
