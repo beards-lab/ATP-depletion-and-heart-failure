@@ -9,6 +9,18 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 > Reusable, non-critical helpers live in `Auxiliary/` (diagnostic probes in
 > `Auxiliary/diagnostics/`). Core model code lives in `Model/`.
 
+## Start here — the numbers that are settled
+
+| question | answer | where |
+|---|---|---|
+| What does 2 mM ATP do? | **force ×1.36, `ktr` ×0.55** (4 preps, rundown-corrected) | [ATPEffectReconciliation](ATPEffectReconciliation/conclusions.md) |
+| How do I correct for rundown? | `loss = 0.45·\|slope\|·T_act` on **effective activated time**; correct force, **not** `ktr` | [RundownCorrection](RundownCorrection/conclusions.md) |
+| What *is* rundown? | **series-elastic creep** — ~35 % softer, ~0.1 µm longer. Not fewer heads. | [RundownCorrection](RundownCorrection/conclusions.md) |
+| Which slack features can I trust? | `ktr` ratio (CV 8 %), normalised `A`/`peak1_y`/`peak2`/`vall_y` (CV 4–7 %). Not `ovrsht_*`, not `ktr2_*` | [SlackDataAnalysis](SlackDataAnalysis/conclusions.md) |
+| Can I pool the Baker data? | `ktr` yes; **amplitudes no** — different protocol, truncated recovery | [SlackDataAnalysis](SlackDataAnalysis/conclusions.md) |
+| How many parameters are identifiable? | **11**, from the Slack/FV/Ktr feature set | [SensitivityAnalysis](SensitivityAnalysis/conclusions.md) |
+| Is `ktr` a separate process from restretch recovery? | **No** — one rate, ~41–47 s⁻¹, across all three rises | [RestretchVsKtrRecovery](RestretchVsKtrRecovery/conclusions.md) |
+
 ## Index
 
 | Analysis | Status | One line | Conclusion |
@@ -20,6 +32,11 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 | **LastSlackIdentification** | stub | Piecewise strain-dependent detachment fit to the last-slack transient. | [conclusions](LastSlackIdentification/conclusions.md) |
 | **PassiveForceID** | findings | Justifies direct subtraction of the high-Ca passive trace to isolate F_XB, from the mechanical topology. | [conclusions](PassiveForceID/conclusions.md) |
 | **LowATP_ForceEnhancement** | findings | 2 mM ATP gave ~32–44% more isometric force than 8 mM in the 03/27/2026 data; cross-referenced with literature. | [conclusions](LowATP_ForceEnhancement/conclusions.md) |
+| **SlackDataAnalysis** | findings | Cross-dataset audit of all 9 slack recordings, one extraction path. **Baker is a different protocol** (2–6× shorter recovery) so its amplitudes are truncated and its "low ATP loses force" is an artifact; its `ktr` is fine. **Absolute force is untransferable (CV 20 %) but shape collapses to CV 4–7 %** once each prep's strength is divided out ⇒ fit normalised shape + a per-prep scale. Ranks every feature by reliability; retires `ovrsht_*` and `ktr2_*`. | [conclusions](SlackDataAnalysis/conclusions.md) |
+| **RundownCorrection** | findings | Rundown is **linear in effective ACTIVATED time** (the within-run slope is force-independent: −0.459 fresh vs −0.462 at −17.5 % force), and only **φ ≈ 0.45** of each run's within-run decline is permanent. Mechanism test against the model: fewer heads, lost SL, uniform slowdown and reduced attachment each fail on ≥1 observable; **series-elastic creep (kSE ×0.65, SL −0.098 µm) reproduces force ×0.83, `ktr` ×0.88 AND the length-tension bend**. Correcting `ktr` makes consistency worse — don't. | [conclusions](RundownCorrection/conclusions.md) |
+| **ATPEffectReconciliation** | findings | Applies the rundown correction to all four preps (three ran 8→2, 04/10 ran 2→8). Force CV **22 % → 11 %**, giving **×1.36**; `ktr` needs no correction and is already **×0.55 at CV 8 %**. **Low ATP = stronger and slower**, force×ktr ×0.74. Supersedes the earlier ×1.18/×1.23 figures, which were uncorrected or wall-clock-corrected. | [conclusions](ATPEffectReconciliation/conclusions.md) |
+| **RestretchVsKtrRecovery** | findings | All three force rises (ktr, post-slack, post-restretch) share **one rate, ~41–47 s⁻¹**, across three protocol days — ktr is *not* a different process. Isolates three model defects: a titin-dashpot force floor unique to the ktr protocol, `tau_reg` sitting inside the ktr timescale, and a post-restretch recovery ~2× too fast. | [conclusions](RestretchVsKtrRecovery/conclusions.md) |
+| **ApoPoolDetachment** | **falsified** | Detachment ceiling + tearing into a nucleotide-free pool (`UseR2Ceiling`, `UseD0State`, both default-OFF, wired and regression-clean). Reaches the measured post-restretch rate, but the **ktr overstretch peak** (data 0.72–0.83 F_iso; uncapped model 0.746, every capped variant 1.2–2.2) falsifies the ceiling on data already in the cost. ATP justifications also fail by 30–250×. Verdict: do not refit; the driver is kept as a falsification harness. | [conclusions](ApoPoolDetachment/conclusions.md) |
 
 ## Summaries & recommendations (across analyses)
 
@@ -42,10 +59,30 @@ LastSlackIdentification target the same protocol. The Phase-1 fit reproduces pea
 overshoots peak1; the recommended path is to raise `kSE` (3–5×), let the A2 attachment shift
 fire at threshold strain, then tune `slope`/`s_threshold_R` for valley/second-peak sharpness.
 
-**ATP-dependence is the open scientific question.** LowATP_ForceEnhancement documents a real,
-rundown-corrected force *increase* at low ATP — the phenomenon the whole project exists to
-explain. Mechanistic identification of the ATP-dependent differences is the headline next step
-(see [`../Docs/ROADMAP.md`](../Docs/ROADMAP.md)).
+**Recovery rate is one number, and the model splits it into three.** RestretchVsKtrRecovery shows
+the data has a *single* force-redevelopment rate (~41–47 s⁻¹) shared by the ktr protocol, the
+post-slack redevelopment and the post-restretch recovery, on all three protocol days. The model gets
+ratios of 3.16 / 1.40 / 0.35 instead of 1.0 — so protocol-independence of the redevelopment rate is
+a sharp, cheap test that the current cost function does not score at all. Two of the three causes are
+fixable by flags/parameters already present; the third (post-restretch ~2× too fast) needs new
+mechanism, and ApoPoolDetachment records the leading candidate together with the reasons to distrust
+its stated physiology.
+
+**The ATP effect is now measured, not estimated.** ATPEffectReconciliation settles the target:
+**force ×1.36, `ktr` ×0.55**, consistent across four preps and both ATP orders once rundown is
+removed. Low ATP makes the muscle *stronger and slower* (force×`ktr` = ×0.74). This supersedes
+the ×1.18 in LowATP_ForceEnhancement (uncorrected 03/27 only) and the ×1.23 briefly quoted from
+a wall-clock rundown model. What remains open is *mechanistic* identification — reproducing
+both numbers from cross-bridge kinetics rather than fitting them (see
+[`../Docs/ROADMAP.md`](../Docs/ROADMAP.md)); LowATP_k2Frontier shows a single `k2` cannot do it.
+
+**Rundown is a mechanical lesion, and it is identifiable.** RundownCorrection shows the
+preparation degrades by **series-elastic creep** (~35 % softer, ~0.1 µm longer), not by losing
+myosin heads — the length–tension curve *bends*, and a pure force scale cannot bend it. Two
+practical consequences: correct force on **effective activated time** (φ ≈ 0.45 of each run's
+within-run decline is permanent), and **never correct `ktr`** — doing so degrades cross-prep
+consistency. When representing rundown in the model, prefer a per-run *length offset* to a
+per-run *force scale*.
 
 **Methodology that's settled.** PassiveForceID justifies direct subtraction of the high-Ca
 passive trace to recover the cross-bridge-only force — treat this as the standard passive
