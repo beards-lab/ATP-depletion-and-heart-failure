@@ -140,9 +140,27 @@ params0.MaxSpaceExtensionCount = Inf;
 params0.UseRegistrationAvailability = 1;
 params0.A0 = 0.210961;
 params0.v_ref_reg = 0.259405;
-params0.tau_reg = 0.0274315;
+% !! THIS FILE SHADOWS params/ThursdayNightFever.m ON THE MATLAB PATH.
+% loadParams() resolves via which(), which finds Workbench/ first, so THIS is
+% the file that actually loads. The two copies are NOT identical (they differ in
+% PieceWiseStrainDepParams, L_thin, L_hbare, d_optimal). Resolve the duplicate.
+%
+% tau_reg 0.0274 -> 0.002 (2026-07-28, Analyses/RestretchVsKtrRecovery).
+% At 27 ms the availability gate REMEMBERS the release preceding the hold: the
+% ktr manoeuvre shortens for 6.5 ms vs the slack's 2.2 ms, leaving A_reg at
+% 0.341 vs 0.284, so force redeveloped 3.2x faster after the ktr release than
+% after a slack -- where the data says the two rates are equal (ktr/post-slack
+% = 0.99 across three protocol days). At 2 ms the gate tracks velocity
+% quasi-instantaneously: the FV shoulder survives (a steady-state-during-a-ramp
+% property) but nothing carries into the isometric hold.
+params0.tau_reg = 0.002;
 params0.RegAvailShorteningOnly = 1;
 params0.UseMaxwellDashpot = 1;
+% Titin pulls but cannot push. Was unset (getParams default false), so the ktr
+% protocol's 1.05 -> 1.00 release could not discharge the Maxwell element and
+% redevelopment started from 0.18 F_iso of pure dashpot stress (active force was
+% -2.47 at that instant) where the data starts at 0.000.
+params0.UseMaxwellTensionOnly = 1;
 params0.mu_neg = 0.015621;
 params0.mu2 = 0;
 params0.ksrd2sr = 8.3099;
