@@ -32,6 +32,14 @@ on every dataset and never writes back.
 **Acquisition order.** All days ran 8 mM → 2 mM **except 04/10**, which ran
 2 mM → 8 mM. 03/27 additionally repeated the 8 mM at the end of the session.
 
+![All slack traces, aligned on the first slack release](results/overview_traces.png)
+
+![Slack features, normalised per prep](results/features_normalised.png)
+
+*Force features divided by each prep's own mean `steady`. The shapes collapse
+(CV 4–7 %) even though absolute force spans 37.5–62.2 kPa across preps — this is why
+a cost function should fit normalised shape plus one per-prep scale.*
+
 ---
 
 ## 1. The Baker dataset is a different experiment

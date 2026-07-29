@@ -26,7 +26,14 @@ numbering is not chronological.)*
 
 **"Bracket" means bracketed in TIME, not in force.** Force never rises: the 8 mM
 condition falls monotonically 68.43 → 56.45 kPa. The 2 mM run reads higher than
-both only because low ATP increases force. See `results/bracket_explained.png`.
+both only because low ATP increases force.
+
+![The bracket, from the raw timecourses](results/bracket_explained.png)
+
+*(a) the four raw 03/27 timecourses — 2 mM (orange) highest, 8 mM fresh (light blue),
+8 mM repeat (dark blue) lowest. (c) the damage staircase: force drops only during the
+shaded activation windows and lands on the measured repeat. The orange bar is the ATP
+effect — the measured 2 mM force against where 8 mM would have been at that instant.*
 
 ---
 
@@ -82,6 +89,8 @@ whole range the corrected ATP force effect is **≈ ×1.35**:
 An alternative damage model — one universal kPa/s rate rather than
 slope-proportional — gives 1.335 / 1.341 / 1.486 (CV 6.2 %). **The answer is
 robust to which damage model is assumed.**
+
+![Calibration and validation](results/rundown_correction.png)
 
 > **This supersedes the earlier wall-clock exponential treatment**, which
 > under-corrected (it ignored that damage accrues during activation) and therefore
@@ -139,6 +148,14 @@ longer *and* softer simultaneously lets the sarcomeres sit shorter at a given ML
 Both combinations can reach the observed *(force, ktr)* point — that pair of
 numbers alone does **not** identify the lesion. **The length–tension shape does**,
 and it selects series-elastic damage.
+
+![Model perturbation study](results/mechanism_simulation.png)
+
+*Each lesion is tuned to reproduce the observed force loss exactly, so `ktr` (top
+right) and the length–tension shape (bottom middle) become free discriminators. Only
+the lesions whose "shift" bar beats their "scale" bar bend the curve as the data does.*
+
+![Data-side evidence: length-tension and ktr](results/rundown_mechanism.png)
 
 ### What this rules out
 

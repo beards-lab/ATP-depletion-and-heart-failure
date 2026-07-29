@@ -55,6 +55,13 @@ RundownCorrection §5):
 `ktr` is the most reliable number in the whole dataset: four preps, two ATP
 orders, two eras, two different slack protocols.
 
+![The ATP effect, reconciled](results/atp_reconciliation.png)
+
+*Top left: force ratio per prep, raw vs corrected. Top middle: per feature (dashed =
+raw, solid = corrected) — the three preps converge. Top right: `ktr`, already
+consistent without any correction. Bottom left: the correction moves the preps
+together, not apart.*
+
 ## The trustworthy picture
 
 | observable | effect of 2 mM vs 8 mM | confidence |
