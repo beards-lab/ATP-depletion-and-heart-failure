@@ -313,6 +313,114 @@ doing its job, and it shifts the isometric operating point. Getting from "mechan
 to "model still fits everything else" requires a joint refit of at least `k2, k2max, k2rip, alphaRip,
 dr3, k_D0T, kstiff2` — that belongs on its own branch, not on top of the current fit.
 
+---
+
+# Part 4 — where the post-restretch excess actually comes from (2026-07-29)
+
+Diagnostic only, no new mechanism. Scripts: `captureWindows.m` → `windowFluxLedger.m` /
+`RunFluxLedger.m` → `seedWindow.m` / `RunStateSwaps.m`. All 11 windows reproduce the shared
+estimator byte-for-byte and every flux ledger closes to <1e-3.
+
+## The SRX trap is engaged in one window and absent in the other — 370×
+
+Zero-cost check first (`srxEigTau`, the local fn in `Auxiliary/diagnostics/srxProbe.m:52`).
+`kmsr = 0`, so SRX is a **one-way force-gated trap**: entry `ksr0·exp(−F/σ2)`, exit
+`kmsrd·exp(F/σ_srd1)`, both pointing the same way.
+
+| window starts at | entry /s | exit /s | in/out | τ_slow |
+|---|---|---|---|---|
+| post-slack, ktr (F ≈ 0) | **327** | **21** | 15.6 | **51.9 ms** |
+| post-restretch (F = 0.86 F_iso) | 66 | 280 | 0.31 | **9.7 ms** |
+
+51.9 ms is the *same order as the redevelopment itself* (~22 ms); 9.7 ms is 5× faster than it. The
+flux ledger confirms this is not just a rate difference but a difference in whether the trap runs at
+all:
+
+| | postSlack2 | postRestretch2 | ktr |
+|---|---|---|---|
+| k63 | 45.4 | **89.6** | 53.0 |
+| **SRX excursion during window** | **+0.373** | **+0.001** | +0.044 (starts full, 0.414) |
+| N_PT2SR (flux into trap) | 0.516 | 0.077 | 0.183 |
+| new-head share ν | 0.998 | **0.780** | 0.965 |
+| internal traffic I | 1.09 | **1.88** | 1.50 |
+| t63 | 29.4 ms | 13.1 ms | 20.1 ms |
+
+**37 % of all heads cycle through the SRX trap during the post-slack window; 0.1 % during
+post-restretch.** And post-restretch is only 78 % new attachment — 22 % is redistribution of
+bridges that survived the stretch (p1+p2 = 0.156 at t0, vs a pool that is rebuilt from ~0.19 in the
+other two).
+
+## But the SRX gates are NOT a usable lever — the predicted fix is falsified
+
+The plan predicted that flattening the force gates (`σ2`, `σ_srd1`) would converge the rates.
+Frozen-IC sweep says the opposite:
+
+| variant | postSlack2 | postRestretch2 | ratio | D = Δln k_R − Δln k_S |
+|---|---|---|---|---|
+| baseline | 45.7 | 80.7 | 1.77 | 0 |
+| σ2 ×3 | 45.5 | 84.3 | 1.85 | +0.05 |
+| σ_srd1 ×3 | 45.0 | 138.8 | 3.08 | +0.56 |
+| both ×3 | 48.2 | 349.2 | 7.24 | +1.41 |
+| both ×0.5 | 57.9 | 93.2 | 1.61 | −0.09 |
+| *data target* | *50.0* | *50.0* | *1.00* | |
+
+Flattening makes it **much worse**. Steepening (×0.5) improves the ratio only to 1.61 and pushes
+both absolute rates the wrong way. There is no setting of the SRX force sensitivities that converges
+the three windows.
+
+## Why: force cannot be decoupled from the bound pool in this model
+
+State swaps into the post-restretch start (self-normalised replays; control H0b = 80.7):
+
+| hybrid | k63 | vs H0b | reading |
+|---|---|---|---|
+| H0a donor replay | 45.7 | (vs 45.4 orig) | seeding contract sound |
+| H0b recipient replay | 80.7 | (vs 89.6 orig, −10 %) | **replay is 10 % off — see caveat** |
+| **H1 p1,p2 ← donor** | 63.8 | **−16.9** | the surviving **bound pool** carries most of it |
+| H1raw grid copy | 84.6 | +4.0 | strain re-registration matters |
+| **H2 PD ← donor** | 68.0 | **−12.7** | the **primed reservoir** (0.646 → 0.470) carries the rest |
+| **H3 SRX pool ← donor** | 85.1 | **+4.4** | **SRX pool size at t0 is irrelevant** |
+| H3′ Force(t0) → 0 | n/a | — | **not a valid experiment** |
+| H4 A_reg ← donor | n/a | — | not measurable |
+
+H1 + H2 ≈ −29.6 of the −35 gap. **H3 is the key negative:** the SRX *pool* is not the handle. The
+trap matters through its *gate*, and the gate reads force — which is `kstiff·p2_1` through a serial
+element with τ ≈ mu/kSE ≈ **3 µs**. Zeroing `LSE` (H3′) is undone within one solver step, so force
+cannot be held low independently of the bound population. H_SRX and "the bound pool sets it" are the
+same statement seen from two sides.
+
+## What this means
+
+The post-restretch window is fast because **it never leaves the activated state**: it starts at
+0.86 F_iso with PD = 0.646 and p1+p2 = 0.156, so the gate stays open, the trap stays empty, and only
+a 0.17 F_iso excursion has to be recovered — 22 % of it by redistributing survivors. The post-slack
+and ktr windows start at zero force and near-zero bound population and must rebuild everything
+through a trap that parks 37 % of the heads.
+
+No parameter fix is in sight: the two knobs that set the trap's force sensitivity make it worse, and
+the pools that do carry the effect are the state itself, not parameters.
+
+**The open question is now a measurement question, not a model question.** Part 1 already recorded
+that the post-restretch amplitude is 0.22 F_iso against 0.74 / 1.00 for the other two, and that its
+single-exponential r² is 0.46–0.86 against 0.97–0.99. A 0.17 F_iso small-signal relaxation about an
+operating point may simply not be the same physical quantity as a full redevelopment from zero, in
+which case demanding that the model give them one rate is demanding the wrong thing. **Settle the
+window definition against the data before spending any more on parameters.**
+
+## Caveats on the method
+
+- **H0b replays 10 % slow** (80.7 vs 89.6). The seeded hold drops the protocol's residual
+  ~0.0025 µm/s drift and any solver history. Donor replay is exact (45.7 vs 45.4), so the contract is
+  sound; the recipient is the fragile one — consistent with its 4× smaller span. All hybrid
+  comparisons are therefore made against **H0b**, not against the original.
+- The `k63` crossing rule degenerates on the post-restretch window whenever a perturbation moves the
+  force at t0 relative to a span of only 0.17 F_iso. `RunStateSwaps.m` now rejects such runs rather
+  than reporting a rate (H3′, H4).
+- `Auxiliary/diagnostics/ktrProbe.m` is **silently broken**: it builds `PU0 = zeros(1,2*ss+7)` = 127
+  where this paramset needs 128, so `getParams:571` rebuilds it from defaults and discards the
+  intended detached initial condition without warning. It has reported an activation-from-rest, not
+  a Brenner ktr, since `A_reg` was added. `seedWindow.m` supersedes it and asserts the length.
+
 ## Secondary structure worth keeping
 
 - **post-slack k falls with slack depth** on two of three days (04/03: 48→30 s⁻¹ over cycles 1–5;
