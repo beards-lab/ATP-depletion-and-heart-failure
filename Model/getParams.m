@@ -320,6 +320,15 @@ end
 
     params0.K_T3 = 4; % (mM)
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
+
+    % Low-ATP levers (ported from lowatp-2state). Both scale a rate by a Michaelis
+    % factor in [MgATP] that is NORMALISED to 1 at MgATP_ref, so switching them on
+    % leaves the MgATP = MgATP_ref (8 mM) baseline bit-for-bit unchanged for any Km.
+    params0.MgATP_ref = 8;          % [ATP] (mM) at which both gates equal 1
+    params0.UseAtpDetachR2 = false; % R2 (P2 detachment) x gATP_R2 -> force amplitude lever
+    params0.K_T2 = 2.5;             % Km(ATP) (mM) of R2's ATP-binding detachment step
+    params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
+    params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
     
     % strain-associated parameters
     params0.alpha0 = 0;

@@ -474,6 +474,16 @@ if params.UseR2Ceiling
     R2     = R2 .* (R2max ./ (R2max + r2rate));
 end
 
+% Low-ATP, ATP-LIMITED detachment. A CK/CrP-buffered fibre keeps [ADP] ~ 0, so the
+% driver of the 2 mM phenotype is low [ATP] directly, not high [ADP]: the P2 head
+% must bind ATP before it can let go, so R2 x gATP_R2. Normalised so gATP_R2 = 1 at
+% MgATP_ref (8 mM) -> the high-ATP fit is untouched for ANY K_T2. Inert when off.
+if params.UseAtpDetachR2
+    gATP_R2 = (params.MgATP/(params.MgATP + params.K_T2)) ...
+            / (params.MgATP_ref/(params.MgATP_ref + params.K_T2));
+    R2 = R2 .* gATP_R2;
+end
+
 % p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).
 % The factor is FLOORED at 1: base turnover k3 at/above s3 (so force-bearing p3
 % at positive operating strain still detaches at k3 and cannot accumulate), and
@@ -521,7 +531,16 @@ end
 %% Super-relaxed (SRX/DRX) dynamics
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
-    RSRD2PD = params.kmsrd*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
+    % Low-ATP: the SRX-ADP return (P_SRD -> PD) needs ATP to re-prime, so it slows at
+    % low [ATP]. kmsrd_eff = kmsrd*gATP, normalised so gATP = 1 at MgATP_ref (8 mM)
+    % => the 8 mM run is byte-identical. This is the ktr lever (force is flat in it).
+    kmsrd_eff = params.kmsrd;
+    if params.UseAtpKmsrd
+        gATP = (params.MgATP/(params.MgATP + params.K_srx)) ...
+             / (params.MgATP_ref/(params.MgATP_ref + params.K_srx));
+        kmsrd_eff = kmsrd_eff * gATP;
+    end
+    RSRD2PD = kmsrd_eff*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
     if params.UseLimitedSRDTransition
         RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)))*PD;
     else
