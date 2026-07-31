@@ -16,7 +16,13 @@
 %
 %   Two versions of the left panel are produced:
 %     'FV' - normalised force vs velocity      -> results/summary_figure_FV.png
-%     'PV' - power vs velocity (F_norm * v)    -> results/summary_figure_PV.png
+%     'PV' - power vs velocity, kW/m^3         -> results/summary_figure_PV.png
+%
+%   The PV panel is ABSOLUTE (stress x strain rate = power per unit volume),
+%   while the FV panel is normalised to each condition's own isometric force.
+%   That is deliberate but it means the two panels are not the same comparison:
+%   the model over-predicts isometric stress by ~15% relative to the Baker FV
+%   set, which FV hides and PV does not. See PV_UNITS in plotSummaryFigure.m.
 %
 %   NOTE ON THE LOW-ATP RUN.  In this parameterisation [MgATP] enters the model
 %   only through the two ATP-gated levers ported from the lowatp-2state branch:
@@ -152,13 +158,34 @@ else
 end
 
 %% ============================== PLOT =======================================
-% PNG at 600 dpi (small figure -> needs the density) plus a vector PDF for print.
+% PNG and PDF, BOTH at 600 dpi through the identical raster path so the PDF is
+% layout-identical to the PNG. The PDF is deliberately NOT ContentType 'vector':
+% (1) vector export re-solves the tiledlayout onto the paper canvas, which used
+%     to displace the legends (the "mangled" PDF); the raster path cannot.
+% (2) the slack/staircase traces are thousands of high-frequency points, so a
+%     vector PDF is enormous and slow for no visual gain at this size.
+% 600 dpi at 3.8 in is ~2280 px across -> crisp in print. If a journal demands
+% true vector, switch the PDF line to 'ContentType','vector' and re-check the
+% legends in the output.
+% Left-panel style variants (right panels unchanged), suffix '' keeps the base
+% filenames as they were:
+%   'line' - data markers + connecting line, sim line   (base)
+%   'v1'   - data markers only (8 mM filled / 2 mM open); sim line
+%   'v2'   - all markers, no lines; circle = data, triangle = sim
+styles = {'line', ''; 'v1', '_v1'; 'v2', '_v2'};
+fnum   = 900;
 for v = {'FV', 'PV'}
-    fh = plotSummaryFigure(C, v{1}, [], FIGSIZE);
-    exportgraphics(fh, fullfile(resDir, ['summary_figure_' v{1} '.png']), 'Resolution', 600);
-    exportgraphics(fh, fullfile(resDir, ['summary_figure_' v{1} '.pdf']), 'ContentType', 'vector');
-    savefig(fh, fullfile(resDir, ['summary_figure_' v{1} '.fig']), 'compact');
-    
+    for s = 1:size(styles, 1)
+        fnum = fnum + 1;
+        fh   = plotSummaryFigure(C, v{1}, fnum, FIGSIZE, styles{s,1});
+        stem = fullfile(resDir, ['summary_figure_' v{1} styles{s,2}]);
+        exportgraphics(fh, [stem '.png'], 'Resolution', 600);
+        if isempty(styles{s,2})       % base style only: also PDF + .fig
+            exportgraphics(fh, [stem '.pdf'], 'Resolution', 600);
+            set(fh, 'Visible', 'on');  % headless figures save Visible='off' otherwise
+            savefig(fh, [stem '.fig']);
+        end
+    end
 end
 
 fprintf('figures (%.1f x %.1f in) -> %s\n', FIGSIZE(1), FIGSIZE(2), resDir);

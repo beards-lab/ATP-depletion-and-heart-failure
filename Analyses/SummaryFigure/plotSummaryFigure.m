@@ -1,4 +1,4 @@
-function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
+function fig = plotSummaryFigure(C, leftPanel, figNum, figSize, style)
 % PLOTSUMMARYFIGURE  Three-panel summary figure from a pre-simulated cache.
 %
 %   FIG = PLOTSUMMARYFIGURE(C) plots the normalised force-velocity version.
@@ -32,10 +32,12 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     if nargin < 2 || isempty(leftPanel); leftPanel = 'FV'; end
     if nargin < 3 || isempty(figNum);    figNum    = 900 + strcmpi(leftPanel, 'PV'); end
     if nargin < 4 || isempty(figSize);   figSize   = [3.8 2.9]; end   % inches
-%%
-    % Power-velocity units: 'norm' -> (F/F0)*v [ML/s]; 'abs' -> kPa*ML/s.
-    PV_UNITS = 'norm';
-
+    % LEFT-PANEL marker/line style (right panels are unaffected):
+    %   'line' - data = open markers + connecting line, sim = line   (default)
+    %   'v1'   - data = markers ONLY, no line (8 mM filled, 2 mM open); sim = line
+    %   'v2'   - NO lines at all; data and sim each a distinct marker shape
+    %            (data = circle, sim = triangle), 8 mM filled / 2 mM open
+    if nargin < 5 || isempty(style);     style     = 'line'; end
     % Type sizes (pt) chosen to stay legible at the default figSize.
     FS.axis = 8;    % tick labels
     FS.lab  = 9;    % axis labels
@@ -56,35 +58,78 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     set(fig, 'Color', 'w', 'Units', 'inches', ...
         'Position', [1 1 figSize], 'PaperUnits', 'inches', ...
         'PaperSize', figSize, 'PaperPosition', [0 0 figSize]);
-    % 5 rows so the right column can be split unevenly: the slack panel needs the
-    % height (five cycles, two force bands), the staircase does not.
-    tiledlayout(5, 2, 'TileSpacing', 'tight', 'Padding', 'tight');
+    % Parent 1x2 layout so the LEFT-RIGHT gap ('compact') is set independently of
+    % the vertical gap inside the right column. The right column is a nested 5-row
+    % layout, split 3:2 (slack needs the height for five cycles across two force
+    % bands; the staircase does not).
+    tl = tiledlayout(fig, 1, 2, 'TileSpacing', 'compact', 'Padding', 'tight');
+    rt = tiledlayout(tl, 5, 1, 'TileSpacing', 'tight', 'Padding', 'none');
+    rt.Layout.Tile = 2;
 
     axDefaults = {'FontSize', FS.axis, 'LineWidth', 0.5, 'TickLength', [0.02 0.02], ...
                   'TickDir', 'out', 'Layer', 'top'};
 
     %% ---------------- LEFT: force-velocity or power-velocity --------------
-    ax1 = nexttile(1, [5 1]); hold(ax1, 'on'); box(ax1, 'on');
+    ax1 = nexttile(tl, 1); hold(ax1, 'on'); box(ax1, 'on');
 
     isPV = strcmpi(leftPanel, 'PV');
-    if isPV && strcmpi(PV_UNITS, 'abs')
-        yOf  = @(s) s.f(:) .* s.v(:);
-        ylab = 'Power (kPa$\cdot$ML/s)';
-    elseif isPV
-        yOf  = @(s) s.fnorm(:) .* s.v(:);
-        ylab = 'Power ($F/F_0\cdot$ML/s)';
+    if isPV
+        % Power = stress x strain rate. Force here is a STRESS (kPa) and velocity
+        % is a strain rate (ML/s = 1/s), so P = F*v is a power PER UNIT VOLUME.
+        % We report it as P/P0, each SOURCE normalised to its OWN 8 mM peak power
+        % (data by the 8 mM data peak, model by the 8 mM model peak) - so both
+        % 8 mM curves top out at 1 and the 2 mM deficit reads off directly,
+        % without the model's ~15% isometric-stress overshoot contaminating the
+        % scale. Absolute units are kW/m^3 (= kPa*1/s exactly, ~0.94 W/kg).
+        Pw   = @(s) s.f(:) .* s.v(:);
+        P0d  = max(Pw(C.fvdata.hi));
+        P0m  = max(Pw(C.fv.hi));
+        yDat = @(s) Pw(s) / P0d;
+        yMod = @(s) Pw(s) / P0m;
+        ylab = 'Power ($P/P_0$, 8 mM peak)';
     else
-        yOf  = @(s) s.fnorm(:);
+        yDat = @(s) s.fnorm(:);
+        yMod = yDat;
         ylab = 'Force (norm.)';
     end
 
-    % Data first so the simulated lines sit on top.
-    hDhi = plot(ax1, C.fvdata.hi.v, yOf(C.fvdata.hi), 'o-', 'Color', CL.data, ...
-                'LineWidth', LW.data + 0.3, 'MarkerSize', MS, 'MarkerFaceColor', 'w');
-    hDlo = plot(ax1, C.fvdata.lo.v, yOf(C.fvdata.lo), 's--', 'Color', CL.data, ...
-                'LineWidth', LW.data + 0.3, 'MarkerSize', MS, 'MarkerFaceColor', 'w');
-    hMhi = plot(ax1, C.fv.hi.v, yOf(C.fv.hi), '-',  'Color', CL.sim, 'LineWidth', LW.curve);
-    hMlo = plot(ax1, C.fv.lo.v, yOf(C.fv.lo), '--', 'Color', CL.sim, 'LineWidth', LW.curve);
+    % Data first so the simulated lines sit on top. Marker fill encodes [ATP]
+    % (filled = 8 mM, open = 2 mM); marker shape in 'v2' encodes source
+    % (circle = data, triangle = sim). CL.sim carries an alpha 4th element for
+    % the lines; marker face/edge need a plain RGB triplet, so strip it.
+    simRGB = CL.sim(1:3);
+    switch lower(style)
+        case 'v1'   % data markers only (no line); sim lines as in 'line'
+            hDhi = plot(ax1, C.fvdata.hi.v, yDat(C.fvdata.hi), 'o', 'Color', CL.data, ...
+                        'LineWidth', LW.data + 0.3, 'MarkerSize', MS, 'MarkerFaceColor', CL.data);
+            hDlo = plot(ax1, C.fvdata.lo.v, yDat(C.fvdata.lo), 'o', 'Color', CL.data, ...
+                        'LineWidth', LW.data + 0.3, 'MarkerSize', MS, 'MarkerFaceColor', 'w');
+            hMhi = plot(ax1, C.fv.hi.v, yMod(C.fv.hi), '-',  'Color', CL.sim, 'LineWidth', LW.curve);
+            hMlo = plot(ax1, C.fv.lo.v, yMod(C.fv.lo), '--', 'Color', CL.sim, 'LineWidth', LW.curve);
+
+        case 'v2'   % no lines anywhere; distinct marker shape per source
+            % Sim is evaluated on a denser velocity grid than the data; as pure
+            % markers that grid is too crowded, so subsample the sim down to just
+            % the velocities the data has (one sim marker per data marker).
+            vHi = C.fv.hi.v; yHi = yMod(C.fv.hi); mHi = ismembertol(vHi, C.fvdata.hi.v, 1e-6);
+            vLo = C.fv.lo.v; yLo = yMod(C.fv.lo); mLo = ismembertol(vLo, C.fvdata.lo.v, 1e-6);
+            hDhi = plot(ax1, C.fvdata.hi.v, yDat(C.fvdata.hi), 'o', 'LineStyle', 'none', ...
+                        'Color', CL.data, 'LineWidth', LW.data + 0.3, 'MarkerSize', MS + 0.4, 'MarkerFaceColor', CL.data);
+            hDlo = plot(ax1, C.fvdata.lo.v, yDat(C.fvdata.lo), 'o', 'LineStyle', 'none', ...
+                        'Color', CL.data, 'LineWidth', LW.data + 0.3, 'MarkerSize', MS + 0.4, 'MarkerFaceColor', 'w');
+            hMhi = plot(ax1, vHi(mHi), yHi(mHi), '^', 'LineStyle', 'none', ...
+                        'Color', simRGB, 'LineWidth', LW.data + 0.3, 'MarkerSize', MS + 0.4, 'MarkerFaceColor', simRGB);
+            hMlo = plot(ax1, vLo(mLo), yLo(mLo), '^', 'LineStyle', 'none', ...
+                        'Color', simRGB, 'LineWidth', LW.data + 0.3, 'MarkerSize', MS + 0.4, 'MarkerFaceColor', 'w');
+
+        otherwise   % 'line' (default, original look)
+            hDhi = plot(ax1, C.fvdata.hi.v, yDat(C.fvdata.hi), 'o-', 'Color', CL.data, ...
+                        'LineWidth', LW.data + 0.3, 'MarkerSize', MS, 'MarkerFaceColor', 'w');
+            hDlo = plot(ax1, C.fvdata.lo.v, yDat(C.fvdata.lo), 's--', 'Color', CL.data, ...
+                        'LineWidth', LW.data + 0.3, 'MarkerSize', MS, 'MarkerFaceColor', 'w');
+            hMhi = plot(ax1, C.fv.hi.v, yMod(C.fv.hi), '-',  'Color', CL.sim, 'LineWidth', LW.curve);
+            hMlo = plot(ax1, C.fv.lo.v, yMod(C.fv.lo), '--', 'Color', CL.sim, 'LineWidth', LW.curve);
+    end
 
     if isPV
         yline(ax1, 0, '-', 'Color', [0.85 0.85 0.85], 'HandleVisibility', 'off');
@@ -98,12 +143,10 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     set(ax1, axDefaults{:});
     xlim(ax1, [-0.15 6.3]);
     xticks(ax1, 0:2:6);
-    % Just enough headroom for the legend, which sits top-right where both curves
-    % have already decayed. FV needs less than PV (PV stays high out to v = 3).
-    ytop = max([yOf(C.fvdata.hi); yOf(C.fvdata.lo); yOf(C.fv.hi); yOf(C.fv.lo)]);
-    % ylim(ax1, [min(0, min(yOf(C.fv.lo))), ytop * ternary(isPV, 1.32, 1.16)]);
+    % Legend sits top-right where both curves have already decayed; leave a little
+    % headroom above the 8 mM peak (=1 for PV) for it.
     if isPV
-        ylim(ax1, [0 0.9]);
+        ylim(ax1, [0 1.22]);
     else
         ylim(ax1, [0 1.05]);
     end
@@ -113,7 +156,7 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     lg1.ItemTokenSize = [10 4];
 
     %% ---------------- RIGHT TOP: slack + passive --------------------------
-    ax2 = nexttile(2, [3 1]); hold(ax2, 'on'); box(ax2, 'on');
+    ax2 = nexttile(rt, 1, [3 1]); hold(ax2, 'on'); box(ax2, 'on');
 
     yyaxis(ax2, 'right');
     hSL = plot(ax2, C.slack.dt, C.slack.dML, '-', 'Color', CL.sl, 'LineWidth', LW.sl);
@@ -137,22 +180,22 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     xlabel(ax2, '$t$ (s)', 'Interpreter', 'latex', 'FontSize', FS.lab);
     set(ax2, axDefaults{:}, 'YColor', 'k');
     xlim(ax2, C.slack.tlim);
-    ylim(ax2, [-4 126]);          % headroom above the ~99 kPa peaks for the legend
+    ylim(ax2, [-4 138]);          % headroom above the ~99 kPa peaks for the 'north' legend
     yticks(ax2, 0:40:80);
     title(ax2, 'Slack', 'FontSize', FS.tit);
     % Two columns, not four: at this width a single row runs off the axis and
-    % into the SL scale. Pushed hard against the top edge to give the traces the
-    % rest of the panel.
+    % into the SL scale. 'north' (auto-anchored) rather than a manual Position:
+    % manual figure-normalised placement is computed against the on-screen raster
+    % layout and does NOT survive the reflow that vector export (PDF/.fig) does,
+    % which mangled the legend there. Location presets are re-anchored by MATLAB
+    % in every export path. The ylim headroom below keeps it clear of the peaks.
     lg2 = legend(ax2, [hSd hSm hPd hPm], ...
         {'data', 'sim', 'passive data', 'passive sim'}, ...
-        'FontSize', FS.leg - 0.5, 'NumColumns', 2, 'Box', 'off');
+        'Location', 'north', 'FontSize', FS.leg - 0.5, 'NumColumns', 2, 'Box', 'off');
     lg2.ItemTokenSize = [6 4];
-    lg2.Units = 'normalized';
-    lg2.Position(1) = ax2.Position(1) + 0.5*(ax2.Position(3) - lg2.Position(3));
-    lg2.Position(2) = ax2.Position(2) + ax2.Position(4) - lg2.Position(4);
 
     %% ---------------- RIGHT BOTTOM: staircase -----------------------------
-    ax3 = nexttile(8, [2 1]); hold(ax3, 'on'); box(ax3, 'on');
+    ax3 = nexttile(rt, 4, [2 1]); hold(ax3, 'on'); box(ax3, 'on');
 
     yyaxis(ax3, 'right');
     plot(ax3, C.stairs.dt, C.stairs.dML, '-',  'Color', CL.sl, 'LineWidth', LW.sl);
@@ -162,8 +205,9 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     ylim(ax3, [1.98 2.32]);
 
     yyaxis(ax3, 'left');
-    % Absolute kPa on both sides: the recording is stored normalised, so
-    % RunSummaryFigure multiplies it back by the Fss the curation divided out.
+    % Normalised on both sides. The cache carries the recording in kPa (undone
+    % from the curation's Fss), so divide it back out here to match the model's
+    % own normalisation; swap both to C.stairs.dF / C.stairs.F for absolute kPa.
     hFd = plot(ax3, C.stairs.dt, C.stairs.dF/C.stairs.Fss_data, '-', 'Color', CL.data, 'LineWidth', LW.data);
     hFm = plot(ax3, C.stairs.t,  C.stairs.Fnorm,  '-', 'Color', CL.sim,  'LineWidth', LW.sim);
     ylabel(ax3, 'Force (norm.)', 'Interpreter', 'latex', 'FontSize', FS.lab);
@@ -174,7 +218,6 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     % legend there rather than reserving a full-width band above the trace. That
     % is what lets this panel run at 2/5 of the column height. Limits come from
     % what is actually inside the time window, not from the whole warm-started run.
-    wd = C.stairs.dt >= C.stairs.tlim(1) & C.stairs.dt <= C.stairs.tlim(2);
     wm = C.stairs.t  >= C.stairs.tlim(1) & C.stairs.t  <= C.stairs.tlim(2);
     lo = min([C.stairs.Fnorm(wm)]);
     hi = max([C.stairs.Fnorm(wm)]);
@@ -182,10 +225,22 @@ function fig = plotSummaryFigure(C, leftPanel, figNum, figSize)
     title(ax3, 'Staircase', 'FontSize', FS.tit);
     lg3 = legend(ax3, [hFd hFm], {'data', 'sim'}, ...
         'Location', 'northwest', 'FontSize', FS.leg, 'NumColumns', 2, 'Box', 'off');
-
     lg3.ItemTokenSize = [6 4];
-    lg3pos = lg3.Position;
-    lg3.Position = lg3pos + [-0.02 0.03 0 0]
+
+    % Push each legend flush against the TOP of its panel, into the empty band
+    % above the traces (the 'Location' presets leave it sitting down on the
+    % peaks). Done after a drawnow so the nested layout has resolved the axis
+    % Positions. This is SAFE for the exports because both PNG and PDF are now
+    % raster (Resolution, not ContentType 'vector'): they capture the on-screen
+    % layout as-is, so manual placement holds. It only broke under vector reflow.
+    drawnow;
+    set([lg1 lg2 lg3], 'Units', 'normalized');
+    lg1.Position(1) = ax1.Position(1) + ax1.Position(3) - lg1.Position(3) - 0.006;
+    lg1.Position(2) = ax1.Position(2) + ax1.Position(4) - lg1.Position(4) - 0.006;
+    lg2.Position(1) = ax2.Position(1) + 0.5*(ax2.Position(3) - lg2.Position(3));
+    lg2.Position(2) = ax2.Position(2) + ax2.Position(4) - lg2.Position(4) - 0.004;
+    lg3.Position(1) = ax3.Position(1) + 0.012;
+    lg3.Position(2) = ax3.Position(2) + ax3.Position(4) - lg3.Position(4) - 0.004;
 end
 
 function out = ternary(cond, a, b)
