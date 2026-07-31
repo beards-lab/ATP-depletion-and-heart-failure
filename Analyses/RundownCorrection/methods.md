@@ -163,6 +163,94 @@ against where the 8 mM condition would have been at that instant (65.25).
 
 ---
 
+## M.5b Refinement — reference each run to its own activation
+
+The correction in M.5 compares two runs at a **fixed protocol window**. That is only
+valid if both conditions are at the same point of their own activation, and they are
+not.
+
+**Force takes 3.3–5.8 s to develop** after activation begins, and rundown runs
+throughout that rise, so the observed peak is not the undamaged force. The two ATP
+conditions develop force at different rates:
+
+| | time to peak after onset | state at W1 (68.7 s) |
+|---|---|---|
+| 8 mM | 5.3 – 5.8 s | still rising |
+| 2 mM | 3.6 – 4.6 s | already falling |
+
+At the W2 window the 2 mM run has therefore been decaying ~3.0 s against ~0.7 s for
+the 8 mM run, **and** its slope is ~2× steeper (M.5c). On 03/27 that is 3.65 kPa lost
+from the 2 mM peak versus 0.34 kPa from the 8 mM peak — the fixed-window comparison
+understates the ATP effect by ~4 %, entirely *inside* the runs, where no between-run
+correction can reach it.
+
+**Procedure.** For each run, take the decay line from W2–W3 and evaluate it at that
+run's own peak time and its own relaxation time:
+
+```
+    t_pk    = argmax of the ML=1.0 force envelope
+    t_off   = last sample above 20 % of peak
+    F_pk    = v2 + slope * (t_pk  - t_W2)      "force at full activation"
+    F_end   = v2 + slope * (t_off - t_W2)      "force at relaxation"
+    T_dec   = t_off - t_pk                     the run's own decay phase
+```
+
+Then form ratios from `F_pk` rather than from the window value, and compute damage
+over `T_dec` rather than over a common activation duration:
+
+| referencing | 03/27 | 04/03 | 04/10 | mean | CV |
+|---|---|---|---|---|---|
+| fixed window W2 | 1.225 | 1.196 | 1.678 | 1.366 | 20 % |
+| own-peak | 1.269 | 1.233 | 1.649 | 1.384 | 17 % |
+| own-peak + damage over `T_dec` | 1.306 | 1.313 | 1.486 | **1.369** | **7 %** |
+
+The own-peak step costs nothing — no phi, no damage model — and should be used
+regardless.
+
+### M.5c Decay rate depends on ATP
+
+| | 8 mM | 2 mM | ratio |
+|---|---|---|---|
+| absolute (kPa/s) | 0.560 ± 0.142 | 1.092 ± 0.113 | **×1.95** |
+| relative (%/s) | 1.06 ± 0.37 | 1.50 ± 0.12 | ×1.42 |
+| paired within preparation | | | ×2.66, ×1.37, ×1.77 |
+
+All three preparations agree in direction. The 2 mM *relative* rate is tight across
+preparations (CV 8 %) while the 8 mM is scattered (CV 35 %). Note that 03/27's 8 mM
+run has the shallowest relative slope in the entire set (0.67 %/s): the preparation
+the correction is calibrated on is the most robust one available.
+
+### M.5d Does decay occur between activations?
+
+Extrapolating each run to its own `F_pk` and `F_end` (above) makes the session a
+chain. With `a` the ATP effect and `r` the between-activation recovery factor
+(`r > 1` = force partially recovers while relaxed), the 03/27 chain gives two
+equations in two unknowns:
+
+```
+    F_pk(2mM #2)  / F_end(8mM #1)  =  1.355  =  r * a
+    F_pk(8mM #4)  / F_end(2mM #2)  =  0.798  =  r^n / a
+```
+
+| rest intervals assumed | `a` | `r` |
+|---|---|---|
+| one each (n = 1) | **1.303** | +4.0 % per rest |
+| two after the 2 mM run (n = 2) | **1.320** | +2.6 % per rest |
+
+**The "no decay between activations" assumption essentially holds**: the residual is
+a small *recovery* of 2.6–4.0 % per rest interval, not further decay. This route
+estimates the ATP effect as **×1.30–1.32 from one preparation, with no phi and no
+damage model** — an independent confirmation of the value obtained in M.7.
+
+![Decay geometry](results/decay_geometry.png)
+
+*(a) activation envelopes normalised to their own peak — 2 mM (red) peaks earlier
+than 8 mM (blue). (b) 03/27 decay lines extrapolated to each run's own peak (stars).
+(c) paired decay rates. (d) the continuity chain. (e) CV by referencing scheme.
+(f) decay-phase duration.*
+
+---
+
 ## M.6 Worked example (03/27)
 
 | step | quantity | value |
@@ -233,10 +321,47 @@ The downstream consequence, across all four preparations:
 ## M.8 What must NOT be corrected
 
 The same bracket shows the rate of force redevelopment falls by ×0.884 over the
-session. It is nonetheless **wrong to apply a rundown correction to `ktr`**: doing so
-*increases* between-preparation scatter (CV 9 % → 13–16 %), under both wall-clock and
-effective-time models. The bracket's `ktr` loss does not transfer to the much shorter
-132–308 s gaps. Over those gaps the implied bias is ≈ 2 %.
+session. It is nonetheless **wrong to apply a rundown correction to `ktr`**.
+
+This was tested properly rather than asserted (`RunJointCorrection.m`). The coupling
+between the two corrections was left free and scanned:
+
+```
+    ktr_frac(gap)  =  gamma * force_frac(gap)
+```
+
+| gamma | meaning | CV of the ktr ratio |
+|---|---|---|
+| 0 | no correction | **9.4 %** |
+| +0.68 | implied by the bracket (force ×0.829, ktr ×0.884) | 15.8 % |
+| +0.71 | predicted by the series-creep lesion (M.9) | 16.1 % |
+
+Both physically motivated couplings make consistency **worse**. `CV(gamma)` is
+monotone over the whole scanned range, so there is no interior optimum; the apparent
+improvement at negative gamma is not a mechanism (it would mean rundown makes `ktr`
+faster) and works only by lifting one preparation toward the other two — one free
+parameter fitted to three points.
+
+There is also no dose-response to follow: `ktr` ratio against force-damage dose gives
+**r = −0.63, p = 0.57 (n = 3)**, non-monotone.
+
+**The reason is mechanistic.** The lesion (M.9) reaches force through the
+length–tension relation, a strong channel, and `ktr` through added series compliance,
+a weak one — ×0.829 versus ×0.884 over the same bracket. A scaled correction assumes
+precisely the proportionality the mechanism denies.
+
+**A within-run `ktr` decay cannot currently be measured.** Comparing `ktr` from the
+ktr burst (t ≈ 71.6 s) with slack segment 2 (t ≈ 75.5 s — same SL 2.0, same
+activation, ~4 s apart) gives ratios of 1.09 / 0.86 / 1.45 / 1.22 / 0.94 / 0.73 across
+the six runs: scatter far larger than any plausible 4-second decay. The two are
+mechanically different perturbations, and the burst fit window spans only ~2.8 time
+constants. A hi-res repeat run would be needed.
+
+> **Recommendation:** correct force; report `ktr` raw; never compare `ktr` across long
+> session gaps. Over the 132–308 s gaps actually used the implied `ktr` bias is ≈ 2 %,
+> smaller than the between-preparation scatter.
+
+![Joint correction](results/joint_correction.png)
 
 > **Recommendation:** correct force; report `ktr` raw; never compare `ktr` across long
 > session gaps.
@@ -267,15 +392,60 @@ discriminators:
 | reduced attachment | `ka` | 1.045 (wrong sign) | vertical scale |
 | **observed** | | **0.884** | **horizontal shift** |
 
-No single lesion suffices. Force loss together with the observed *bend* in the
-length–tension relation requires a length shift; the `ktr` loss requires added series
-compliance. **These are the same physical lesion** — a series elastic element that
-creeps longer and softer simultaneously. Imposing both (`kSE` ×0.65, SL −0.098 µm)
-reproduces force ×0.827, `ktr` ×0.877 and the bend, against observed 0.829 / 0.884 /
-bend. An alternative pairing reaching the same (force, `ktr`) point by fewer heads plus
-slower motors predicts a pure vertical scale and is rejected by the shape.
+No single lesion suffices. The `ktr` loss requires **added series compliance** — no
+alternative reaches it. The force half is settled by a second, stronger test below.
 
 ![Model perturbation study](results/mechanism_simulation.png)
+
+### M.9b Which force lever? The five-segment profile decides
+
+The bracket yields not one number but a **profile**: `ktr` and amplitude at each of
+the five slack segments, fresh and repeat (`RunModelRundownFit.m`). Observed
+(repeat / fresh, sampling-matched):
+
+| | s1 (2.04 µm) | s2 | s3 | s4 | s5 (1.88 µm) | mean |
+|---|---|---|---|---|---|---|
+| `ktr` ratio | 0.947 | 0.906 | 0.847 | 0.829 | 0.893 | 0.884 |
+| amplitude ratio | 0.823 | 0.805 | 0.808 | 0.802 | 0.792 | **0.806** |
+
+The amplitude profile is essentially **flat** (gradient −0.031 across the ladder):
+
+| candidate | RMSE `ktr` | RMSE amplitude | total |
+|---|---|---|---|
+| SL0 only (−0.098 µm) | 0.116 | 0.058 | 0.130 |
+| kSE only (×0.65) | 0.069 | 0.187 | 0.199 |
+| SL0 + kSE | 0.066 | 0.052 | 0.084 |
+| kstiff only (×0.84) | 0.108 | 0.023 | 0.111 |
+| **kstiff + kSE (×0.84, ×0.65)** | **0.058** | **0.017** | **0.060** |
+
+A length shift of the required size predicts a **steep** amplitude gradient
+(0.910 → 0.726) because the deep segments lose more length–tension; the data show
+−0.031, and a force scale predicts −0.001. **On five points the force loss is a
+scale, not a shift.**
+
+The earlier length-shift verdict came from the 6-point length–tension curve, in which
+the **ML 1.10** pre-slack plateau (ratio 0.887) is the only point breaking an
+otherwise flat 0.79–0.83 pattern — and it lies outside the slack ladder. Passive
+force is largest there (~5 kPa of 80, and passive does not run down), which explains
+part of it but not all. **The length-shift evidence rests on one measurement and
+should be treated as provisional.**
+
+**Revised mechanism:** rundown = loss of force-generating material in parallel (≈16 %)
+**plus** added series compliance (≈35 %) — consistent with myofibrils rupturing near
+the attachments, which removes parallel force-generating material and leaves a
+compliant damaged region in series.
+
+![Rundown as a decaying model parameter](results/model_rundown_fit.png)
+
+### M.9c Rundown as a fitted nuisance parameter
+
+The practical alternative to correcting data: give each run a **single rundown
+coordinate** mapped jointly onto (`kstiff`, `kSE`), fit it alongside the physiology,
+and the treatment parameters are estimated on a common footing automatically. This is
+one nuisance dimension per run, not two free knobs — the two model parameters move
+together because they are two consequences of one lesion. It also removes the need
+for phi, `T_dec` and the own-peak referencing entirely, since the model then carries
+the fibre state explicitly.
 
 Two consequences follow for practice:
 
@@ -322,6 +492,9 @@ Two consequences follow for practice:
 | script | produces |
 |---|---|
 | `RunBracketExplainer.m` | `results/bracket_explained.png` — the bracket and the damage staircase |
+| `RunDecayGeometry.m` | `results/decay_geometry.png`, `.mat` — activation rise vs decay, ATP-dependence of the decay rate, continuity/recovery test, own-peak referencing |
+| `RunJointCorrection.m` | `results/joint_correction.png`, `.mat` — phi on the own-peak/`T_dec` footing; free scan of the force→`ktr` correction coupling |
+| `RunModelRundownFit.m` | `results/model_rundown_fit.png`, `.mat` — rundown as a decaying model parameter, tested against the 5-segment `ktr` and amplitude profiles |
 | `RunRundownCorrection.m` | `results/rundown_correction.png`, `.mat` — linearity test, phi calibration, phi scan, sensitivity |
 | `RunRundownMechanisms.m` | `results/rundown_mechanism.png` — length–tension and `ktr` evidence from the data |
 | `RunMechanismSimulation.m` | `results/mechanism_simulation.png` — model perturbation study |
@@ -335,10 +508,15 @@ Each runs standalone from a clean MATLAB session after
 ## M.12 Summary of the procedure
 
 1. Measure `F_i`, `s_i`, `T_i` for every run (M.3).
-2. Obtain phi from a same-condition bracket: `phi = dF_measured / SUM |s_i| T_i` (M.4).
-3. Compute `dmg = phi * SUM |s_i| T_i` over the intervening force-generating
+2. **Reference each run to its own activation**: find `t_pk`, extrapolate the decay
+   line to it, and use `F_pk` in place of the window value; use each run's own decay
+   phase `T_dec = t_off - t_pk` in place of a common activation duration (M.5b).
+   This step is free and should always be applied.
+3. Obtain phi from a same-condition bracket: `phi = dF_measured / SUM |s_i| T_i` (M.4).
+4. Compute `dmg = phi * SUM |s_i| T_dec_i` over the intervening force-generating
    activations (M.5).
-4. Form `f = dmg / F_later` and correct the **later** run upward (M.5).
-5. Report corrected force ratios; report `ktr` **uncorrected** (M.8).
-6. Validate by between-preparation scatter, not by the bracket the correction was
-   calibrated on (M.7).
+5. Form `f = dmg / F_later` and correct the **later** run upward (M.5).
+6. Report corrected force ratios; report `ktr` **uncorrected** (M.8).
+7. Validate by between-preparation scatter, not by the bracket the correction was
+   calibrated on (M.7); cross-check against the continuity route (M.5d), which is
+   independent of phi.

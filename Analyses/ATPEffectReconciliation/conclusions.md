@@ -52,8 +52,21 @@ RundownCorrection §5):
 |---|---|---|---|---|---|
 | 0.537 | 0.593 | 0.492 | 0.566 | **0.547** | **8 %** |
 
-`ktr` is the most reliable number in the whole dataset: four preps, two ATP
-orders, two eras, two different slack protocols.
+`ktr` is the most reproducible number in the dataset: four preps, two ATP orders,
+two eras, two different slack protocols.
+
+> **⚠ But it is the wrong probe.** [RundownCorrection §5f](../RundownCorrection/conclusions.md)
+> shows the slack-derived `ktr` is **~5× more compliance-sensitive** than the
+> dedicated ktr protocol. The two disagree by 24 %:
+>
+> | | ktr protocol | slack |
+> |---|---|---|
+> | ATP effect on `ktr` | **×0.72** (CV 4 %) | ×0.58 (CV 7 %) |
+>
+> They agree at 8 mM and diverge only at 2 mM. **For cross-bridge kinetics prefer
+> ×0.72**; the slack value is contaminated by whatever series compliance differs
+> between the conditions. The slack `ktr` remains the right probe for *rundown*,
+> which is itself largely a compliance lesion.
 
 ![The ATP effect, reconciled](results/atp_reconciliation.png)
 
@@ -75,6 +88,56 @@ Physiologically consistent: fewer ATP molecules → slower ADP release/detachmen
 bridges dwell longer in force-bearing states → **more force per bridge-cycle but a
 slower cycle**. It matches Beard 2022 in direction, with a larger force effect
 (×1.36 vs the ~×1.18 previously quoted from uncorrected 03/27 data).
+
+## Does the model-based correction reconcile the reversed-order prep better?
+
+`RunModelBasedReconciliation.m` → `results/model_based_reconciliation.png`. Instead
+of a fractional correction, the rundown **lesion** identified in
+[RundownCorrection §4b](../RundownCorrection/conclusions.md) (`kstiff` ×0.84 +
+`kSE` ×0.65 at the full bracket dose) is simulated at each preparation's own dose,
+and its predicted force *and* `ktr` changes are divided out.
+
+![Model-based vs empirical correction](results/model_based_reconciliation.png)
+
+| dose λ | lesion | predicted force × | predicted `ktr` × |
+|---|---|---|---|
+| 03/27, λ=0.17 | kstiff ×0.973, kSE ×0.940 | 0.969 | 0.983 |
+| 04/03, λ=0.38 | kstiff ×0.939, kSE ×0.867 | 0.935 | 0.947 |
+| 04/10, λ=0.83 | kstiff ×0.867, kSE ×0.708 | 0.852 | 0.896 |
+
+**Force — marginally better.**
+
+| | 03/27 | 04/03 | 04/10 | mean | CV |
+|---|---|---|---|---|---|
+| raw (own-peak) | 1.269 | 1.233 | 1.649 | 1.384 | 17 % |
+| empirical fractional | 1.306 | 1.311 | 1.445 | 1.354 | 6 % |
+| **model lesion** | 1.309 | 1.319 | 1.405 | **1.344** | **4 %** |
+
+The two routes agree on the answer (**×1.34 vs ×1.35**) and the model route is
+slightly tighter, because the lesion's force response is not exactly proportional to
+dose — which matters most for 04/10, whose dose is 5× 03/27's. **The reversed-order
+preparation is reconciled: 1.649 → 1.405, against 1.309 and 1.319.**
+
+**`ktr` — no better, and for a now-explicit reason.**
+
+| | 03/27 | 04/03 | 04/10 | CV |
+|---|---|---|---|---|
+| raw | 0.537 | 0.593 | 0.492 | **9 %** |
+| model lesion | 0.547 | 0.626 | 0.441 | 17 % |
+
+The model *derives* a force:`ktr` coupling of **0.71** — essentially the value the
+empirical scaling assumed — so it inherits the identical problem. The obstacle is
+visible directly: **04/10 has the largest damage (14.1 %) but the lowest raw `ktr`
+ratio (0.492)**. Any dose-proportional `ktr` correction moves it *further* from the
+other two. For a rundown correction to help, 04/10 would have to have the *highest*
+raw ratio. It does not, so the `ktr` scatter is not dose-driven — it is biological
+variation, or 04/10's specific anomaly.
+
+> **Bottom line.** The model route reconciles **force** slightly better (CV 6 % → 4 %)
+> and confirms ×1.34–1.35. It does **not** rescue `ktr`, and now says why rather than
+> just failing. Its real value is different: the fibre state can be *fitted* rather
+> than the data corrected — which is what matters once the ATP effect is itself
+> represented in the model.
 
 ## Caveats
 
