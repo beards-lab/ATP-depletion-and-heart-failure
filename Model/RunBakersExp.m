@@ -42,6 +42,11 @@ end
 
 %% KTR EXPERIMENT
 if params0.RunKtr
+    % Ktr_mean normally arrives via the LoadData call in the FV section; load it
+    % here too so RunKtr works with RunForceVelocity switched off.
+    if ~exist('Ktr_mean', 'var')
+        LoadData;
+    end
     [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean);
     E(end+1) = E_ktr;
     out = out_ktr;

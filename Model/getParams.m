@@ -207,6 +207,13 @@ end
         'v_ref_reg', 0.8, ...      % sliding speed (um/s, same units as Vums; ~0.4 ML/s) at which availability is half-recovered. Used when UseRegistrationAvailability
         'tau_reg', 0.02, ...       % registration relaxation time (s, ~1/ktr) so ktr stays single-order. Used when UseRegistrationAvailability
         'RegAvailShorteningOnly', false, ... % if true, availability tracks SHORTENING speed only (max(0,-vel)); restretch/lengthening does not boost attachment -> preserves post-restretch undershoot while keeping the FV shoulder
+        'UseD0State', false, ...   % nucleotide-free detached state D0. A head torn off under strain (XB_Ripped) never bound ATP, so it cannot re-prime until it does: it lands in D0 and leaves only via ATP binding. Appends +1 scalar ODE state at the tail (after A_reg). false => nothing appended, byte-identical to the legacy state vector
+        'k_D0T', 500, ...          % [ATP]-saturated ceiling on D0 -> PT (s^-1); used when UseD0State
+        'K_D0T', 0.15, ...         % MgATP half-saturation of the D0 -> PT step (mM); used when UseD0State
+        'D0FromR2', 0, ...         % fraction of the normal R2 (p2 -> PT) flux routed via D0 instead of straight to PT. 0 = only torn bridges transit D0. Used when UseD0State
+        'UseR2Ceiling', false, ... % series ATP-binding ceiling on strong-bridge detachment: 1/R2_eff = 1/R2_strain(s) + 1/R2max. Caps the unbounded strain acceleration of R2 so stretched bridges cannot vanish in <1 ms
+        'k2max', 1500, ...         % [ATP]-saturated ceiling on the p2 detachment rate (s^-1); used when UseR2Ceiling
+        'K_T2c', 0.15, ...         % MgATP half-saturation of that ceiling (mM); used when UseR2Ceiling
         'UseMaxwellDashpot', false, ...
         'mu_neg', '=mu', ...
         'mu2', 0, ...
@@ -217,6 +224,8 @@ end
         'd_actin', 0.0055, ...     % actin site repeat distance (um)
         'kSE_M', 500, ...          % Maxwell dashpot spring stiffness; used when UseMaxwellDashpot
         'eta_M', 1.0, ...          % Maxwell dashpot viscosity; used when UseMaxwellDashpot
+        'UseMaxwellTensionOnly', false, ... % titin pulls but cannot push: shortening slackens the filament and releases the stored unfolding stress at once (tau_M_slack), instead of the default rectifier which only ever charges. Used when UseMaxwellDashpot
+        'x_M_slack', 0.01, ...     % slack length constant (um): stored stress decays as exp(-shortening/x_M_slack); used when UseMaxwellTensionOnly
         'FudgeA', 0, ...           % quadratic SL coeff for slack velocity; used when FudgeVmax
         'FudgeB', 0, ...           % linear SL coeff for slack velocity
         'FudgeC', 0, ...           % constant SL coeff for slack velocity
@@ -311,21 +320,15 @@ end
 
     params0.K_T3 = 4; % (mM)
     params0.K_D = 0.194; % MgADP dissociation constant from Yamashita etal (Circ Res. 1994; 74:1027-33).
-    params0.UseAdpTrap = false;    % low-ATP: scale R2 (P2 detachment) by g2(MgADP,K_D); inert at MgADP=0.
-    params0.UsePiReversal = false; % low-ATP: Pi inhibits the power stroke R12 (mass action) -> shifts p2->p1, force down via POPULATION; inert at Pi=0.
-    params0.UsePiReverseStroke = false; % low-ATP: Pi drives the REVERSE stroke R21 *= (1+Pi/K_Pi) -> heads dwell in pre-stroke attached state; inert at Pi=0.
-    params0.UsePiForce = false;    % REMOVED/inert: was an unphysical kstiff2 scaling (stiffness is mechanical, not [Pi]-set). Use UsePiReversal (rate-based) instead.
-    % Forced-detachment parking: high-strain rip p2->PK (detached, ATP-depleted, off-cycle) + ATP-gated return PK->PT.
-    params0.UseForcedDetachmentPark = false; % master flag; appends +1 scalar ODE state PK. Inert (zero-length) when off.
-    params0.UseAtpKmsrd = false;   % low-ATP: SRX-ADP return kmsrd_eff = kmsrd*gATP; gATP=1 at MgATP_ref => 8mM invariant. Breaks force<->ktr weld (magnitude + per-seg slope).
-    params0.K_srx = 9.3;           % Km(ATP) [mM] for the SRX-ADP return; gives kmsrd_eff(2mM)/kmsrd_eff(8mM) ~ 0.38.
-    params0.MgATP_ref = 8;         % reference [ATP] (mM) where gATP=1 (high-ATP baseline). Shared by UseAtpKmsrd/UseAtpDetachR2.
-    params0.UseAtpDetachR2 = false; % low-ATP: R2 (P2 detachment) x gATP_R2, normalized to 1 at MgATP_ref. Preferred over UseAdpTrap: driven by low [ATP] directly (CK/CrP buffer keeps [ADP]~0), not [ADP].
-    params0.K_T2 = 2.5;             % Km(ATP) [mM] for R2's ATP-binding-detachment step.
-    params0.kpark = 0;      % rip rate p2->PK, strain-gated by exp(alphaRip*(s+dr3)); 0 = off (both ATP levels).
-    params0.kunpark = 0;    % return rate PK->PT, gated by MgATP/(MgATP+K_T_park); fast at high ATP -> PK~0.
-    params0.K_T_park = 4;   % Km(ATP) [mM] for the PK->PT recharge/return.
-    params0.PARK_0 = 0;     % initial PK fraction.
+
+    % Low-ATP levers (ported from lowatp-2state). Both scale a rate by a Michaelis
+    % factor in [MgATP] that is NORMALISED to 1 at MgATP_ref, so switching them on
+    % leaves the MgATP = MgATP_ref (8 mM) baseline bit-for-bit unchanged for any Km.
+    params0.MgATP_ref = 8;          % [ATP] (mM) at which both gates equal 1
+    params0.UseAtpDetachR2 = false; % R2 (P2 detachment) x gATP_R2 -> force amplitude lever
+    params0.K_T2 = 2.5;             % Km(ATP) (mM) of R2's ATP-binding detachment step
+    params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
+    params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
     
     % strain-associated parameters
     params0.alpha0 = 0;
@@ -574,7 +577,7 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseForcedDetachmentPark;
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseD0State;
     PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
@@ -597,17 +600,17 @@ end
         else
             A_reg0 = [];
         end
-        % Forced-detachment parking pool PK: append one scalar state at the tail (after
-        % A_reg), init PARK_0. [] when off => nothing appended => legacy state vector.
-        if params.UseForcedDetachmentPark
-            Park0 = params.PARK_0;
+        % Nucleotide-free detached pool: empty at rest (nothing has been torn
+        % off yet). Appended AFTER A_reg, so its index is Ns*ss+8+UseRegistrationAvailability.
+        if params.UseD0State
+            D0_0 = 0;
         else
-            Park0 = [];
+            D0_0 = [];
         end
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, Park0];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, Park0];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0];
 		end
 		
 		if params.UseSuperRelaxedADP

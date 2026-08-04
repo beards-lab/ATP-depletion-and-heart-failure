@@ -1,28 +1,56 @@
-% TODO:
-% - extend to ktr and minor perturbations export
-% - fix the velocitytable for those as well
-
 % CreateProtocolVelocityTable.m
-% clear;
-dataDir    = '../data/03 27 2026 M/';
-fpath      = [dataDir '06_Merged_8mM_Active_PNB_Mava.txt'];
-fpath      = [dataDir '02_Merged_8mM_Active.txt'];
-% exportData = [dataDir '06_Merged_8mM_Active_PNB_Mava_proc.mat'];
-% outPath    = '../data/protocol_03_27_2026_velocitytable_slack.mat';
-outPath    = '../data/protocol_03_27_2026_8mM_slack.mat';
-% outPath    = '../data/protocol_03_27_2026_ActivePNBMava_slack.mat';
+% Builds the SLACK protocol files (velocitytable + datatable + features_data)
+% from the merged log traces produced by mergeLogsAndBursts / LoadAndPlotLogs.
+%
+% The velocitytable is recovered from the length trace by Ramer-Douglas-Peucker
+% line simplification plus a cluster-collapse pass that snaps each transition
+% onto its true plateau boundaries (raw L is noisy enough that naive RDP leaves
+% mid-slope points with the wrong L, which the ODE integrator then ramps through).
+%
+% Each config row yields a 22-row / 5-slack velocitytable, so every
+% RunSlackSegments selector in runSlackExperiment (which indexes rows literally)
+% stays valid across protocol days.
+%
+% NOTE on the 04-series: those slack recordings open with an extra isovelocity
+% ramp (-2 ML/s, 1.10 -> 0.80 ML) before the first slack. That is a separate
+% experiment, carved out by CreateFVRampProtocolVelocityTable; here the clip
+% window simply starts after it.
+%
+% Produces:
+%   data/protocol_03_27_2026_{8mM,2mM,ActivePNBMava}_slack.mat
+%   data/protocol_04_10_2026_{8mM,2mM,ActivePNBMava}_slack.mat
 
-fpath      = [dataDir '03_Merged_2mM_Active.txt'];
-outPath    = '../data/protocol_03_27_2026_2mM_slack.mat';
+% {merged source file, slackSegment [s], tWarmStart [s], output}
+configs = {
+  '../data/03 27 2026 M/02_Merged_8mM_Active.txt',            [74.00, 78], 50, '../data/protocol_03_27_2026_8mM_slack.mat';
+  '../data/03 27 2026 M/03_Merged_2mM_Active.txt',            [74.00, 78], 50, '../data/protocol_03_27_2026_2mM_slack.mat';
+  '../data/03 27 2026 M/06_Merged_8mM_Active_PNB_Mava.txt',   [74.00, 78], 50, '../data/protocol_03_27_2026_ActivePNBMava_slack.mat';
+  '../data/04 10 2026 Male 2-8/03_Merged_8mM_Active.txt',          [74.60, 78], 50, '../data/protocol_04_10_2026_8mM_slack.mat';
+  '../data/04 10 2026 Male 2-8/02_Merged_2mM_Active.txt',          [74.60, 78], 50, '../data/protocol_04_10_2026_2mM_slack.mat';
+  '../data/04 10 2026 Male 2-8/04_Merged_8mM_Active_PNB_Mava.txt', [74.60, 78], 50, '../data/protocol_04_10_2026_ActivePNBMava_slack.mat';
+  '../data/04 03 2026 F/02_Merged_8mM_Active.txt',                 [74.60, 78], 50, '../data/protocol_04_03_2026_8mM_slack.mat';
+  '../data/04 03 2026 F/03_Merged_2mM_Active.txt',                 [74.60, 78], 50, '../data/protocol_04_03_2026_2mM_slack.mat';
+  '../data/04 03 2026 F/04_Merged_8mM_Active_PNB_Mava.txt',        [74.60, 78], 50, '../data/protocol_04_03_2026_ActivePNBMava_slack.mat';
+};
 
-fpath      = [dataDir '01_Merged_Relax.txt'];
-outPath    = '../data/protocol_03_27_2026_passive_slack.mat';
+% Which rows to (re)build. Defaults to the most recently added rows only:
+% every already-built row's features_data on disk was re-extracted afterwards
+% with trendline smoothing by UpdateSlackFeatures, and re-running it here would
+% overwrite that with the unsmoothed version. Both knobs are guarded so a caller can preset them
+% (e.g. slackRunIdx = 1:3; slackSaveOutputs = false) to regression-check
+% without writing. The names are script-specific so the sibling Create*
+% scripts can run back-to-back in one workspace without inheriting each other's.
+if ~exist('slackRunIdx', 'var');      slackRunIdx      = 7:9;  end
+if ~exist('slackSaveOutputs', 'var'); slackSaveOutputs = true; end
 
-% set #02
-% dataDir = '../data/04 03 2026 F/';
-% fpath = [dataDir '04_Merged_8mM_Active_PNB_Mava.txt'];
-% outPath = '../data/protocol_04_03_2026_velocitytable.mat';
+vt_out = cell(size(configs, 1), 1);   % per-row results, for inspection / regression
+dt_out = cell(size(configs, 1), 1);
 
+for ci = slackRunIdx(:)'
+    fpath        = configs{ci, 1};
+    slackSegment = configs{ci, 2};
+    tWarmStart   = configs{ci, 3};
+    outPath      = configs{ci, 4};
 
 M = readmatrix(fpath);
 
@@ -155,14 +183,30 @@ vel_um = v_vt * 2; % placeholder scaling
 
 velocitytable = [t_vt, v_vt, vel_um, L_vt];
 
+% Collapse a split final plateau. RDP occasionally cuts a long hold in two on
+% sub-tolerance drift (e.g. L 1.0001 -> 1.0002 over 47 ms, i.e. wider than
+% dt_cluster so the cluster pass leaves it), which adds a no-op row and shifts
+% every later index — runSlackExperiment selects segments by literal row number.
+% A hold is always FOLLOWED by a ramp, so two consecutive near-zero-velocity
+% rows at the same length can only be a split plateau; drop the later one.
+vthresh_noop = 0.05;    % ML/s — an order below the slowest real ramp (~2.7)
+k = 1;
+while k < size(velocitytable, 1)
+    if abs(velocitytable(k, 2))   < vthresh_noop && ...
+       abs(velocitytable(k+1, 2)) < vthresh_noop && ...
+       abs(velocitytable(k+1, 4) - velocitytable(k, 4)) < tol
+        velocitytable(k+1, :) = [];
+    else
+        k = k + 1;
+    end
+end
+
 % Generate datatable (downsampled full trace for cost function evaluation)
 dsf = 5; % downsample factor
 datatable = [downsample(t, dsf), downsample(L, dsf), downsample(F, dsf)];
 
 
 % clip it - catch the first slack burst
-tWarmStart   = 50;    % warm-start entry time prepended to velocitytable
-slackSegment = [74, 78];
 i_firstSlack = find(velocitytable(:, 1) >= slackSegment(1) & velocitytable(:, 2) < -10, 1, 'first');
 clipping     = [velocitytable(i_firstSlack, 1), slackSegment(2)];  % [t_start, t_end] seconds — adjust as needed
 
@@ -192,35 +236,39 @@ end
 %% fit data features in slack
 features_data = struct();
 features_data = extractSlackAttributes(datatable(:, 1), datatable(:, 3), datatable(:, 2), velocitytable, features_data, [], true);
-            % % Print extracted values to console so they can be pasted into the else branch below
-            % fieldNames = fieldnames(features_data);
-            % for k = 1:numel(fieldNames)
-            %     fname = fieldNames{k};
-            %     val   = features_data.(fname);
-            %     if ~isnumeric(val), continue; end
-            %     s = mat2str(round(val, 4, 'significant'));
-            %     fprintf('features_data.%s = %s;\n', fname, s);
-            % end
-
 
 %%
 
 % Save it
-save(outPath, 'velocitytable', 'datatable', 'features_data');
-fprintf('Saved new velocitytable (%dx4) and datatable (%dx3) to %s\n', ...
-        size(velocitytable,1), size(datatable,1), outPath);
+vt_out{ci} = velocitytable;
+dt_out{ci} = datatable;
+if slackSaveOutputs
+    save(outPath, 'velocitytable', 'datatable', 'features_data');
+    fprintf('Saved new velocitytable (%dx4) and datatable (%dx3) to %s\n', ...
+            size(velocitytable,1), size(datatable,1), outPath);
+else
+    fprintf('[no-save] velocitytable (%dx4) and datatable (%dx3) for %s\n', ...
+            size(velocitytable,1), size(datatable,1), outPath);
+end
+fprintf('  %d slack releases, L %.4f -> %.4f, t [%.3f %.3f]\n', ...
+        numel(find(velocitytable(:,2) < -1)), velocitytable(1,4), velocitytable(end,4), ...
+        velocitytable(1,1), velocitytable(end,1));
 
-figure(50); clf;
+figure(50+ci); clf;
 ax1 = nexttile;
 plot(t, L, 'Color', [0.7 0.7 0.7]); hold on;
 plot(velocitytable(:,1), velocitytable(:,4), 'ro-', 'MarkerSize', 4);
-title('Extracted Velocity Table over Original L trace');
+title(['Extracted Velocity Table over Original L trace: ' outPath], 'Interpreter', 'none');
 ylabel('Length (Lo)'); xlabel('Time (s)');
 legend('Raw L', 'Velocity Table Segments');
 ax2 = nexttile;
 plot(t, F, 'Color', [0.7 0.7 0.7]); hold on;
 plot(datatable(:,1), datatable(:,3), 'r-');
-linkaxes([ax1 ax2], 'x')
+ylabel('Force (kPa)'); xlabel('Time (s)');
+linkaxes([ax1 ax2], 'x');
+xlim(ax1, slackSegment + [-0.2 0.2]);
+
+end
 
 function keep = rdp(x, y, epsilon)
     % Iterative RDP algorithm

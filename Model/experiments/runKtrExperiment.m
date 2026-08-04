@@ -10,28 +10,42 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
 %   Inputs:
 %     params0   - Base parameter struct. Must include params0.modelFcn (string).
 %     Ktr_mean  - Scalar (or vector) of target Ktr values (s^-1) from data.
+%                 Optional: only the hardcoded-protocol fallback uses it, since
+%                 the file-driven path scores against the data trace instead.
 %
 %   Outputs:
-%     E_ktr   - Scalar cost: squared deviation of simulated Ktr from Ktr_mean(1).
+%     E_ktr   - Scalar cost: MSE vs the data trace (file-driven protocol), or
+%               squared deviation of simulated Ktr from Ktr_mean(1) (fallback).
 %     out_ktr - Output struct from evaluateModel (time-shifted so t=0 at
 %               the start of force redevelopment).
+
+    if nargin < 2; Ktr_mean = []; end
 
     modelFcn = str2func(params0.modelFcn);
     params = params0;
     params.SL0 = 2.0;
-    params = getParams(params, params.g, true);
 
     if isfield(params, 'ktr_velocitytableonfile') && ~isempty(params.ktr_velocitytableonfile)
         datastruct    = load(['data/' params.ktr_velocitytableonfile]);
         datatable     = datastruct.datatable;
         velocitytable = datastruct.velocitytable;
+
+        % Start at the length the protocol actually starts from, rather than
+        % assuming 2.0 um. The ktr files begin at L=1.0 ML so this is a no-op
+        % for them, but the FV2 ramp files begin at L=1.1 ML (SL 2.2) and the
+        % fixed 2.0 offset the whole simulated trajectory by -0.2 um.
+        % (col 4 is the length in ML; SL = 2 x ML.)
+        params.SL0 = 2 * velocitytable(1, 4);
+        params = getParams(params, params.g, true);
         params.Velocity = velocitytable(:, 2);
 
         [~, out_ktr] = evaluateModel(modelFcn, velocitytable(:, 1), params);
 
-        % Normalize model force by pre-shortening isometric
+        % Normalize model force by pre-shortening isometric force, taken at the
+        % onset of shortening (interpolated, not window-averaged, so the long
+        % quiet warm-up's initial force-buildup transient does not bias it).
         t_pre   = velocitytable(2, 1);   % first real protocol row (after warm-start)
-        Fm_ss   = mean(out_ktr.Force(out_ktr.t < t_pre));
+        Fm_ss   = interp1(out_ktr.t, out_ktr.Force, t_pre, 'linear', 'extrap');
         if Fm_ss == 0; Fm_ss = 1; end
         F_norm  = out_ktr.Force / Fm_ss;
 
@@ -41,7 +55,13 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
 
         Ktr = NaN;   % not extracted for file-driven protocol
     else
+        params = getParams(params, params.g, true);
         % Fallback: hardcoded rapid ktr protocol, scalar Ktr cost
+        if isempty(Ktr_mean)
+            error('runKtrExperiment:missingKtrMean', ...
+                ['The hardcoded ktr fallback needs Ktr_mean (run LoadData first), ' ...
+                 'or set params0.ktr_velocitytableonfile to use a protocol file.']);
+        end
         v = 500; % ML/s
         pos_ML = [1   , 1, 0.8, 0.8, 1.05, 1.05, 1, 1];
         times = cumsum([0, 1.0004, 0.2/v, 0.01005 - 0.2/v, 0.25/v, 0.0045 - 0.25/v, 0.05/v, 1]);
@@ -77,7 +97,7 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
         if isfield(params, 'ktr_velocitytableonfile') && ~isempty(params.ktr_velocitytableonfile)
             % File-driven protocol: plot normalized force traces
             t_pre  = velocitytable(2, 1);
-            Fm_ss  = mean(out_ktr.Force(out_ktr.t < t_pre));
+            Fm_ss  = interp1(out_ktr.t, out_ktr.Force, t_pre, 'linear', 'extrap');
             if Fm_ss == 0; Fm_ss = 1; end
 
             yyaxis right;

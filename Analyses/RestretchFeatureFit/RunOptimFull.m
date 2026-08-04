@@ -44,17 +44,21 @@ addpath(genpath(root));
 cfg = struct();
 cfg.baseSnap = 'params/params_2state_a2hop.m';   % <<< 2-state ~2.95. Switch to params/params_full3_seed.m for 3-state.
 cfg.baseSnap = 'params/optfull4_opt.m';
+cfg.baseSnap = 'params/ThursdayNightFever.m';
+
 cfg.tag      = 'optfull_FourthSlackTimebase';
 
-cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|4', 'A|50', 'ktr_rmse|0-.5|.1', ...
-    'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70',...
-    't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', ...
-    'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', ...
-    'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05'};
+
+% cfg.fn = {'FV_fnorm|FV_v|10', 'ktr|4', 'A|50', 'ktr_rmse|0-.5|.1', ...
+%     'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70',...
+%     't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', ...
+%     'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', ...
+%     'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05'};
 
 % ---- read the seed so the pool matches the model ----
-params0 = getParams(); run(cfg.baseSnap); 
+params0 = getParams(); run(cfg.baseSnap);
 NoS = params0.NumberOfStates;
+cfg.fn = params0.fn;
 
 % ---- COMPREHENSIVE candidate pool (everything with demonstrated leverage) ----
 cand = { ...
@@ -110,21 +114,25 @@ cfg.N_DRAW        = 10;                          % Nelder-Mead-tractable block s
 cfg.SIMPLEX_EVALS = (NoS==3)*40 + (NoS==2)*60;  % ~7-12 evals/dim
 cfg.MaxRunTime    = (NoS==3)*90 + (NoS==2)*60;   % generous ceiling: the A2-hop config is stiffer and flaked at 45s under load
 cfg.SURR_EVALS    = 0;                           % pure fminsearch (no surrogate)
-cfg.KICK_FRAC     = 0;
+% Basin-escape kick: on STALL_LIMIT non-improving rounds, perturb a COPY of the
+% incumbent by +-KICK_FRAC and RETRY THE SAME DRAW once. Safe because the kick
+% seed never mutates the running base and is kept only if the retry improves
+% (see optimizeFeatures "KICK INVARIANT"). Set 0 to disable.
+cfg.KICK_FRAC     = 0.1;
 cfg.DEBUG           = false;
-cfg.TIME_BUDGET_HRS = 48;                        % long haul; raise/lower as desired
+cfg.TIME_BUDGET_HRS = 480;                        % long haul; raise/lower as desired
 cfg.RESUME          = false;%isfile(fullfile(root, 'params', 'optfull_state.mat'));
 
 params0.RunForceVelocity = false; params0.RunKtr = false; params0.RunSlack = true;
 params0.RunStairs = false; params0.RunForceVelocityTime = false;
 params0.EvalFeatures = false; params0.BreakOnODEUnstable = false;
 params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
-params0.RunSlackSegments = 'Fourth';
+params0.RunSlackSegments = 'AllPar';
 params0.FV_velocities = -[0 0.5 1 2 4];
 params0.MaxRunTime = cfg.MaxRunTime;
 
-params0.OptimizeOn = 'timecourse';
-params0.RunForceVelocity = false;
+params0.OptimizeOn = 'time';
+% params0.RunForceVelocity = false;
 % p0.RunSlackSegments = 'Fourth';
 
 cfg.params0 = params0;

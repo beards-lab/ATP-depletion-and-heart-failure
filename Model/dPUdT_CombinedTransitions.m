@@ -122,12 +122,16 @@ else
     A_reg = 1;
 end
 
-% Forced-detachment parking pool PK (scalar, detached/ATP-depleted). Tail state, read AFTER A_reg
-% so its index shifts by UseRegistrationAvailability. PK=0 (absent) when the feature is off.
-if params.UseForcedDetachmentPark
-    PK = max(0, PU(Ns*ss + 8 + params.UseRegistrationAvailability));
+% Nucleotide-free detached pool D0 (index Ns*ss+8+UseRegistrationAvailability,
+% i.e. appended AFTER A_reg). A cross-bridge torn off the thin filament under
+% strain (XB_Ripped) never completed the ATP-binding step that normally
+% terminates the stroke, so it is detached but apo: it cannot re-prime until
+% ATP binds. D0 holds those heads; they leave only via RD0T below. When the
+% feature is off the state is absent and D0=0 (identity -> byte-compatible).
+if params.UseD0State
+    D0 = max(0, PU(Ns*ss + 8 + params.UseRegistrationAvailability));
 else
-    PK = 0;
+    D0 = 0;
 end
 
 
@@ -200,11 +204,11 @@ else
 end
 
 % non-hydrolized ATP in non-super relaxed state
-PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD + PK)); % unattached permissive fraction - (PK = parked pool)
+PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD + D0)); % unattached permissive fraction - (D0 is 0 unless UseD0State)
     
 
 if params.UseOverlapFactor
-    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD + PK); % overlap factor
+    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
 end    
 
 F_passive = 0;
@@ -286,7 +290,24 @@ Force = Force + params.mu2*vel;
 
 if params.UseMaxwellDashpot
     dSLc = vel - dLSEdt;
-    dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
+    if params.UseMaxwellTensionOnly
+        % Titin pulls but cannot push. Charging is unchanged, but any shortening
+        % pays out slack and releases the stored unfolding stress, with a slack
+        % LENGTH constant x_M_slack: X decays as exp(-shortening/x_M_slack), so
+        % tension is gone after a fraction of a percent ML and can only be
+        % rebuilt by lengthening again. Behavioural stand-in for domain
+        % refolding. Written as one continuous expression (the release term
+        % vanishes smoothly as dSLc -> 0) so the solver sees no switch: a hard
+        % branch here chatters around dSLc = 0 and stalls ode15s.
+        % This is what stops a stretch-then-release (ktr restretch to 105% then
+        % return to 100%) leaving a force floor across the redevelopment window;
+        % passive cycles restretch monotonically and hold, so they are untouched.
+        dx_dash_dt = params.kSE_M * max(0, dSLc) ...
+                   - X_visc / params.eta_M ...
+                   - X_visc * max(0, -dSLc) / params.x_M_slack;
+    else
+        dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
+    end
 end
 
 %% TRANSITIONS
@@ -437,35 +458,30 @@ else
     end
 end
 
-% Low-ATP ADP-trap: elevated [ADP] blocks ADP release (P2 detachment), scaling R2 by the
-% ATP-ready fraction g2 (=1 at MgADP=0). Traps force-bearing P2 -> force up, ktr/onset slower. Guarded.
-if params.UseAdpTrap
-    denom_g2 = params.MgADP/params.K_D + params.MgATP/params.K_T1;
-    if denom_g2 > 0; g2trap = (params.MgATP/params.K_T1)/denom_g2; else; g2trap = 1; end
-    R2 = R2 .* g2trap;
-end
-% Low-ATP, ATP-LIMITED detachment (preferred physiology: CK/CrP-buffered fiber keeps [ADP]~0, so
-% the driver is low [ATP] directly, not high [ADP]). R2 (P2 detachment needs ATP binding) x gATP_R2,
-% normalized so gATP_R2=1 at MgATP_ref (8 mM) => 8 mM invariant regardless of K_T2. Guarded, additive
-% with UseAdpTrap (use one or the other, not both, in a given params file).
-if params.UseAtpDetachR2
-    gATP_R2 = (params.MgATP/(params.MgATP+params.K_T2)) / (params.MgATP_ref/(params.MgATP_ref+params.K_T2));
-    R2 = R2 .* gATP_R2;
+% Series ATP-binding ceiling on strong-bridge detachment.
+% Strain legitimately accelerates the ADP-release / isomerisation step, but the
+% head still has to bind ATP before it can let go, and THAT step has a finite
+% maximal rate. The strain-dependent R2(s) above grows without bound (it reaches
+% 2000-4600 /s at restretch strains), which is chemically impossible and is why
+% every stretched bridge is annihilated in <1 ms. Combine the two steps in
+% SERIES (resistances add), so low strain is untouched and high strain saturates:
+%     1/R2_eff = 1/R2_strain(s) + 1/R2max,   R2max = k2max*[ATP]/(K_T2c+[ATP])
+% Inert when UseR2Ceiling is false. R2 here is a FLUX (rate*p2), so the per-head
+% rate is recovered before the ceiling is applied.
+if params.UseR2Ceiling
+    R2max  = params.k2max * params.MgATP / (params.K_T2c + params.MgATP);
+    r2rate = R2 ./ max(p2, 1e-12);
+    R2     = R2 .* (R2max ./ (R2max + r2rate));
 end
 
-% Low-ATP Pi inhibition of the power stroke (P1->P2): Pi is a PRODUCT of the stroke
-% (A.M.ADP.Pi -> A.M.ADP + Pi), so elevated [Pi] inhibits it by mass action -> heads shift back to
-% the pre-stroke, low-force state -> isometric force falls via the POPULATION (not per-head
-% stiffness), and forward kinetics slow. f2Pi=1 at Pi=0 (inert). Guarded.
-if params.UsePiReversal
-    f2Pi = 1/(1 + params.Pi/params.K_Pi);
-    R12 = R12 .* f2Pi;
-end
-% Pi-driven REVERSE power stroke (P2->P1): elevated [Pi] rebinds A.M.ADP and drives the stroke
-% backward, keeping heads attached in the pre-stroke (low-force) state. R21 *= (1+Pi/K_Pi).
-% Guarded, inert at Pi=0. (Whether this speeds or slows ktr is tested empirically.)
-if params.UsePiReverseStroke
-    R21 = R21 .* (1 + params.Pi/params.K_Pi);
+% Low-ATP, ATP-LIMITED detachment. A CK/CrP-buffered fibre keeps [ADP] ~ 0, so the
+% driver of the 2 mM phenotype is low [ATP] directly, not high [ADP]: the P2 head
+% must bind ATP before it can let go, so R2 x gATP_R2. Normalised so gATP_R2 = 1 at
+% MgATP_ref (8 mM) -> the high-ATP fit is untouched for ANY K_T2. Inert when off.
+if params.UseAtpDetachR2
+    gATP_R2 = (params.MgATP/(params.MgATP + params.K_T2)) ...
+            / (params.MgATP_ref/(params.MgATP_ref + params.K_T2));
+    R2 = R2 .* gATP_R2;
 end
 
 % p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).
@@ -478,19 +494,16 @@ end
 R3 = params.k3*p3 .* min(MAX_RATE, max(1, exp(-params.alpha3*(s - params.s3))));
 R3m = params.k3m*p3;
 
-% to PT state directly
+% to PT state directly (or to the apo pool D0 when UseD0State — see below)
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
-% Forced-detachment parking (guarded): high-strain rip diverts p2 -> PK (detached, ATP-depleted,
-% off-cycle); ATP-gated return PK -> PT. Entry is STRAIN-gated only (tearing, both ATP levels); exit
-% is [ATP]-gated (fast at high ATP -> PK~0, near-transparent; slow at low ATP -> PK accumulates).
-% Force-neutral (rip ~0 at operating strain). R_park is a per-bin vector; dPK is the scalar pool rate.
-if params.UseForcedDetachmentPark
-    R_park   = params.kpark * p2 .* min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
-    R_unpark = params.kunpark * (params.MgATP/(params.MgATP + params.K_T_park)) * PK;
-    dPK = sum(R_park)*dS - R_unpark;   % fill from rip; drain returns to PT by conservation
+% D0 -> PT: the torn head binds ATP and rejoins the cycle. Saturating in
+% [MgATP] so k_D0T is the ATP-saturated ceiling and K_D0T sets where the step
+% becomes ATP-limited. This is what makes the refractory pool [ATP]-dependent.
+if params.UseD0State
+    RD0T = params.k_D0T * params.MgATP/(params.K_D0T + params.MgATP) * D0;
 else
-    R_park = 0; dPK = 0;
+    RD0T = 0;
 end
 
 if params.UseStrictDetachmentAt > 0
@@ -518,11 +531,13 @@ end
 %% Super-relaxed (SRX/DRX) dynamics
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
-    % Low-ATP: the SRX-ADP return (P_SRD->PD) needs ATP to re-prime -> slower at low [ATP].
-    % kmsrd_eff = kmsrd * gATP, normalized so gATP=1 at MgATP_ref (8 mM) => 8 mM byte-identical. Guarded.
+    % Low-ATP: the SRX-ADP return (P_SRD -> PD) needs ATP to re-prime, so it slows at
+    % low [ATP]. kmsrd_eff = kmsrd*gATP, normalised so gATP = 1 at MgATP_ref (8 mM)
+    % => the 8 mM run is byte-identical. This is the ktr lever (force is flat in it).
     kmsrd_eff = params.kmsrd;
     if params.UseAtpKmsrd
-        gATP = (params.MgATP/(params.MgATP+params.K_srx)) / (params.MgATP_ref/(params.MgATP_ref+params.K_srx));
+        gATP = (params.MgATP/(params.MgATP + params.K_srx)) ...
+             / (params.MgATP_ref/(params.MgATP_ref + params.K_srx));
         kmsrd_eff = kmsrd_eff * gATP;
     end
     RSRD2PD = kmsrd_eff*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
@@ -615,8 +630,22 @@ end
 dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
 % dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
 dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
-dp2 = + R12 - R21  - R2 - XB_Ripped - R_park + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet (-R_park = high-strain rip to parked pool)
+dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
 dp3 = - R3 + R3m + R2;
+
+% Apo pool balance. Both inflows already leave their source state above; PT is
+% the complementary pool, so adding mass to D0 automatically withholds it from
+% PT — no explicit PT term is needed (or possible).
+%   (a) XB_Ripped: torn off under strain, never bound ATP  -> always via D0
+%   (b) D0FromR2 : optionally route that share of the normal p2->PT flux
+%                  through D0 too, making the whole cycle ATP-gated in one place
+dD0 = 0;
+if params.UseD0State
+    dD0 = sum(XB_Ripped)*dS - RD0T;
+    if params.D0FromR2 > 0
+        dD0 = dD0 + params.D0FromR2 * sum(R2)*dS;
+    end
+end
 
 % A2 re-attachment during restretch (UseA2Reattaching): ATP-cocked heads (PT)
 % bind DIRECTLY into the strong post-stroke state p2 at strain dA2re (default 0)
@@ -761,10 +790,9 @@ if params.UseRegistrationAvailability
     f = [f; dA_reg];
 end
 
-% Forced-detachment parking pool derivative, appended AFTER A_reg so the tail index matches the
-% read (Ns*ss + 8 + UseRegistrationAvailability). Off => nothing appended => legacy state vector.
-if params.UseForcedDetachmentPark
-    f = [f; dPK];
+% Apo pool, appended LAST so its index is Ns*ss+8+UseRegistrationAvailability.
+if params.UseD0State
+    f = [f; dD0];
 end
 
 rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];

@@ -48,6 +48,7 @@ SMOOTH_WIN_SLOW_S     = 0.025;  % rloess window for overshoot tail    (≈25 ms)
 % Guardrail scale factors (calibrated at optfull3_opt baseline to sum ~0.5 and ~1)
 DOUBLEPEAK_SCALE      = 0.1;    % grading factor for spurious 2nd peak prominence penalty (×1: no 2nd peaks at baseline)
 COOLDOWN_LS_SCALE     = 0.15; % scaling factor for cool-down overshoot LS error (calibrated to sum ≈1)
+RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (vall2) that anchors the recovery fit
 
     if nargin < 5
         features = [];
@@ -401,6 +402,29 @@ COOLDOWN_LS_SCALE     = 0.15; % scaling factor for cool-down overshoot LS error 
         feats.ovrsht_dy = o_v - feats.steady;
         feats.ovrsht_t  = t(o_i);
 
+        % ── Post-restretch force redevelopment: first-order fit ───────────
+        % The rate at which force recovers AFTER the re-stretch ramp has ended.
+        % Scored as a RATE rather than by least squares on the trace: the
+        % window is ~280 ms of which only the first ~30 ms carries the rate
+        % information, so a trace-wise LSQE is dominated by the (already
+        % correct) plateau and is nearly blind to a 2-3x rate error.
+        %
+        % Conventions match Analyses/RestretchVsKtrRecovery/recoveryWindows.m
+        % so the values are directly comparable to that analysis' tables:
+        %   baseline B = the vall2 minimum within RESTRETCH_VALL_WIN_S of the
+        %                ramp end (the recovery starts there, NOT at the ramp
+        %                end - the first ~7 ms are still falling),
+        %   plateau  P = median over the last 15% of the window,
+        %   amplitude A = P - B held FIXED, so the fitted k is a pure rate and
+        %                does not absorb a force-scale error (that is already
+        %                scored by vall2_dy / steady).
+        % Only k and t0 are free -> the estimate is span-insensitive
+        % (verified: data 48.5 s^-1 at a 30 ms span vs 48.4 at full span).
+        % y_light (light movmedian on the data path, raw on the sim path) is used
+        % only to LOCATE the anchor minimum; the fit itself is on raw y.
+        [feats.rsK, feats.rsA, feats.rsT0, feats.rsR2, feats.rsK63] = ...
+            fitRestretchRecovery(t, y, y_light, feats.steady, RESTRETCH_VALL_WIN_S);
+
         % Guardrail: least-squares error of cool-down window vs data
         if ~isempty(datatable)
             dwin = datatable(:,1) >= velocity_segment(4) & datatable(:,1) <= velocity_segment(5) & datatable(:,1) <= velocity_segment(4) + 0.15;
@@ -533,6 +557,7 @@ COOLDOWN_LS_SCALE     = 0.15; % scaling factor for cool-down overshoot LS error 
             features = struct();   % plain struct; fields accumulate as row vectors below
         end
 
+
         % features(i_seg) = feats;
         % i_seg is implicit via (end+1)
         fieldNames = fieldnames(feats);
@@ -549,4 +574,80 @@ COOLDOWN_LS_SCALE     = 0.15; % scaling factor for cool-down overshoot LS error 
 
     end
 
+end
+
+
+% =========================================================================
+function [k, A, t0, r2, k63] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin)
+%FITRESTRETCHRECOVERY First-order fit of the force rise after a re-stretch.
+%
+%   [K, A, T0, R2, K63] = fitRestretchRecovery(T, Y, Y_ANCHOR, STEADY, VALLWIN)
+%
+%   T, Y     - the post-restretch window (t relative to the segment origin;
+%              t(1) is the end of the re-stretch ramp).
+%   Y_ANCHOR - same window, lightly smoothed on the data path (identical to Y
+%              on the sim path). Used ONLY to locate the starting minimum, so
+%              a single noise spike cannot set the baseline. The fit itself
+%              always runs on the raw Y.
+%   STEADY   - plateau force for this cycle (feats.steady), used only as a
+%              fallback when the window is too short for its own plateau.
+%   VALLWIN  - span (s) after the ramp end within which the recovery's
+%              starting minimum (vall2) is located.
+%
+%   Returns the rate K (1/s) of  F = B + A*(1-exp(-k*max(t-t0,0)))  with the
+%   baseline B (the vall2 minimum) and the amplitude A = P-B both FIXED, so
+%   only K and T0 are fitted. Fixing A is what makes K span-insensitive and
+%   keeps a force-scale error out of the rate.
+%
+%   K63 is the model-free crossing rate 1/(t63 - t_on), reported for
+%   cross-checking against Analyses/RestretchVsKtrRecovery; it is a
+%   piecewise-constant function of the parameters and so is a diagnostic,
+%   not a fit target.
+
+    k = NaN; A = NaN; t0 = NaN; r2 = NaN; k63 = NaN;
+
+    t = t(:); y = y(:); y_anchor = y_anchor(:);
+    if numel(y_anchor) ~= numel(y); y_anchor = y; end
+    ok = isfinite(t) & isfinite(y) & isfinite(y_anchor);
+    t = t(ok); y = y(ok); y_anchor = y_anchor(ok);
+    if numel(t) < 20 || ~(t(end) > t(1)); return; end
+
+    % Baseline: the minimum within the first VALLWIN of the window. The
+    % recovery starts there — the first few ms after the ramp are still falling.
+    nWin = nnz(t <= t(1) + vallWin);      % contiguous prefix: t is ascending
+    if nWin < 3; nWin = numel(t); end
+    [B, iB] = min(y_anchor(1:nWin));      % smoothed value AND location, so a
+                                          % single downward spike cannot set B
+
+    tt = t(iB:end) - t(iB);
+    yy = y(iB:end) - B;
+    if numel(tt) < 20 || ~(tt(end) > 0); return; end
+
+    % Plateau: median of the last 15% of the remaining window.
+    P = median(yy(tt >= tt(end) - 0.15*(tt(end) - tt(1))));
+    if ~isfinite(P); P = steady - B; end
+    A = P;
+    if ~isfinite(A) || A <= 0
+        % No net rise (force fell and stayed down) — the rate is undefined.
+        A = NaN; return;
+    end
+
+    obj = @(q) sum((yy - A .* (1 - exp(-abs(q(1)) .* max(tt - max(q(2), 0), 0)))).^2);
+    q   = fminsearch(obj, [45, 0.004], ...
+                     optimset('Display', 'off', 'MaxFunEvals', 4e3, 'MaxIter', 4e3));
+    k  = abs(q(1));
+    t0 = max(q(2), 0);
+
+    pred = A .* (1 - exp(-k .* max(tt - t0, 0)));
+    r2   = 1 - sum((yy - pred).^2) / max(sum((yy - mean(yy)).^2), eps);
+
+    % Model-free crossing estimator (diagnostic).
+    n    = max(3, round(0.002 / median(diff(tt))));
+    yn   = movmedian(yy, n) / A;
+    below = find(yn < 0.05);
+    if isempty(below); i_on = 1; else; i_on = below(end); end
+    i63 = find(yn >= 1 - exp(-1) & (1:numel(yn))' > i_on, 1);
+    if ~isempty(i63) && tt(i63) > tt(i_on)
+        k63 = 1 / (tt(i63) - tt(i_on));
+    end
 end
