@@ -6,6 +6,74 @@ Driver: `RunOptimLowATPAbs.m`. Baseline diagnostic: `../../Workbench/CheckJointA
 
 ---
 
+# CAN THE OTHER MECHANISMS PUSH rsK THE RIGHT WAY? — No. (2026-08-04)
+
+With refitting 8 mM now permitted, every remaining mechanism was scanned at **both** ATP levels.
+`../ApoPoolDetachment` had scored these at 8 mM only; the ATP **ratio** was never asked.
+Reproduce: `RunMechanismRatioScan.m`. Baseline = `rskR2_w025_opt` + gates (K_T2=1.8, K_srx=9).
+
+Need: `rsK8` 114.2 → **43.7**, ratio 0.56 → **0.36**, holding `peak1_8` ≈ 89–94 and `steady8` ≈ 77.
+
+| config | rsK8 | peak1_8 | steady8 | rsK2 | **ratio** | verdict |
+|---|---|---|---|---|---|---|
+| baseline (gates only) | 114.2 | 93.7 | 76.7 | 63.8 | 0.56 | — |
+| `eta_M`×0.3 | **68.2** | **93.6** | **76.7** | 45.2 | 0.66 ↑ | level ✅ / ratio ✗ |
+| `k2`×0.6 | 62.0 | 121.8 ✗ | 93.2 ✗ | 40.2 | 0.65 ↑ | level ✅ / peak+force ✗ |
+| `k2`×0.6 + `eta_M`×0.3 | **46.2** | 121.7 ✗ | 93.1 ✗ | 32.2 | 0.70 ↑ | level ✅ / ratio ✗✗ |
+| ceiling `k2max`=1500 | 95.9 | 101.6 | 78.1 | 67.1 | 0.70 ↑ | weak / ratio ✗ |
+| ceiling `k2max`=800 | 106.8 | 109.4 | 79.3 | 67.1 | 0.63 ↑ | weak / ratio ✗ |
+| ceiling `k2max`=1500, `K_T2c`=6 | 120.8 ↑ | 108.1 | 79.1 | 61.0 | **0.50 ↓** | ratio ✅ / level ✗ |
+| **`K_T2`=6 (gate pushed hard)** | 114.2 | 93.7 | 76.7 | 46.0 | **0.40 ↓** | ratio ✅ / level ✗, force ✗ |
+| `eta_M`×0.3 + `K_T2`=6 | 68.2 | 93.6 | 76.7 | 36.0 | 0.53 ↑ | **the weld, in one row** |
+| `ceil400+D0+rip3000` | NaN | NaN | 26.5 ✗ | NaN | — | **model destroyed** |
+| `ceil300+D0+rip10000` | NaN | NaN | 14.8 ✗ | NaN | — | **model destroyed** |
+| *data* | *43.7* | *89.3* | *77.3* | *15.9* | ***0.36*** | |
+
+## The result: a LEVEL ↔ RATIO weld
+
+**Every lever that fixes the 8 mM `rsK` level makes the ATP ratio worse; the only levers that
+improve the ratio do not fix the level.** 15 configurations, no exceptions.
+
+The clearest single row is `eta_M`×0.3 + `K_T2`=6: `K_T2`=6 alone gives ratio **0.40** (nearly the
+data's 0.36); adding the level fix pushes it straight back to **0.53**.
+
+**Why:** `rsK` saturates in the detachment rate. At the baseline the model sits in the *steep*
+region, where the multiplicative ATP gate produces a large fractional change in `rsK`. Fixing the
+8 mM level (`eta_M`/`k2`) moves the operating point into the flat region, so the same gate buys a
+smaller fractional change → ratio → 1. **The model's ATP effect on `rsK` is partly an artefact of
+sitting in the steep region, and it is spent as soon as the level is corrected.**
+
+## Secondary findings
+
+- **`eta_M` is the clean level lever**: `rsK8` 114.2 → 68.2 with `peak1_8` (93.6) and `steady8`
+  (76.7) **untouched**. The worry that refitting 8 mM must make things worse is unfounded for
+  `eta_M` — it is nearly free. `k2` is the dirty one (`peak1_8` +28, `steady8` +16 uncompensated).
+- **The D0 / tearing pool is dead on this baseline** — `steady` collapses to 15–27 and the cost
+  explodes to 8×10⁴–1.4×10⁵. It was viable only on the older TNF + `UseMaxwellTensionOnly` +
+  `tau_reg`=2 ms baseline. Not a candidate here at any setting tried.
+- The ceiling remains weak in *both* directions even before the ktr-overstretch guardrail
+  (`../ApoPoolDetachment`) is applied — which would only make it worse.
+
+## What the data actually demands
+
+`rsK` (×0.36) is suppressed by low ATP **more** than `ktr` (×0.55) and far more than force (×1.36).
+Any lever acting on the shared cycle rate moves `rsK` and `ktr` together, so it cannot produce that
+ordering. The missing mechanism must be **specific to the post-lengthening window** and
+**ATP-gated** — i.e. it must slow re-attachment after a stretch, at low ATP, without touching the
+isometric cycle.
+
+That is exactly the shape of the one candidate never built: the **lengthening-driven registration
+availability penalty** (`RegAvailShorteningOnly = 1` today, so lengthening does not modulate
+availability, and the post-restretch window is precisely a post-lengthening window) — independently
+recommended by [`../ApoPoolDetachment/conclusions.md`](../ApoPoolDetachment/conclusions.md) §3 on
+entirely different grounds. Built `MgATP_ref`-normalised it would also be 8 mM-inert.
+
+**Recommendation:** do not spend an 8 mM refit on `rsK` with the current mechanism set — the weld
+above says the ratio will be paid for the level. Build the lengthening-availability lever first,
+then refit.
+
+---
+
 # CURRENT ANSWER — 2 mM fit on the FROZEN 8 mM baseline (2026-08-04)
 
 **Deliverable: `params/lowATP_only_opt.m` — `K_T2 = 1.80`, `K_srx = 9.00`.**
