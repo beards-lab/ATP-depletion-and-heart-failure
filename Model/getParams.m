@@ -330,6 +330,17 @@ end
     params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
     params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
 
+    % Strain-dependent ATP gating of R2 detachment. Positive strain inhibits ADP
+    % release, putting the ATP-binding step in series behind a strain-slowed step, so
+    % the APPARENT Km(ATP) for detachment rises with strain:
+    %     Km_eff(s) = K_T2 * (1 + kAtpStrain * max(0, s - sAtpStrain0))
+    % Still MgATP_ref-normalised => 8 mM bit-identical for ANY setting. This is what
+    % lets low ATP suppress the post-stretch recovery (rsK) more than the isometric
+    % one (ktr) -- a separation a strain-uniform gate cannot express. Inert when off.
+    params0.UseStrainDepAtpGate = false;
+    params0.kAtpStrain  = 0;        % 1/strain; 0 => strain-uniform (legacy behaviour)
+    params0.sAtpStrain0 = 0;        % strain (um) above which the ATP step starts to bite
+
     % --- Joint (dual-condition) ATP fit -----------------------------------
     % When UseAtpJointFit is true the objective becomes an ABSOLUTE two-condition
     % cost:  Et = w8*E(high ATP, as configured) + w2*E(low ATP, overrides below).
