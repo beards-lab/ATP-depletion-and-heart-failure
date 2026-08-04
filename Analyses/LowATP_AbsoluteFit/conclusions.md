@@ -4,6 +4,84 @@ Supersedes the ratio-scored low-ATP fits (`LowATP_kmsrd`, `LowATP_2State`). Base
 `params/rskR2_w025_opt.m` (the rsK/rsR2-weighted high-ATP snapshot).
 Driver: `RunOptimLowATPAbs.m`. Baseline diagnostic: `../../Workbench/CheckJointAtpBaseline.m`.
 
+---
+
+# CURRENT ANSWER — 2 mM fit on the FROZEN 8 mM baseline (2026-08-04)
+
+**Deliverable: `params/lowATP_only_opt.m` — `K_T2 = 1.80`, `K_srx = 9.00`.**
+No shared parameter refitted; verified `max |shared param delta| = 0` against `rskR2_w025_opt`.
+Driver: `RunFitLowATPOnly.m`.
+
+## Observe — which mechanisms are even admissible
+
+`dPUdT_CombinedTransitions.m` has exactly **four** `[MgATP]`-dependent paths. Only two are
+`MgATP_ref`-normalised (`gATP = 1` at 8 mM for **any** Km), i.e. provably inert at 8 mM:
+
+| path | line | normalised? | admissible with 8 mM frozen |
+|---|---|---|---|
+| `K_T2` (`UseAtpDetachR2`) — R2 detachment | 482 | **yes** | ✅ force amplitude |
+| `K_srx` (`UseAtpKmsrd`) — SRX-ADP return | 539 | **yes** | ✅ ktr |
+| `k2max`/`K_T2c` (`UseR2Ceiling`) | 472 | no | ❌ would move 8 mM (also falsified) |
+| `k_D0T`/`K_D0T` (`UseD0State`) | 504 | no | ❌ would move 8 mM (also contested) |
+
+So the justifiable lever set under this constraint is **exactly `{K_T2, K_srx}`** — a result read
+off the code, not assumed.
+
+## Orient — what those two levers can and cannot reach
+
+The 2 mM `rsK` error **factorises**:
+
+    x3.77 observed  =  x2.61 inherited 8 mM defect  x  x1.47 low-ATP specific
+
+With 8 mM frozen only the ×1.47 is reachable. Confirmed by sweep: the best `rsK` anywhere in the
+lever plane is 49.0 (vs data 15.9) and that corner wrecks everything else. **`rsK` is structurally
+unreachable here** — it is an 8 mM baseline defect (model 114.2 vs data 43.7), not a low-ATP one.
+
+## Decide — score three objectives from the same runs
+
+`absFull` (all features), `absReach` (post-restretch recovery cluster removed: `rsK`, `rsR2`,
+`coolDownLS`, `ovrsht_dy`, `vall2_dy`), and the legacy `ratio`. 5×5 lever sweep + local refine;
+the 8 mM leg is computed **once** (the gates are inert there by construction).
+
+| objective | optimum | K_T2 | K_srx |
+|---|---|---|---|
+| `absReach` | **5.033** (8 mM floor 2.723) | **1.80** | **9.0** |
+| `ratio` (legacy relative) | 0.142 | 1.97 | 9.0 |
+| `absFull` | 26.03 | 1.40 | 13.0 |
+
+**`absReach` and the legacy `ratio` agree** (K_srx 9.0; K_T2 1.8 vs 1.97, adjacent grid points) —
+two independent metrics selecting the same levers is the strongest validation available here.
+
+**`absFull` disagrees, and that is the warning:** it buys an unreachable `rsK` by degrading the
+force fit — `steady` 87.5 against data 91.3, versus 90.0–91.1 at the `absReach` optimum. Scoring a
+defect the levers cannot reach actively corrupts the features they can. **Do not fit 2 mM against
+`rsK` while 8 mM is frozen.**
+
+## Fit — where it lands
+
+| feature | model (2 mM) | data (2 mM) |
+|---|---|---|
+| `steady` | 92.1 92.9 93.4 93.9 77.7 | 95.8 95.7 94.8 94.2 75.7 |
+| `ktr` | 30.2 27.9 26.0 24.0 23.0 | 32.3 28.9 26.0 23.0 21.9 |
+| `peak1_y` | 122.2 122.9 120.9 119.0 93.5 | 121.3 121.3 114.6 109.6 92.8 |
+| `rsK` | 64.2 62.5 64.1 70.6 57.4 | 14.8 15.2 15.5 15.0 18.9 ⟵ unreachable |
+
+`ktr` tracks the per-segment slope essentially exactly; `steady` and `peak1_y` are close, both
+slightly under/over on the middle segments. Everything except the post-restretch recovery is fit.
+
+## Consequence
+
+The post-restretch recovery **cannot** be fixed from the low-ATP side. It is an 8 mM defect that
+low ATP amplifies, so it needs either a refit of 8 mM (the joint driver below) or a new mechanism —
+and the only untested candidate that would not disturb either measured peak is the one
+[`../ApoPoolDetachment/conclusions.md`](../ApoPoolDetachment/conclusions.md) recommends: a
+**lengthening-driven registration-availability penalty** (`RegAvailShorteningOnly = 1` today, so
+lengthening does not modulate availability — and the post-restretch window is exactly a
+post-lengthening window). If built `MgATP_ref`-normalised it would also be 8 mM-inert and thus
+admissible under this constraint.
+
+---
+
 ## Why absolute, and why JOINT
 
 The ratio cost (2 mM / 8 mM) cancels the high-ATP baseline's own error, so it can score the
