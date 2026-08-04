@@ -138,3 +138,39 @@ observable visible without letting a possibly-mechanical artifact drive cross-br
 `UseStrainDepAtpGate` / `kAtpStrain` / `sAtpStrain0` are wired in
 `Model/dPUdT_CombinedTransitions.m` + `Model/getParams.m`, **default OFF and 8 mM-inert by
 construction**. Kept (tested, falsified, documented) rather than deleted, per repo practice.
+
+---
+
+# Addendum: `rsK` is also NUMERICALLY discontinuous (2026-08-04)
+
+A 6-lever joint fit at `rsK` weight 0.1 (`../LowATP_AbsoluteFit/RunJointFitRsk010.m`, 70 min,
+127 evals, free `{k2, kstiff2, ka, eta_M, K_T2, K_srx}`) **did not move the parameters**:
+
+| param | seed | "fitted" | change |
+|---|---|---|---|
+| `k2` | 100.355 | 100.358 | +0.003 % |
+| `kstiff2` | 24893.5 | 24894.9 | +0.006 % |
+| `ka` | 215.992 | 215.981 | −0.005 % |
+| `eta_M` | 0.0268907 | 0.0268966 | +0.02 % |
+| `K_T2` / `K_srx` | 1.80 / 9.00 | 1.80004 / 8.99942 | ~0 |
+
+Yet the joint cost moved 24.0296 → **23.7158** (−1.3 %), and the whole of it is **one feature**:
+
+    hi:rsK   1.356 -> 0.969   (-0.387)     everything else cancels (sum of the rest ~ +0.07)
+
+So a **0.01 % parameter change moves `hi:rsK` by 28 %**. Baking the snapshot at `%.6g` alone
+shifts the cost by 0.18 (the in-run value was 23.5337, the re-evaluated snapshot 23.7158).
+The objective itself is deterministic — the seed re-evaluates to 24.0296 exactly, 4/4 — so this
+is genuine discontinuity, not run-to-run noise.
+
+**Cause:** `rsK` is a first-order rate fitted over a *detected* window. Small parameter changes
+move the detected valley/window, which flips the fitted rate. fminsearch consequently spent the
+run shrinking against detection thresholds rather than exploring physiology.
+
+**Third independent reason to keep `rsK` down-weighted**, alongside (1) it is probably a
+slack-protocol compliance artifact and (2) no tested mechanism can reach it. It is now also
+established as an unreliable thing to optimise *against*.
+
+**Consequence for fitting:** a 6-parameter fminsearch is the wrong tool here. To actually exploit
+the lower weight, run the proper campaign — `../LowATP_AbsoluteFit/RunOptimLowATPAbs.m` (78-param
+pool, draws/kicks/resume), which now takes `WEIGHT_RSK` (default 0.1).

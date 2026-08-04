@@ -65,6 +65,15 @@ fn = params0.fn;
 % run and only de-duplicates rsK), which double-counts that guardrail. Drop dupes.
 [~, iu] = unique(fn, 'stable'); fn = fn(iu);
 
+% rsK weight. Default 0.1 (down from the snapshot's 0.25): rsK is (a) probably a
+% slack-protocol compliance artifact, (b) unreachable by any tested mechanism, and
+% (c) NUMERICALLY DISCONTINUOUS -- a 0.01 % parameter change moves hi:rsK by 28 %
+% (see ../LowATP_RestretchRecovery/mechanism_hunt.md). Keep it visible, not steering.
+if ~exist('WEIGHT_RSK','var'); WEIGHT_RSK = 0.1; end
+fn = cellfun(@(s) regexprep(s, '^rsK(\|.*)?$', sprintf('rsK|%g', WEIGHT_RSK)), ...
+             fn, 'UniformOutput', false);
+fprintf('[%s] rsK weight set to %g\n', cfg.tag, WEIGHT_RSK);
+
 % Low-ATP leg: the 2 mM day has SLACK ONLY -- no force-velocity, no passive protocol.
 % Their features would otherwise register as missing (100 each) on every evaluation.
 fn2 = fn(~(startsWith(fn, 'FV') | startsWith(fn, 'PS_')));
