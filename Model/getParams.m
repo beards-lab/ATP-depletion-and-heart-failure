@@ -329,7 +329,24 @@ end
     params0.K_T2 = 2.5;             % Km(ATP) (mM) of R2's ATP-binding detachment step
     params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
     params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
-    
+
+    % --- Joint (dual-condition) ATP fit -----------------------------------
+    % When UseAtpJointFit is true the objective becomes an ABSOLUTE two-condition
+    % cost:  Et = w8*E(high ATP, as configured) + w2*E(low ATP, overrides below).
+    % Implemented in evaluateBakersExp by a guarded recursive call, so every
+    % existing path (featCost decomposition, optimizeFeatures, iter gallery) is
+    % reused unchanged. Inert -- and byte-identical -- when false.
+    % All fields are scalars/strings/cell-of-strings so snapshots serialise.
+    params0.UseAtpJointFit  = false;
+    params0.AtpJoint_w8     = 1;    % weight on the high-ATP condition
+    params0.AtpJoint_w2     = 1;    % weight on the low-ATP condition
+    params0.AtpJoint_MgATP2 = 2;    % [ATP] (mM) of the low-ATP condition
+    params0.AtpJoint_Pi2    = 0.8;  % [Pi] (mM) of the low-ATP condition (inert unless a Pi mechanism is on)
+    params0.AtpJoint_vt2    = 'protocol_03_27_2026_2mM_slack.mat'; % low-ATP slack protocol+data
+    params0.AtpJoint_fn2    = {};   % feature list for the low-ATP leg; {} => inherit params0.fn
+    params0.AtpJoint_RunFV2 = false;% no 2 mM force-velocity data -> keep FV out of the low-ATP leg
+    params0.AtpJoint_RunPS2 = false;% no 2 mM passive protocol   -> keep PS_* out of the low-ATP leg
+
     % strain-associated parameters
     params0.alpha0 = 0;
     params0.alpha0_L = 0;
