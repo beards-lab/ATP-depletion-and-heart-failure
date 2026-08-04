@@ -30,20 +30,48 @@ F2     = 70;                 % typical 2 mM plateau force
 aTrue  = 1.344;              % rundown-corrected ATP force effect
 sdPrep = 0.053;              % residual between-prep SD after correction
 
-f82 = PHI*s8*T8 / F2;        % 8->2 : the 2 mM (later, STRONG) is degraded
-f28 = PHI*s2*T2 / F8;        % 2->8 : the 8 mM (later, WEAK)  is degraded
-b82 = 1 - f82;               % multiplicative bias on the measured ratio
-b28 = 1/(1 - f28);
+% ── The bias, derived explicitly ───────────────────────────────────────────
+% DEFINITIONS
+%   a       the TRUE ATP effect = F_2mM / F_8mM with BOTH measured at the SAME
+%           fibre state. This is the quantity we want.
+%   L       absolute damage (kPa) accrued during the EARLIER run's activation,
+%           L = phi * |slope_earlier| * T_earlier.  Rundown is linear in kPa/s,
+%           so the damage is ABSOLUTE, not fractional -- this is what makes the
+%           bias asymmetric.
+%   The LATER run is the degraded one:  F_later_measured = F_later_true - L.
+%   f       = L / F_later_measured   (damage as a fraction of what was measured)
+%
+% BIAS = R_measured / a   -- the measured 2mM/8mM ratio against the true effect
+%
+%   8 -> 2 : R_meas = F2_meas / F8 ,  F2_true = F2_meas + L
+%            a = (F2_meas + L)/F8 = R_meas*(1+f)   =>  BIAS = 1/(1+f)   < 1
+%            the 2 mM numerator is the degraded one -> ratio UNDER-states a
+%
+%   2 -> 8 : R_meas = F2 / F8_meas ,  F8_true = F8_meas + L
+%            a = F2/(F8_meas + L) = R_meas/(1+f)   =>  BIAS = (1+f)     > 1
+%            the 8 mM denominator is the degraded one -> ratio OVER-states a
+L82 = PHI*s8*T8;   f82 = L82/F2;   b82 = 1/(1+f82);
+L28 = PHI*s2*T2;   f28 = L28/F8;   b28 = 1+f28;
 
-fprintf('=== WHY THE ORDER BIAS IS ASYMMETRIC ===\n');
-fprintf('  8->2 : damage %.2f kPa on the 2 mM run (F=%.0f) = %.1f%%  -> bias x%.3f\n', ...
-        PHI*s8*T8, F2, 100*f82, b82);
-fprintf('  2->8 : damage %.2f kPa on the 8 mM run (F=%.0f) = %.1f%%  -> bias x%.3f\n', ...
-        PHI*s2*T2, F8, 100*f28, b28);
-fprintf('  |bias| ratio = %.1fx : the 2->8 order is %.1fx worse.\n', ...
-        (b28-1)/(1-b82), (b28-1)/(1-b82));
-fprintf('  Two compounding reasons: the 2 mM run decays x%.2f faster, AND the run it\n', s2/s8);
-fprintf('  degrades (8 mM) is x%.2f weaker, so the same kPa is a bigger fraction.\n', F2/F8);
+fprintf('=== HOW THE BIAS ARISES, AND WHAT IS BIASED AGAINST WHAT ===\n');
+fprintf('  BIAS = (measured 2mM/8mM force ratio) / (true ATP effect at fixed fibre state)\n\n');
+fprintf('  8->2 : the 8 mM runs first and does the damage.\n');
+fprintf('         L    = phi*|s8|*T8 = %.2f*%.3f*%.1f = %.2f kPa\n', PHI,s8,T8,L82);
+fprintf('         the degraded run is the 2 mM one, F ~ %.0f kPa -> f = %.3f\n', F2, f82);
+fprintf('         the DEGRADED run is the NUMERATOR -> ratio too SMALL\n');
+fprintf('         BIAS = 1/(1+f) = %.3f   (%+.1f%%)\n\n', b82, 100*(b82-1));
+fprintf('  2->8 : the 2 mM runs first and does the damage.\n');
+fprintf('         L    = phi*|s2|*T2 = %.2f*%.3f*%.1f = %.2f kPa\n', PHI,s2,T2,L28);
+fprintf('         the degraded run is the 8 mM one, F ~ %.0f kPa -> f = %.3f\n', F8, f28);
+fprintf('         the DEGRADED run is the DENOMINATOR -> ratio too LARGE\n');
+fprintf('         BIAS = (1+f)   = %.3f   (%+.1f%%)\n\n', b28, 100*(b28-1));
+fprintf('  ASYMMETRY = %.1fx, from two compounding factors:\n', (b28-1)/(1-b82));
+fprintf('    (i)  numerator : the 2 mM run decays x%.2f faster, so L is x%.2f larger\n', s2/s8, L28/L82);
+fprintf('    (ii) denominator: it degrades the 8 mM run, which is x%.2f weaker,\n', F2/F8);
+fprintf('         so the same kPa is a larger fraction\n');
+fprintf('    net f: %.3f vs %.3f = x%.1f\n', f28, f82, f28/f82);
+fprintf('\n  (F8=%.0f, F2=%.0f are representative plateau forces; the real bias is\n', F8, F2);
+fprintf('   prep-specific and computed per prep in ../ATPEffectReconciliation.)\n');
 
 %% ── Designs, with and without correction ──────────────────────────────────
 % "correction" = the model-lesion correction, assumed to remove the bias with a
@@ -112,13 +140,14 @@ for k=[3 6 9]; text(k, sdPrep/sqrt(k)+0.001, sprintf('%.3f',sdPrep/sqrt(k)),'Fon
 
 nexttile; hold on; box on;
 xq = 0:0.02:0.30;
-plot(100*xq, 100*((1-xq)-1), '-','Color',[0 0.45 0.74],'LineWidth',2);
-plot(100*xq, 100*(1./(1-xq)-1), '-','Color',[0.85 0.33 0.10],'LineWidth',2);
+plot(100*xq, 100*(1./(1+xq)-1), '-','Color',[0 0.45 0.74],'LineWidth',2);
+plot(100*xq, 100*((1+xq)-1),    '-','Color',[0.85 0.33 0.10],'LineWidth',2);
 plot(100*f82, 100*(b82-1),'o','Color',[0 0.45 0.74],'MarkerFaceColor',[0 0.45 0.74],'MarkerSize',10);
 plot(100*f28, 100*(b28-1),'o','Color',[0.85 0.33 0.10],'MarkerFaceColor',[0.85 0.33 0.10],'MarkerSize',10);
-yline(0,'k:'); xlabel('damage fraction of the degraded run (%)'); ylabel('bias (%)');
-title('(d) The bias is not symmetric in dose');
-legend({'8\rightarrow2 (deflates)','2\rightarrow8 (inflates)'},'Location','northwest','FontSize',7);
+yline(0,'k:'); xlabel('f = damage / force of the DEGRADED run (%)'); ylabel('bias (%)');
+title('(d) Same f gives a bigger bias when it hits the denominator');
+legend({'8\rightarrow2: degraded run is the numerator','2\rightarrow8: degraded run is the denominator'}, ...
+       'Location','northwest','FontSize',7);
 
 nexttile; hold on; box on;
 txt = {'\bfRECOMMENDED DESIGN\rm','', ...

@@ -11,9 +11,10 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 
 > ### 📋 [Rundown & pooling strategy](RundownCorrection/strategy.md) — read before designing or analysing the next dataset
 > Decision document: what to correct, what not to, which running order to request,
-> where to put the repeats, and how to pool. **Key call:** don't correct the data for
-> fitting — fit a per-record rundown coordinate. And **2→8 order carries 3.6× the bias
-> of 8→2**, so balancing the design does *not* cancel it.
+> where to put the repeats, and how to pool. **Key calls:** correct the *second record
+> of each prep* (force **and** slack `ktr`, same lesion) and fit one prep at a time;
+> and **2→8 carries ≈3.2× the bias of 8→2** — with the derivation in §2 — so
+> balancing the design does *not* cancel it.
 
 ## Start here — the numbers that are settled
 
