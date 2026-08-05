@@ -67,6 +67,34 @@ if isfield(params, 'RemoveField') && ~isempty(params.RemoveField)
     end
 end
 
+%% ---- General 8 mM-inert ATP power gates --------------------------------------
+% rate_eff = rate * (MgATP/MgATP_ref)^p.
+% The factor is EXACTLY 1 at MgATP = MgATP_ref for ANY p, so the high-ATP fit is
+% bit-identical no matter what the optimiser does with these exponents; p > 0
+% suppresses the rate at low ATP, p < 0 enhances it. This gives the low-ATP fit many
+% degrees of freedom at ZERO cost to the high-ATP fit -- the key asymmetry.
+% Applied HERE (once per simulation) rather than in dPUdT, which is the ODE RHS and
+% would pay the dynamic-field lookup on every call. params is a local copy, so this
+% cannot leak back to the caller and cannot be applied twice.
+if isfield(params, 'UseAtpPowerGates') && params.UseAtpPowerGates
+    rATP = params.MgATP / params.MgATP_ref;
+    if rATP ~= 1
+        % Tier A: rate constants (ATP dependence mechanistically natural).
+        % Tier B: shape/stiffness levers (weaker claim -- reported separately).
+        % NOTE kstiff2/kSE/dr are also read later in THIS file (e.g. the kSE event
+        % function), which is why the gates are applied here, above those uses.
+        gated = {'k2','kmsrd','kah','kamh','ka','kd','k1','k_1', ...
+                 'ksr0','ksr2srd','ksrd2sr','tau_reg','A0','eta_M', ...
+                 'kstiff2','kSE','kSE_M','mu_neg','dr','dr2','P_bound_max'};
+        for gi = 1:numel(gated)
+            pn = ['pAtp_' gated{gi}];
+            if isfield(params, pn) && params.(pn) ~= 0 && isfield(params, gated{gi})
+                params.(gated{gi}) = params.(gated{gi}) * rATP ^ params.(pn);
+            end
+        end
+    end
+end
+
 
 if isfield(params, 'ksrm')
     error('Change ksrm to kmsr!!')

@@ -341,6 +341,35 @@ end
     params0.kAtpStrain  = 0;        % 1/strain; 0 => strain-uniform (legacy behaviour)
     params0.sAtpStrain0 = 0;        % strain (um) above which the ATP step starts to bite
 
+    % --- General 8 mM-inert ATP power gates (applied in evaluateModel) ----
+    % rate_eff = rate * (MgATP/MgATP_ref)^p. Exactly 1 at MgATP_ref for ANY p, so the
+    % high-ATP fit is bit-identical whatever these become; p>0 suppresses at low ATP,
+    % p<0 enhances. Many low-ATP degrees of freedom at zero high-ATP cost. All 0 = inert.
+    params0.UseAtpPowerGates = false;
+    params0.pAtp_k2      = 0;   % strong-bridge detachment
+    params0.pAtp_kmsrd   = 0;   % SRX-ADP return
+    params0.pAtp_kah     = 0;   % hydrolysis / re-priming (PT -> PD)
+    params0.pAtp_kamh    = 0;   % reverse priming (PD -> PT)
+    params0.pAtp_ka      = 0;   % attachment
+    params0.pAtp_kd      = 0;   % pre-stroke detachment
+    params0.pAtp_k1      = 0;   % power stroke
+    params0.pAtp_k_1     = 0;   % reverse stroke
+    params0.pAtp_ksr0    = 0;   % SRX entry
+    params0.pAtp_ksr2srd = 0;   % SRX -> SRX-ADP
+    params0.pAtp_ksrd2sr = 0;   % SRX-ADP -> SRX
+    params0.pAtp_tau_reg = 0;   % registration-availability recovery time
+    params0.pAtp_A0      = 0;   % registration-availability floor
+    params0.pAtp_eta_M   = 0;   % Maxwell dashpot viscosity (least defensible; see docs)
+    % Tier B -- shape/stiffness levers, weaker physiological claim (see
+    % Analyses/LowATP_AbsoluteFit/conclusions.md for the honest justification/limits)
+    params0.pAtp_kstiff2    = 0;   % per-head stiffness of the post-stroke state
+    params0.pAtp_kSE        = 0;   % series elastic stiffness
+    params0.pAtp_kSE_M      = 0;   % Maxwell spring
+    params0.pAtp_mu_neg     = 0;   % negative-strain viscosity
+    params0.pAtp_dr         = 0;   % power-stroke displacement
+    params0.pAtp_dr2        = 0;   % R2 strain offset
+    params0.pAtp_P_bound_max = 0;  % occupancy-saturation ceiling
+
     % --- Joint (dual-condition) ATP fit -----------------------------------
     % When UseAtpJointFit is true the objective becomes an ABSOLUTE two-condition
     % cost:  Et = w8*E(high ATP, as configured) + w2*E(low ATP, overrides below).
