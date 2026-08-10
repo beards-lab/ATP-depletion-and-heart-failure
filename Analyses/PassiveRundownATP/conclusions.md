@@ -168,3 +168,91 @@ persistent residuals, and those are three of the top terms in the 2 mM cost.
   `vall2_dy` or `ovrsht_dy`. That single correction touches three of the largest 2 mM residuals.
 - 04/10 remains the strongest test of the rundown-differential itself, because its acquisition
   order is reversed and the sign should **flip**.
+
+---
+
+# Third pass — CAN the passive be scaled up, and by how much? (2026-08-10)
+
+Script: `RunPassiveScaleFeasibility.m` · figure: `results/passive_feasibility.png`
+
+## The acquisition order — the user was right, and it is worse than assumed
+
+From the raw folder `data/03 27 2026 M/`:
+
+    01_Relax → 02_8mM_Active → 03_2mM_Active → 04_8mM_Active_repeat → [05 MISSING] → 06_8mM_PNB_Mava
+
+The passive protocol sits after **four** activations, not two. (`05` is absent from the series —
+something was run and not exported.) The bracket **02 vs 04** is the −17.5 % force measurement that
+[RundownCorrection](../RundownCorrection/conclusions.md) §4b is built on, and its parallel-material
+component is **~16 % at full dose**. So passive at the time of PNB+Mava should sit **~16–20 % below**
+the first 8 mM run — more than the 7.6 % used in the second pass.
+
+## Do we have SL? **No.**
+
+The raw ASI600A export carries three channels only:
+
+    Time (ms) | L in (Lo) | F in (kPa)
+
+That is **motor length in Lo units — there is no measured sarcomere length**. The `SL` column in the
+curated `.mat` is *derived* from motor length. Consequence: the passive–SL relation cannot be
+established independently of the model's own series-compliance assumption, and since rundown
+*adds ~35 % series compliance*, the ML→SL map is itself changing through the session. Any passive
+claim resting on SL is therefore model-internal, not measured.
+
+## The feasibility test
+
+Three constraints, one axis (`k_pas`). (A) is the **direct** measurement — what passive was fitted
+to. (B) is the **indirect** demand from the 2 mM slack run.
+
+| `k_pas` × | (A) PNB+Mava passive cost | (B) peak2 (2 mM) | (B) 2 mM total cost |
+|---|---|---|---|
+| 0.50 | 2.383 | 80.41 | 22.00 |
+| 0.75 | 1.433 | 81.36 | 18.51 |
+| **1.00** | **1.115** ← (A) optimum | 82.29 | 16.79 |
+| **1.25** | 1.398 | 83.21 | **16.65** ← (B) optimum |
+| 1.50 | 2.240 | 84.11 | 17.16 |
+| 2.00 | 5.475 | 85.88 | 23.03 |
+| 3.00 | 17.262 | 89.25 | 65.09 |
+| **4.00** | **34.711** (31× worse) | **92.43** = data | 201.45 |
+
+![passive feasibility](results/passive_feasibility.png)
+
+## Answers
+
+**1. My "~3× under-scaled" claim (second pass) was WRONG — retracted.**
+The direct passive measurement prefers **×1.00**. The model's passive is correctly scaled *against
+the passive data it was fitted to*. The earlier inference came from comparing the model's settled
+passive (~2 % of steady) with the rundown write-up's "~5 kPa of 80" (~6 %) — those are different
+length points and different definitions, so the comparison was invalid.
+
+**2. Can we reasonably scale the passive up? YES — to ≈×1.2, and three independent lines agree.**
+
+| line of evidence | says |
+|---|---|
+| rundown, 4 activations × 16 % parallel loss | ×1.16 – 1.20 |
+| what the 2 mM slack total cost prefers | **×1.25** |
+| what the direct passive measurement tolerates | ×1.20 costs only **+0.23** (1.115 → 1.341) |
+
+A ~20 % upward passive correction for the **active** runs is therefore **defensible on three
+independent grounds**, cheap on the direct fit, and it is exactly the user's hypothesis quantified.
+It should be applied as a *per-run* correction (8 mM more than 2 mM), not as a change to `k_pas`
+itself — the fitted `k_pas` is right *for the PNB+Mava condition*.
+
+**3. Must we postulate a scaling "because it fits"? NO — and the data forbids the big one.**
+Closing `peak2` on passive alone needs **×4.0**, where the direct passive cost is **34.7 vs 1.1 —
+31× worse**. That is a hard experimental rejection, on data already in the cost function.
+**`peak2` is therefore NOT a passive-scaling problem**; something else drives it.
+
+## Consequences
+
+- Apply the ≈×1.2 passive correction to the active runs (differential: 8 mM > 2 mM). Expected
+  effect is modest — the second pass measured `rsK` ratio 0.605 → 0.565 and cost 16.79 → 16.68 for
+  the 1.08/1.04 differential.
+- Stop attributing `peak2` to passive. Note also that
+  [SlackDataAnalysis](SlackDataAnalysis/conclusions.md) already retires **`ovrsht_*`** as
+  unreliable across preps — and `ovrsht_dy` is the *second largest* term in the current 2 mM cost
+  (2.77). Two of the top four 2 mM residuals (`ovrsht_dy`, and `rsK` via slack-compliance
+  contamination) are therefore of questionable evidential value, which materially changes what
+  "fitting the 2 mM data" should even mean.
+- Getting further on the passive question needs **measured SL** (striation/laser diffraction),
+  which this rig did not record. Without it the ML→SL map is model-internal and moves with rundown.
