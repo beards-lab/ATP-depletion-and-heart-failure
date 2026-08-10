@@ -47,8 +47,14 @@ NoS = params0.NumberOfStates;
 %% ---- objective: the previous feature list + the recovery RATE -----------
 fn = params0.fn;
 
-% Drop any stale rsK entry so re-running cannot double-count it.
-fn = fn(~startsWith(fn, 'rsK'));
+% Drop any stale post-restretch entry so re-seeding from a snapshot this
+% driver itself wrote cannot double-count it. Must match on the PRIMARY FIELD
+% NAME, not on a prefix of the whole string: startsWith(fn,'rsK') misses
+% 'rsR2|0.4-1.0|0.5', which is then appended a second time below.
+RS_TERMS = {'rsK', 'rsR2'};
+primary  = cellfun(@(s) regexprep(strtok(s, '|'), '\[.*$', ''), fn, ...
+                   'UniformOutput', false);
+fn = fn(~ismember(primary, RS_TERMS));
 
 % rsK: normalised |data-model| per cycle, summed over the 5 cycles.
 % At the seed this scores ~8.5 at weight 1 -- deliberately the largest single
@@ -152,10 +158,40 @@ fprintf('[%s] pool=%d | N_DRAW=%d | budget %.1f h | resume=%d\n', ...
     cfg.tag, numel(cfg.pool), cfg.N_DRAW, cfg.TIME_BUDGET_HRS, cfg.RESUME);
 
 %% ---- BASELINE SANITY GUARD ----------------------------------------------
-% An optimiser seeded from a failed evaluation optimises the failure penalty,
-% not the model, and will happily run all night doing it. Refuse to start.
-fprintf('[%s] checking baseline evaluates...\n', cfg.tag);
+% An optimiser seeded from a broken evaluation optimises the penalty, not the
+% model, and will happily run all night doing it. Two distinct failure modes,
+% so two distinct checks.
+
+% (1) COVERAGE: can every fn entry actually be scored? A feature absent from
+% features_data or features_model scores MISSING_FEATURE_COST = 100, which
+% after weighting looks like an ordinary bad-fit number rather than an error
+% ('rsK|0.25' with no data target scores exactly 25). This bites whenever the
+% untracked data/*.mat files are older than Model/extractSlackAttributes.m --
+% e.g. after moving the run to another machine.
 pchk = cfg.params0; pchk.mods = {}; pchk.g = ones(1, 0);   % = optimizeFeatures' setMods
+fprintf('[%s] checking every fn entry can be scored...\n', cfg.tag);
+rep = checkFeatureCoverage(pchk);
+if ~rep.ok
+    if ~isempty(rep.missingModel)
+        fprintf(2, '  ABSENT from features_model (stale Model/ code?):\n');
+        fprintf(2, '    %s\n', rep.missingModel{:});
+    end
+    if ~isempty(rep.missingData)
+        fprintf(2, '  ABSENT from features_data (stale data/*.mat?):\n');
+        fprintf(2, '    %s\n', rep.missingData{:});
+    end
+    error('RunOptimRsK:missingFeatures', ...
+        ['%d feature(s) in params0.fn cannot be scored; each contributes a ' ...
+         'flat MISSING_FEATURE_COST=100 x weight and is INVISIBLE to the ' ...
+         'optimiser. For rsK/rsR2: copy data/%s from the machine that has ' ...
+         'them, or run Analyses/RestretchRecoveryFit/AddRestretchFeatsToData.m ' ...
+         '(DRYRUN=false) to add them in place.'], ...
+        numel(rep.missingModel) + numel(rep.missingData), params0.velocitytableonfile);
+end
+fprintf('[%s]   coverage OK (%d fn entries)\n', cfg.tag, numel(pchk.fn));
+
+% (2) EVALUABILITY: does the seed integrate inside MaxRunTime?
+fprintf('[%s] checking baseline evaluates...\n', cfg.tag);
 c0 = evaluateBakersExp(1, pchk, true, true);
 fprintf('[%s] baseline cost = %.4f\n', cfg.tag, c0);
 if ~isfinite(c0) || c0 > 1e4
