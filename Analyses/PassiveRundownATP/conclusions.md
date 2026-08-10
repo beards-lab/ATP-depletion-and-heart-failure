@@ -94,3 +94,77 @@ Two caveats to carry into that test:
 - Peak passive differs slightly between the two runs here (20.28 vs 19.96) purely because the two
   protocols have different length trajectories — not an ATP or rundown effect. Any future
   comparison must be made at matched length.
+
+---
+
+# CORRECTION + confirmation (2026-08-10, second pass)
+
+The first pass got two things wrong. Both are fixed here.
+Script: `RunPassivePostRestretch.m`.
+
+## 1. Direction — I used the wrong reference point; the hypothesis is RIGHT
+
+The model's passive is fitted to **PNB+Mava**, which ran **last** and is therefore the **lowest**
+of the three. So relative to the model, **both** active runs should want **more** passive:
+
+    model (= PNB+Mava)  x1.00   |   2 mM  x~1.04   |   8 mM  x~1.08
+
+(03/27 loses 3.8 % per activation interval; PNB+Mava sits after both activations, so ~7.6 % below
+the 8 mM state.) My first pass compared the 2 mM optimum against the *2-vs-8 difference* (x0.973)
+and called the observed x1.10 "wrong direction". **That reference was wrong** — against the
+PNB+Mava-fitted baseline, x1.10 is the *expected* sign, and close to the predicted x1.04.
+**Direction confirmed.**
+
+## 2. Locus — passive acts on the SECOND peak and the decay, not the first
+
+The first pass reported only `peak1_y` and `steady`, which is why it saw nothing. Scanning `k_pas`
+at 2 mM and reading the post-restretch observables:
+
+| `k_pas` × | peak2 | vall2_dy | ovrsht_dy | rsK | **peak1_y** | steady |
+|---|---|---|---|---|---|---|
+| 0.5 | 80.41 | −22.07 | 0.036 | 58.9 | **113.52** | 86.05 |
+| 1.0 | 82.29 | −21.51 | 0.212 | 62.0 | **113.53** | 87.85 |
+| 1.5 | 84.11 | −20.99 | 0.321 | 65.6 | **113.55** | 89.50 |
+| 2.0 | 85.88 | −20.83 | 0.058 | 67.5 | **113.56** | 91.44 |
+| 3.0 | 89.25 | −20.40 | 0.151 | 65.0 | **113.59** | 95.27 |
+| *data 2 mM* | *92.43* | *−14.58* | *0.445* | *15.9* | *111.93* | *91.25* |
+
+**`peak2` moves +11 % across the scan while `peak1_y` moves 0.06 %.** The hypothesis that passive
+shapes the *second* peak and the post-restretch decay is **confirmed**, and it corrects the first
+pass's "the probe is blind" verdict — the probe was blind only because I read the wrong peak.
+
+## 3. Does the rundown differential help? Yes, correctly signed — but small
+
+| case | rsK8 | rsK2 | **rsK ratio** | peak2 (2 mM) | 2 mM cost |
+|---|---|---|---|---|---|
+| model as fitted (1.00 / 1.00) | 102.5 | 62.0 | 0.605 | 82.29 | 16.789 |
+| **rundown differential (1.08 / 1.04)** | 110.1 | 62.3 | **0.565** | 82.44 | **16.680** |
+| exaggerated 1.5 / 1.2 | 108.5 | 64.7 | 0.596 | 83.03 | 16.800 |
+| exaggerated 2.0 / 1.3 | 109.1 | 65.1 | 0.597 | 83.39 | 16.792 |
+| *data* | *43.7* | *15.9* | ***0.363*** | *92.43* | |
+
+The predicted differential moves the `rsK` ratio 0.605 → 0.565 (~13 % of the way to 0.363) and
+improves the cost. **Real and correctly signed, but it is not the `rsK` answer** — and note that
+*more* passive makes `rsK` itself *faster* (58.9 → 67.5), i.e. away from the data.
+
+## 4. The bigger finding that fell out: the model's passive looks ~3× too small
+
+`peak2` is a 10-unit residual (model 82.29 vs data 92.43) and **more passive closes it** — x3.0
+reaches 89.25. Independently, the model's settled passive is **~2 % of steady force where the
+rundown analysis measures ~6 %** (5 kPa of 80). **Two independent routes both say the model's
+passive is roughly 3× under-scaled.**
+
+That is far beyond anything rundown can explain (~4–8 %), so it is a *separate and larger* issue
+than the ATP question — but it is plausibly why `peak2`, `vall2_dy` and `ovrsht_dy` are all
+persistent residuals, and those are three of the top terms in the 2 mM cost.
+
+## Revised verdict
+
+- The rundown→passive→ATP-bias chain is **real, correctly signed, and now correctly located**
+  (second peak + decay). Its magnitude on 03/27 is small (cost 16.79 → 16.68).
+- It is **not** the explanation for `rsK` — passive moves `rsK` the wrong way.
+- **The actionable finding is the passive scale itself**: fix the ~3× under-scaling (and check it
+  against the PNB+Mava `PS_*` residuals) before drawing any further conclusion from `peak2`,
+  `vall2_dy` or `ovrsht_dy`. That single correction touches three of the largest 2 mM residuals.
+- 04/10 remains the strongest test of the rundown-differential itself, because its acquisition
+  order is reversed and the sign should **flip**.

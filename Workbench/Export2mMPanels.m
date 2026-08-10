@@ -39,7 +39,11 @@ for i = 1:size(RUNS,1)
             k = k + 1;
             fn = fullfile(outdir, sprintf('2mM_%s_%02d.png', nm, k));
             try
-                exportgraphics(f, fn, 'Resolution', 300);
+                % blow the figure up to a large canvas BEFORE export, otherwise the
+                % axes keep their small on-screen layout and detail stays unreadable
+                set(f,'Units','pixels','Position',[30 30 2400 1350],'Color','w');
+                drawnow;
+                exportgraphics(f, fn, 'Resolution', 200);
                 fprintf('  saved %s\n', fn);
             catch ME
                 fprintf('  [skip fig] %s\n', ME.message);
@@ -60,9 +64,10 @@ q.PlotEachSeparately=0;
 [~,~,fm,fd] = runSlackExperiment(q);
 fn = q.fn; [~,iu]=unique(fn,'stable'); fn=fn(iu);
 fnS = fn(~(startsWith(fn,'FV')|startsWith(fn,'PS_')));
-figure('Position',[40 40 1900 1050],'Color','w');
+figure('Units','pixels','Position',[20 20 2560 1400],'Color','w');
 plotFeatures(fd, fm, [], fnS);
 sgtitle('2 mM ATP — model vs data, all scored slack features');
-exportgraphics(gcf, fullfile(outdir,'2mM_plotFeatures_panel.png'), 'Resolution', 300);
+drawnow;
+exportgraphics(gcf, fullfile(outdir,'2mM_plotFeatures_panel.png'), 'Resolution', 200);
 fprintf('  saved 2mM_plotFeatures_panel.png\n');
 disp('EXPORT DONE');
