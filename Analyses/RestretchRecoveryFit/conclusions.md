@@ -218,6 +218,89 @@ strain-agnostic, and naturally larger after a bigger re-stretch, hence negative.
 at the same candidate independently. This analysis supplies its target:
 **slope ≈ −126 s⁻¹/ML at `rsK` ≈ 44–52 s⁻¹.**
 
+## 6b. REVISION (2026-08-10) — the amplitude dependence was the Maxwell dashpot,
+## not missing physiology
+
+*Assessed at `params/rskR2_w025_opt.m` (the optimiser's point after the overnight
+runs). Scripts: [`AssessSnapshot.m`](AssessSnapshot.m),
+[`RunRecoveryAnatomy.m`](RunRecoveryAnatomy.m),
+[`RunMechanismProbe.m`](RunMechanismProbe.m),
+[`RunAmpNoMaxwell.m`](RunAmpNoMaxwell.m).*
+
+**§6 above said the model's positive amplitude dependence was structural and needed
+a new stretch-engaged mechanism. That was wrong.** Every amplitude sweep behind §6
+ran with the Maxwell dashpot on. Switching it off:
+
+| synthetic depth sweep | slope (s⁻¹/ML) | r | level |
+|---|---|---|---|
+| Maxwell **ON** | **+276** | 0.58 | 76–115 |
+| Maxwell **OFF** | **−52** | −0.61 (flat) | 70–77 |
+| *data* | *−94* | — | *~44* |
+
+With the dashpot off the cross-bridge machinery already delivers a **nearly
+amplitude-independent** rate — qualitatively the behaviour the data shows. The
+`+714` slope quoted in §6 was a property of the series-viscoelastic element.
+
+### Anatomy: what actually carries the recovery
+
+Fraction of each carrier's own excursion completed when **force** is 63 % recovered
+(1.00 = finished early, not rate-limiting; ~0.63 = tracks force):
+
+| window | Force | F_active | F_passive | LSE | bound (p1+p2) | t63 |
+|---|---|---|---|---|---|---|
+| postRestretch c1 | 0.66 | 0.57 | 0.41 | 0.65 | 0.75 | 13.8 ms |
+| postSlack c1 | 0.64 | 0.65 | **1.00** | 0.94 | **0.28** | 21.7 ms |
+
+And the composition of the recovered force:
+
+| window | ΔForce | ΔF_active | ΔF_passive |
+|---|---|---|---|
+| postRestretch | **+14.3** | +22.2 | **−7.9** |
+| postSlack | +67.6 | +70.2 | −2.6 |
+
+**The post-restretch net recovery is the small difference of two large opposing
+terms** — a +22 kPa active rise against a −8 kPa passive decay. The post-slack
+window has no such component (−2.6 kPa against +70). The two windows are
+rate-limited by different things *in the model*: post-slack by strain accumulation
+on a slowly-growing population (`bound` lags at 0.28), post-restretch by the bound
+population itself (0.75) blended with a decaying dashpot.
+
+### Revised decomposition of the gap
+
+| | `rsK` | vs data |
+|---|---|---|
+| model as-is | 102.6 | ×2.35 |
+| **Maxwell dashpot OFF** | 66.9 | **×1.53** |
+| data | 43.7 | ×1.00 |
+
+Roughly **half the excess is the dashpot** (ln 102.6/66.9 = 0.43 of ln 102.6/43.7
+= 0.85) and half is genuinely fast cross-bridge kinetics. Turning it off is not the
+fix — feature total 6.5 → 18.3, because the element is load-bearing for
+`ovrsht_dy`, `vall2_dy` and the passive features. It has to be made *right*.
+
+### The residual protocol dependence, correctly sized
+
+| | ktr | rsK | rsK/ktr |
+|---|---|---|---|
+| data | ~49 | 43.7 | **0.89** |
+| model, Maxwell ON | 52.5 | 102.6 | 1.95 |
+| model, Maxwell OFF | 52.2 | 66.9 | **1.28** |
+
+So a real but much smaller structural residual: the model is ~1.4× too
+protocol-dependent after the dashpot is accounted for, not the ~2× §6 implied.
+
+### Negative results (do not re-run these)
+
+| probe | `rsK` | reading |
+|---|---|---|
+| `kah`×0.4 (slower priming) | 109.7 (**up**) | the existing hydrolysis step does **not** gate this window — fast alternative paths exist |
+| `ka`×0.5 | 107.9, force → 52.8 kPa | attachment rate is not the lever, and it wrecks force |
+| `UseMaxwellTensionOnly=1` | 103.5, featL2 6.5→8.0 | no help *here*; its benefit in RestretchVsKtrRecovery Part 2 was specific to the **ktr protocol**, which this objective does not run |
+
+The `kah` result matters for mechanism design: **slowing an existing rate does not
+clamp the recovery, because the model always has a faster parallel route.** Only an
+*obligatory in-series* step can.
+
 ## 7. Unlooked-for: `rsK` is a strong ATP signal
 
 Extracting `rsK` on every protocol file gave the 2 mM / 8 mM comparison for free:

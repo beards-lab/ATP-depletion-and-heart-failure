@@ -8,7 +8,8 @@ params0 = getParams();
 %%
 % optfull4_opt
 % optfull_FourthSlackTimebase_opt
-optfull6_opt
+% optfull6_opt
+rskR2_w025_opt
 fn = params0.fn;
 params0.UseMaxwellSymmetric = false;
 % fn = {'FV_fnorm|FV_v|10', 'ktr|8', 'A|50', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05'};
@@ -39,6 +40,7 @@ params0.BreakOnODEUnstable = false;
 %%
 % params0.velocitytableonfile = 'protocol_03_27_2026_ActivePNBMava_slack.mat';
 % params0.ka = 0;
+params0.RunSlackSegments = 'All';
 tic
 RunBakersExp;
 toc
