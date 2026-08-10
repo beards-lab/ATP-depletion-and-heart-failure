@@ -249,7 +249,7 @@ Closing `peak2` on passive alone needs **×4.0**, where the direct passive cost 
   effect is modest — the second pass measured `rsK` ratio 0.605 → 0.565 and cost 16.79 → 16.68 for
   the 1.08/1.04 differential.
 - Stop attributing `peak2` to passive. Note also that
-  [SlackDataAnalysis](SlackDataAnalysis/conclusions.md) already retires **`ovrsht_*`** as
+  [SlackDataAnalysis](../SlackDataAnalysis/conclusions.md) already retires **`ovrsht_*`** as
   unreliable across preps — and `ovrsht_dy` is the *second largest* term in the current 2 mM cost
   (2.77). Two of the top four 2 mM residuals (`ovrsht_dy`, and `rsK` via slack-compliance
   contamination) are therefore of questionable evidential value, which materially changes what

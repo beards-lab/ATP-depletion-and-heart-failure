@@ -40,7 +40,12 @@ here=fileparts(mfilename('fullpath')); root=fullfile(here,'..','..');
 cd(root); addpath(genpath(root)); LoadData;
 resdir=fullfile(here,'results'); if ~exist(resdir,'dir'); mkdir(resdir); end
 
-b=getParams(loadParams('lowATP_powergate2_opt'),[],true,false);
+% Branch-portable baseline: the low-ATP snapshot exists only on lowatp-2state, so
+% fall back to the shared high-ATP baseline elsewhere (e.g. on Further-optim).
+BASE='lowATP_powergate2_opt';
+if ~isfile(fullfile(root,'params',[BASE '.m'])); BASE='rskR2_w025_opt'; end
+fprintf('baseline: %s\n', BASE);
+b=getParams(loadParams(BASE),[],true,false);
 b.RunForceVelocity=false; b.RunForceVelocityTime=false; b.RunKtr=false; b.RunStairs=false;
 b.RunSlackPassive=false; b.RunSlack=true; b.EvalFeatures=true; b.BreakOnODEUnstable=false;
 b.RunSlackSegments='AllPar'; b.MaxRunTime=400; b.PlotEachSeparately=0; b.PlotFeatureFitting=0;

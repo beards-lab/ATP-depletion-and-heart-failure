@@ -31,7 +31,12 @@ here=fileparts(mfilename('fullpath')); root=fullfile(here,'..','..');
 cd(root); addpath(genpath(root)); LoadData;
 resdir=fullfile(here,'results'); if ~exist(resdir,'dir'); mkdir(resdir); end
 
-b=getParams(loadParams('lowATP_powergate2_opt'),[],true,false);
+% Branch-portable baseline: the low-ATP snapshot exists only on lowatp-2state, so
+% fall back to the shared high-ATP baseline elsewhere (e.g. on Further-optim).
+BASE='lowATP_powergate2_opt';
+if ~isfile(fullfile(root,'params',[BASE '.m'])); BASE='rskR2_w025_opt'; end
+fprintf('baseline: %s\n', BASE);
+b=getParams(loadParams(BASE),[],true,false);
 b.EvalFeatures=true; b.BreakOnODEUnstable=false; b.MaxRunTime=400;
 b.PlotEachSeparately=0; b.PlotFeatureFitting=0; b.RunSlackSegments='AllPar';
 b.passive_velocitytableonfile='protocol_03_27_2026_ActivePNBMava_slack.mat';
