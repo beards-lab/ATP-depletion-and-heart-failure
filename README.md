@@ -4,6 +4,24 @@ MATLAB codebase implementing a strain-discretized cardiac cross-bridge (sarcomer
 
 ---
 
+## 👉 New here? Start with [`Example/`](Example/README.md)
+
+```matlab
+cd('<repo root>'); addpath(genpath('.'));
+Example\RunExampleHighATP
+```
+
+A working, heavily-commented entry point: it loads the current best high-ATP (8 mM)
+parametrization, runs all four mechanical protocols (slack, ktr, staircase,
+force-velocity) against real recordings, and plots the per-feature fit. Takes ~2.5
+minutes. [`Example/README.md`](Example/README.md) documents the protocols, the
+parameter system, the feature/cost machinery, and the known residuals.
+
+`Example/BuildExampleProtocol.m` + `RunExampleProtocol.m` show how to drive the
+model with a length protocol of your own design.
+
+---
+
 ## Naming Conventions
 
 | Pattern | Meaning |
@@ -17,6 +35,9 @@ MATLAB codebase implementing a strain-discretized cardiac cross-bridge (sarcomer
 
 ```
 ATP-depletion-and-heart-failure/
+│
+├── Example/            START HERE — commented starter driver for the high-ATP
+│                       protocol battery + how to build your own protocol
 │
 ├── Model/              Core ODE engine, parameter system, experiment runners,
 │   │                   feature extraction and cost functions — model code ONLY
@@ -54,6 +75,8 @@ ATP-depletion-and-heart-failure/
 │
 ├── Figures/            Generated and reference figures
 ├── scripts/            Infrastructure (setup-gh.sh, rol.sbatch)
+│   └── fulldata/       Private full-data repo: seeding, sync workflow, payload
+│                       manifest. See scripts/fulldata/README.md
 ├── data/               Experimental data — not tracked by git
 └── _archive/           Disk-only graveyard for stale dumps (gitignored)
 ```

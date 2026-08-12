@@ -71,10 +71,20 @@ RunBakersExp  % script in Model/, uses params0 from workspace
 % Workbench/HandtuneAlternativeModel.m
 ```
 
-**Evaluate fit quality** (returns scalar error):
+**Evaluate fit quality** (returns scalar error) — current path:
+```matlab
+[Et, E, featCost, featNames] = evaluateBakersExp(g, params0, limitNegative, plotDebug)
+% Sets params0.g = g, calls LoadData + RunBakersExp, and returns the scalar
+% objective. When params0.OptimizeOn == 'Feats', Et is the FEATURE cost alone
+% (sum of evalFeatureCost with costExp=2); otherwise Et = sum(E).
+% featCost/featNames are computed only when nargout >= 3.
+```
+
+Legacy path (does **not** call `RunBakersExp`; builds its own `params0` and calls
+`evaluateModel` directly). Only `Workbench/RunOptimLakes.m` still uses it:
 ```matlab
 [Etot, E1] = evaluateProblem(fcn, g, true, [1 1 1 1])
-% 4th arg is binary vector selecting which experiment types to include
+% 4th arg is a binary vector selecting which experiment types to include
 ```
 
 ## Naming Conventions
@@ -88,8 +98,16 @@ RunBakersExp  % script in Model/, uses params0 from workspace
 > **`Docs/README.md`** (knowledge map) and **`Analyses/README.md`** (analyses index + synthesis).
 > See `Docs/reorganization-plan.md` for the rationale.
 
+- **`Example/`** — the onboarding package; the canonical "how to run the model" answer.
+  Start at `Example/README.md`. Heavily commented, verified end-to-end:
+  - `RunExampleHighATP.m` — high-ATP (8 mM) battery: slack + ktr + stairs + FV,
+    on `params/ExampleHighATP.m`. Reference feature cost **7.50** on the 03/27 8 mM set.
+  - `BuildExampleProtocol.m` / `RunExampleProtocol.m` — build and run a custom
+    length protocol (hold–stretch–hold), with a lossless round-trip self-test.
+  - `params/ExampleHighATP.m` is FROZEN (verbatim copy of `rskR2_w025_opt.m`);
+    the name is chosen so optimizer output (`<tag>_opt.m`, `<tag>_iter/`) can never collide.
 - **`Model/`** — core model functions ONLY (model code, nothing else):
-  - `Driver.m` — minimal entry point; canonical "how to run the model" example
+  - `Driver.m` — 700-line historical entry point; prefer `Example/` for onboarding
   - `getParams.m` — central parameter management; call this to build/update any params struct
   - `evaluateModel.m` — runs the ODE integrator for one experimental condition
   - `RunBakersExp.m` — script that evaluates all experimental challenges (FV, Ktr, slack, stairs) and computes total error `E`
