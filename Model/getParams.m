@@ -214,6 +214,19 @@ end
         'UseR2Ceiling', false, ... % series ATP-binding ceiling on strong-bridge detachment: 1/R2_eff = 1/R2_strain(s) + 1/R2max. Caps the unbounded strain acceleration of R2 so stretched bridges cannot vanish in <1 ms
         'k2max', 1500, ...         % [ATP]-saturated ceiling on the p2 detachment rate (s^-1); used when UseR2Ceiling
         'K_T2c', 0.15, ...         % MgATP half-saturation of that ceiling (mM); used when UseR2Ceiling
+        'SRXFromR2', 0, ...        % fraction of the WHOLE strong-bridge detachment flux (R2 in 2-state, R3 in 3-state) that lands in the SRX pool instead of the DRX pool PT. 1 => detachment is obligatorily via SRX (SRX becomes an in-series step of every cycle). Strain-independent
+        'SRXFromR2HighStrain', 0, ...% same, but only for the HIGH-STRAIN (mechanical-rupture) part of that flux: fraction ramps 0->this over s in [sSRXrip, sSRXrip+dSRXrip]. The low-strain chemical path is untouched, so the effect exists only while the fibre is stretched
+        'sSRXrip', 0.015, ...      % half-sarcomere strain (um) where the rupture branch starts recoiling into SRX; used when SRXFromR2HighStrain > 0
+        'dSRXrip', 0.005, ...      % width (um) of that ramp; used when SRXFromR2HighStrain > 0
+        'SRXRecoilToD', false, ... % destination of the routed flux: false => P_SR (SRX with ATP, i.e. the head completed the chemical cycle); true => P_SRD (SRX with ADP, the correct destination for a MECHANICALLY ruptured bridge, which never released its ADP)
+        'SRXRecoilToD0', false, ...% send the routed flux to the D0 pool instead (takes precedence over SRXRecoilToD; requires UseD0State). Control experiment: D0 differs from the SRX states ONLY in that its exit k_D0T is force-INDEPENDENT, so this isolates the SRX exit force gate as the cause of the routing's sign
+        'UseLoadRealign', false, ...% COMPLIANT REALIGNMENT: bound bridges set the register of neighbouring actin sites through filament compliance, so stripping bound mass WHILE THE FILAMENT STAYS LOADED leaves the register disturbed and re-equilibration takes time. Appends +1 scalar state A_def (a deficit) at the tail, gating ka_eff by (1-A_def). Driven by net LOSS of bound mass weighted by force, so it is exactly zero at any steady state -> inert at the operating point, and it separates the recovery windows by construction (post-restretch strips p2 at 0.84 F_iso; post-slack strips it at F=0)
+        'k_cr', 3, ...             % gain: A_def gained per unit of bound mass lost under full load [-]. Used when UseLoadRealign
+        'tau_cr', 0.020, ...       % re-equilibration time of the register (s). Used when UseLoadRealign
+        'F_cr', 25, ...            % force (kPa) at which the load weighting F/(F+F_cr) is half-maximal; F_cr -> 0 makes the deficit load-independent. Used when UseLoadRealign
+        'Adef_max', 0.9, ...       % ceiling on the deficit, so the attachment gate (1-A_def) cannot reach 0. Used when UseLoadRealign
+        'SRDOutflowK', 0, ...      % FIXED-DWELL outflow from P_SRD: RSRD2PD *= P_SRD/(P_SRD+SRDOutflowK). For P_SRD >> SRDOutflowK the outflow is a CONSTANT FLUX (zeroth order), so the pool drains linearly and a bigger slug takes proportionally longer to clear -- a dwell time rather than a rate. 0 => the legacy first-order form exactly
+        'D0OutflowK', 0, ...       % same fixed-dwell saturation on the D0 -> PT outflow (RD0T). 0 => legacy first-order. Used when UseD0State
         'UseMaxwellDashpot', false, ...
         'mu_neg', '=mu', ...
         'mu2', 0, ...
@@ -577,7 +590,7 @@ end
     
     
     %% Step 8: Initialize state vector PU0
-    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseD0State;
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseD0State + params.UseLoadRealign;
     PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
@@ -607,10 +620,17 @@ end
         else
             D0_0 = [];
         end
+        % Compliant-realignment deficit: zero at rest (the register is
+        % equilibrated). Appended LAST, index Ns*ss+8+UseRegistrationAvailability+UseD0State.
+        if params.UseLoadRealign
+            A_def0 = 0;
+        else
+            A_def0 = [];
+        end
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0, A_def0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0, A_def0];
 		end
 		
 		if params.UseSuperRelaxedADP

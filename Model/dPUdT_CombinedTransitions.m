@@ -134,6 +134,21 @@ else
     D0 = 0;
 end
 
+% Compliant-realignment deficit A_def (index Ns*ss+8+UseRegistrationAvailability+UseD0State,
+% i.e. appended after D0). Bound bridges set the register of the neighbouring actin
+% sites through filament compliance (Daniel 1998; Tanner, Daniel & Regnier 2007), so
+% stripping bound mass WHILE THE FILAMENT STAYS LOADED leaves the register disturbed
+% and re-equilibration takes tau_cr. A_def is that disturbance; it gates attachment
+% below. Driven by the NET loss of bound mass, so it vanishes identically at any
+% steady state -> the mechanism is a pure transient and does not rescale ka.
+% When the feature is off the state is absent and A_def = 0 (identity).
+if params.UseLoadRealign
+    A_def = min(params.Adef_max, max(0, ...
+        PU(Ns*ss + 8 + params.UseRegistrationAvailability + params.UseD0State)));
+else
+    A_def = 0;
+end
+
 
 
 
@@ -356,6 +371,11 @@ end
 if params.UseRegistrationAvailability
     ka_eff = ka_eff * A_reg;
 end
+% Compliant-realignment gate: sites whose register was disturbed by bound mass
+% stripped under load are unavailable until re-equilibration. A_def = 0 when off.
+if params.UseLoadRealign
+    ka_eff = ka_eff * (1 - A_def);
+end
 RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
 
 % Global (mean-field) binding-site occupancy saturation of attachment.
@@ -502,6 +522,13 @@ XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))
 % becomes ATP-limited. This is what makes the refractory pool [ATP]-dependent.
 if params.UseD0State
     RD0T = params.k_D0T * params.MgATP/(params.K_D0T + params.MgATP) * D0;
+    % Fixed-dwell version (see the P_SRD note below). D0 is fed ONLY by the
+    % rupture/recoil flux, so a constant outflow here is a dwell time imposed on
+    % exactly the heads torn off by the stretch and on nothing else — the one
+    % place in this model where a residence time can be made protocol-selective.
+    if params.D0OutflowK > 0
+        RD0T = RD0T * params.D0OutflowK / (D0 + params.D0OutflowK);
+    end
 else
     RD0T = 0;
 end
@@ -528,6 +555,45 @@ if params.UseCatchBond && vel > 0
     end
 end
 
+% Destination of the strong-bridge detachment flux: DRX (PT) or SRX.
+% The detaching head has two ways out of p2 and the model currently gives both the
+% same destination — the DRX/ATP-cocked pool PT:
+%   (a) chemical cycle completion (ADP release -> ATP binding -> detach), the
+%       low-strain part of R2. Ends as M.ATP, so PT *or* SRX-with-ATP (P_SR) are
+%       both chemically legal destinations; which one it is, is the question
+%       SRXFromR2 asks (1 => folding back is obligatory, SRX is in series with
+%       every cycle rather than a side pool fed only from PT).
+%   (b) mechanical rupture, the unbounded strain acceleration of R2 (700-4600 /s at
+%       restretch strains). That head never released its ADP, so PT is the one
+%       destination it cannot have. SRXFromR2HighStrain routes that branch alone,
+%       leaving the operating-point path untouched: the detour exists only while
+%       the fibre is stretched past sSRXrip, i.e. only during a restretch.
+%       Note this is a DESTINATION switch, not a rate cap — R2(s) itself is
+%       unchanged, so the restretch and ktr-overstretch force peaks that pin it
+%       (Analyses/ApoPoolDetachment) are unaffected by construction.
+% SRXRecoilToD picks P_SRD (SRX.ADP) over P_SR (SRX.ATP) as the landing state,
+% which is the nucleotide-consistent choice for branch (b).
+% Fully inert at the defaults (both fractions 0).
+fR2_srx = params.SRXFromR2;
+if params.UseDirectSRXTransition
+    fR2_srx = 1;   % legacy all-or-nothing flag == SRXFromR2 = 1
+end
+if params.SRXFromR2HighStrain > 0
+    fR2_srx = fR2_srx + params.SRXFromR2HighStrain * ...
+        min(1, max(0, (s - params.sSRXrip) / max(params.dSRXrip, 1e-9)));
+end
+if any(fR2_srx > 0)
+    % The flux that leaves the attached pool for the detached pool: R2 in
+    % 2-state, R3 in 3-state (there R2 is only p2 -> p3, still attached).
+    if Ns == 3
+        RdetSRX = sum(min(1, fR2_srx) .* R3) * dS;
+    else
+        RdetSRX = sum(min(1, fR2_srx) .* R2) * dS;
+    end
+else
+    RdetSRX = 0;
+end
+
 %% Super-relaxed (SRX/DRX) dynamics
 % F_SR = (SL-LSE);
 if params.UseSuperRelaxedADP
@@ -541,6 +607,24 @@ if params.UseSuperRelaxedADP
         kmsrd_eff = kmsrd_eff * gATP;
     end
     RSRD2PD = kmsrd_eff*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
+    % FIXED-DWELL outflow. A first-order rate gives an exponential residence time
+    % whose mean is set by the rate alone; a head that has just arrived is as
+    % likely to leave as one that has been there 50 ms. Saturating the outflow in
+    % the pool occupancy makes it a CONSTANT FLUX once the pool is stocked
+    % (P_SRD >> SRDOutflowK), so the pool drains LINEARLY: a slug of size m takes
+    % m/J to clear. That is a dwell time rather than a rate, and — unlike a rate —
+    % it makes a BIGGER slug take PROPORTIONALLY LONGER, which is the sign the
+    % post-restretch amplitude dependence needs.
+    %   flux = kmsrd_eff*e^(F/s) * K * P_SRD/(P_SRD+K)
+    %        -> legacy first-order EXACTLY as P_SRD -> 0 (factor K/(P_SRD+K) -> 1)
+    %        -> constant flux kmsrd_eff*e^(F/s)*K once P_SRD >> K
+    % So SRDOutflowK is the crossover occupancy and the only new parameter; the
+    % legacy rate is preserved at low occupancy. Inert at SRDOutflowK = 0.
+    if params.SRDOutflowK > 0
+        % max(0,·): P_SRD can undershoot slightly during a solver trial step, and
+        % a raw P_SRD near -SRDOutflowK would put a pole in the RHS.
+        RSRD2PD = RSRD2PD * params.SRDOutflowK / (max(0, P_SRD) + params.SRDOutflowK);
+    end
     if params.UseLimitedSRDTransition
         RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)))*PD;
     else
@@ -571,11 +655,19 @@ end
 
 
 dU_SRD = RSR2SRD - RSRD2SR - RSRD2PD  + RPD2SRD ;
+dU_SR  = -RSR2PT  + RPT2SR + RSRD2SR - RSR2SRD;
 
-if params.UseDirectSRXTransition
-    dU_SR = -RSR2PT  + RPT2SR + sum(R2)*dS + RSRD2SR - RSR2SRD;
-else    
-    dU_SR = -RSR2PT  + RPT2SR + RSRD2SR - RSR2SRD;
+% Land the detachment flux routed to SRX above. PT is the complementary pool, so
+% adding the mass here is what withholds it from PT — no explicit PT term exists.
+% Guarded so the routing can never create an absorbing sink: a pool whose exit
+% machinery is switched off would swallow the mass permanently.
+% (the D0 destination is landed further down, where dD0 is assembled)
+if RdetSRX > 0 && ~(params.SRXRecoilToD0 && params.UseD0State)
+    if params.SRXRecoilToD && params.UseSuperRelaxedADP
+        dU_SRD = dU_SRD + RdetSRX;   % SRX.ADP — nucleotide-consistent for rupture
+    elseif params.UseSuperRelaxed
+        dU_SR  = dU_SR  + RdetSRX;   % SRX.ATP
+    end
 end
 
 if params.UseA2AttachmentShift
@@ -644,6 +736,13 @@ if params.UseD0State
     dD0 = sum(XB_Ripped)*dS - RD0T;
     if params.D0FromR2 > 0
         dD0 = dD0 + params.D0FromR2 * sum(R2)*dS;
+    end
+    %   (c) the strain-gated recoil flux, when D0 is its chosen destination.
+    %       D0 is identical to the SRX states as a refractory pool EXCEPT that
+    %       its exit k_D0T is force-independent, so this is the control that
+    %       isolates the SRX exit force gate.
+    if params.SRXRecoilToD0
+        dD0 = dD0 + RdetSRX;
     end
 end
 
@@ -795,7 +894,48 @@ if params.UseD0State
     f = [f; dD0];
 end
 
-rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS];
+% Compliant-realignment deficit, appended after D0.
+%   dA_def/dt = k_cr * [rate of bound-mass LOSS] * [load weighting] - A_def/tau_cr
+% The driver is the NET change of the bound population (dp1+dp2+dp3 integrated,
+% i.e. attachment minus detachment), so it is identically zero at any steady
+% state — the mechanism cannot rescale ka or shift the operating point, it only
+% acts on transients. This is deliberate: the register is set by the bound
+% population, and a population that is not changing has an equilibrated register.
+%
+% The load weighting F/(F+F_cr) is what separates the recovery windows, and it is
+% the whole point of the mechanism:
+%   post-restretch  p2 is stripped 0.19 -> 0.05 while force HOLDS at 0.84 F_iso
+%                   -> large loss x large weight -> large deficit
+%   post-slack/ktr  p2 collapses too, but force goes to ZERO with it
+%                   -> large loss x ~zero weight -> no deficit
+% so it slows the window that is too fast and leaves the two that are right.
+% Unlike A_reg this is direction-agnostic (it reads disrupted mass, not the sign
+% of velocity) — see Analyses/RestretchVsKtrRecovery §C on why that matters.
+if params.UseLoadRealign
+    % NB in 2-state dp3 is computed but DISCARDED (it carries R2, the flux that
+    % actually leaves for PT), so it must not be counted here.
+    if Ns == 3
+        dBound = sum(dp1 + dp2 + dp3) * dS;
+    else
+        dBound = sum(dp1 + dp2) * dS;
+    end
+    g_load = max(0, F_total) / (max(0, F_total) + params.F_cr);
+    % SMOOTH rectifier (SiLU: u/(1+e^{-u/e})). A hard max(0,·) on the DERIVATIVE
+    % switches every time the bound population crosses from shrinking to growing,
+    % which happens continuously in the post-stretch ringing — ode15s then chases
+    % the corner and the evaluation time explodes. This form is C-infinity, is
+    % exactly 0 at u = 0 (so the steady-state inertness is preserved to machine
+    % precision), and equals u for u >> LOSS_EPS.
+    LOSS_EPS = 0.5;                              % 1/s; << the ~14 1/s stripping rate
+    u = -dBound;
+    loss = u / (1 + exp(-u/LOSS_EPS));
+    dA_def = params.k_cr * loss * g_load - A_def/params.tau_cr;
+    if A_def >= params.Adef_max; dA_def = min(0, dA_def); end   % hold the ceiling
+    f = [f; dA_def];
+end
+
+% RdetSRX appended LAST so existing rates(1..16) indices are untouched.
+rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS, RdetSRX];
 
 if params.DryRun
     f = zeros(size(PU));

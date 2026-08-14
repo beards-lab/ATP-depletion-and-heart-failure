@@ -467,6 +467,9 @@ end
         if params.UseD0State
             out.D0(i) = PU(j, Ns*params.ss + 8 + params.UseRegistrationAvailability);
         end
+        if params.UseLoadRealign
+            out.A_def(i) = PU(j, Ns*params.ss + 8 + params.UseRegistrationAvailability + params.UseD0State);
+        end
 
         % get the XB force from the dpudt directly
         [~, outputs, rates] = fcn(T(j), PU(j, :)', params); 
@@ -496,6 +499,9 @@ end
             out.RSRD2SR(i) = rates(14);
             out.RT2(i)  = rates(15);
             out.R2D(i)  = rates(16);
+        end
+        if length(rates) >= 17
+            out.RdetSRX(i) = rates(17);  % detachment flux routed to SRX/D0
         end
 
         % first moments invalid due to shifting in strain s        
