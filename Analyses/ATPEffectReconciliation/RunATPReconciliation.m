@@ -113,9 +113,13 @@ fbh = extractSlackAttributes(Bh.datatable(:,1),Bh.datatable(:,3),Bh.datatable(:,
 fbl = extractSlackAttributes(Bl.datatable(:,1),Bl.datatable(:,3),Bl.datatable(:,2),Bl.velocitytable,[],[],false,true);
 set(0,'DefaultFigureVisible','on');
 bakerKtr = mean(fbl.ktr,'omitnan')/mean(fbh.ktr,'omitnan');
-fprintf('\n  Baker ktr ratio (uncorrectable for force, but a rate): %.3f\n', bakerKtr);
-allK = [rawK(:,1)' bakerKtr];
-fprintf('  ktr across ALL FOUR preps: %s  mean %.3f  CV %.0f%%\n', ...
+% 2026-08-12: Baker is DROPPED FROM POOLING entirely -- it is an older protocol
+% (2-6x shorter recovery windows, different length ladder), so pooling it with
+% the 2026 protocol days mixes two experiment designs. It is still computed and
+% printed as an independent sanity check, but it enters no statistic.
+fprintf('\n  Baker ktr ratio: %.3f   [REPORTED ONLY -- old protocol, not pooled]\n', bakerKtr);
+allK = rawK(:,1)';
+fprintf('  ktr across the three 2026 preps: %s  mean %.3f  CV %.0f%%\n', ...
         mat2str(round(allK,3)), mean(allK), cv(allK));
 fprintf('  Correcting ktr for rundown pushes CV %0.f%% -> %0.f%% : DO NOT correct it.\n', ...
         cv(rawK(:,1)), cv(corK(:,1)));
@@ -125,7 +129,7 @@ FORCE = mean(corF(:));  KTR = mean(allK);
 fprintf('\n\n================== THE ATP EFFECT ==================\n');
 fprintf('  FORCE  x%.2f   (rundown-corrected, %d features x %d preps, CV %.0f%%)\n', ...
         FORCE, numel(fF), nP, cv(corF(:)));
-fprintf('  ktr    x%.2f   (raw, 4 preps incl. Baker, CV %.0f%%)\n', KTR, cv(allK));
+fprintf('  ktr    x%.2f   (raw, %d 2026 preps, Baker excluded, CV %.0f%%)\n', KTR, nP, cv(allK));
 fprintf('  => 2 mM ATP makes the muscle STRONGER and SLOWER.\n');
 fprintf('     force x ktr = x%.2f, so the slowed turnover outweighs the extra force.\n', FORCE*KTR);
 
@@ -155,8 +159,8 @@ legend('Location','best','FontSize',7);
 
 nexttile; hold on; box on;
 b = bar([allK'; nan]); b.FaceColor = 'flat';
-b.CData = [cols; 0.4 0.4 0.4; 1 1 1];
-set(gca,'XTick',1:4,'XTickLabel',[P(:,1)' {'Baker'}]);
+b.CData = [cols; 1 1 1];
+set(gca,'XTick',1:nP,'XTickLabel',P(:,1)');
 yline(KTR,'k--','LineWidth',1.5); ylabel('ktr ratio 2 mM / 8 mM'); ylim([0 0.8]);
 title(sprintf('ktr: raw, already consistent (CV %.0f%%)', cv(allK)));
 
@@ -186,11 +190,13 @@ ylabel('force ratio'); title('Spread collapses after correction');
 nexttile; hold on; box on;
 txt = {sprintf('\\bfATP effect (2 mM vs 8 mM)\\rm'), '', ...
        sprintf('FORCE   \\times%.2f   (CV %.0f%%, n=%d preps)', FORCE, cv(corF(:)), nP), ...
-       sprintf('ktr     \\times%.2f   (CV %.0f%%, n=4 preps)', KTR, cv(allK)), '', ...
+       sprintf('ktr     \\times%.2f   (CV %.0f%%, n=%d preps)', KTR, cv(allK), nP), '', ...
        'Low ATP -> STRONGER and SLOWER.', '', ...
        sprintf('rundown correction: \\phi=%.2f on', PHI), ...
        'effective activated time', '', ...
-       'Baker excluded from force (truncated', 'recovery, different protocol).'};
+       'Baker DROPPED entirely: old protocol,', ...
+       'truncated recovery. (Its ktr ratio is', ...
+       sprintf('%.2f -- consistent, but not pooled.)', bakerKtr)};
 text(0.03, 0.95, txt, 'VerticalAlignment','top','FontSize',10); axis off;
 
 sgtitle('The ATP effect, reconciled across protocol days after rundown correction');

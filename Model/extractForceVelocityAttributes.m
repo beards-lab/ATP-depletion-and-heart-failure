@@ -45,3 +45,32 @@ features.FV_v = FV_x;
 features.FV_f = F_active(win)';
 % force normalized
 features.FV_fnorm = features.FV_f./features.FV_f(1);
+
+% ---- POWER --------------------------------------------------------------
+% Power = force x shortening velocity. It is the observable the ATP effect
+% actually shows up in (peak power and the velocity it occurs at both move
+% between 8 and 2 mM), and unlike FV_fnorm it is not dominated by the
+% isometric point, which carries no information about cross-bridge kinetics.
+%
+% The MODEL has a single FV curve, so the per-dataset fields are aliases of
+% that one curve. They exist so the same fn entry can score the model against
+% the two-dataset average built on the data side (see runFVExperiment), which
+% is where FV_power1/2 genuinely differ. FV_normpowerVar is a property of the
+% DATA spread only; on the model side it is zero by construction and is
+% emitted purely so a stray fn entry cannot score MISSING_FEATURE_COST.
+% The v = 0 point is EXCLUDED: power there is identically zero in every dataset
+% and in every model, by definition. Including it would contribute exactly zero
+% error while soaking up weight mass, making the inverse-variance weights on the
+% informative points smaller than they appear. FV_powerv records the velocities
+% these arrays are on, since they are shorter than FV_v.
+ipw = features.FV_v > 0;
+features.FV_powerv    = features.FV_v(ipw);
+features.FV_power     = features.FV_f(ipw)     .* features.FV_powerv;
+features.FV_normpower = features.FV_fnorm(ipw) .* features.FV_powerv;
+
+features.FV_power1       = features.FV_power;
+features.FV_power2       = features.FV_power;
+features.FV_normpower1   = features.FV_normpower;
+features.FV_normpower2   = features.FV_normpower;
+features.FV_normpowerAvg = features.FV_normpower;
+features.FV_normpowerVar = zeros(size(features.FV_normpower));

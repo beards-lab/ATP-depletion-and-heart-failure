@@ -14,6 +14,12 @@ function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn,
 %     'field_y|field_x|weight'  X-Y scatter with weight
 %     'field|lb-ub'             boundary check: cost=0 inside [lb,ub], quadratic outside
 %     'field|lb-ub|weight'      boundary check with explicit weight
+%     'field|w:varfield'        PER-ELEMENT weights: varfield is read from
+%                               FEATS_DATA and treated as a variance; weights are
+%                               inverse-variance, floored at 10% of the mean
+%                               variance, renormalised to mean 1. Combines with a
+%                               scalar weight: 'field|w:varfield|weight'.
+%                               e.g. 'FV_normpowerAvg|w:FV_normpowerVar|20'
 %     'f1|w1|lb1-ub1,f2|lb2-ub2'  grouped boundary check: one joint cost, one bar tile
 %     'field|@(X,Y_data) expr'  custom cost function (escape hatch)
 %
@@ -134,12 +140,21 @@ function [c, w] = evalOneSubEntry(feat, sel, tail_tokens, feats_data, feats_sim,
 %   C  - unweighted cost scalar
 %   W  - weight (default 1)
 
-w         = 1;
-range_tok = '';
+VAR_FLOOR_FRAC = 0.1;   % shrinkage floor on the variance used for weighting,
+                        % as a fraction of its own mean. Without it a point where
+                        % the sources happen to agree exactly (e.g. power at v=0,
+                        % which is 0 in every dataset by construction) would get
+                        % infinite weight.
+
+w          = 1;
+range_tok  = '';
+wvec_field = '';
 
 for ti = 1:numel(tail_tokens)
     tok = tail_tokens{ti};
-    if isRangeToken(tok)
+    if startsWith(tok, 'w:')
+        wvec_field = tok(3:end);          % per-element weights from a DATA field
+    elseif isRangeToken(tok)
         range_tok = tok;
     else
         wv = str2double(tok);
@@ -168,6 +183,35 @@ else
     fs  = applyFeatSelector(double([feats_sim.(feat)]),  sel);
     n_F = mean(fd, 'omitnan');
     if n_F == 0; n_F = 1; end
-    c = sum(abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
+
+    % Per-element weights (optional). 'w:FIELD' takes FIELD from feats_DATA —
+    % a weight is a property of how well the measurement is determined, so it
+    % must not depend on the model. Interpreted as a VARIANCE: weights are
+    % inverse-variance, floored at VAR_FLOOR_FRAC of the mean variance, then
+    % renormalised to mean 1 so the scalar weight keeps its usual meaning and
+    % the term's magnitude stays comparable to an unweighted one.
+    wvec = 1;
+    if ~isempty(wvec_field)
+        if ~isfield(feats_data, wvec_field)
+            error('evalFeatureCost:missingWeightField', ...
+                  'Weight field "%s" (from "w:%s") is not in feats_data.', ...
+                  wvec_field, wvec_field);
+        end
+        vv = applyFeatSelector(double([feats_data.(wvec_field)]), sel);
+        if numel(vv) ~= numel(fd)
+            error('evalFeatureCost:weightLengthMismatch', ...
+                  'Weight field "%s" has %d elements but "%s" has %d.', ...
+                  wvec_field, numel(vv), feat, numel(fd));
+        end
+        vbar = mean(vv, 'omitnan');
+        if isfinite(vbar) && vbar > 0
+            vv   = max(vv, VAR_FLOOR_FRAC * vbar);
+            wvec = 1 ./ vv;
+            wvec = reshape(wvec / mean(wvec, 'omitnan'), size(fd));
+        end
+        % all-zero / non-finite variance => leave wvec = 1 (uniform)
+    end
+
+    c = sum(wvec .* abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
 end
 end
