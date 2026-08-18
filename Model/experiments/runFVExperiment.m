@@ -121,16 +121,55 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
             features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,a+1)', struct(), FV_velocities);
         else
             % Hardcoded Baker lab 8 mM reference values (avoids re-extracting each iteration)
-            AllVelocities = -[0, 0.5, 1, 2, 3, 4, 5, 6, 7];
-            if strcmp(params0.FV_dataset, 'Baker2022')
-                AllForces     = [56.40, 51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120];
-            elseif strcmp(params0.FV_dataset,'IsovelocityForFilip2021')
-                AllForces = [67.3942   60.9885   42.7059   18.8539 12.5956    6.4426    3.5136    1.8556];
+            % NB there are 8 forces, so only 8 velocities. The list previously
+            % carried a 9th entry (-7) with no matching force, which would have
+            % indexed past the end had FV_velocities ever asked for it.
+            AllVelocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
+            FV_SETS = { 'Baker2022',               [56.40,   51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120]
+                        'IsovelocityForFilip2021', [67.3942, 60.9885, 42.7059, 18.8539, 12.5956, 6.4426, 3.5136, 1.8556] };
+            iset = find(strcmp(FV_SETS(:,1), params0.FV_dataset), 1);
+            if isempty(iset)
+                error('runFVExperiment:unknownFVdataset', ...
+                      'params0.FV_dataset = "%s" is not one of: %s', ...
+                      params0.FV_dataset, strjoin(FV_SETS(:,1)', ', '));
             end
+            AllForces = FV_SETS{iset,2};
+
             vsel = find(ismember(AllVelocities, FV_velocities));
             features_data.FV_v     = -AllVelocities(vsel)';
             features_data.FV_f     = AllForces(vsel)';
             features_data.FV_fnorm = AllForces(vsel)'/AllForces(1);
+
+            % ---- POWER, from BOTH datasets ------------------------------
+            % The two FV curves come from different preparations/sources, so
+            % their absolute forces are not comparable (isometric 56.4 vs 67.4
+            % kPa) but their SHAPES are. Each is therefore normalised by its
+            % OWN isometric force before power is formed, and the two are
+            % averaged. The per-point variance between them is the honest
+            % statement of how well-determined each velocity is, and is what
+            % the 'w:FV_normpowerVar' weighting in the objective consumes.
+            i0 = find(AllVelocities == 0, 1);
+            if isempty(i0)
+                error('runFVExperiment:noIsometric', ...
+                      'FV reference set has no v=0 point to normalise by.');
+            end
+            % v = 0 excluded — power there is identically 0 in every dataset by
+            % definition, so it can never contribute error, and including it
+            % would only dilute the inverse-variance weights on the points that
+            % do carry information. Must match extractForceVelocityAttributes.
+            ipw  = features_data.FV_v > 0;
+            vpos = features_data.FV_v(ipw);
+            vsp  = vsel(ipw);
+            features_data.FV_powerv = vpos;
+            P = zeros(numel(vsp), size(FV_SETS,1));
+            for q = 1:size(FV_SETS,1)
+                Fq = FV_SETS{q,2};
+                features_data.(sprintf('FV_power%d', q))     = Fq(vsp)' .* vpos;
+                features_data.(sprintf('FV_normpower%d', q)) = (Fq(vsp)'/Fq(i0)) .* vpos;
+                P(:,q) = features_data.(sprintf('FV_normpower%d', q));
+            end
+            features_data.FV_normpowerAvg = mean(P, 2);
+            features_data.FV_normpowerVar = var(P, 0, 2);
         end
         features_model = extractForceVelocityAttributes(FV_velocities, F_active(a, :), features_model, FV_velocities);
     end
