@@ -124,6 +124,9 @@ end
         'UseSuperRelaxed', false, ...
         'UseSpaceExtension', false,...
         'MaxRunTime', Inf, ... % maximal model runtime in seconds before is killed. Used to unstuck the optimization
+        'odeRelTol', 1e-2, ... % ode15s RelTol. Loose for speed; tightening buys little (see below)
+        'odeAbsTol', 1e-4, ... % ode15s AbsTol. Cost scatter is sigma~0.076 and only ~0.057 at RelTol 1e-3
+                           ... %   -> Analyses/AtpGateHillForm/conclusions.md §3-3a before using these
         'NumberOfStates', 2, ... % number of strain-dependent states
         'UseTitinInterpolation', false, ... % interpolating titin pre-simulated force at each model eval
         'MaxSlackNegativeForce', 0, ... 
@@ -369,6 +372,25 @@ end
     params0.pAtp_dr         = 0;   % power-stroke displacement
     params0.pAtp_dr2        = 0;   % R2 strain offset
     params0.pAtp_P_bound_max = 0;  % occupancy-saturation ceiling
+
+    % --- Saturable (Hill/Michaelis) variant of the same gates ---------------
+    % AtpGateForm = 'power' keeps the legacy rate*(ATP/ATP_ref)^p.
+    % AtpGateForm = 'hill'  switches to the classic saturable form, renormalised so
+    % MgATP_ref is still exactly untouched:
+    %     rate_eff = rate * Corr_ref * ATP^p/(KAtp^p + ATP^p),
+    %     Corr_ref = (KAtp^p + ATP_ref^p)/ATP_ref^p        (= 1/hill(ATP_ref))
+    % pAtp_* doubles as the Hill coefficient; KAtp_* is that step's half-saturating
+    % [ATP] in mM. KAtp = Inf reproduces the power law EXACTLY (its unsaturated
+    % limit), so every existing snapshot is byte-identical under either form. With
+    % data at only two [ATP] the pair (p, K) is not jointly identifiable -- one of
+    % them must be fixed; see Analyses/AtpGateHillForm/conclusions.md.
+    params0.AtpGateForm = 'power';
+    atpGated = {'k2','kmsrd','kah','kamh','ka','kd','k1','k_1', ...
+                'ksr0','ksr2srd','ksrd2sr','tau_reg','A0','eta_M', ...
+                'kstiff2','kSE','kSE_M','mu_neg','dr','dr2','P_bound_max'};
+    for i_atpg = 1:numel(atpGated)
+        params0.(['KAtp_' atpGated{i_atpg}]) = Inf;   % Inf => power law (inert switch)
+    end
 
     % --- Joint (dual-condition) ATP fit -----------------------------------
     % When UseAtpJointFit is true the objective becomes an ABSOLUTE two-condition

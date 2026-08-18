@@ -67,12 +67,25 @@ if isfield(params, 'RemoveField') && ~isempty(params.RemoveField)
     end
 end
 
-%% ---- General 8 mM-inert ATP power gates --------------------------------------
-% rate_eff = rate * (MgATP/MgATP_ref)^p.
-% The factor is EXACTLY 1 at MgATP = MgATP_ref for ANY p, so the high-ATP fit is
-% bit-identical no matter what the optimiser does with these exponents; p > 0
-% suppresses the rate at low ATP, p < 0 enhances it. This gives the low-ATP fit many
-% degrees of freedom at ZERO cost to the high-ATP fit -- the key asymmetry.
+%% ---- General 8 mM-inert ATP gates ---------------------------------------------
+% Two functional forms, both EXACTLY 1 at MgATP = MgATP_ref for any coefficients, so
+% the high-ATP fit is bit-identical whatever the optimiser does; the gate only ever
+% moves the low-ATP condition. This gives the low-ATP fit many degrees of freedom at
+% ZERO cost to the high-ATP fit -- the key asymmetry.
+%
+%   AtpGateForm = 'power' (legacy):  rate_eff = rate * (ATP/ATP_ref)^p
+%   AtpGateForm = 'hill'          :  rate_eff = rate * Corr_ref * ATP^p/(K^p + ATP^p)
+%                                    with Corr_ref = (K^p + ATP_ref^p)/ATP_ref^p
+%
+% The Hill form is the saturable version: pAtp_* is the Hill coefficient and the new
+% KAtp_* is the half-saturating [ATP] (mM) of that step. K -> Inf recovers the power
+% law exactly (the unsaturated limit), which is why KAtp_* defaults to Inf and old
+% snapshots are byte-identical. K -> 0 kills the gate (fully saturated at both
+% conditions). p < 0 makes it an ATP-INHIBITED step (rate rises as ATP falls), where
+% the roles of the two K limits swap. Unlike the power law the Hill form is bounded
+% as ATP -> 0 and ATP -> Inf, which is what makes extrapolation off the two measured
+% concentrations physically meaningful. See Analyses/AtpGateHillForm/.
+%
 % Applied HERE (once per simulation) rather than in dPUdT, which is the ODE RHS and
 % would pay the dynamic-field lookup on every call. params is a local copy, so this
 % cannot leak back to the caller and cannot be applied twice.
@@ -86,10 +99,20 @@ if isfield(params, 'UseAtpPowerGates') && params.UseAtpPowerGates
         gated = {'k2','kmsrd','kah','kamh','ka','kd','k1','k_1', ...
                  'ksr0','ksr2srd','ksrd2sr','tau_reg','A0','eta_M', ...
                  'kstiff2','kSE','kSE_M','mu_neg','dr','dr2','P_bound_max'};
+        useHill = isfield(params, 'AtpGateForm') && strcmpi(params.AtpGateForm, 'hill');
         for gi = 1:numel(gated)
             pn = ['pAtp_' gated{gi}];
             if isfield(params, pn) && params.(pn) ~= 0 && isfield(params, gated{gi})
-                params.(gated{gi}) = params.(gated{gi}) * rATP ^ params.(pn);
+                nATP = params.(pn);          % Hill coefficient (= the power-law exponent)
+                kn   = ['KAtp_' gated{gi}];
+                if useHill && isfield(params, kn) && isfinite(params.(kn)) && params.(kn) > 0
+                    KnATP   = params.(kn) ^ nATP;
+                    corrRef = (KnATP + params.MgATP_ref^nATP) / params.MgATP_ref^nATP;
+                    fATP    = corrRef * params.MgATP^nATP / (KnATP + params.MgATP^nATP);
+                else
+                    fATP = rATP ^ nATP;  % power law == the K -> Inf limit of the Hill form
+                end
+                params.(gated{gi}) = params.(gated{gi}) * fATP;
             end
         end
     end
@@ -175,6 +198,16 @@ i_tf0 = 0;
 % which causes ode15s to use a deficient Jacobian → thousands of tiny timesteps.
 % Left as a no-op until a representative non-zero state is available for pattern computation.
 
+% ODE tolerances. Deliberately loose for speed. Tightening them is NOT the lever it
+% looks like: the 2 mM feature cost carries scatter of sigma ~0.076 (peak-to-peak 0.25)
+% under parameter nudges of order 1e-9, and a full decade of RelTol only takes that to
+% 0.057 for 1.4x the runtime -- the roughness is dominated by discrete decisions
+% downstream (event crossings, fit windows), not by truncation error. Measured in
+% Analyses/AtpGateHillForm/conclusions.md §3-3a. Overridable so it stays measurable;
+% absent fields keep the historical values, so every existing run is unchanged.
+if isfield(params, 'odeAbsTol'), odeAbsTol = params.odeAbsTol; else, odeAbsTol = 1e-4; end
+if isfield(params, 'odeRelTol'), odeRelTol = params.odeRelTol; else, odeRelTol = 1e-2; end
+
 % vs for VelocitySegment
 for vs = 1:length(T) - 1
     ts = T(vs);
@@ -186,7 +219,7 @@ for vs = 1:length(T) - 1
     params.Vums = params.v*params.ML; % velocity in um/s
 
 
-    opts = odeset('Events', @movingWindow, 'AbsTol', 1e-4, 'RelTol', 1e-2);
+    opts = odeset('Events', @movingWindow, 'AbsTol', odeAbsTol, 'RelTol', odeRelTol);
 
     % test odess
     %         tic
