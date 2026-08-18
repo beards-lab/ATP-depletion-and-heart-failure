@@ -6,11 +6,16 @@ load-realignment refit). The low-ATP fit was built on the *previous* baseline
 good the 2 mM fit is now.
 
 **Verdict.** The transfer works and it is a large, real improvement: **2 mM feature cost
-19.58 → 12.44** on one fixed yardstick, against a scatter floor of ~0.25. Nothing was
-refitted at low ATP. The gain is **not** the gates doing something new — it is that
-realign4 fixed a defect the two conditions *share*, and the 2 mM condition inherited it.
-The specifically-ATP part of the residual is essentially untouched: the model's
-`rsK` ratio is 0.588 against a measured 0.363, versus 0.600 before.
+19.58 → 12.44** on one fixed yardstick, against a scatter floor of ~0.25. Refitting the
+gates on the new baseline then buys a further **12.44 → 11.20** (§5).
+
+But the gain is **not** the gates doing something new — it is that realign4 fixed a
+defect the two conditions *share*, and the 2 mM condition inherited it. The
+specifically-ATP part of the residual survives both steps intact: `rsK`'s ratio is 0.587
+against a measured 0.363, versus 0.600 before any of this. The refit, given 21 free ATP
+exponents, moved `rsK` by **0.02** and spent two of its three accepted moves on
+**mechanical** levers (`eta_M`, `kSE`) rather than rate constants. The kinetic gates are
+exhausted; what remains is structural.
 
 ---
 
@@ -125,7 +130,87 @@ Mostly no, and this is the honest limit of the result. Ratios are 2 mM / 8 mM:
   the valley and second peak. These are the terms that got worse in §3 and they are the
   natural targets for a refit.
 
-## 5. What this does and does not license
+## 5. The refit
+
+Round 3, `RunGateRefit.m`: the same 21 exponents, seeded from the transferred values,
+optimised on the realign4 baseline against its own feature list. Three changes from
+round 2, all forced by [AtpGateHillForm](../AtpGateHillForm/conclusions.md) §3a — accept
+threshold **0.25** (the measured peak-to-peak scatter) instead of `1e-4`, coarse steps,
+and `%.17g` serialisation. Converged in **36.5 min / 79 evaluations**, well inside the
+3 h budget: it ran out of moves, not time.
+
+**2 mM cost 12.4399 → 11.2037** (−1.24, −10 %). Written to
+`params/lowATP_realign4_gates_opt.m`. 8 mM invariance asserted exactly zero.
+
+**Only three moves cleared the threshold, out of 21 gates:**
+
+| gate | tier | seed → refit | ×factor at 2 mM | Δcost |
+|---|---|---|---|---|
+| `kmsrd` SRX-ADP return | A | +0.636 → +0.486 | 0.414 → **0.510** | −0.251 |
+| `eta_M` Maxwell dashpot | A* | 0.000 → **−0.200** | 1.000 → **1.319** | −0.464 |
+| `kSE` series elastic | B | +0.070 → +0.150 | 0.907 → **0.812** | −0.521 |
+
+The other 18 — including **every core rate constant**: `k2`, `kah`, `kamh`, `ka`, `kd`,
+`k1`, `k_1`, `ksr0`, `ksr2srd`, `ksrd2sr` — did not move at all. Stage 1 tested the nine
+already-active gates at ±0.15/±0.30 and accepted exactly one.
+
+### 5a. What the refit is telling us, which is more than the −1.24
+
+**The gains are in the mechanical levers, not the kinetic ones.** `eta_M` (a viscosity)
+and `kSE` (a series stiffness) together supply **0.99 of the 1.24** — and both are the
+levers this project has flagged as the weakest physiological claims (`getParams` calls
+`eta_M` "least defensible"; `kSE` is tier B by construction). The cross-bridge *rate*
+gates are done: they were already at a local optimum, and the objective's remaining
+low-ATP degrees of freedom are compliance, not chemistry.
+
+That is exactly what §4's conflict predicts. `ktr` needed *less* low-ATP suppression and
+`rsK` needed *more*, on two rates driven by the same core cycle, so no strain-uniform
+kinetic gate can serve both. The optimiser did the only thing available: it took the one
+kinetic move that helps `ktr` (`kmsrd`, the `ktr` lever, relaxed 0.414 → 0.510) and paid
+for the rest with series compliance.
+
+**Where the −1.24 landed, and what it cost:**
+
+| feature | seed | refit | Δ |
+|---|---|---|---|
+| `vall2_dy` | 1.801 | 1.180 | −0.62 |
+| `coolDownLS` | 1.616 | 1.280 | −0.34 |
+| `ktr` | 0.725 | 0.424 | −0.30 |
+| `vall_y` | 0.798 | 0.691 | −0.11 |
+| `ktr_rmse` | 0.191 | 0.114 | −0.08 |
+| `A` | 0.610 | 0.534 | −0.08 |
+| `peak1_dSL` | 0.282 | 0.427 | +0.15 |
+| `restretchSlopeStart` | 0.580 | 0.700 | +0.12 |
+| **`rsK`** | **2.756** | **2.736** | **−0.02** |
+
+The refit **recovered the terms the transfer had broken** — `ktr`, `A`, `ktr_rmse` and
+`vall2_dy` were four of the six that got worse in §3, and all four came back. `ktr`'s
+ratio improves 0.469 → 0.504 against a measured 0.537 (m/d 0.87 → **0.94**).
+
+**`rsK` did not move — 2.756 → 2.736.** It is now **24 % of the whole 2 mM residual** and
+by far the largest single term, and 21 free ATP exponents bought 0.02 of it. Its ratio
+sits at 0.587 against a measured 0.363 (m/d 1.61, unchanged). This is the cleanest
+statement yet that **the residual low-ATP defect is not reachable by any 8 mM-inert rate
+gate**: the levers exist, the optimiser has them, and they do nothing.
+
+`vall_y` and `peak2` also stay stuck at m/d 0.90 — the model under-produces the low-ATP
+enhancement of the valley and second peak, and no gate fixed that either.
+
+### 5b. Two caveats on the number
+
+- `kmsrd`'s move cleared the threshold by 0.001 (−0.251 against 0.25). At σ ≈ 0.076 that
+  is ~3.3σ — defensible, but it is the one move here that a re-run might not reproduce.
+  The `eta_M` and `kSE` moves are ~6σ and ~7σ and are not in question.
+- All costs still carry the constant +1.200 bound-term artifact (§2). The refit's honest
+  numbers are 11.24 → **10.00** against a floor of **1.91**.
+
+**Side note, in the model's favour:** the refit moved `kmsrd`'s 2 mM factor from 0.414 to
+0.510, which raises its implied Km from 7.15 mM toward ~5 mM and its `k/K` from
+2.8×10³ toward ~4×10³ M⁻¹s⁻¹. Still 100× too slow to be ATP binding, so
+AtpGateHillForm's falsification stands — but the fit moved *toward* chemical plausibility
+when given the freedom, not away from it.
+
+## 6. What this does and does not license
 
 - **Does:** adopt `params/lowATP_realign4_gates.m` as the low-ATP snapshot. It is
   strictly better than the incumbent on the current objective and the gates transfer
@@ -133,10 +218,15 @@ Mostly no, and this is the honest limit of the result. Ratios are 2 mM / 8 mM:
 - **Does not:** claim the low-ATP *mechanism* improved. No low-ATP parameter was
   refitted, and the ATP ratios are the same or marginally worse except through `rsK`'s
   shared component.
-- **Next, and cheap:** the gates have never been refitted on this baseline. `rsK`,
-  `vall2_dy`, `ktr` and `A` moved; a re-run of the power-gate optimiser from these
-  exponents should recover most of the +1.6 that the six worsened terms cost — with
-  accept thresholds at ~0.25, not `1e-4` (§3a of AtpGateHillForm).
+- **The refit is now done** (§5) and lands at **11.20**. It recovered the terms the
+  transfer broke, but only by spending series compliance, and it did not touch `rsK`.
+- **Next is not another gate fit.** Round 3 had 21 free exponents and used three, two of
+  them mechanical. The kinetic gates are exhausted. `rsK` is 24 % of the residual and
+  moved by 0.02, so the next step has to be *structural*: something that can slow the
+  post-restretch recovery at low ATP **without** slowing `ktr`. `UseStrainDepAtpGate`
+  (already wired, default-off) is the cheapest candidate — it makes the apparent Km(ATP)
+  rise with strain, which is exactly the `rsK`-vs-`ktr` separation a strain-uniform gate
+  cannot express. It has never been fitted.
 
 ## 6. Files
 
@@ -144,6 +234,8 @@ Mostly no, and this is the honest limit of the result. Ratios are 2 mM / 8 mM:
 |---|---|
 | `BuildCombinedSnapshot.m` | writes `params/lowATP_realign4_gates.m` = realign4 + the gate block, exponents at `%.17g` from the optimiser state |
 | `RunTransferCheck.m` | the five slack simulations, scored under both feature lists; writes `results/realign4_transfer.mat` |
+| `RunGateRefit.m` | round-3 gate refit on this baseline; accept threshold 0.25, staged coordinate descent, asserts 8 mM invariance; writes `params/lowATP_realign4_gates_opt.m` and `results/gaterefit_state.mat` |
 
     matlab -batch "run('Analyses/LowATP_Realign4Transfer/BuildCombinedSnapshot.m')"
     matlab -batch "run('Analyses/LowATP_Realign4Transfer/RunTransferCheck.m')"
+    matlab -batch "BUDGET_H=3; run('Analyses/LowATP_Realign4Transfer/RunGateRefit.m')"
