@@ -35,8 +35,19 @@ function writeParamsToMFile(filename, params, modNames, comment)
              % fprintf("Writing %s\n", nam);            
              fprintf(fid, "params0.%s = '%s';\r\n", nam, par);
         elseif iscell(par)
-            % fprintf("Writing %s\n", nam);
-            fprintf(fid, "params0.%s = {'%s'};\r\n", nam, strjoin(params.fn, "', '")); 
+            % Serialise THIS field, not params.fn. The old code wrote
+            % strjoin(params.fn,...) for every cell-valued field, so any
+            % snapshot with more than one cell field silently got fn's
+            % contents in all of them. That was invisible while fn was the
+            % only meaningful cell field (params0.mods was also written wrong
+            % but is reset to {} at the end of this file anyway), and it
+            % corrupted AtpJoint_fn2 -- the low-ATP leg's feature list -- the
+            % moment a second one existed.
+            if isempty(par)
+                fprintf(fid, "params0.%s = {};\r\n", nam);
+            else
+                fprintf(fid, "params0.%s = {'%s'};\r\n", nam, strjoin(par, "', '"));
+            end
         elseif any(size(par) > 1) ...
             && nam ~= "s" ...
             && nam ~= "g" ...

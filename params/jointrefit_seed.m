@@ -194,7 +194,7 @@ params0.PieceWiseStrainDep2X_logOffset = 1.00052;
 params0.PieceWiseStrainDepX_logOffset = 0.944725;
 params0.PlotFeatureFitting = 0;
 params0.FV_dataset = 'Baker2022';
-params0.mods = {'ktr|10', 'A|50', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'PS_restretchPeak|0.446621', 'PS_rampupRMSE|0.0022331', 'PS_holdDecayRMSE|0.00446621', 'PS_steady22|0.22331', 'PS_steady20|0.22331', 'rsR2|0.4-1.0|0.5', 'rsK|0.25', 'rsR2|0.4-1.0|0.5', 'FV_normpowerAvg|w:FV_normpowerVar|62.2779'};
+params0.mods = {};
 params0.K_coop = 5.7;
 params0.k_on = 59.655;
 params0.k_off = 307.17;
@@ -339,7 +339,7 @@ params0.AtpJoint_w2 = 1;
 params0.AtpJoint_MgATP2 = 2;
 params0.AtpJoint_Pi2 = 0.8;
 params0.AtpJoint_vt2 = 'protocol_03_27_2026_2mM_slack.mat';
-params0.AtpJoint_fn2 = {'ktr|10', 'A|50', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'PS_restretchPeak|0.446621', 'PS_rampupRMSE|0.0022331', 'PS_holdDecayRMSE|0.00446621', 'PS_steady22|0.22331', 'PS_steady20|0.22331', 'rsR2|0.4-1.0|0.5', 'rsK|0.25', 'rsR2|0.4-1.0|0.5', 'FV_normpowerAvg|w:FV_normpowerVar|62.2779'};
+params0.AtpJoint_fn2 = {'ktr|10', 'A|50', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'rsR2|0.4-1.0|0.5', 'rsK|0.25'};
 params0.AtpJoint_RunFV2 = 0;
 params0.AtpJoint_RunPS2 = 0;
 % Reset the modifiers, as they are already applied
