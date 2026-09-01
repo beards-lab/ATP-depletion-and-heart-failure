@@ -131,20 +131,29 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
         if recalculateDataFeats
             features_data = extractForceVelocityAttributes(-Data_ATP(:,1)', Data_ATP(:,i_atp+1)', struct(), FV_velocities);
         else
-            % Hardcoded Baker lab 8 mM reference values (avoids re-extracting each iteration)
+            % Reference FV curve, taken from the LOADED data at THIS [ATP].
+            % Previously these were hardcoded 8 mM numbers, which silently scored
+            % the 2 mM condition against the 8 mM curve. The data for every
+            % [ATP] is already in LoadData (Data_ATP columns are ATP_c = 8/4/2,
+            % i_atp selects), so index it rather than transcribe it.
             % NB there are 8 forces, so only 8 velocities. The list previously
             % carried a 9th entry (-7) with no matching force, which would have
             % indexed past the end had FV_velocities ever asked for it.
             AllVelocities = -[0, 0.5, 1, 2, 3, 4, 5, 6];
-            FV_SETS = { 'Baker2022',               [56.40,   51.8120, 37.4459, 17.8025, 11.4430, 6.2643, 3.2759, 2.2120]
-                        'IsovelocityForFilip2021', [67.3942, 60.9885, 42.7059, 18.8539, 12.5956, 6.4426, 3.5136, 1.8556] };
+            FV_SETS = { 'Baker2022',               Data_ATP
+                        'IsovelocityForFilip2021', Data_ATP_AB2021 };
             iset = find(strcmp(FV_SETS(:,1), params0.FV_dataset), 1);
             if isempty(iset)
                 error('runFVExperiment:unknownFVdataset', ...
                       'params0.FV_dataset = "%s" is not one of: %s', ...
                       params0.FV_dataset, strjoin(FV_SETS(:,1)', ', '));
             end
-            AllForces = FV_SETS{iset,2};
+            AllForces = FV_SETS{iset,2}(1:numel(AllVelocities), i_atp+1)';
+            if any(~isfinite(AllForces))
+                error('runFVExperiment:noDataAtThisATP', ...
+                      'dataset "%s" has no force-velocity data at %g mM MgATP.', ...
+                      params0.FV_dataset, params0.MgATP);
+            end
 
             vsel = find(ismember(AllVelocities, FV_velocities));
             features_data.FV_v     = -AllVelocities(vsel)';
@@ -172,15 +181,27 @@ function [E_fv, outs, features_model, features_data] = runFVExperiment(params0, 
             vpos = features_data.FV_v(ipw);
             vsp  = vsel(ipw);
             features_data.FV_powerv = vpos;
-            P = zeros(numel(vsp), size(FV_SETS,1));
+            % Each source set is read at THIS [ATP] too. A set with no data at
+            % this [ATP] (AB2021 has no 4 mM arm) drops out of the average
+            % instead of poisoning it with NaN.
+            P = nan(numel(vsp), size(FV_SETS,1));
             for q = 1:size(FV_SETS,1)
-                Fq = FV_SETS{q,2};
+                Fq = FV_SETS{q,2}(1:numel(AllVelocities), i_atp+1)';
+                if any(~isfinite(Fq)); continue; end
                 features_data.(sprintf('FV_power%d', q))     = Fq(vsp)' .* vpos;
                 features_data.(sprintf('FV_normpower%d', q)) = (Fq(vsp)'/Fq(i0)) .* vpos;
                 P(:,q) = features_data.(sprintf('FV_normpower%d', q));
             end
-            features_data.FV_normpowerAvg = mean(P, 2);
-            features_data.FV_normpowerVar = var(P, 0, 2);
+            if all(all(~isfinite(P)))
+                error('runFVExperiment:noPowerData', ...
+                      'no force-velocity source set has data at %g mM MgATP.', params0.MgATP);
+            end
+            features_data.FV_normpowerAvg = mean(P, 2, 'omitnan');
+            % omitnan so a dropped source set gives the remaining one's variance
+            % (0 for a single set) rather than NaN. evalFeatureCost applies a
+            % VAR_FLOOR_FRAC shrinkage floor, so a 0 here cannot become an
+            % infinite inverse-variance weight.
+            features_data.FV_normpowerVar = var(P, 0, 2, 'omitnan');
         end
         features_model = extractForceVelocityAttributes(FV_velocities, F_active(i_atp, :), features_model, FV_velocities);
     end
