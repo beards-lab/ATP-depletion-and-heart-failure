@@ -17,9 +17,12 @@ here = fileparts(mfilename('fullpath')); root = fullfile(here,'..','..');
 cd(root); addpath(genpath(root)); LoadData;
 if isempty(gcp('nocreate')); parpool('local',5); end
 
-outdir = fullfile(here,'results','figs');
+if ~exist('SNAP8','var'); SNAP8 = 'realign4_opt'; end
+if ~exist('SNAP2','var'); SNAP2 = 'lowATP_realign4_gates_opt'; end
+if ~exist('SUFFIX','var'); SUFFIX = ''; end
+outdir = fullfile(here,'results',['figs' SUFFIX]);
 if ~exist(outdir,'dir'); mkdir(outdir); end
-CACHE = fullfile(here,'results','report_cache.mat');
+CACHE = fullfile(here,'results',['report_cache' SUFFIX '.mat']);
 
 C8 = [0.00 0.35 0.70];   % 8 mM
 C2 = [0.80 0.20 0.10];   % 2 mM
@@ -29,8 +32,8 @@ CD = [0.15 0.15 0.15];   % data
 if exist(CACHE,'file') && ~(exist('FORCE_RERUN','var') && FORCE_RERUN)
     fprintf('loading cached runs from %s\n', CACHE); S = load(CACHE);
 else
-    p8 = iBase(getParams(loadParams('realign4_opt'), [], true, false), 8);
-    p2 = iBase(getParams(loadParams('lowATP_realign4_gates_opt'), [], true, false), 2);
+    p8 = iBase(getParams(loadParams(SNAP8), [], true, false), 8);
+    p2 = iBase(getParams(loadParams(SNAP2), [], true, false), 2);
 
     fprintf('\n== FV, 8 mM ==\n');
     q = p8; q.RunForceVelocity = true; q.RunSlack = false;
@@ -148,6 +151,7 @@ fprintf('\nREPORT FIGURES DONE -> %s\n', outdir);
 %% ========================================================================
 function p = iBase(p, atp)
 p.EvalFeatures=true; p.BreakOnODEUnstable=false; p.OptimizeOn='Feats';
+p.UseAtpJointFit=false;   % figures score one condition at a time, not the joint objective
 p.RunSlackSegments='All'; p.MaxRunTime=600;
 p.PlotEachSeparately=0; p.PlotFeatureFitting=0; p.PlotFullscreen=0;
 p.RunForceVelocity=false; p.RunForceVelocityTime=false;
