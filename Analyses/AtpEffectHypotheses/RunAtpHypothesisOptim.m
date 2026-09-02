@@ -211,12 +211,16 @@ for r = 1:numel(todo)
     c = cost(q); nEval = nEval + 1; c0 = c;
     fprintf('\n=== %s: %s (%d gates) seed %.4f ===\n', rung, lbl, numel(gates), c);
 
-    tR = tic; improved = true; sweep = 0;
+    tR = tic; improved = true; sweep = 0; fullSweep = false;
     while improved && toc(tR) < budgetPer
-        improved = false; sweep = sweep + 1;
+        improved = false; sweep = sweep + 1; fullSweep = true;
         steps = [0.15 -0.15 0.30 -0.30]; if sweep > 1; steps = [0.07 -0.07]; end
         for gi = 1:numel(gates)
-            if toc(tR) > budgetPer; break; end
+            % Running out of budget mid-sweep is NOT convergence: the gates after
+            % this one were never tested. Record that, or a truncated rung gets
+            % reported as "converged" and its untested gates are wrongly called
+            % worthless -- which is exactly what happened to H3/eta_M in the pilot.
+            if toc(tR) > budgetPer; fullSweep = false; break; end
             f = ['pAtp_' gates{gi}]; base = q.(f);
             bestC = c; bestV = base;
             for s = steps
@@ -232,9 +236,13 @@ for r = 1:numel(todo)
             end
         end
     end
-    conv = ~improved;   % stopped because nothing helped, not because time ran out
+    % CONVERGED means a FULL sweep completed with nothing accepted. Without the
+    % fullSweep term, a rung that ran out of budget partway through its gate list
+    % is reported as converged and its UNTESTED gates are wrongly concluded to be
+    % worthless.
+    conv = ~improved && fullSweep;
     fprintf('  %s: %.4f -> %.4f  (%d sweeps, %.1f min, %s)\n', rung, c0, c, sweep, ...
-            toc(tR)/60, iIf(conv,'CONVERGED','BUDGET REACHED'));
+            toc(tR)/60, iIf(conv,'CONVERGED','TRUNCATED - not all gates tested'));
 
     exps = struct();
     for g = 1:numel(ALL21); exps.(['pAtp_' ALL21{g}]) = q.(['pAtp_' ALL21{g}]); end
