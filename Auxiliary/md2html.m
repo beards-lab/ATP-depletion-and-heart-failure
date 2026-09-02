@@ -45,6 +45,7 @@ inCode = false;             % inside ``` fence
 listKind = '';              % '', 'ul' or 'ol'
 tbl  = {};                  % pending table rows
 para = {};                  % pending paragraph lines
+liBuf = {};                 % pending list-item lines
 
 for i = 1:numel(lines)
     L = lines{i};
@@ -55,7 +56,7 @@ for i = 1:numel(lines)
             H{end+1} = '</code></pre>'; inCode = false; %#ok<*AGROW>
         else
             [para, H] = iFlushPara(para, H);
-            [listKind, H] = iCloseList(listKind, H);
+            [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
             [tbl, H] = iFlushTable(tbl, H);
             H{end+1} = '<pre><code>'; inCode = true;
         end
@@ -75,13 +76,13 @@ for i = 1:numel(lines)
     % ---- blank line ------------------------------------------------------
     if isempty(strtrim(L))
         [para, H] = iFlushPara(para, H);
-        [listKind, H] = iCloseList(listKind, H); continue
+        [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H); continue
     end
 
     % ---- horizontal rule -------------------------------------------------
     if ~isempty(regexp(strtrim(L), '^(-{3,}|\*{3,}|_{3,})$', 'once'))
         [para, H] = iFlushPara(para, H);
-        [listKind, H] = iCloseList(listKind, H);
+        [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
         H{end+1} = '<hr>'; continue
     end
 
@@ -89,7 +90,7 @@ for i = 1:numel(lines)
     tk = regexp(L, '^(#{1,6})\s+(.*)$', 'tokens', 'once');
     if ~isempty(tk)
         [para, H] = iFlushPara(para, H);
-        [listKind, H] = iCloseList(listKind, H);
+        [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
         n = numel(tk{1});
         H{end+1} = sprintf('<h%d>%s</h%d>', n, iInline(tk{2}), n);
         continue
@@ -99,7 +100,7 @@ for i = 1:numel(lines)
     tk = regexp(L, '^>\s?(.*)$', 'tokens', 'once');
     if ~isempty(tk)
         [para, H] = iFlushPara(para, H);
-        [listKind, H] = iCloseList(listKind, H);
+        [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
         if ~isempty(H) && startsWith(H{end}, '<blockquote>')
             H{end} = regexprep(H{end}, '</blockquote>$', [' ' iInline(tk{1}) '</blockquote>']);
         else
@@ -109,38 +110,41 @@ for i = 1:numel(lines)
     end
 
     % ---- list items ------------------------------------------------------
+    % The item's raw text is BUFFERED (like a paragraph) and inline markup is
+    % applied only when the item ends, so emphasis or a link that wraps across
+    % a line break inside a bullet is handled correctly.
     tk = regexp(L, '^\s*[-*]\s+(.*)$', 'tokens', 'once');
     if ~isempty(tk)
         [para, H] = iFlushPara(para, H);
+        [liBuf, H] = iFlushItem(liBuf, H);
         if ~strcmp(listKind,'ul')
-            [listKind, H] = iCloseList(listKind, H);
+            [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
             H{end+1} = '<ul>'; listKind = 'ul';
         end
-        H{end+1} = sprintf('<li>%s</li>', iInline(tk{1})); continue
+        liBuf = {tk{1}}; continue
     end
     tk = regexp(L, '^\s*\d+\.\s+(.*)$', 'tokens', 'once');
     if ~isempty(tk)
         [para, H] = iFlushPara(para, H);
+        [liBuf, H] = iFlushItem(liBuf, H);
         if ~strcmp(listKind,'ol')
-            [listKind, H] = iCloseList(listKind, H);
+            [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
             H{end+1} = '<ol>'; listKind = 'ol';
         end
-        H{end+1} = sprintf('<li>%s</li>', iInline(tk{1})); continue
+        liBuf = {tk{1}}; continue
     end
 
     % ---- wrapped continuation of the current list item -------------------
-    % Only when no paragraph is open: an indented line under an open list item
-    % belongs to that item, not to a new paragraph.
-    if ~isempty(listKind) && isempty(para) && ~isempty(regexp(L, '^\s\s+\S', 'once'))
-        H{end} = regexprep(H{end}, '</li>$', [' ' iInline(strtrim(L)) '</li>']);
-        continue
+    if ~isempty(liBuf) && isempty(para)
+        liBuf{end+1} = strtrim(L); continue
     end
 
     % ---- ordinary prose: accumulate, do NOT emit yet ---------------------
-    [listKind, H] = iCloseList(listKind, H);
+    [liBuf, H] = iFlushItem(liBuf, H); [listKind, H] = iCloseList(listKind, H);
     para{end+1} = strtrim(L);
 end
 [~, H] = iFlushPara(para, H);
+[liBuf, H] = iFlushItem(liBuf, H);
 [~, H] = iCloseList(listKind, H);
 [~, H] = iFlushTable(tbl, H);
 if inCode; H{end+1} = '</code></pre>'; end
@@ -198,6 +202,15 @@ end
 para = {};
 end
 
+function [liBuf, H] = iFlushItem(liBuf, H)
+% Join the buffered lines of ONE list item, THEN apply inline markup -- same
+% reason as iFlushPara: emphasis spanning a line break inside a bullet.
+if ~isempty(liBuf)
+    H{end+1} = sprintf('<li>%s</li>', iInline(strjoin(liBuf, ' ')));
+end
+liBuf = {};
+end
+
 function [listKind, H] = iCloseList(listKind, H)
 if ~isempty(listKind); H{end+1} = ['</' listKind '>']; end
 listKind = '';
@@ -208,7 +221,12 @@ if isempty(tbl); return; end
 rows = {};
 for k = 1:numel(tbl)
     r = regexprep(tbl{k}, '^\||\|$', '');       % strip outer pipes
-    rows{end+1} = strsplit(r, '|'); %#ok<AGROW>
+    % Split on UNESCAPED pipes only: "\|" is a literal | inside a cell (e.g.
+    % a header like "mean \|SD\|"), not a column separator. Protect it, split,
+    % then restore -- otherwise such a cell silently becomes three columns.
+    r = strrep(r, '\|', char(1));
+    c = strsplit(r, '|');
+    rows{end+1} = strrep(c, char(1), '|'); %#ok<AGROW>
 end
 % row 2 of a Markdown table is the ---|--- separator
 hasHdr = numel(rows) >= 2 && all(cellfun(@(c) ~isempty(regexp(strtrim(c), ...
