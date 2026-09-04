@@ -101,10 +101,10 @@ Legacy path (does **not** call `RunBakersExp`; builds its own `params0` and call
 - **`Example/`** — the onboarding package; the canonical "how to run the model" answer.
   Start at `Example/README.md`. Heavily commented, verified end-to-end:
   - `RunExampleHighATP.m` — high-ATP (8 mM) battery: slack + ktr + stairs + FV,
-    on `params/ExampleHighATP.m`. Reference feature cost **7.50** on the 03/27 8 mM set.
+    on `params/ExampleHighATP.m`. Reference feature cost **0.96** on the 03/27 8 mM set.
   - `BuildExampleProtocol.m` / `RunExampleProtocol.m` — build and run a custom
     length protocol (hold–stretch–hold), with a lossless round-trip self-test.
-  - `params/ExampleHighATP.m` is FROZEN (verbatim copy of `rskR2_w025_opt.m`);
+  - `params/ExampleHighATP.m` is FROZEN (verbatim copy of `spreadw_opt.m`, the current best);
     the name is chosen so optimizer output (`<tag>_opt.m`, `<tag>_iter/`) can never collide.
 - **`Model/`** — core model functions ONLY (model code, nothing else):
   - `Driver.m` — 700-line historical entry point; prefer `Example/` for onboarding

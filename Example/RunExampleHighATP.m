@@ -327,7 +327,7 @@ featCost = plotFeatures(features_data, features_model, [], params0.fn);
 
 % THIS is the number that matters — the scalar objective the optimizer
 % minimised (evaluateBakersExp returns exactly this when OptimizeOn='Feats').
-% For the shipped parametrization on the 8 mM 03/27 dataset it is ~7.5.
+% For the shipped parametrization on the 8 mM 03/27 dataset it is ~0.96.
 % A value near that means your environment reproduces the reference run.
 fprintf('\n==> OPTIMIZER OBJECTIVE (feature cost, costExp = 2): %.4g\n', ...
         sum(featCost, 'omitnan'));

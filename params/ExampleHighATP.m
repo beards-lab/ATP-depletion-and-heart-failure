@@ -6,10 +6,14 @@
 % just pulls the repo and runs an optimization cannot collide with this file.
 %
 % PROVENANCE
-%   Content copied verbatim from params/rskR2_w025_opt.m (2026-08-10), the
-%   rsK-weighted-0.25 optimizer point assessed in
-%   Analyses/RestretchRecoveryFit/conclusions.md, section 6b.
-%   Lineage: ThursdayNightFever -> optfull7_opt_mov -> rsk_w025_opt -> (this).
+%   Content copied verbatim from params/spreadw_opt.m (2026-09-02), the best
+%   iteration (#18) of the spread-weighted run: seed 3.8513 -> 0.9786 on its
+%   own objective. Assessed in Analyses/OptimResultReport/conclusions.md.
+%   Lineage: ThursdayNightFever -> optfull7_opt_mov -> rsk_w025_opt
+%            -> rskR2_w025_opt -> realign2/3/4_opt -> spreadw_seed -> (this).
+%   NOTE the source run was NOT converged (round 38 was still improving), and
+%   its feature weights come from measured between-preparation spread, with
+%   force-velocity pinned at 70% by hand. See Analyses/FeatureWeighting/.
 %
 % HOW TO LOAD  (never `run` or `eval` a snapshot in the base workspace -- a
 % stale params0 leaks fields and defaults silently override the snapshot):
@@ -23,9 +27,16 @@
 % See also: Example/README.md, Auxiliary/loadParams.m, Model/getParams.m
 % =========================================================================
 % Generated file to manipulate the simulation parameters directly
+% spreadw_opt: BEST of the spread-weighted run = spreadw_iter_018 (header 0.9715, round 38).
+% PROVENANCE: run executed off-machine; only params/spreadw_iter/ was returned
+%   (no spreadw_state.mat, so no optIter/featCost history). Seed params/spreadw_seed.m = 3.8513.
+%   VERIFIED: re-evaluates to 0.9786 here (+0.7 % of header). Iterations 14-18 all
+%   reproduce within 0.7 %; only iter 13 did not (+12.5 %), and the run climbed past it.
+%   NOT converged - round 38 was still improving (-2.9 % on its own step).
+% param_opt_iter #18 | cost 0.9715 | round 38 | direct
 params0.N = 30;
 params0.Slim = 0.3;
-params0.LXBpivot = 2.2;
+params0.LXBpivot = 2.25783;
 params0.dS = 0.002;
 params0.Slim_l = 1.7;
 params0.Slim_r = 2.21;
@@ -82,7 +93,7 @@ params0.RunSlackPassive = 1;
 params0.WindowsOverflowStepCount = -1;
 params0.UseSuperRelaxed = 1;
 params0.UseSpaceExtension = 1;
-params0.MaxRunTime = 600;
+params0.MaxRunTime = 300;
 params0.NumberOfStates = 2;
 params0.UseTitinInterpolation = 0;
 params0.MaxSlackNegativeForce = 0;
@@ -100,11 +111,11 @@ params0.UseA2Popping = 0;
 params0.UseA2AttachmentShift = 0;
 params0.UseA2MechanicalRecocking = 0;
 params0.UseForceOnsetShift = 0;
-params0.L_thick = 1.69632;
-params0.L_hbare = 0.107603;
-params0.L_thin = 1.11994;
+params0.L_thick = 1.70408;
+params0.L_hbare = 0.109744;
+params0.L_thin = 1.17352;
 params0.UseGlobalOccupancySaturation = 1;
-params0.P_bound_max = 1.02139;
+params0.P_bound_max = 1.07174;
 params0.OccupancyForm = 'linear';
 params0.UseTargetZoneSaturation = 0;
 params0.max_attached_per_bin = 0.01;
@@ -117,18 +128,18 @@ params0.v_att_sigma = 1.5;
 params0.v_att_amplitude = 0.3;
 params0.v_att_center = -1;
 params0.UseLatticeSpacing = 1;
-params0.d10_ref = 0.037;
-params0.SL_ref_lattice = 1.99638;
-params0.R_thick = 0.00854628;
-params0.R_thin = 0.0041174;
-params0.d_optimal = 0.02379;
+params0.d10_ref = 0.0369819;
+params0.SL_ref_lattice = 1.99647;
+params0.R_thick = 0.00831871;
+params0.R_thin = 0.00393292;
+params0.d_optimal = 0.0236306;
 params0.sigma_lattice = 0.00256565;
 params0.Lsc0 = 1.80093;
-params0.gamma = 7.87152;
+params0.gamma = 7.81871;
 params0.FudgeVmax = 0;
 params0.e2L = 2;
 params0.e2R = 2;
-params0.estiff = 0.965542;
+params0.estiff = 0.965322;
 params0.drawForceOnset = 0;
 params0.UseLimitedSRDTransition = 0;
 params0.UseSuperRelaxedADP = 1;
@@ -152,8 +163,8 @@ params0.UseSafeSRReset = 0;
 params0.ShowArrayShiftWarnings = 0;
 params0.LegacyStrainFlipping = 0;
 params0.UsePieceWiseStrainDep = 1;
-params0.PieceWiseStrainDepParams = [0.5 1.49083788967473 3.71547063730257 56.8363707634804 50];
-params0.PieceWiseStrainDepX = [0.1 0.0073235303657001 0 -0.00588864174453824 -1];
+params0.PieceWiseStrainDepParams = [0.5 1.49083788967473 3.71547063730257 57.3929656064222 50];
+params0.PieceWiseStrainDepX = [0.1 0.0073235303657001 0 -0.00618148971154849 -1];
 params0.UseA1AttachmentKernel = 0;
 params0.OptimizeFVInit = 1;
 params0.EvalFeatures = 1;
@@ -162,9 +173,9 @@ params0.EvalPeaks = 0;
 params0.recalculateDataFeats = 0;
 params0.MaxSpaceExtensionCount = Inf;
 params0.UseRegistrationAvailability = 1;
-params0.A0 = 0.211587;
-params0.v_ref_reg = 0.26589;
-params0.tau_reg = 0.0271394;
+params0.A0 = 0.211058;
+params0.v_ref_reg = 0.636296;
+params0.tau_reg = 0.0266487;
 params0.RegAvailShorteningOnly = 1;
 params0.UseD0State = 0;
 params0.k_D0T = 500;
@@ -173,23 +184,36 @@ params0.D0FromR2 = 0;
 params0.UseR2Ceiling = 0;
 params0.k2max = 1500;
 params0.K_T2c = 0.15;
+params0.SRXFromR2 = 0;
+params0.SRXFromR2HighStrain = 0.209449;
+params0.sSRXrip = 0.0136579;
+params0.dSRXrip = 0.005;
+params0.SRXRecoilToD = 0;
+params0.SRXRecoilToD0 = 0;
+params0.UseLoadRealign = 1;
+params0.k_cr = 1.54222;
+params0.tau_cr = 0.0212538;
+params0.F_cr = 23.6004;
+params0.Adef_max = 0.9;
+params0.SRDOutflowK = 0;
+params0.D0OutflowK = 0;
 params0.UseMaxwellDashpot = 1;
-params0.mu_neg = 0.0154399;
+params0.mu_neg = 0.0145186;
 params0.mu2 = 0;
-params0.ksrd2sr = 8.6763;
+params0.ksrd2sr = 8.8308;
 params0.slope = 17332;
 params0.s_threshold_R = 0.0049333;
 params0.s_threshold_L = 5.5;
 params0.d_actin = 0.0055;
-params0.kSE_M = 77.0121;
-params0.eta_M = 0.0270046;
-params0.UseMaxwellTensionOnly = 0;
-params0.x_M_slack = 0.01;
+params0.kSE_M = 95.3207;
+params0.eta_M = 0.0137602;
+params0.UseMaxwellTensionOnly = 1;
+params0.x_M_slack = 0.0109334;
 params0.FudgeA = 0;
 params0.FudgeB = 0;
 params0.FudgeC = 0;
-params0.kstiff2_n = 11846;
-params0.kstiff1_n = 15949.7;
+params0.kstiff2_n = 12403.4;
+params0.kstiff1_n = 16570.7;
 params0.k2d = 0;
 params0.drmr = 0;
 params0.pop_s = -Inf;
@@ -198,49 +222,49 @@ params0.Srd_n = 1;
 params0.UseJPattern = 0;
 params0.UseFastPPval = 1;
 params0.UseCompiledMex = 0;
-params0.PieceWiseStrainDepR21X_logOffset = 0.801252;
-params0.PieceWiseStrainDepR1DX_logOffset = 1.01325;
-params0.PieceWiseStrainDep2X_logOffset = 1.00041;
-params0.PieceWiseStrainDepX_logOffset = 0.922156;
+params0.PieceWiseStrainDepR21X_logOffset = 0.812027;
+params0.PieceWiseStrainDepR1DX_logOffset = 1.00946;
+params0.PieceWiseStrainDep2X_logOffset = 1.00166;
+params0.PieceWiseStrainDepX_logOffset = 0.944725;
 params0.PlotFeatureFitting = 0;
 params0.FV_dataset = 'Baker2022';
-params0.mods = {'FV_fnorm|FV_v|10', 'ktr|10', 'A|50', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'PS_restretchPeak', 'PS_rampupRMSE|0.005', 'PS_holdDecayRMSE|0.01', 'PS_steady22|0.5', 'PS_steady20|0.5', 'rsR2|0.4-1.0|0.5', 'rsK|0.25', 'rsR2|0.4-1.0|0.5'};
+params0.mods = {'ktr|1.11216', 'A|2.05065', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|0.101495', 'restretchSlopeStart|0.160294', 'peak1_y|1.53998', 'peak1_dSL|0.0249288', 'vall_y|2.03941', 'vall_t|0.0206445', 'peak2|3.47152', 'steady|0.257629', 'vall2_dy|0.244352', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'PS_restretchPeak|0.068114', 'PS_rampupRMSE|0.0022331', 'PS_holdDecayRMSE|0.00446621', 'PS_steady22|0.0638811', 'PS_steady20|0.0638811', 'rsR2|0.4-1.0|0.5', 'rsK|0.315399', 'FV_normpowerAvg|w:FV_normpowerVar|125.105'};
 params0.K_coop = 5.7;
 params0.k_on = 59.655;
 params0.k_off = 307.17;
 params0.vmax = 10;
-params0.kah = 101.587;
-params0.kamh = 8.20386;
+params0.kah = 153.103;
+params0.kamh = 8.95489;
 params0.kadh = 0;
-params0.ka = 216.194;
-params0.kd = 87.1332;
-params0.k1 = 150.718;
-params0.k_1 = 33.1637;
-params0.k2 = 100.504;
+params0.ka = 253.486;
+params0.kd = 87.4174;
+params0.k1 = 160.43;
+params0.k_1 = 30.1656;
+params0.k2 = 104.26;
 params0.k_2 = 4.11178;
-params0.kA2re = 0;
+params0.kA2re = 17.6364;
 params0.dA2re = 0;
-params0.kA2hop = 34206.2;
-params0.sA2hop = 0.00512614;
+params0.kA2hop = 35963.6;
+params0.sA2hop = 0.00474969;
 params0.k3 = 44.255;
 params0.k3m = 0;
 params0.drp3 = 0.01;
-params0.ksr0 = 328.508;
-params0.sigma1 = 28.9343;
-params0.sigma2 = 41.3668;
+params0.ksr0 = 344.697;
+params0.sigma1 = 29.374;
+params0.sigma2 = 26.5731;
 params0.kmsr = 0;
-params0.kmsrd = 19.7826;
+params0.kmsrd = 31.1873;
 params0.ksrd = 0;
-params0.ksr2srd = 110.393;
-params0.sigma_srd1 = 26.6986;
+params0.ksr2srd = 124.665;
+params0.sigma_srd1 = 24.5186;
 params0.sigma_srd2 = 37.6151;
 params0.SRXT_0 = 0.08;
 params0.SRXD_0 = 0.08;
 params0.K_Pi = 4.007;
 params0.K_T1 = 0.5;
 params0.dr = 0.0112849;
-params0.kstiff1 = 28147;
-params0.kstiff2 = 24722.2;
+params0.kstiff1 = 28604.9;
+params0.kstiff2 = 22214.9;
 params0.kstiff3 = 14000;
 params0.K_T3 = 4;
 params0.K_D = 0.194;
@@ -264,12 +288,12 @@ params0.k2rip = 0;
 params0.dr0 = 0;
 params0.dr1 = 0.00462613;
 params0.dr_1 = 0;
-params0.dr2 = 0.0313649;
+params0.dr2 = 0.0315934;
 params0.dr3 = -0.01;
 params0.Amax = 1;
-params0.mu = 0.0156363;
-params0.kSE = 4911.76;
-params0.ekSE = 0.9247;
+params0.mu = 0.0191723;
+params0.kSE = 5324.48;
+params0.ekSE = 0.847707;
 params0.c_SE_visc = 0;
 params0.c_titin_visc = 0;
 params0.k_catch_bond = 0;
@@ -285,13 +309,13 @@ params0.TK0 = 0.01;
 params0.UseStrainDep4R1D = 0;
 params0.FV_velocities = [0 -0.5 -1 -2 -4];
 params0.baseline_dummy = 0;
-params0.fn = {'FV_fnorm|FV_v|10', 'ktr|10', 'A|50', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|2', 'restretchSlopeStart|1', 'peak1_y|10', 'peak1_dSL|1', 'vall_y|10', 'vall_t|0.2', 'peak2|5', 'steady|50', 'vall2_dy|1.0', 'ovrsht_dy|1', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'PS_restretchPeak', 'PS_rampupRMSE|0.005', 'PS_holdDecayRMSE|0.01', 'PS_steady22|0.5', 'PS_steady20|0.5', 'rsR2|0.4-1.0|0.5', 'rsK|0.25', 'rsR2|0.4-1.0|0.5'};
-params0.PieceWiseStrainDep2X = [0.1 0.0347413584396853 0.0257001998547849 0.0132215794052143 0 -0.0055 -0.008 -0.01];
-params0.PieceWiseStrainDep2Params = [50 16.1267102464074 1.16929528144301 0.387136278162538 10.1636273599448 17.0734873413693 50 50];
-params0.PieceWiseStrainDepR1DX = [-0.0519046236772118 -0.0049020022411942 0.00663179878145925 0.0520638610323752];
-params0.PieceWiseStrainDepR1DParams = [50.3368765297144 1.32569650574272 1.10764620732374 8.88896471875363];
-params0.PieceWiseStrainDepR21X = [-0.05 -0.00505177954313796 0.00677498048057487 0.0551910567479871];
-params0.PieceWiseStrainDepR21Params = [50 1.01083647314493 0.926459373320942 47.6741672599624];
+params0.fn = {'ktr|1.11216', 'A|2.05065', 'ktr_rmse|0-.5|.1', 'XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70', 't0_crossing|SLdiff|0.101495', 'restretchSlopeStart|0.160294', 'peak1_y|1.53998', 'peak1_dSL|0.0249288', 'vall_y|2.03941', 'vall_t|0.0206445', 'peak2|3.47152', 'steady|0.257629', 'vall2_dy|0.244352', 'k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001', 'doublePeak|10', 'coolDownLS|0.05', 'PS_restretchPeak|0.068114', 'PS_rampupRMSE|0.0022331', 'PS_holdDecayRMSE|0.00446621', 'PS_steady22|0.0638811', 'PS_steady20|0.0638811', 'rsR2|0.4-1.0|0.5', 'rsK|0.315399', 'FV_normpowerAvg|w:FV_normpowerVar|125.105'};
+params0.PieceWiseStrainDep2X = [0.1 0.0345956786379113 0.0264703854687818 0.0132621403823119 0 -0.0055 -0.008 -0.01];
+params0.PieceWiseStrainDep2Params = [50 15.6801116313738 1.16929528144301 0.366936756345699 9.88009413391803 14.482579158438 50 50];
+params0.PieceWiseStrainDepR1DX = [-0.051977799989905 -0.00504500566797261 0.00708760454896618 0.0518730664571295];
+params0.PieceWiseStrainDepR1DParams = [48.5080790878495 1.32863726423055 1.08925145395137 9.17058296303864];
+params0.PieceWiseStrainDepR21X = [-0.05 -0.00505177954313796 0.0067212537298732 0.0535637410826618];
+params0.PieceWiseStrainDepR21Params = [50 1.01083647314493 0.970092249062485 50.3647430667384];
 params0.OptimizeOn = 'Feats';
 params0.passive_velocitytableonfile = 'protocol_03_27_2026_ActivePNBMava_slack.mat';
 % Reset the modifiers, as they are already applied

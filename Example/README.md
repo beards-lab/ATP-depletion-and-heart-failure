@@ -35,11 +35,11 @@ Takes **1–2.5 minutes** (the first run is slower — MATLAB is compiling). You
 - in the command window, a cost breakdown ending in:
 
 ```
-==> OPTIMIZER OBJECTIVE (feature cost, costExp = 2): 7.502
+==> OPTIMIZER OBJECTIVE (feature cost, costExp = 2): 0.9643
 ```
 
-**That 7.5 is the reference number.** If you get it, your environment reproduces
-the run this package was built from. (`sum(E)` printed just above it is ~210 —
+**That 0.96 is the reference number.** If you get it, your environment reproduces
+the run this package was built from. (`sum(E)` printed just above it is ~166 —
 that is a diagnostic total, not the fitted objective. See §5.)
 
 Then:
@@ -142,12 +142,12 @@ normalised-force convention it is driven **through `runKtrExperiment`**.
 
 Two numbers come out, and confusing them is the most common early mistake.
 
-**`sum(E)` ≈ 210** — a diagnostic total. `E` is a positional row vector: one
+**`sum(E)` ≈ 166** — a diagnostic total. `E` is a positional row vector: one
 trace-MSE term per active protocol, then one term per scored feature. It is
-dominated by the slack trace MSE (~178), which is a per-sample squared error over
+dominated by the slack trace MSE (~154), which is a per-sample squared error over
 a long trace, scaled by 20, that **nothing ever tried to minimise**.
 
-**Feature cost ≈ 7.50** — the real objective. The shipped snapshot sets
+**Feature cost ≈ 0.96** — the real objective. The shipped snapshot sets
 `params0.OptimizeOn = 'Feats'`, so the optimizer minimises the feature cost alone.
 A large `sum(E)` beside a small feature cost is the expected picture.
 
@@ -204,7 +204,8 @@ and the two are **not** identical.
 ### The shipped parametrization
 
 `params/ExampleHighATP.m` — a 2-state model at 8 mM MgATP. Content copied verbatim
-from `params/rskR2_w025_opt.m` (2026-08-10). The name is deliberate: optimizer
+from `params/spreadw_opt.m` (2026-09-02), the best iteration of the spread-weighted
+run (seed 3.8513 → 0.9786 on its own objective). The name is deliberate: optimizer
 drivers write `params/<tag>_opt.m` and `params/<tag>_iter/`, so a machine that
 pulls this repository and runs an optimization can never collide with this file.
 
@@ -226,6 +227,7 @@ version in `Model/evalFeatureCost.m`):
 | `'field\|w'` | ... with weight `w` |
 | `'field_y\|field_x'` | Scatter *y* against *x*, e.g. `'FV_fnorm\|FV_v'` |
 | `'field\|lb-ub'` | **Boundary**: penalise only outside `[lb, ub]`. Scored against the **simulation alone** — no data is read. This is how physiological plausibility is enforced on quantities nobody measured. |
+| `'field\|w:varfield'` | **Per-element weights**: `varfield` is read from the *data* struct and treated as a variance; weights are inverse-variance, floored at 10 % of the mean variance and renormalised to mean 1. Combines with a scalar: `'field\|w:varfield\|weight'`. This is how the shipped snapshot scores force-velocity. |
 | `'f1\|w1,f2\|lb-ub'` | A comma at top level makes one **grouped** joint cost, rendered as a single tile |
 | `'field[sel]'` | Reduce a per-cycle vector: `[1] [end] [mean] [min] [max] [median] [first] [last]` |
 
@@ -243,20 +245,37 @@ Useful helpers:
 
 ## 8. Known residuals
 
-The shipped parametrization is the current best, not a solved problem. On the
-8 mM 03/27 dataset:
+The shipped parametrization is the current best, not a solved problem. It comes
+from a **spread-weighted** run: feature weights are inverse-variance, derived from
+the measured between-preparation spread, with force-velocity pinned at 70 % by
+hand. It was **not converged** — the run was still improving when it stopped.
+
+Measured on the 8 mM 03/27 dataset, ranked by contribution to the cost:
 
 | Feature | Data | Model | Status |
 |---|---|---|---|
-| `ktr` | ~50 /s | ~57 /s | Force redevelopment is **too fast**. A long-standing 2-state limitation: turnover, attached fraction and ktr are welded together by the core cycle. |
-| `rsK` | ~42 /s | ~110 /s | Post-re-stretch recovery is **~2.6× too fast**, and its amplitude dependence has the **wrong sign** (model +714 vs data −126). This is the open structural defect. |
-| `FV_fnorm` | 0.66 at 1 ML/s | 0.57 | The force-velocity curve falls off too steeply at intermediate velocities |
-| `coolDownLS` | 0 | ~1.2 | A residual the current parametrization does not clear |
+| `FV_normpowerAvg` | — | — | The **largest single cost term** (~19 % of the total), which is what pinning FV at 70 % told the optimizer to buy |
+| `PS_rampupRMSE` / `PS_holdDecayRMSE` | 0 | ~2–5 | Passive residuals. These are model-vs-data *residuals*, so their data value is 0 by construction — not features you can "match" |
+| `coolDownLS` | 0 | ~0.6 | Not cleared, though roughly halved from the previous fit |
+| `restretchSlopeStart` | 1390 → 1690 (rising) | 1300 → 1190 (falling) | **The slope still has the wrong sign across cycles.** The magnitudes are close; the trend is inverted |
+| `peak1_dSL` | ~0.025 | ~0.042 | The first-peak length excursion is ~70 % too large |
+| `ktr` | ~50 /s | ~54 /s | Force redevelopment still **~8 % too fast** — a long-standing 2-state limitation: turnover, attached fraction and ktr are welded together by the core cycle |
+| `peak1_y` | ~96 | ~103 | First peak overshoots by ~7 % |
 
-`PS_rampupRMSE` and `PS_holdDecayRMSE` are model-vs-data *residuals*, so their data
-value is 0 by construction — they are not features you can "match".
+**Fixed in this parametrization:** `rsK`, the post-re-stretch recovery rate, was
+the open structural defect for months (previous fit: model ~110 /s against data
+~42 /s). It now sits on the three-preparation envelope mean — model [47…54]
+against data [46…50].
 
-Background: `Analyses/README.md` indexes the investigations behind each of these.
+**One discrepancy that is NOT scored** — worth knowing before you trust the fit
+anywhere near lengthening: `ovrsht_dy` (the lengthening overshoot) is **model
+~0.04–0.17 against data ~1.2–1.5**, roughly an order of magnitude low. It is
+absent from this snapshot's feature list, so nothing is pushing on it, and it got
+worse rather than better in this run.
+
+Background: `Analyses/OptimResultReport/conclusions.md` is the write-up of this
+specific run; `Analyses/FeatureWeighting/` explains where the weights come from;
+`Analyses/README.md` indexes everything else.
 
 ---
 
@@ -292,8 +311,15 @@ slack cycle) and its internal `switch` indexes rows literally, so a table of the
 wrong shape is silently mis-read.
 
 There is a small discovery built into the example: the peak (yield) force during
-the ramp is set by the stretch **velocity**, not by how far you stretch. Change
-`dL` from 0.05 to 0.01 and the peak stays at ~72.9 kPa; change `V` and it moves.
+the ramp is governed by stretch **velocity** far more than by stretch amplitude.
+From an isometric 64.5 kPa, a **five-fold** change in `dL` moves the peak ~1 %
+(78.2 → 77.3 kPa), while a **two-fold** change in `V` moves it ~6 %
+(78.2 → 82.6 kPa).
+
+The oscillation you see during the ramp is real model dynamics, not numerical
+noise: its amplitude is unchanged when the strain-grid spacing `params.dS` is
+halved or quartered. That is the test worth repeating if you push into more
+violent protocols.
 
 ---
 

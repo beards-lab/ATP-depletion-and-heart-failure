@@ -84,10 +84,15 @@ xlim(tZoom); ylabel('Force (kPa)'); xlabel('t (s)'); grid on;
 % rather than continuing to climb. The saturation level is the lengthening
 % YIELD point: strained bridges detach as fast as the stretch loads them.
 %
-% Worth checking for yourself: that peak is set by the ramp VELOCITY, not by
-% how far you stretch. Re-run with dL = 0.01 instead of 0.05 in
-% BuildExampleProtocol.m and the peak lands in the same place (~72.9 kPa here);
-% change V instead and it moves.
+% Worth checking for yourself: that peak is governed by the ramp VELOCITY far
+% more than by how far you stretch. Measured here, from an isometric 64.5 kPa:
+%
+%        dL = 0.05, V = 0.5  ->  78.2 kPa      dL = 0.05, V = 1.0  ->  82.6
+%        dL = 0.01, V = 0.5  ->  77.3 kPa      dL = 0.01, V = 1.0  ->  81.7
+%
+% A FIVE-fold change in amplitude moves the peak ~1 %; a two-fold change in
+% velocity moves it ~6 %. Change dL and V at the top of
+% BuildExampleProtocol.m and reproduce it.
 %
 % The oscillation during the ramp is real model dynamics, not numerical noise
 % — repeated detach/re-attach of the strained population. Its amplitude is
