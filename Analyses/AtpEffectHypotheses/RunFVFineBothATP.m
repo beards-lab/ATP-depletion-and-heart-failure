@@ -152,45 +152,59 @@ fprintf('Vmax (F/F0 -> 0): 8 mM %s | 2 mM %s ML/s\n', ...
         iNum(v8max, VMAX), iNum(v2max, VMAX));
 
 close all force;
-fig = figure('Units','pixels','Position',[20 20 1500 640],'Color','w');
-tl = tiledlayout(1,2,'Padding','compact','TileSpacing','compact');
+% SLIDE SIZING, matching Analyses/OptimResultReport/MakeSlideFigures.m in the
+% Further-optim worktree: one slide grid cell is 4.6 x 3.07 in (3:2), and MATLAB
+% font sizes are POINTS against the figure's paper size -- so setting the figure
+% in INCHES makes the on-slide point size exactly what is asked for below. Each
+% of the two panels is one cell wide AND one cell high, hence a figure two cells
+% plus the inter-cell gap across.
+FIG_W = 4.6; FIG_H = FIG_W*2/3; GAP = 0.14;
+FS = 14; FSL = 15; FST = 15; FSLG = 13; DPI = 300;
+LW = 2.8; MS = 7;
+fig = figure('Units','inches','Position',[1 1 2*FIG_W+GAP FIG_H],'Color','w');
+tiledlayout(1,2,'Padding','compact','TileSpacing','compact');
 
 ax = nexttile; hold on; box on; grid on
 iBand(vD, mu8, sd8, B8); iBand(vD, mu2, sd2, B2);
-p1 = plot(vFine(m8), Fn8p(m8), '-', 'Color',C8,'LineWidth',3.0);
-p2 = plot(vFine(m2), Fn2p(m2), '-', 'Color',C2,'LineWidth',3.0);
-d1 = plot(vD, mu8, 'o','Color',K8,'MarkerFaceColor',K8,'MarkerSize',9);
-d2 = plot(vD, mu2, 'o','Color',K2,'MarkerFaceColor',K2,'MarkerSize',9);
-xlabel('shortening velocity (ML/s)','FontSize',15,'FontWeight','bold');
-ylabel('F / F_{iso}','FontSize',15,'FontWeight','bold');
-title('Force-velocity','FontSize',17,'FontWeight','bold');
+p1 = plot(vFine(m8), Fn8p(m8), '-', 'Color',C8,'LineWidth',LW);
+p2 = plot(vFine(m2), Fn2p(m2), '-', 'Color',C2,'LineWidth',LW);
+d1 = plot(vD, mu8, 'o','Color',K8,'MarkerFaceColor',K8,'MarkerSize',MS);
+d2 = plot(vD, mu2, 'o','Color',K2,'MarkerFaceColor',K2,'MarkerSize',MS);
+xlabel('shortening velocity (ML/s)');
+ylabel('F / F_{iso}');
+title('Force-velocity');
 if isfinite(v2max) && v2max <= VPLOT_MAX
     xline(v2max,':','Color',C2,'LineWidth',2.0,'HandleVisibility','off');
-    text(v2max-0.06, 0.60, sprintf('V_{max} %.2f',v2max),'Color',C2, ...
-         'FontSize',12,'FontWeight','bold','Rotation',90,'HorizontalAlignment','left');
+    % Anchored near the FLOOR, not mid-axis: at slide point sizes the rotated
+    % label spans a third of the panel height and ran into the legend up there.
+    % Down here the only thing it crosses is the tail of the curves, at ~0.03.
+    text(v2max-0.06, 0.08, sprintf('V_{max} %.2f',v2max),'Color',C2, ...
+         'FontSize',FSLG-1,'FontWeight','bold','Rotation',90,'HorizontalAlignment','left');
 end
-ylim([0 1.02]);
-xlim([0 VPLOT_MAX]); set(ax,'FontSize',14,'LineWidth',1.1);
+ylim([0 1.02]); xlim([0 VPLOT_MAX]);
+% The rung name is deliberately NOT in the legend. Which rung won is a result of
+% the ladder, reported by RunAtpHypothesisOptim.m; on this figure the 2 mM curve
+% is simply the best low-ATP model we have, and the label should read that way.
 legend([d1 p1 d2 p2], {'data 8 mM \pm SD','model 8 mM', ...
-        'data 2 mM \pm SD',sprintf('model 2 mM (%s)',BEST.rung)}, ...
-        'Location','northeast','FontSize',12);
+        'data 2 mM \pm SD','model 2 mM'}, 'Location','northeast');
+iStyleAx(ax, FS, FSL, FST, FSLG);
 
 ax = nexttile; hold on; box on; grid on
 iBand(vD, pm8, ps8, B8); iBand(vD, pm2, ps2, B2);
-plot(vFine(m8), Pw8p(m8), '-', 'Color',C8,'LineWidth',3.0);
-plot(vFine(m2), Pw2p(m2), '-', 'Color',C2,'LineWidth',3.0);
-plot(vD, pm8, 'o','Color',K8,'MarkerFaceColor',K8,'MarkerSize',9);
-plot(vD, pm2, 'o','Color',K2,'MarkerFaceColor',K2,'MarkerSize',9);
-xlabel('shortening velocity (ML/s)','FontSize',15,'FontWeight','bold');
-ylabel('normalised power','FontSize',15,'FontWeight','bold');
-title('Force-velocity (power)','FontSize',17,'FontWeight','bold');
-xlim([0 VPLOT_MAX]); set(ax,'FontSize',14,'LineWidth',1.1);
+plot(vFine(m8), Pw8p(m8), '-', 'Color',C8,'LineWidth',LW);
+plot(vFine(m2), Pw2p(m2), '-', 'Color',C2,'LineWidth',LW);
+plot(vD, pm8, 'o','Color',K8,'MarkerFaceColor',K8,'MarkerSize',MS);
+plot(vD, pm2, 'o','Color',K2,'MarkerFaceColor',K2,'MarkerSize',MS);
+xlabel('shortening velocity (ML/s)');
+ylabel('normalised power');
+title('Force-velocity (power)');
+xlim([0 VPLOT_MAX]);
+iStyleAx(ax, FS, FSL, FST, FSLG);
 
-title(tl, sprintf(['8 mM vs 2 mM, fine velocity grid.  core %s;  low-ATP %s, ' ...
-        '%d gates, 2 mM cost %.2f.  F_{iso} %.0f \\rightarrow %.0f kPa (\\times%.2f)'], ...
-        strrep(S.CORE,'_','\_'), BEST.rung, BEST.dof, BEST.c, F8iso, F2iso, F2iso/F8iso), ...
-        'FontSize',14,'FontWeight','bold');
-exportgraphics(fig, fullfile(figDir,'fig_fv_fine_bothatp.png'),'Resolution',170);
+% NO overall title: on a slide the panel titles plus the spoken caption carry
+% it, and the core/rung/cost line was report bookkeeping. That bookkeeping is
+% still printed to stdout above and below, which is where it belongs.
+exportgraphics(fig, fullfile(figDir,'fig_fv_fine_bothatp.png'),'Resolution',DPI);
 fprintf('\nsaved fig_fv_fine_bothatp.png\n');
 
 %% ---- the numbers, for the record -----------------------------------------
@@ -220,4 +234,17 @@ if isnan(v)
 else
     s = sprintf('%.2f', v);
 end
+end
+
+function iStyleAx(ax, FS, FSL, FST, FSLG)
+% Slide styling, copied from MakeSlideFigures.m so the two figure families look
+% like one set: oversized type, heavier axes, tight margins. Applied last so it
+% overrides anything the plotting calls set.
+set(ax, 'FontSize',FS, 'LineWidth',1.1, 'GridAlpha',0.16, 'Box','on', ...
+        'TickDir','out', 'TickLength',[0.015 0.015]);
+ax.XLabel.FontSize = FSL;  ax.XLabel.FontWeight = 'bold';
+ax.YLabel.FontSize = FSL;  ax.YLabel.FontWeight = 'bold';
+ax.Title.FontSize  = FST;  ax.Title.FontWeight  = 'bold';
+lg = get(ax,'Legend');
+if ~isempty(lg); lg.FontSize = FSLG; lg.Box = 'on'; end
 end
