@@ -32,6 +32,7 @@
   /* the 2x2 slide block: same arrangement as the PowerPoint slide */
   .slidegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 8px}
   .slidegrid img{width:100%;height:auto;border:1px solid var(--line);border-radius:5px;display:block}
+  .slidegrid .wide{grid-column:1 / -1}
   @media (max-width:640px){.slidegrid{grid-template-columns:1fr}}
 </style>
 
@@ -72,13 +73,14 @@ model is fitted to. The three-preparation envelope is in §2.</p>
 <div class="slidegrid">
   <img src="{{SLIDE_FV}}"     alt="Force-velocity, normalised power">
   <img src="{{SLIDE_STAIRS}}" alt="Staircase prediction">
-  <img src="{{SLIDE_RSALL}}"  alt="Slack protocol, all five cycles">
-  <img src="{{SLIDE_RSDET}}"  alt="Re-stretch transient, pre-last cycle">
+  <img src="{{SLIDE_RSDET}}"  alt="Slack cycle 4, release through re-stretch">
+  <img src="{{SLIDE_RSALL}}"  alt="Slack protocol, all five cycles" class="wide">
 </div>
-<p class="sub">Top left: force–velocity power, the scored quantity — the whole of the
-improvement. Top right: staircase, never fitted, and the model overshoots every step.
-Bottom left: the five slack cycles. Bottom right: the pre-last re-stretch transient, where
-the remaining lengthening-overshoot defect is clearest.</p>
+<p class="sub">Force–velocity power, the scored quantity — the whole of the improvement.
+Staircase, never fitted, and the model overshoots every step. Slack cycle 4 from 20 ms
+before the release through 100 ms past the re-stretch. Across the bottom, the whole slack
+protocol. Slack, slack-detail and staircase carry the commanded length (ML) on a muted
+right-hand axis, parked below the force trace.</p>
 
 <h2>1. Where the gain went</h2>
 <table>
