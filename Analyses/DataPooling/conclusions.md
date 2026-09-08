@@ -361,6 +361,15 @@ it has to be stated; it is not a rounding effect.
   analysis (`SPREAD_SOURCE = 'pooled'` in `BuildWeightedObjective`) and renames the
   `rsK` term to `rsK80`, so the audited target is scored with the audited estimator.
 
+> **The switch is sticky, and that is deliberate.** `writeParamsToMFile` serialises
+> every field, so `params/pooled8_*.m` carry `UsePooledTarget = 1` and re-score
+> themselves against the pool wherever they are loaded. A snapshot that names its own
+> target is the right default — but it means **a cost quoted for a `pooled8` snapshot is
+> not comparable to one quoted for `estiff125_opt`** unless you say which target. To
+> compare on the old yardstick, set `params0.UsePooledTarget = false` explicitly after
+> `loadParams`. (`getParams` defaults it to `false`, so snapshots predating this change
+> keep scoring the single preparation — nothing silently moved.)
+
 ### What the level step costs, and what it hides
 
 `estiff125_opt` — the best fit to 03/27 alone — scores **0.955 against 03/27** and
