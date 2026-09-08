@@ -418,6 +418,67 @@ single feature, and the weight table prices it at 2.7 % — but `rsT0` and `peak
 price at **35 %** each. Adding a term while the target moves makes the result
 unreadable. Next campaign: `ADD_FEATS = {'rsT20'}`.
 
+### The refit: 4.431 → 2.700 (−39 %), and it is a relocation, not a free win
+
+`params/pooled8_opt.m`, 4 h / 9 rounds / 5 workers. **Nine improvements in nine
+rounds — zero stalls**, so the run was still gaining when the budget expired: this is
+budget-limited, not converged. `VerifyPooledRun.m` re-evaluates the whole gallery
+(`optimizeFeatures` has no repeat-evaluation guard on accept, and the objective's
+roughness has bought a fake step twice before): **all nine reproduce**, worst
+`pooled8_iter_007` at +0.107, inside the 0.25 noise floor. The winner re-evaluates
+**2.6999** against a claimed 2.7095.
+
+| parametrisation | POOLED objective | old single-03/27 objective |
+|---|---|---|
+| `estiff125_opt` | 4.4309 | **0.9547** |
+| `pooled8_opt` | **2.6999** | 1.0876 |
+| | **−39.1 %** | **+13.9 %** |
+
+**Say this plainly: the refit is not a strict improvement, it is a move to a
+better-justified target.** It gives up 14 % on 03/27's own objective to gain 39 % on
+the pool. That is the right trade — three preparations with error bars against one
+fibre — but "cost went down 39 %" without the second column is not an honest summary.
+The asymmetry (39 % gained, 14 % given up) is what §5's `chi2Prep` = 0.40 predicted:
+03/27 is a fair stand-in almost everywhere, and the overshoot is the exception.
+
+**Where it went** (χ² per slack segment; 1.0 = one preparation-width):
+
+| gained | seed → win | paid | seed → win |
+|---|---|---|---|
+| **`peak1_y`** | **6.58 → 3.91** | **`ktr`** | **0.15 → 0.97** |
+| `peak1_dSL` | 5.24 → 3.85 | `rsK80` | 0.06 → 0.42 |
+| `vall_t` | 4.36 → 2.86 | `vall2_dy` | 1.33 → 1.57 |
+| `vall_y` | 1.70 → 0.38 | `restretchSlopeStart` | 0.41 → 0.51 |
+| `A` | 2.26 → 1.26 | | |
+| `peak2` | 1.33 → 0.83 | | |
+
+The premise held: **the overshoot was buyable once the pooled target stopped rewarding
+it**, and it is down 41 % — the first movement on this defect in three campaigns. But
+**`ktr` is now at 0.97/segment, exactly one preparation-width, from 0.15.** There is no
+headroom left there. If this run is extended, that is the number to watch: `peak1_y`
+must keep falling *and* `ktr` must not cross 1.0, or the fit is buying the overshoot
+with the redevelopment rate. Note the `ktr` in the objective is the **slack**-derived
+one, which ATPEffectReconciliation found ~5× more compliance-sensitive than the ktr
+protocol — so the protocol prediction, not this term, is the physiological check.
+
+### A defect this campaign introduced: `coolDownLS` is trace-anchored
+
+`coolDownLS` (and `slackLSQE`, unused) is a least-squares residual computed inside
+`extractSlackAttributes` against **`datatable` — 03/27's raw trace, in absolute kPa**.
+`pooledTargetFeatures` replaces `features_data`, so it cannot reach a term that never
+looks at `features_data`. The objective therefore pulls in two directions at once: the
+feature block asks for the pooled level (69.35 kPa) while `coolDownLS` asks for 03/27's
+(79.76 kPa). That is exactly why it rose **+42 %** (0.094 → 0.134) — the model went
+where the pooled features sent it.
+
+At weight 0.05 (~5 % of the objective) this acted as a mild brake, not a wrecking ball,
+so the result stands. The fix is to scale the trace-anchored windows by
+`Fref / Fss22(prep)` = 0.869 under a pooled target, the same factor the force features
+already carry — which means `extractSlackAttributes` needs to be told the target level
+rather than assuming the file's. Until then, `coolDownLS` biases the level term toward
+03/27 and should be read as such. (The `PS_*` passive terms are *not* affected: they are
+their own separately-measured condition, legitimately unpooled.)
+
 ## 9. Limitations
 
 * *n* = 3. Every spread here has a 12× confidence interval. The **rankings** in §2 are
