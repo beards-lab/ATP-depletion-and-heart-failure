@@ -33,8 +33,16 @@ param(
     [string] $PublicUrl   = 'https://github.com/beards-lab/ATP-depletion-and-heart-failure.git',
     [string] $PrivateUrl  = 'https://github.com/beards-lab/ATP-depletion-and-heart-failure-full-data.git',
     [string] $Branch      = 'Further-optim',
+    [string] $CloneFrom   = '',
+    [switch] $SkipPush,
+    [switch] $Yes,
     [switch] $Execute
 )
+
+# Clone source. Default is the public GitHub URL (anonymous clone, no auth
+# needed). Pass -CloneFrom <local repo path> to seed from a local checkout
+# instead - use that when the commits you want are not yet pushed to GitHub.
+if (-not $CloneFrom) { $CloneFrom = $PublicUrl }
 
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -102,23 +110,31 @@ if (Test-Path $ShareDir) {
 Say "  share clone target: $ShareDir  (does not exist yet - good)"
 Say "  private remote:     $PrivateUrl"
 
-# --- 1. Clone from public, then sever the public remote -------------------
-Step "1. Clone $Branch from the public repository"
-Run @('clone', '--branch', $Branch, $PublicUrl, $ShareDir)
+# --- 1. Clone, then sever the public remote -------------------------------
+Step "1. Clone $Branch from: $CloneFrom"
+# --no-hardlinks: when seeding from a local path, git would otherwise share
+# object files between the two repositories. This clone is pushed elsewhere and
+# must stand on its own.
+Run @('clone', '--no-hardlinks', '--branch', $Branch, $CloneFrom, $ShareDir)
 
-Step '2. Remove the public remote and point origin at the PRIVATE repository'
+Step '2. Remove the source remote and point origin at the PRIVATE repository'
 # This is the safety property of the whole design: after this, the share clone
-# has no route to the public repo at all.
+# has no route to the public repo at all, so GitHub Desktop cannot leak data.
 Run @('remote', 'remove', 'origin') $ShareDir
 Run @('remote', 'add', 'origin', $PrivateUrl) $ShareDir
 
-# --- 3. Seed the code mirror branch ---------------------------------------
-Step '3. Push the code mirror branch (no data on it)'
-Run @('push', '-u', 'origin', "${Branch}:code") $ShareDir
+# --- 3. Create the code mirror branch -------------------------------------
+Step '3. Create the code mirror branch (no data on it)'
+Run @('branch', '-f', 'code', $Branch) $ShareDir
+if (-not $SkipPush) {
+    Run @('push', '-u', 'origin', 'code:code') $ShareDir
+} else {
+    Say '  (-SkipPush) local branch only; push it from GitHub Desktop'
+}
 
 # --- 4. Build main = code + workflow + data -------------------------------
 Step '4. Create main and add the sync workflow'
-Run @('checkout', '-B', 'main') $ShareDir
+Run @('checkout', '-B', 'main', $Branch) $ShareDir
 
 $wfDir = Join-Path $ShareDir '.github\workflows'
 if ($Execute) {
@@ -152,10 +168,22 @@ if (-not $Execute) {
     return
 }
 
+if ($SkipPush) {
+    Write-Host "`nLocal setup complete - NOTHING WAS PUSHED (-SkipPush)." -ForegroundColor Green
+    Write-Host "The share clone is ready at: $ShareDir" -ForegroundColor Green
+    Write-Host "Its only remote is the PRIVATE repo, so pushing from there is safe:" -ForegroundColor Green
+    Write-Host "  $PrivateUrl" -ForegroundColor Green
+    Write-Host "`nIn GitHub Desktop: File -> Add local repository -> $ShareDir" -ForegroundColor Green
+    Write-Host "then publish/push BOTH branches: 'code' and 'main'." -ForegroundColor Green
+    return
+}
+
 Write-Host "`nAbout to PUSH the data payload to:" -ForegroundColor Yellow
 Write-Host "  $PrivateUrl  (branch main)" -ForegroundColor Yellow
-$ans = Read-Host 'Type PUSH to continue, anything else to stop'
-if ($ans -ne 'PUSH') { Write-Host 'Stopped. Nothing pushed.'; return }
+if (-not $Yes) {
+    $ans = Read-Host 'Type PUSH to continue, anything else to stop'
+    if ($ans -ne 'PUSH') { Write-Host 'Stopped. Nothing pushed.'; return }
+}
 
 Run @('push', '-u', 'origin', 'main') $ShareDir
 

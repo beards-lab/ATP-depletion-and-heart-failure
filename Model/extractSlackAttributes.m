@@ -422,7 +422,24 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         % (verified: data 48.5 s^-1 at a 30 ms span vs 48.4 at full span).
         % y_light (light movmedian on the data path, raw on the sim path) is used
         % only to LOCATE the anchor minimum; the fit itself is on raw y.
-        [feats.rsK, feats.rsA, feats.rsT0, feats.rsR2, feats.rsK63] = ...
+        %
+        % rsK80/rsT20 are the AUDITED replacements (Analyses/RestretchMetricAudit).
+        % Two things were wrong with rsK as a rate, and neither is the
+        % exponential:
+        %   (1) the amplitude came from the tail of the fit window, so anything
+        %       that moved the window's END moved the rate -- truncating to
+        %       60 ms shifted rsK by +77 %, and a known time-dilation was
+        %       recovered to only 24 %. Sourcing the amplitude from `steady`
+        %       (measured separately, at the reference length) instead drops
+        %       those to 9 % and 8 %.
+        %   (2) the whole-window least squares spends most of its leverage on
+        %       the plateau. ln(4)/(t80-t20) uses only the part of the rise
+        %       that carries rate information, and is toe- and plateau-free.
+        % Together: between-preparation SD 17.2 % -> 6.1 %, 2 mM/8 mM
+        % discriminability z 3.2 -> 6.8, and the value is invariant to the
+        % crossing smoother (47.7/47.5/47.5 at 2/5/10 ms).
+        [feats.rsK, feats.rsA, feats.rsT0, feats.rsR2, feats.rsK63, ...
+         feats.rsK80, feats.rsT20] = ...
             fitRestretchRecovery(t, y, y_light, feats.steady, RESTRETCH_VALL_WIN_S);
 
         % Guardrail: least-squares error of cool-down window vs data
@@ -578,10 +595,10 @@ end
 
 
 % =========================================================================
-function [k, A, t0, r2, k63] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin)
+function [k, A, t0, r2, k63, k80, t20] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin)
 %FITRESTRETCHRECOVERY First-order fit of the force rise after a re-stretch.
 %
-%   [K, A, T0, R2, K63] = fitRestretchRecovery(T, Y, Y_ANCHOR, STEADY, VALLWIN)
+%   [K, A, T0, R2, K63, K80, T20] = fitRestretchRecovery(T, Y, Y_ANCHOR, STEADY, VALLWIN)
 %
 %   T, Y     - the post-restretch window (t relative to the segment origin;
 %              t(1) is the end of the re-stretch ramp).
@@ -603,8 +620,26 @@ function [k, A, t0, r2, k63] = fitRestretchRecovery(t, y, y_anchor, steady, vall
 %   cross-checking against Analyses/RestretchVsKtrRecovery; it is a
 %   piecewise-constant function of the parameters and so is a diagnostic,
 %   not a fit target.
+%
+%   K80 and T20 are the AUDITED rate and delay (Analyses/RestretchMetricAudit):
+%
+%       A_ext = STEADY - B                  amplitude from OUTSIDE the window
+%       z(t)  = (y - B) / A_ext             the shape, 0 -> 1
+%       K80   = ln(4) / (t80 - t20)         the rate  (t_x = z first reaches x)
+%       T20   = t20                         the delay
+%
+%   Two changes from K, both measured rather than argued:
+%     * the amplitude no longer comes from the tail of the fit window, so the
+%       rate no longer moves when the window does (60 ms truncation: +77 % on
+%       K, exactly 0 on K80; recovery of a known time-dilation: 24 % error on
+%       K, 6 % on K80);
+%     * only the 20-80 % band of the rise is used, which is where the rate
+%       information is -- the toe and the plateau are excluded by construction
+%       instead of being fitted around with a free t0.
+%   Result on the three 2026 preparations, segments 1-4: between-preparation
+%   SD 17.2 % -> 6.1 %, 2 mM/8 mM discriminability z 3.2 -> 6.8.
 
-    k = NaN; A = NaN; t0 = NaN; r2 = NaN; k63 = NaN;
+    k = NaN; A = NaN; t0 = NaN; r2 = NaN; k63 = NaN; k80 = NaN; t20 = NaN;
 
     t = t(:); y = y(:); y_anchor = y_anchor(:);
     if numel(y_anchor) ~= numel(y); y_anchor = y; end
@@ -649,5 +684,36 @@ function [k, A, t0, r2, k63] = fitRestretchRecovery(t, y, y_anchor, steady, vall
     i63 = find(yn >= 1 - exp(-1) & (1:numel(yn))' > i_on, 1);
     if ~isempty(i63) && tt(i63) > tt(i_on)
         k63 = 1 / (tt(i63) - tt(i_on));
+    end
+
+    % ── The audited rate: 20-80 % band, amplitude from `steady` ──────────
+    % The crossings are read off a 5 ms movmedian (the same width the caller
+    % uses to locate the minimum) so a single sample cannot set a crossing
+    % time; the width does not matter much -- the value is 47.7 / 47.5 / 47.5
+    % at 2 / 5 / 10 ms across the three 2026 preparations.
+    Aext = steady - B;
+    if isfinite(Aext) && Aext > 0
+        nx = max(3, round(0.005 / median(diff(tt))));
+        zx = movmedian(yy, nx) / Aext;
+        t20 = firstCrossing(tt, zx, 0.20);
+        t80 = firstCrossing(tt, zx, 0.80);
+        if isfinite(t20) && isfinite(t80) && t80 > t20
+            k80 = log(4) / (t80 - t20);
+        end
+    end
+end
+
+% =========================================================================
+function tx = firstCrossing(tt, z, lev)
+%FIRSTCROSSING first upward crossing of LEV, linearly interpolated. NaN if none.
+    tx = NaN;
+    i = find(z >= lev, 1);
+    if isempty(i); return; end
+    if i == 1; tx = tt(1); return; end
+    z1 = z(i-1); z2 = z(i);
+    if z2 == z1
+        tx = tt(i);
+    else
+        tx = tt(i-1) + (lev - z1) / (z2 - z1) * (tt(i) - tt(i-1));
     end
 end

@@ -32,12 +32,23 @@
 %     recovered as datatable(:,3) * Fss.
 %   - datatable length is in um (SL ~ L x 2).
 %
+% BOTH 04-series days carry the manoeuvre. 04/03 runs the identical commanded
+% ramp (-2.00 ML/s, 34.6 ms, 1.060 -> 0.990 ML) in all three of its conditions;
+% only 03/27 predates it. That is six FV2 measurements, not three
+% (Analyses/DataPooling/RunFVConsistency.m).
+%
 % Produces:
+%   data/protocol_04_03_2026_velocitytable_FV2.mat          (8mM ATP)
+%   data/protocol_04_03_2026_velocitytable_FV2_2mM.mat      (2mM ATP)
+%   data/protocol_04_03_2026_velocitytable_FV2_PNBMava.mat  (8mM + PNB/Mava)
 %   data/protocol_04_10_2026_velocitytable_FV2.mat          (8mM ATP)
 %   data/protocol_04_10_2026_velocitytable_FV2_2mM.mat      (2mM ATP)
 %   data/protocol_04_10_2026_velocitytable_FV2_PNBMava.mat  (8mM + PNB/Mava)
 
 configs = {
+    '../data/04 03 2026 F/8mM_slack.txt',                  '../data/protocol_04_03_2026_velocitytable_FV2.mat';
+    '../data/04 03 2026 F/2mM_slack.txt',                  '../data/protocol_04_03_2026_velocitytable_FV2_2mM.mat';
+    '../data/04 03 2026 F/8mM_slack_PNB_Mava.txt',         '../data/protocol_04_03_2026_velocitytable_FV2_PNBMava.mat';
     '../data/04 10 2026 Male 2-8/8mM_slack.txt',          '../data/protocol_04_10_2026_velocitytable_FV2.mat';
     '../data/04 10 2026 Male 2-8/2mM_slack.txt',          '../data/protocol_04_10_2026_velocitytable_FV2_2mM.mat';
     '../data/04 10 2026 Male 2-8/8mM_slack_PNB_Mava.txt', '../data/protocol_04_10_2026_velocitytable_FV2_PNBMava.mat';
@@ -50,6 +61,8 @@ warmupLead = 5;           % isometric warm-up before the ramp (s), so the model
                           % reaches steady state before the length change
 thresh     = 0.005;       % 0.5% ML transition-detection threshold
 
+% Defaults to every row: the FV2 outputs are named apart from every other
+% protocol file, so a re-run cannot overwrite a differently-built dataset.
 if ~exist('fvRunIdx', 'var'); fvRunIdx = 1:size(configs, 1); end
 
 for ci = fvRunIdx(:)'
