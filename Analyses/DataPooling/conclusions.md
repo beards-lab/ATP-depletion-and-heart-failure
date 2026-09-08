@@ -479,6 +479,68 @@ rather than assuming the file's. Until then, `coolDownLS` biases the level term 
 03/27 and should be read as such. (The `PS_*` passive terms are *not* affected: they are
 their own separately-measured condition, legitimately unpooled.)
 
+### The two unscored protocols: one improved, one regressed
+
+Neither the ktr protocol nor the staircase is in the objective, so both are predictions.
+
+| | data | `estiff125_opt` | `pooled8_opt` |
+|---|---|---|---|
+| ktr re-stretch overshoot | 1.032 | 1.079 (+4.6 %) | **1.061 (+2.8 %)** |
+| ktr redevelopment, 20–80 % | 56.0 s⁻¹ | 72.8 (+30 %) | **78.8 (+41 %)** |
+| staircase step peaks (mean) | 1.227 | +4.1 % | +4.4 % |
+| **staircase plateau F(2.2)/F(2.0)** | **1.187** | **+0.9 %** | **+5.9 %** |
+
+**The overshoot fix generalises** — it shows up in a protocol the fit never saw, which
+is the strongest evidence that the pooled target found something real rather than
+fitting noise. **The redevelopment rate and the force–length end point paid for it.**
+The redevelopment going 30 % → 41 % too fast corroborates the scored slack `ktr` term
+(χ² 0.15 → 0.97) rather than contradicting it: the same defect read by two protocols.
+
+### Where the force–length regression actually comes from — NOT segment 5
+
+The tempting explanation is slack segment 5: it re-stretches to ML 1.00 rather than
+1.10, is off the amplitude ladder, and carries 39.9 % between-preparation spread
+(RestretchMetricAudit §3), so it is the only length information in the slack block and
+it is the least trustworthy segment. **The residuals do not support it.** Segment 5
+holds 27 % of the total squared relative residual where an even share would be 20 % —
+over-represented, not dominant — and its `steady` residual *improved* (+19.8 % → +16.0 %)
+while segments 1–4 got slightly worse. Dropping it would not have prevented this.
+
+What the per-segment table shows instead is blunter:
+
+```
+steady, model minus pooled target, % of the pooled mean
+  estiff125_opt   +16.1  +17.0  +17.5  +17.7  +19.8
+  pooled8_opt     +16.9  +17.5  +18.1  +18.2  +16.0
+```
+
+**The level did not move.** The pooled target asked for a force level 13 % lower and the
+optimiser declined to pay: the model still sits 17–18 % above the pooled `steady` in
+every segment, i.e. it still carries 03/27's scale (79.5 vs 69.35 kPa). That is
+**χ² 1.21 per segment — more than one preparation-width off, and the objective does not
+care**, because `steady` holds 0.71 of a 4.43 total (~2.6 %) while the 40 % pinned to FV
+is scale-blind by construction (`extractForceVelocityAttributes` normalises model power
+by the model's OWN isometric). This is exactly the trap FeatureWeighting §"ANCHOR_GUARD"
+named — the weight backing the absolute level fell 13× — and FV_SHARE 0.40 has not
+fixed it. The guard did not bite either: 79.5 kPa is inside `52.5-87.7`.
+
+So the correct reading of this campaign is: **it bought shape and left the level alone.**
+The staircase's force–length regression is a second-order consequence — the model
+steepened its length dependence while sitting at the wrong absolute level.
+
+Three candidate fixes, in ascending order of commitment:
+
+1. **Tighten the anchor guard** to the pooled level ± its own CV (`58.6-80.1`), so the
+   present 79.5 kPa is at the edge rather than comfortably inside. Cheapest; costs 0 at
+   the seed only if the level is already acceptable, which it is not quite.
+2. **Pin the level the way FV is pinned.** The level is not a shape feature and 1/s²
+   will never defend it against a scale-blind 40 %; if it matters it has to be asserted,
+   exactly as `FV_SHARE` is asserted. This is the honest parallel to the existing pin.
+3. **Score the staircase plateau** as the force–length term. Physiologically the right
+   home for length dependence — the slack block only sees it through segment 5, the
+   least trustworthy segment — but the staircase is not pooled, so this needs the
+   pooling work extended to it first.
+
 ## 9. Limitations
 
 * *n* = 3. Every spread here has a 12× confidence interval. The **rankings** in §2 are
