@@ -36,10 +36,20 @@ SP = load(fullfile(root,'Analyses','FeatureWeighting','results','feature_spread.
 if isempty(gcp('nocreate')); parpool('local', 4); end
 
 %% ---- run both -----------------------------------------------------------
-% Both are scored on ONE common fn -- TAG_NEW's. realign4_opt's own list still
-% carries the duplicated rsR2 boundary entry, so the two lists differ in length
-% and a per-feature comparison against its native list would not line up. The
-% duplicate costs 0, so this does not move realign4's headline number.
+% Both are scored on ONE common OBJECTIVE -- TAG_NEW's. That means two fields,
+% not one:
+%   fn               realign4_opt's own list still carries the duplicated rsR2
+%                    boundary entry, so the two lists differ in length and a
+%                    per-feature comparison against native lists would not line
+%                    up. The duplicate costs 0, so this does not move
+%                    realign4's headline number.
+%   UsePooledTarget  the TARGET the fn entries are scored against. Snapshots
+%                    carry it (writeParamsToMFile serialises every field), so
+%                    without this override a pooled8 snapshot would be scored
+%                    against the 3-preparation pool while its comparison base
+%                    was scored against 03/27 -- same weights, different data,
+%                    and the per-feature table below silently meaningless.
+%                    See Analyses/DataPooling/conclusions.md Sec 8.
 % REUSE = true replays the last saved run instead of re-simulating — for
 % figure/axis tweaks, which otherwise cost 4 minutes of ODE solving each time.
 MATF = fullfile(resDir, sprintf('fit_report_%s.mat', TAG_NEW));
@@ -47,14 +57,23 @@ if exist('REUSE','var') && REUSE && isfile(MATF)
     fprintf('REUSE: replaying %s (no model evaluated)\n', MATF);
     S = load(MATF, 'R', 'NAMES'); R = S.R; NAMES = S.NAMES;
 else
-    FN = getParams(loadParams(TAG_NEW), [], true, false).fn;
+    pNew = getParams(loadParams(TAG_NEW), [], true, false);
+    FN   = pNew.fn;
+    TGT  = pNew.UsePooledTarget;
+    if ~isequal(TGT, false)
+        fprintf('target: POOLED (from %s) — applied to BOTH tags\n', TAG_NEW);
+    end
     for k = 1:2
         fprintf('=== running %s ===\n', NAMES{k});
-        R(k) = iRunAll(NAMES{k}, FN);                               %#ok<SAGROW>
+        R(k) = iRunAll(NAMES{k}, FN, TGT);                          %#ok<SAGROW>
         fprintf('    feature cost = %.4f\n', R(k).cost);
     end
+    % The figures below all read ONE data-feature struct (fd, from TAG_NEW).
+    % Enforce that it really is the one both costs were computed against
+    % instead of trusting it.
+    iAssertSameData(R(1).fdata, R(2).fdata, FN);
 end
-fd = R(2).fdata;      % data features are identical for both
+fd = R(2).fdata;      % data features are identical for both — asserted above
 
 %% ---- colours ------------------------------------------------------------
 cDat = [0.15 0.18 0.22];  cBas = [0.55 0.60 0.66];  cNew = [0.72 0.14 0.18];
@@ -310,11 +329,13 @@ save(fullfile(resDir,sprintf('fit_report_%s.mat',TAG_NEW)), 'R','NAMES','nm','c1
 fprintf('\nwrote results/fit_report_%s.mat and 8 figures\n', TAG_NEW);
 
 %% ======================= helpers ========================================
-function R = iRunAll(tag, FN)
+function R = iRunAll(tag, FN, TGT)
 % Run every protocol for one snapshot and return everything needed to plot.
+% FN and TGT together are the common objective — see the header above.
     params0 = getParams(loadParams(tag), [], true, false);
     params0.mods = {}; params0.g = ones(1,0);
-    if nargin > 1 && ~isempty(FN); params0.fn = FN; end
+    if nargin > 1 && ~isempty(FN);  params0.fn = FN; end
+    if nargin > 2; params0.UsePooledTarget = TGT; end
     params0.RunForceVelocity = true;  params0.RunSlack   = true;
     params0.RunSlackPassive  = true;
     params0.RunKtr           = true;  params0.RunStairs  = true;   % PREDICTIONS
@@ -342,6 +363,26 @@ function iterPlotCycle(dtb, R, t0, win, cDat, CC, LW)
         plot(o.t(mm)-t0, o.Force(mm), '-','Color',CC{k},'LineWidth',LW{k});
     end
     xlim(win);
+end
+
+function iAssertSameData(fdA, fdB, FN)
+% The two tags must have been scored against the SAME data features, or the
+% per-feature comparison is between two different questions. Only the fields
+% the objective actually reads are checked.
+    names = unique(cellfun(@(x) regexprep(strtok(x,'|'), '\[.*$',''), FN, 'uni', 0));
+    bad = {};
+    for i = 1:numel(names)
+        f = names{i};
+        if ~isfield(fdA,f) || ~isfield(fdB,f); continue; end   % regularisers
+        a = double(fdA.(f)(:)); b = double(fdB.(f)(:));
+        if numel(a) ~= numel(b) || ~isequaln(a, b); bad{end+1} = f; end   %#ok<AGROW>
+    end
+    if ~isempty(bad)
+        error('RunFitReport:targetMismatch', ...
+            ['the two tags were scored against DIFFERENT data (%s) — check ' ...
+             'UsePooledTarget and velocitytableonfile in both snapshots.'], ...
+            strjoin(bad, ', '));
+    end
 end
 
 function s = iTrim(fn)
