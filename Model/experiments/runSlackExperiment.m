@@ -51,6 +51,16 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         features_data.t0_crossing = features_data.t0;
     end
 
+    % Pooled target. The curated file above is ONE preparation; with
+    % UsePooledTarget set, the slack block is scored against the 3-preparation
+    % pooled mean instead (Analyses/DataPooling). Done HERE, before the
+    % slackIdx trim below, so the trim still reconciles data and model lengths
+    % in the one place that owns that job.
+    if isfield(params, 'UsePooledTarget') && ~isequal(params.UsePooledTarget, false) ...
+            && ~isempty(fieldnames(features_data))
+        features_data = pooledTargetFeatures(features_data, params.UsePooledTarget);
+    end
+
     
 
     validZone = datatable(:, 1) > 1;

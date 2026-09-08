@@ -45,6 +45,12 @@
 % Usage:
 %   matlab -batch "TIME_HRS=12; run('Analyses/FeatureWeighting/RunOptimSpreadW.m')"
 % Resume is automatic if params/<TAG>_state.mat exists.
+%
+% ALSO THE SHARED ENGINE for later campaigns: every knob below is
+% `if ~exist`-guarded and the script opens with `clc` (not `clear`), so a
+% wrapper can set TAG / SEEDSNAP / SEED_EXPECT / TIME_HRS / NWORKERS and call
+% `run` on this file. ../DataPooling/RunOptimPooled.m does exactly that, which
+% is why the parameter pool lives here and is not copied per campaign.
 
 clc;
 here = fileparts(mfilename('fullpath'));

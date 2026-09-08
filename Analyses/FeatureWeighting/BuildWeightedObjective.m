@@ -5,6 +5,12 @@
 % snapshot that scores EXACTLY the same total as the current objective, so a
 % new optimisation starts from a comparable number.
 %
+% Caller-settable knobs (see the block below): BASE, SEEDTAG, SPREAD_SOURCE,
+% POOLED_TARGET, FN_RENAME, ADD_FEATS, FV_SHARE, SHARE_CAP, KAPPA,
+% ANCHOR_GUARD. SPREAD_SOURCE / POOLED_TARGET are what switch this script from
+% the single-preparation objective to the 3-preparation pooled one; see
+% Analyses/DataPooling/RunOptimPooled.m for the campaign that uses them.
+%
 % THE RULE
 %
 %   w_f  =  lambda * R_f / s_f^2
@@ -32,15 +38,19 @@
 % Output -> results/weighted_objective.mat, results/weight_table.txt
 %           params/<SEEDTAG>.m  (the reweighted seed snapshot)
 
-clear; clc;
+clearvars -except BASE SEEDTAG SPREAD_SOURCE POOLED_TARGET FN_RENAME ADD_FEATS ...
+                  FV_SHARE SHARE_CAP KAPPA ANCHOR_GUARD ANCHOR_ENTRY; clc;
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here, '..', '..');
 cd(root); addpath(genpath(root));
 resDir = fullfile(here, 'results');
 
 %% ---- knobs -------------------------------------------------------------
-BASE     = 'realign4_opt';     % the parametrisation to be cost-neutral at
-SEEDTAG  = 'spreadw_seed';     % params/<SEEDTAG>.m
+% All of these can be set by the caller before running this script; the
+% `clearvars -except` above keeps them. A bare `clear` here would silently
+% ignore them, which is how two earlier runs were mis-attributed.
+if ~exist('BASE','var');    BASE    = 'realign4_opt'; end  % be cost-neutral at this parametrisation
+if ~exist('SEEDTAG','var'); SEEDTAG = 'spreadw_seed'; end  % params/<SEEDTAG>.m
 % KAPPA = 0 => R == 1, i.e. the weights are PURE PRECISION and nothing else.
 % This is deliberate. A weight that also encodes "relevance" is no longer a
 % variance, so `cost/s^2` stops being a chi-square and the whole table stops
@@ -50,11 +60,34 @@ SEEDTAG  = 'spreadw_seed';     % params/<SEEDTAG>.m
 % The honest place for the ATP effect is a term that SCORES the 2 mM condition
 % (conclusions.md Sec 8), not a tilt smuggled into the 8 mM weights.
 % Set KAPPA = 0.5 to restore the tilt; R spans 1.0 .. 1+KAPPA*Z_CAP.
-KAPPA    = 0;
+if ~exist('KAPPA','var'); KAPPA = 0; end
 Z_CAP    = 4;
 S_FLOOR  = 0.05;               % no feature is better determined than 5 % across preps
 S_CEIL   = 1.00;               % ... nor worse than 100 %
 DEDUPE   = true;               % drop the duplicated rsR2 boundary entry
+
+% --- WHICH TARGET, AND WHOSE SPREAD ------------------------------------
+% POOLED_TARGET  goes straight into params0.UsePooledTarget, so the base point
+%   below is evaluated against the 3-preparation POOLED slack target rather
+%   than the single curated preparation (Model/pooledTargetFeatures). It is
+%   also written into the seed snapshot, so the optimisation inherits it.
+% SPREAD_SOURCE  where s_f comes from:
+%   'spread'  results/feature_spread.mat — RAW between-prep SD, force features
+%             normalised by their own run's mean `steady`, no rundown lift.
+%   'pooled'  Model/pooledTarget8mM — the SAME three preparations, but anchored
+%             on Fss22, rundown-corrected and variance-moderated (Smyth 2004,
+%             d0 = 2.74 against d = 2). Moderation is the substantive change:
+%             it compresses the 1/s^2 dynamic range 446x -> 13x, which stops
+%             `steady` (4 % raw, a within-run repeatability, not a between-prep
+%             spread) from taking the largest weight in the objective, and
+%             stops `vall_t` (84 % raw) from being effectively unscored.
+%             FV and the passive PS_* terms are NOT pooled yet, so they always
+%             fall back to feature_spread.mat.
+% The two knobs are independent on purpose: 'pooled' spreads with the old
+% target isolates the reweighting, and vice versa.
+if ~exist('POOLED_TARGET','var'); POOLED_TARGET = false;    end
+if ~exist('SPREAD_SOURCE','var'); SPREAD_SOURCE = 'spread'; end
+SPREAD_SOURCE = validatestring(SPREAD_SOURCE, {'spread','pooled'});
 
 % --- objective CONDITIONING guards (engineering, not data) ---------------
 % FV_SHARE -- *** ARBITRARY. THIS NUMBER IS A JUDGEMENT CALL, NOT A
@@ -74,11 +107,22 @@ DEDUPE   = true;               % drop the duplicated rsR2 boundary entry
 %   signal), and an objective one feature can buy is how realign2 spent FV
 %   monotonically. Applied AFTER the FV pin, so at FV_SHARE >= ~0.55 it is
 %   inert (there is no longer 30 % of the total available to any one term).
-FV_SHARE  = 0.70;
-SHARE_CAP = 0.30;
+if ~exist('FV_SHARE','var');  FV_SHARE  = 0.70; end
+if ~exist('SHARE_CAP','var'); SHARE_CAP = 0.30; end
 % Candidate features NOT currently scored; reported, added only if listed here.
-ADD_FEATS    = {};             % e.g. {'rsT0','vall2_t','Am'}
-CAND         = {'rsT0','vall2_t','Am','peak1_t','rsA'};
+if ~exist('ADD_FEATS','var'); ADD_FEATS = {}; end   % e.g. {'rsT0','vall2_t','Am'}
+CAND         = {'rsT0','rsT20','vall2_t','Am','peak1_t','rsA'};
+
+% FN_RENAME — {old, new} pairs applied to the fn entries before anything else.
+% Its use is swapping a feature for a BETTER ESTIMATOR OF THE SAME QUANTITY,
+% e.g. {'rsK','rsK80'}: Analyses/RestretchMetricAudit showed rsK reads its
+% amplitude off the tail of the fit window, so a 60 ms window shift moved it by
+% +77 %; rsK80 = ln4/(t80-t20) takes the amplitude from `steady` instead. The
+% pooled target is built on rsK80, so scoring rsK against a pooled number would
+% mix the audited target with the unaudited estimator.
+% This is a rename, not an addition: the weight is re-derived from the new
+% feature's own spread and the term count does not change.
+if ~exist('FN_RENAME','var'); FN_RENAME = cell(0,2); end
 
 % ANCHOR_GUARD -- optional insurance for the ABSOLUTE FORCE LEVEL, which the
 %   FV pin quietly weakens. extractForceVelocityAttributes normalises the
@@ -92,10 +136,32 @@ CAND         = {'rsT0','vall2_t','Am','peak1_t','rsA'};
 %   exactly 0 inside its range, so cost-neutrality is untouched; it only bites
 %   if the force level leaves the range the three preps actually span
 %   (50.6 - 80.6 kPa at 8 mM; 03/27, the fitted prep, is 80.6).
-ANCHOR_GUARD = false;
-ANCHOR_ENTRY = 'steady[1]|50.6-88.7|5';   % ub = 80.6 x 1.10, headroom for 03/27
+if ~exist('ANCHOR_GUARD','var'); ANCHOR_GUARD = false; end
+% Range = what the three preparations actually span. Under the POOLED target
+% the force block is already at the pooled level, so the guard's job changes
+% from "do not drift away from 03/27" to "stay inside the measured spread".
+if ~exist('ANCHOR_ENTRY','var')
+    ANCHOR_ENTRY = 'steady[1]|50.6-88.7|5';   % ub = 80.6 x 1.10, headroom for 03/27
+end
 
 SP = load(fullfile(resDir,'feature_spread.mat'));
+
+% Pooled spreads override SP's per-feature entries when SPREAD_SOURCE is
+% 'pooled'. FV / PS_* have no pooled counterpart and keep SP's numbers.
+if strcmp(SPREAD_SOURCE,'pooled')
+    PT = pooledTarget8mM();
+    for k = 1:numel(PT.name)
+        j = find(strcmp(SP.FEAT(:,1), PT.name{k}), 1);
+        if isempty(j)
+            SP.FEAT(end+1,1) = PT.name(k);  j = size(SP.FEAT,1);
+        end
+        SP.s8(j)  = PT.s(k);
+        SP.zsc(j) = PT.z(k);
+    end
+    fprintf(['SPREAD_SOURCE = pooled : s from Model/pooledTarget8mM (%d preps %s, ' ...
+             'moderated dof %.2f)\n'], PT.nP, strjoin(PT.days,'/'), PT.dof);
+    fprintf('  FV and PS_* keep feature_spread.mat (not pooled yet)\n');
+end
 
 %% ---- fn entry -> spread source ----------------------------------------
 % name in fn            source feature in feature_spread   ('' = regulariser,
@@ -112,6 +178,13 @@ MAP = { 'ktr'                , 'ktr'
         'steady'             , 'steady'
         'vall2_dy'           , 'vall2_dy'
         'rsK'                , 'rsK'
+        'rsK80'              , 'rsK80'               % audited rate  (RestretchMetricAudit)
+        'rsT20'              , 'rsT20'               % audited delay
+        'rsT0'               , 'rsT0'
+        'rsA'                , 'rsA'
+        'Am'                 , 'Am'
+        'peak1_t'            , 'peak1_t'
+        'vall2_t'            , 'vall2_t'
         'PS_restretchPeak'   , '#PS_restretchPeak'
         'PS_steady22'        , '#PS_steady22'
         'PS_steady20'        , '#PS_steady20'
@@ -126,8 +199,40 @@ params0.EvalFeatures = true; params0.OptimizeOn = 'Feats';
 params0.PlotEachSeparately = 0; params0.PlotFeatureFitting = 0;
 params0.RunSlackSegments = 'AllPar'; params0.BreakOnODEUnstable = false;
 params0.MaxRunTime = 300;
+params0.UsePooledTarget = POOLED_TARGET;
 
 fn0 = params0.fn;
+
+%% ---- fn surgery: rename estimators, add unscored features --------------
+% Both happen BEFORE the base evaluation, so cRaw and the neutrality budget
+% are computed on the entry set that will actually be optimised.
+renamed = {};
+for r = 1:size(FN_RENAME,1)
+    for i = 1:numel(fn0)
+        tk = strsplit(fn0{i}, '|');
+        if ~strcmp(regexprep(tk{1}, '\[.*$', ''), FN_RENAME{r,1}); continue; end
+        tk{1} = regexprep(tk{1}, ['^' FN_RENAME{r,1}], FN_RENAME{r,2});
+        fn0{i} = strjoin(tk, '|');
+        renamed{end+1} = sprintf('%s -> %s', FN_RENAME{r,1}, FN_RENAME{r,2}); %#ok<SAGROW>
+    end
+end
+if ~isempty(renamed)
+    fprintf('FN_RENAME: %s\n', strjoin(unique(renamed,'stable'), ' , '));
+end
+
+% Added entries carry weight 1 for now; the loop below gives them lambda/s^2.
+% They are held OUT of the neutrality budget (isAdded) — they were not in the
+% old objective, so pretending the total is unchanged would hide them.
+nOld  = numel(fn0);
+for a = 1:numel(ADD_FEATS)
+    if any(strcmp(regexprep(fn0, '[|\[].*$', ''), ADD_FEATS{a})); continue; end
+    fn0{end+1} = ADD_FEATS{a};                                          %#ok<SAGROW>
+end
+if numel(fn0) > nOld
+    fprintf('ADD_FEATS: appended %s (excluded from the neutrality budget)\n', ...
+        strjoin(fn0(nOld+1:end), ', '));
+end
+
 if DEDUPE
     [~, iu] = unique(fn0, 'stable');
     if numel(iu) < numel(fn0)
@@ -147,6 +252,7 @@ TOT0 = sum(ctot);
 fprintf('base total = %.4f over %d fn entries\n', TOT0, numel(fn0));
 
 prim = cellfun(@(s) regexprep(strtok(s,'|'), '\[.*$',''), fn0, 'uni', 0);
+isAdded = ismember(prim, ADD_FEATS);
 
 %% ---- assemble the new weights -----------------------------------------
 n   = numel(fn0);
@@ -173,36 +279,43 @@ R   = 1 + KAPPA * min(zF, Z_CAP);
 wNewRaw       = nan(1,n);
 wNewRaw(isData) = R(isData) ./ s(isData).^2;
 
-% lambda: preserve the DATA-term subtotal exactly
-num = sum(wOld(isData)    .* cRaw(isData));
-den = sum(wNewRaw(isData) .* cRaw(isData));
+% lambda: preserve the DATA-term subtotal exactly. Newly ADDED entries are
+% held out of the budget — they had no old weight to preserve, so folding them
+% in would silently shrink every other term to pay for them.
+isBudget = isData & ~isAdded;
+num = sum(wOld(isBudget)    .* cRaw(isBudget));
+den = sum(wNewRaw(isBudget) .* cRaw(isBudget));
 lambda = num / den;
 wNew = wOld; wNew(isData) = lambda * wNewRaw(isData);
 fprintf('lambda = %.6g   (data subtotal %.4f preserved; regularisers untouched)\n', lambda, num);
+if any(isAdded)
+    fprintf('  added terms sit ON TOP: %s = %.4f\n', ...
+        strjoin(prim(isAdded),'+'), sum(wNew(isAdded).*cRaw(isAdded)));
+end
 
 % --- conditioning guards ------------------------------------------------
 % Order matters. The FV pin is an editorial decision and goes FIRST; the share
 % cap then polices whatever budget is left. Doing both in one pass can pin more
 % mass than `num` and drive the free terms negative.
-TOT_SEED = sum(wOld .* cRaw);
-pinned   = false(1,n);
+TOT_SEED = sum(wOld(~isAdded) .* cRaw(~isAdded));
+pinned   = isAdded;                 % added terms are not renormalised
 iFV      = find(strcmp(prim,'FV_normpowerAvg') & isData, 1);
 
 if FV_SHARE > 0 && ~isempty(iFV) && cRaw(iFV) > 0
     wNew(iFV) = FV_SHARE * TOT_SEED / cRaw(iFV);
     pinned(iFV) = true;
-    wNew = iRenorm(wNew, cRaw, isData, pinned, num, FV_SHARE, SHARE_CAP);
+    wNew = iRenorm(wNew, cRaw, isBudget, pinned, num, FV_SHARE, SHARE_CAP);
     fprintf('  FV pinned at %.0f %% of the seed total (ARBITRARY — see header)\n', 100*FV_SHARE);
 end
 
 nCap = 0;
 for pass = 1:20
     v    = wNew .* cRaw;
-    hitC = isData & ~pinned & v > SHARE_CAP*TOT_SEED & cRaw > 0;
+    hitC = isBudget & ~pinned & v > SHARE_CAP*TOT_SEED & cRaw > 0;
     if ~any(hitC); break; end
     wNew(hitC) = SHARE_CAP * TOT_SEED ./ cRaw(hitC);
     pinned = pinned | hitC;
-    wNew = iRenorm(wNew, cRaw, isData, pinned, num, FV_SHARE, SHARE_CAP);
+    wNew = iRenorm(wNew, cRaw, isBudget, pinned, num, FV_SHARE, SHARE_CAP);
     nCap = nCap + nnz(hitC);
     fprintf('  share cap pass %d: pinned %s\n', pass, strjoin(prim(hitC), ', '));
 end
@@ -327,8 +440,10 @@ yline(1,'k--','one preparation-width','LineWidth',1.3,'FontSize',11);
 set(gca,'XTick',1:numel(fi),'XTickLabel',lbl,'XTickLabelRotation',45,'FontSize',11, ...
         'YScale','log','TickLabelInterpreter','none');
 ylabel('\chi^2 = cost / s^2','FontSize',12);
+[~, iWorst] = max(chi);
 title({'How far is the model from the data, in noise units?', ...
-       sprintf('%d of %d terms at or below the noise floor — rsK is the defect', nnz(chi<4), numel(chi))}, ...
+       sprintf('%d of %d terms at or below the noise floor — worst is %s (%.0f)', ...
+               nnz(chi<4), numel(chi), lbl{iWorst}, chi(iWorst))}, ...
       'FontSize',12,'FontWeight','bold');
 
 nexttile; hold on; box on; grid on
@@ -341,8 +456,10 @@ for k = find(isATP(:)')      % red tick under the ATP-relevant features
 end
 set(gca,'XTick',1:numel(fi),'XTickLabel',lbl,'XTickLabelRotation',45,'FontSize',11,'TickLabelInterpreter','none');
 ylabel('share of the objective (%)','FontSize',12);
-legend({'realign4 (hand-set)','spread-weighted'},'Location','northeast','FontSize',11);
-title({sprintf('Objective composition — total held at %.4f', TOT_SEED), ...
+legend({sprintf('%s (incoming)', BASE), sprintf('%s-weighted', SPREAD_SOURCE)}, ...
+       'Location','northeast','FontSize',11,'Interpreter','none');
+title({sprintf('Objective composition — total held at %.4f  (target: %s)', TOT_SEED, ...
+               ternary(isequal(POOLED_TARGET,false), 'single prep', 'POOLED')), ...
        sprintf('FV pinned at %.0f %% (arbitrary); everything else = \\lambda/s^2', 100*FV_SHARE)}, ...
       'FontSize',12,'FontWeight','bold');
 
@@ -353,8 +470,10 @@ fprintf('wrote %s\n', fullfile(resDir,'feature_weighting.png'));
 params0.fn = fnNew; params0.mods = {}; params0.g = [];
 snap = fullfile('params', [SEEDTAG '.m']);
 writeParamsToMFile(snap, params0, [], ...
-    sprintf('%s reweighted by measured 8 mM between-prep spread (kappa=%g, lambda=%.6g); cost-neutral at %.4f', ...
-            BASE, KAPPA, lambda, TOT0));
+    sprintf(['%s reweighted by %s 8 mM between-prep spread (kappa=%g, lambda=%.6g); ' ...
+             'target=%s; cost-neutral at %.4f'], ...
+            BASE, SPREAD_SOURCE, KAPPA, lambda, ...
+            ternary(isequal(POOLED_TARGET,false),'single-prep','pooled'), TOT0));
 fprintf('\nwrote %s\n', snap);
 
 save(fullfile(resDir,'weighted_objective.mat'), ...
@@ -370,11 +489,15 @@ function tf = isRangeTok(t)
     tf = ~isempty(regexp(t, '^-?[\d.]+\s*-\s*-?[\d.]+$', 'once'));
 end
 
-function w = iRenorm(w, cRaw, isData, pinned, num, FV_SHARE, SHARE_CAP)
+function o = ternary(c, a, b); if c; o = a; else; o = b; end; end
+
+function w = iRenorm(w, cRaw, isBudget, pinned, num, FV_SHARE, SHARE_CAP)
 % Free (unpinned) data terms carry whatever budget the pins left over, so the
 % data subtotal stays exactly `num` and the grand total stays cost-neutral.
-    free  = isData & ~pinned;
-    resid = num - sum(w(pinned & isData) .* cRaw(pinned & isData));
+% isBudget excludes newly ADDED entries: those are not part of the preserved
+% total, so they must not absorb or release any of it.
+    free  = isBudget & ~pinned;
+    resid = num - sum(w(pinned & isBudget) .* cRaw(pinned & isBudget));
     if resid <= 0 || ~any(free)
         error('BuildWeightedObjective:infeasible', ...
             ['pinned terms claim %.4f of the %.4f data budget — lower ' ...

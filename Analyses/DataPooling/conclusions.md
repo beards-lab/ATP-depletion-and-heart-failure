@@ -23,6 +23,9 @@ divisor must be per *preparation*, not per *run*, or the ATP effect is defined a
 | `RunFVConsistency.m` | does the in-preparation F–V point rescue the borrowed F–V curve | `results/fv_consistency.png` |
 | `buildPooledTarget.m` | **the deliverable**: pooled target + honest error bar per feature | `results/pooled_target.mat` |
 | `RunSummaryFigure.m` | the argument on one page | `results/datapooling_summary.png` |
+| `WritePooledTarget.m` | freeze the target into version control, next to what it replaces | `../../Model/pooledTarget8mM.m`, `results/pooled_target_report.txt` |
+| `BuildPooledSeed.m` | put that target *into the objective* and reweight from its spreads | `../../params/pooled8_seed.m` |
+| `RunOptimPooled.m` | refit against it (engine: `../FeatureWeighting/RunOptimSpreadW.m`) | `params/pooled8_opt.m`, `params/pooled8_iter/` |
 
 **[methods.md](methods.md) is the paper-ready paragraph** — 167 words, and it is meant
 to be the entire data-manipulation section.
@@ -340,7 +343,73 @@ it has to be stated; it is not a rounding effect.
    SL) to close the ~5 % length-offset residual, and keep the FV2 manoeuvre: it is free
    and it is the only F–V measurement tied to these preparations.
 
-## 8. Limitations
+## 8. The target, actually in the objective (2026-09-08)
+
+§7 said what to adopt. This section is what adopting it did. Three files, one switch:
+
+* **`WritePooledTarget.m` → `Model/pooledTarget8mM.m`.** `buildPooledTarget` needs the
+  six curated protocol files and `data/` is not in git, so the pooled numbers are
+  frozen once into a generated function. Regenerate it when a preparation lands — that
+  is the point: the target moves as data comes in, and the file header records which
+  preparations and which options produced it.
+* **`params0.UsePooledTarget`** (default `false`) routes the slack block through
+  `Model/pooledTargetFeatures`, which *replaces* `features_data` rather than adding a
+  penalty. A pooled target is a different value for the same quantity, so every
+  existing `fn` entry, weight and diagnostic keeps working. Modes: `true`/`'all'`,
+  `'shape'` (pooled pattern on the incoming force level), `'level'` (force block only).
+* **`BuildPooledSeed.m` → `params/pooled8_seed.m`** takes `s_f` from the same pooled
+  analysis (`SPREAD_SOURCE = 'pooled'` in `BuildWeightedObjective`) and renames the
+  `rsK` term to `rsK80`, so the audited target is scored with the audited estimator.
+
+### What the level step costs, and what it hides
+
+`estiff125_opt` — the best fit to 03/27 alone — scores **0.955 against 03/27** and
+**4.431 against the pool**. The tempting reading is "that's the −13 % level step"
+(`F_ref` 69.35 vs 03/27's `Fss22` 79.76). It is not. In χ² units — cost over the
+measured between-preparation spread, **per slack segment**, so 1.0 = one
+preparation-width:
+
+| term | χ²/segment | term | χ²/segment |
+|---|---|---|---|
+| **`peak1_y`** | **6.6** | `peak2` | 1.3 |
+| **`peak1_dSL`** | **5.2** | `vall2_dy` | 1.3 |
+| **`vall_t`** | **4.4** | `steady` | 1.3 |
+| `A` | 2.3 | `restretchSlopeStart` | 0.4 |
+| `vall_y` | 1.7 | `t0` 0.3 · `ktr` 0.15 · `rsK80` 0.06 · FV 0.02 | — |
+
+Eight of sixteen terms are already at or below one preparation-width, so there is no
+broad gain to be had. The residual is **the shape and timing of the re-stretch
+transient**, and `peak1_y` is most of it.
+
+**Why 03/27 alone could not see this.** The pool's first re-stretch peak sits **3 %
+below** its own isometric; 03/27's sits **12 % above** it. Fitting 03/27 was quietly
+*rewarding* the model's lengthening overshoot — the defect flagged at the end of the
+spreadw campaign and never scored. Note this is not 03/27 being a bad preparation: its
+χ² against the pooled mean is 0.40 where 0.67 is expected (§5). It is one feature where
+a single fibre's idiosyncrasy happened to point the same way as a model artefact.
+
+**`rsK80` = 0.06 and `ktr` = 0.15 are essentially exact**, which is the other half of
+the reading: the post-re-stretch *rate* is solved (spreadw's win, confirmed against the
+pooled mean and with the audited estimator). Any refit that improves `peak1_y` while
+those climb is trading a solved feature for a broken one.
+
+### The FV pin moved too — deliberately, and it confounds
+
+`FV_SHARE` 0.70 → **0.40**. At 0.70 the fourteen non-FV data terms held 6.6 % of the
+objective between them, so the pooled target's entire contribution would have been
+unbuyable. FV's own residual is χ² 0.02/point — inside the disagreement between its two
+source curves. The consequence for attribution is real and stated here rather than
+buried: this campaign changes the target *and* the pin. §5's `chi2Prep` is the control
+that says the target change alone should not have moved the optimum much.
+
+### Held out on purpose
+
+`rsT20` is **not** added. It is the audited re-stretch delay and the model's worst
+single feature, and the weight table prices it at 2.7 % — but `rsT0` and `peak1_t`
+price at **35 %** each. Adding a term while the target moves makes the result
+unreadable. Next campaign: `ADD_FEATS = {'rsT20'}`.
+
+## 9. Limitations
 
 * *n* = 3. Every spread here has a 12× confidence interval. The **rankings** in §2 are
   not resolvable; the **presence or absence** of normalisation is.
