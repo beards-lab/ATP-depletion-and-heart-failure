@@ -6,6 +6,11 @@ function v_red = applyFeatSelector(v, selector)
 %
 %   Accepted selectors:
 %     '1','2',...,'N' - pick segment N (1-based). Out-of-range -> NaN.
+%     'a:b'           - contiguous range of segments, clipped to numel(v).
+%                       Returns a VECTOR, so the cost stays a mean over the
+%                       kept segments. Used to drop a slack cycle that is a
+%                       different manoeuvre (see Analyses/RecoveryOscillation).
+%     'i,j,k'         - explicit list of segments, clipped the same way.
 %     'end'           - last element.
 %     'first'         - first non-NaN element (NaN if none).
 %     'last'          - last non-NaN element (NaN if none).
@@ -21,13 +26,21 @@ if isempty(selector)
     return;
 end
 
-n = str2double(selector);
-if ~isnan(n) && n == round(n) && n >= 1
-    if n <= numel(v)
-        v_red = v(n);
-    else
-        v_red = NaN;
+% Index forms first: 'N', 'a:b', 'i,j,k' and any mixture. This must precede
+% str2double, which reads '1,3,5' as the number 135 (comma = thousands
+% separator) and would silently turn a segment LIST into a bad index.
+if ~isempty(regexp(selector, '^\s*\d+\s*(:\s*\d+\s*)?(,\s*\d+\s*(:\s*\d+\s*)?)*$', 'once'))
+    idx = [];
+    for part = split(string(selector), ',')'
+        ab = str2double(split(part, ':'));
+        if numel(ab) == 1
+            idx = [idx, ab];                       %#ok<AGROW>
+        else
+            idx = [idx, ab(1):ab(end)];            %#ok<AGROW>
+        end
     end
+    idx = unique(idx(idx >= 1 & idx <= numel(v)), 'stable');
+    if isempty(idx); v_red = NaN; else; v_red = v(idx); end
     return;
 end
 

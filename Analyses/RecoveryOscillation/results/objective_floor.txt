@@ -1,0 +1,18 @@
+THE UNREACHABLE PART OF THE OBJECTIVE      (pooled8_opt, total 2.6999)
+============================================================================================
+sigma is the white transducer noise IN THAT WINDOW, from the data alone.
+A model sitting exactly on the truth still scores the floor.
+
+term                     sigma     floor     model      cost floorCost   irred%
+coolDownLS               1.587    0.3779    1.6372    0.1340    0.0071       5 %
+PS_rampupRMSE            1.232    1.2323    7.4539    0.1241    0.0034       3 %
+PS_holdDecayRMSE         1.444    1.4444    4.4468    0.0883    0.0093      11 %
+--------------------------------------------------------------------------------------------
+trace-LSQ terms total       0.3464   = 12.8 % of the objective
+of which irreducible        0.0198   = 0.7 % of the objective
+
+passive force span in the PNB run: 28.1 kPa, noise sigma 1.23 kPa -> SNR 22.8
+
+rsR2 scores 0.0000 (boundary 0.4-1.0, model 0.999 sits inside). A noise-free
+model CANNOT reach the data value 0.795 -- its ceiling is 0.834 -- so this
+term must stay a boundary and must never be turned into a fit-to-data term.

@@ -130,8 +130,18 @@ if any(~keep)
 end
 cfg.pool = cfg.pool(keep);
 
-cfg.N_DRAW = 10; cfg.SIMPLEX_EVALS = 60; cfg.MaxRunTime = 300;
-cfg.SURR_EVALS = 0; cfg.KICK_FRAC = 0.1; cfg.DEBUG = false;
+% Search character. Guarded like TAG/TIME_HRS so a wrapper can vary it per
+% instance -- which is the whole point of a multi-start campaign: several
+% sessions differing in HOW they search, not only in their random draw.
+% Defaults are the pooled8/spreadw settings, so an unset caller gets exactly
+% the previous behaviour.
+if ~exist('N_DRAW','var');        N_DRAW        = 10;  end
+if ~exist('SIMPLEX_EVALS','var'); SIMPLEX_EVALS = 60;  end
+if ~exist('SURR_EVALS','var');    SURR_EVALS    = 0;   end
+if ~exist('KICK_FRAC','var');     KICK_FRAC     = 0.1; end
+if ~exist('MAX_RUN_TIME','var');  MAX_RUN_TIME  = 300; end
+cfg.N_DRAW = N_DRAW; cfg.SIMPLEX_EVALS = SIMPLEX_EVALS; cfg.MaxRunTime = MAX_RUN_TIME;
+cfg.SURR_EVALS = SURR_EVALS; cfg.KICK_FRAC = KICK_FRAC; cfg.DEBUG = false;
 cfg.TIME_BUDGET_HRS = TIME_HRS;
 cfg.RESUME = isfile(fullfile(root,'params',[cfg.tag '_state.mat']));
 
@@ -158,7 +168,8 @@ end
 fprintf('[%s] coverage OK (%d fn entries)\n', cfg.tag, numel(fn));
 
 [c0,~,ct0,nm0] = evaluateBakersExp(1, pchk, true, false);
-fprintf('[%s] SEED = %.4f   (realign4_opt scored 3.8513 on the OLD objective)\n', cfg.tag, c0);
+fprintf('[%s] SEED = %.4f   (%s, expected %s)\n', cfg.tag, c0, SEEDSNAP, ...
+        num2str(SEED_EXPECT, '%.4f'));
 if ~isfinite(c0) || c0 > 1e4
     error('RunOptimSpreadW:badSeed','seed %.4g looks like a penalty', c0);
 end

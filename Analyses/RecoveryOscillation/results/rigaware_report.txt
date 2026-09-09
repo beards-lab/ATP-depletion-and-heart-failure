@@ -1,0 +1,9 @@
+RIG-AWARE CAMPAIGN -- four searches, one objective
+================================================================================================
+seed rigaware_seed = 2.6858 (expected 2.6858)
+
+snapshot                  header   re-eval     delta vs seed  rounds   stall
+------------------------------------------------------------------------------------------------
+rigaware_seed                NaN    2.6858       NaN    0.0%     NaN     NaN
+
+(no campaign snapshots yet -- seed only)

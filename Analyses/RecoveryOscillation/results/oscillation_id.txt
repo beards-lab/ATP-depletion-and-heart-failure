@@ -1,0 +1,43 @@
+RECOVERY RIPPLE -- rig resonance or biology?   (90 windows)
+======================================================================================
+
+S1  ONE FREQUENCY?   f0 of the residual, Hz
+group                 n     mean       sd      cv%   median
+8mM postSlack        15     89.6    195.3    218.0     15.6
+8mM postRestretch       15    809.9    722.1     89.2    632.8
+2mM postSlack        15    126.0    427.6    339.3     15.6
+2mM postRestretch       15   1147.4    508.8     44.3   1070.3
+PNB postSlack        15    535.9    521.0     97.2    320.3
+PNB postRestretch       15    591.1    569.0     96.3    441.4
+ALL                  90    550.0    623.7    113.4    189.5
+
+S2  ATP-INVARIANT?   f0 and ripple size by nucleotide
+cond            n    f0 (Hz)   relRMS %   bandFrac
+8mM            30      449.7        8.1       0.12
+2mM            30      636.7        6.2       0.18
+PNB            30      563.5     5718.7       0.20
+  f0 ratio 2mM/8mM = 1.416   (every measured RATE moves by 0.35-0.54)
+
+S3  PRESENT WITHOUT CROSS-BRIDGES?   PNB+Mava, same rig, same manoeuvre
+  PNB windows           n = 30
+  f0                    563.5 +/- 536.8 Hz   (active: 543.2 +/- 667.1)
+  ripple amplitude      0.69 kPa            (active: 0.65 kPa)
+
+S4  AMPLITUDE TRACKS THE EXCITATION?   ripple vs rise amplitude / ramp speed
+  corr(ripple amp, rise amplitude A) = -0.38
+  corr(ripple amp, ramp velocity)    = -0.43
+  ripple / rise amplitude            = 3.9 % (sd 4.0)
+
+S5  IN THE LENGTH CHANNEL?
+  length f0             1334.1 +/- 595.4 Hz
+  matches force f0      19 % of windows within 25 %
+  length ripple amp     7.74e-05 ML
+
+WHAT IT COSTS THE FIT
+  postSlack      R2 of the pure exponential = 0.984 +/- 0.007  (n=30)
+                 residual RMS = 3.0 % of the rise
+  postRestretch  R2 of the pure exponential = 0.795 +/- 0.117  (n=30)
+                 residual RMS = 11.3 % of the rise
+
+  A model with NO ripple can therefore never exceed R2 ~ 0.89 on this data;
+  it will be scored as if it were wrong by 7.1 % of the rise when it is not.

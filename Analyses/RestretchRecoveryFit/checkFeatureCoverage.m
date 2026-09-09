@@ -37,7 +37,7 @@ function rep = checkFeatureCoverage(params0)
 
     for i_fn = 1:numel(params0.fn)
         entry = params0.fn{i_fn};
-        parts = strsplit(entry, ',');        % grouped entries share one slot
+        parts = splitTopLevelComma(entry);   % grouped entries share one slot
         for i_p = 1:numel(parts)
             tokens = strsplit(strtrim(parts{i_p}), '|');
             tokens = tokens(~cellfun(@isempty, tokens));

@@ -109,6 +109,9 @@ fprintf(fid, '%% Fields\n');
 fprintf(fid, '%%   name/cls  feature name and class ("F" force-dimension, "0" scale-free)\n');
 fprintf(fid, '%%   val       pooled 8 mM value, ABSOLUTE units, one column per slack segment\n');
 fprintf(fid, '%%   s/sraw    relative between-preparation SD, moderated / raw (the chi-2 scale)\n');
+fprintf(fid, '%%   seg       which slack cycles s was measured on. The objective MUST score the\n');
+fprintf(fid, '%%             feature on those cycles and no others -- a chi-2 is only a chi-2\n');
+fprintf(fid, '%%             if the residual and the spread come from the same manoeuvre.\n');
 fprintf(fid, '%%   r/sr/z    2 mM / 8 mM ratio, its spread, and |r-1|/sqrt(s^2+sr^2)\n');
 fprintf(fid, '%%   Fref      the pooled absolute level in kPa, and the range the preps span\n');
 fprintf(fid, '%%   dof       degrees of freedom behind s (d0 + n - 1), for confidence intervals\n');
@@ -124,6 +127,7 @@ end
 fprintf(fid, '    ];\n');
 writeRow(fid, 'P.s',    T.s8);
 writeRow(fid, 'P.sraw', T.s8raw);
+fprintf(fid, 'P.seg      = {%s};\n', strjoin(cellfun(@(v) mat2str(v), T.seg, 'uni', 0), ', '));
 writeRow(fid, 'P.r',    T.r);
 writeRow(fid, 'P.sr',   T.sr);
 writeRow(fid, 'P.z',    T.z);

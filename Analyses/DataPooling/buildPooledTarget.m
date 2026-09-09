@@ -44,6 +44,18 @@ if ~isfield(opts,'anchor');  opts.anchor  = 'Fss22'; end
 if ~isfield(opts,'rundown'); opts.rundown = true;    end
 if ~isfield(opts,'shrink');  opts.shrink  = true;    end
 if ~isfield(opts,'phi');     opts.phi     = 0.452;   end
+% Which slack cycles each feature's SPREAD is measured over. The pooled VALUES
+% always carry all five; this sets only the segments behind s, and s must be
+% measured on exactly the segments the objective scores. Cycle 5 re-stretches
+% to a DIFFERENT final length by the SMALLEST amplitude, so for the re-stretch
+% rate it is both a different manoeuvre (Analyses/RestretchMetricAudit sec. 3)
+% and 3-5x noisier (Analyses/RecoveryOscillation) -- there, s(1:5) is entirely
+% accounted for by the transducer and the feature carries no resolvable
+% between-preparation information at all.
+%   opts.segments = 1:4                      applies to every feature
+%   opts.segments = struct('rsK80', 1:4)     per-feature override, rest 1:5
+if ~isfield(opts,'segments'); opts.segments = 1:5;   end
+if ~isfield(opts,'segDefault'); opts.segDefault = 1:5; end
 
 R    = poolLoadRuns();
 days = unique({R.day},'stable'); nP = numel(days);
@@ -100,12 +112,15 @@ T = struct();
 T.name = FEAT(:,1)'; T.cls = FEAT(:,2)';
 [T.m8, T.m2] = deal(nan(nF,nEl));
 [T.s8, T.s8raw, T.r, T.sr, T.z] = deal(nan(1,nF));
+T.seg = repmat({1:nEl}, 1, nF);   % segments behind each s, see segmentsFor
 Rp = nan(nP,nF);                                % per-prep 2 mM / 8 mM ratio
 for k = 1:nF
     V8 = squeeze(Y(:,1,k,:)); V2 = squeeze(Y(:,2,k,:));
     T.m8(k,:)  = mean(V8,1,'omitnan');
     T.m2(k,:)  = mean(V2,1,'omitnan');
-    T.s8raw(k) = relSD(V8);
+    sg         = segmentsFor(opts, T.name{k}, nEl);
+    T.seg{k}   = sg;
+    T.s8raw(k) = relSD(V8(:,sg));
     for p = 1:nP
         qq = V2(p,:)./V8(p,:); qq = qq(isfinite(qq) & qq > 0);
         if ~isempty(qq); Rp(p,k) = exp(mean(log(qq))); end
@@ -228,6 +243,18 @@ end
 end
 
 %% ======================= helpers ========================================
+function sg = segmentsFor(opts, name, nEl)
+%SEGMENTSFOR  Which slack cycles this feature's spread is measured over.
+    s = opts.segments;
+    if isstruct(s)
+        if isfield(s, name); sg = s.(name); else; sg = opts.segDefault; end
+    else
+        sg = s;
+    end
+    sg = sg(sg >= 1 & sg <= nEl);
+    if isempty(sg); sg = 1:nEl; end
+end
+
 function s = relSD(V)
     mu = mean(V,1,'omitnan'); sd = std(V,0,1,'omitnan');
     g = isfinite(mu) & abs(mu) > 0 & isfinite(sd);
