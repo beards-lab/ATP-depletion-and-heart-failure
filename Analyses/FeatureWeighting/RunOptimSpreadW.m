@@ -154,7 +154,29 @@ params0.RunSlackSegments = 'AllPar';
 params0.MaxRunTime = cfg.MaxRunTime; params0.OptimizeOn = 'Feats';
 cfg.params0 = params0;
 
-if isempty(gcp('nocreate')); parpool('local', NWORKERS); end
+% Pool. On a cluster this campaign runs FOUR MATLAB sessions on one node, and
+% every local pool defaults to the SAME JobStorageLocation
+% (~/.matlab/local_cluster_jobs/<release>). Concurrent sessions then race over
+% the same job files and one of them dies with an opaque "failed to start
+% parallel pool" -- typically hours in. Give each session its own directory,
+% under tempdir because it must be node-local and writable, never a shared
+% filesystem. Falls back to the plain call if anything about that fails: a
+% 30-hour run must not be lost to a scratch-directory problem.
+if isempty(gcp('nocreate'))
+    try
+        cl  = parcluster('local');
+        jsl = fullfile(tempdir, sprintf('mjob_%s_%d', cfg.tag, feature('getpid')));
+        if ~isfolder(jsl); mkdir(jsl); end
+        cl.JobStorageLocation = jsl;
+        if cl.NumWorkers < NWORKERS; cl.NumWorkers = NWORKERS; end
+        parpool(cl, NWORKERS);
+        fprintf('[%s] pool of %d, JobStorageLocation %s\n', cfg.tag, NWORKERS, jsl);
+    catch ME
+        warning('RunOptimSpreadW:jobStorage', ...
+            'per-session JobStorageLocation failed (%s) -- falling back', ME.message);
+        if isempty(gcp('nocreate')); parpool('local', NWORKERS); end
+    end
+end
 
 %% ---- pre-flight ----------------------------------------------------------
 pchk = cfg.params0; pchk.mods = {}; pchk.g = ones(1,0);
