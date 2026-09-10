@@ -28,7 +28,32 @@ if [ "${GO:-0}" = "1" ]; then DRY=false; else DRY=true
   echo "DRY RUN: pre-flighting only. Set GO=1 to start the search." >&2
 fi
 
-command -v "$MATLAB" >/dev/null || { echo "matlab not on PATH; set MATLAB=<path>" >&2; exit 1; }
+# On an HPC system MATLAB is almost never on the default PATH -- it lives
+# behind the module system, and `module` is a shell function that a
+# non-interactive script cannot rely on inheriting. So say what to do rather
+# than just what is wrong.
+if ! command -v "$MATLAB" >/dev/null; then
+    {
+        echo "matlab not on PATH."
+        if command -v module >/dev/null 2>&1 || [ -n "${MODULESHOME:-}" ]; then
+            echo
+            echo "This looks like a module-based system. Load it first, in THIS shell:"
+            echo "    module avail matlab        # see what is installed"
+            echo "    module load matlab         # or e.g. matlab/R2023a"
+            echo "    GO=1 HOURS=$HOURS bash $0"
+        fi
+        echo
+        echo "Or point at it directly:  MATLAB=/path/to/matlab GO=1 bash $0"
+    } >&2
+    exit 1
+fi
+
+# Record the release in the log. The campaign was developed on R2023a; the
+# selector syntax it depends on (rsK80[1:4]) is plain regex and string work, so
+# older releases are expected to be fine -- but if a run behaves oddly this is
+# the first line to check, and it costs one banner to have it.
+echo "matlab   $(command -v "$MATLAB")"
+"$MATLAB" -nodisplay -nosplash -batch "fprintf('release  %s\n', version('-release'))" 2>/dev/null || true
 
 pids=()
 for p in $PROFILES; do
