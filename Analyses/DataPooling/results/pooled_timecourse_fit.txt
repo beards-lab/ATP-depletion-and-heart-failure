@@ -1,0 +1,11 @@
+MODEL vs POOLED TIMECOURSE, absolute kPa   (TAG pooled8_opt)
+pooled level Fref = 69.35 kPa from 3 preps 03/27/04/03/04/10
+
+reference             RMS kPa      RMS %   bias kPa     bias %
+----------------------------------------------------------------
+pooled mean @69.3       10.32       18.8       9.92       18.0   <- pooled8_opt
+03/27 M raw              2.79        4.2      -1.49       -2.2   <- pooled8_opt
+pooled mean @69.3       12.00       21.8      11.52       20.9   <- estiff125_opt
+03/27 M raw              2.59        3.9       0.11        0.2   <- estiff125_opt
+
+band width: mean +-SD is 6.3 % of the pooled mean

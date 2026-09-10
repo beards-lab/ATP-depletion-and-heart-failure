@@ -25,6 +25,12 @@ function ok = checkCampaignData(seedTag)
 % are predictions: nothing in the objective touches them, but
 % Analyses/OptimResultReport/RunFitReport.m plots them afterwards.
 %
+% A THIRD tier is reported separately: the other two preparations' 8 mM runs.
+% The fit does not need them -- the pooled target is frozen in code -- but the
+% pooled TIMECOURSE cannot be drawn from one preparation, so
+% RunDataEnvelope / RunPooledTimecourseFit do. Their names are derived from
+% the target's own day list, so they follow it if a fourth preparation lands.
+%
 % See also pooledTarget8mM, RunOptimRigAware, RunRigAwareReport
 
 if nargin < 1 || isempty(seedTag); seedTag = 'rigaware_seed'; end
@@ -80,6 +86,24 @@ else
         PT.nP, strjoin(PT.days,'/'), seg);
 end
 fprintf('REFERENCE Model/LoadData.m  F-V and k_tr arrays are inline -- no data file\n');
+
+% ---- the pooled TIMECOURSE tier ----------------------------------------
+% Derived from the target's day list ('03/27' -> protocol_03_27_2026_8mM_slack).
+if exist('PT','var')
+    fprintf('\nfor the pooled TIMECOURSE figure (RunDataEnvelope / RunPooledTimecourseFit):\n');
+    for i = 1:numel(PT.days)
+        rel = fullfile('data', sprintf('protocol_%s_2026_8mM_slack.mat', ...
+                                       strrep(PT.days{i}, '/', '_')));
+        d = dir(fullfile(root, rel));
+        if isempty(d)
+            fprintf('  %-48s %10s   <-- MISSING (pooled average needs all %d)\n', ...
+                    rel, '-', numel(PT.days));
+        else
+            fprintf('  %-48s %10d\n', rel, d.bytes);
+        end
+    end
+    fprintf('  the FIT does not need these -- the target is frozen in code.\n');
+end
 
 fprintf('\n');
 if ok
