@@ -1,5 +1,10 @@
-function plotRigAware(C, H, resDir)
+function plotRigAware(C, H, resDir, outstem)
 %PLOTRIGAWARE  One page: the four descents, the ranking, and what moved.
+%
+%   OUTSTEM names the file, so two campaigns do not overwrite each other's
+%   figure. Defaults to the original name for older callers.
+
+if nargin < 4 || isempty(outstem); outstem = 'rigaware_report'; end
 
 fig = figure('Position',[60 60 1400 620],'Color','w');
 tiledlayout(1,3,'Padding','compact','TileSpacing','compact');
@@ -36,6 +41,6 @@ if numel(C) > 1
     title(sprintf('%s: where the drop came from', C(iB).name), 'Interpreter','none');
 end
 
-exportgraphics(fig, fullfile(resDir,'rigaware_report.png'), 'Resolution',140);
+exportgraphics(fig, fullfile(resDir,[outstem '.png']), 'Resolution',140);
 close(fig);
 end

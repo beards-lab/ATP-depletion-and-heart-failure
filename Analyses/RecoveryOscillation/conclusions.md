@@ -387,3 +387,56 @@ the reason and the fix is to rescale the trace windows by `Fref/Fss22`.
   is wrong, but the guard's strength was not the number anyone chose. The
   anchor block now replaces every existing guard on the same feature+range
   rather than appending.
+
+---
+
+## 10. How to run it
+
+One name selects the whole campaign. [`campaignSpec.m`](campaignSpec.m) holds
+what each starts from, and the launcher, the SLURM job, the campaign script,
+`campaignStatus` and the consolidation report all read it from there — because
+consolidating one campaign's snapshots against *another* campaign's seed is
+exactly how a "−10 %" gets printed for a search that went nowhere.
+
+| campaign | seed | cost | status |
+|---|---|---|---|
+| `rigaware` | `params/rigaware_seed.m` | 2.6858 | **ran, superseded** (§7). Kept only so the result reproduces |
+| **`floored`** | `params/floored_seed.m` | **0.9081** | the one to run |
+
+```bash
+# 1. pre-flight -- one evaluation, no search. Always do this first.
+matlab -batch "addpath(genpath('.')); PROFILE='a'; DRYRUN=true; \
+    run('Analyses/RecoveryOscillation/RunOptimRigAware.m')"
+
+# 2. launch. CAMPAIGN defaults to `floored`; -Go / GO=1 is the safety catch.
+.\Analyses\RecoveryOscillation\launch_rigaware.ps1 -Hours 30 -Go       # Windows
+GO=1 HOURS=30 Analyses/RecoveryOscillation/launch_rigaware.sh          # Linux
+sbatch --account=<acct> Analyses/RecoveryOscillation/rigaware.sbatch   # Great Lakes
+
+# 3. watch, from the state files rather than the logs
+matlab -batch "addpath(genpath('.')); campaignStatus"
+
+# 4. consolidate
+matlab -batch "addpath(genpath('.')); CAMPAIGN='floored'; \
+    run('Analyses/RecoveryOscillation/RunRigAwareReport.m')"
+```
+
+Pre-flight passes at exactly 0.9081, and the composition is what the exercise
+was for — F–V is gone from the top ten entirely:
+
+```
+peak1_y            0.1558   17.2 %      PS_holdDecayRMSE   0.0954   10.5 %
+peak1_dSL          0.1535   16.9 %      PS_steady20        0.0277    3.0 %
+coolDownLS         0.1483   16.3 %      vall2_dy           0.0252    2.8 %
+PS_rampupRMSE      0.1306   14.4 %      PS_steady22        0.0199    2.2 %
+vall_t             0.0990   10.9 %      steady             0.0194    2.1 %
+```
+
+**Run two profiles, not four** (§8: four sessions is 24 MATLAB processes on one
+node and three of them died). `a` and `b` are the pair worth the cores — `c`
+cannot reach the levers that matter and `d` spends its budget writing a log.
+
+**Read the result against §7, not against the total.** The question is not
+whether the number fell, it is whether `peak1_y` and `peak1_dSL` fell. The
+report flags a protected term (`rsK80`, `ktr`, F–V) that grows by more than
+20 % of itself, which is what §7 needed and did not have.

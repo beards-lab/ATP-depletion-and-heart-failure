@@ -46,6 +46,10 @@
 % =========================================================================
 % HOW TO RUN
 % =========================================================================
+% CAMPAIGN selects what to start from (campaignSpec.m). It defaults to
+% `floored`, which is the one to run: `rigaware` already ran, and sec. 7 of
+% conclusions.md is the record of it putting 110 % of its gain into F-V.
+%
 % One instance, 30 h, resumable (resume is automatic if the state file exists):
 %
 %   matlab -batch "PROFILE='a'; TIME_HRS=30; run('Analyses/RecoveryOscillation/RunOptimRigAware.m')"
@@ -62,7 +66,7 @@
 %   for p in a b c d; do matlab -batch "PROFILE='$p'; TIME_HRS=30; \
 %       run('Analyses/RecoveryOscillation/RunOptimRigAware.m')" & sleep 20; done
 %
-% Then consolidate:  RunRigAwareReport.m
+% Then consolidate:  RunRigAwareReport.m   (same CAMPAIGN)
 %
 % SIZING. One objective evaluation is ~38 s at 5 workers, and a round is
 % SIMPLEX_EVALS of them, so profile A is ~40 min/round -> ~45 rounds in 30 h.
@@ -102,20 +106,16 @@ if ~exist('PROFILE','var');  PROFILE  = 'a'; end
 if ~exist('TIME_HRS','var'); TIME_HRS = 30;  end
 if ~exist('NWORKERS','var'); NWORKERS = 5;   end
 
-% Seed is a knob: the floored campaign reuses this whole file and only changes
-% what it starts from and what that scores.
-%   rigaware_seed  2.6858  BuildRigAwareSeed.m   -- the rsK80[1:4] objective
-%   floored_seed   0.9081  BuildFlooredSeed.m    -- the same, with every data
-%                                                   term given a one-width
-%                                                   deadband (sec. 7: the
-%                                                   unfloored run put 110 % of
-%                                                   its gain into F-V)
-if ~exist('SEEDSNAP','var');    SEEDSNAP    = fullfile('params','rigaware_seed.m'); end
-if ~exist('SEED_EXPECT','var'); SEED_EXPECT = 2.6858; end
-%                       BuildRigAwareSeed.m, cost-neutral at pooled8_opt.
-                        % The engine rejects a seed more than 0.25 away -- the
-                        % objective's own peak-to-peak roughness, not a
-                        % tolerance to tighten (Docs objective_noise_floor).
+% WHICH CAMPAIGN. One file serves both; campaignSpec holds what each starts
+% from, so the launcher, this script, the report and campaignStatus cannot
+% disagree about it. Default is `floored` -- `rigaware` already ran and is kept
+% only so its result reproduces (conclusions.md sec. 7: do not relaunch it).
+% SEEDSNAP / SEED_EXPECT / TAGSTEM still override individually.
+if ~exist('CAMPAIGN','var'); CAMPAIGN = 'floored'; end
+SPEC = campaignSpec(CAMPAIGN);
+if ~exist('SEEDSNAP','var');    SEEDSNAP    = SPEC.seedSnap;   end
+if ~exist('SEED_EXPECT','var'); SEED_EXPECT = SPEC.seedExpect; end
+if ~exist('TAGSTEM','var');     TAGSTEM     = SPEC.stem;       end
 
 switch lower(PROFILE)
     case 'a'; N_DRAW=10; SIMPLEX_EVALS=60; KICK_FRAC=0.10; SURR_EVALS=0;
@@ -126,20 +126,24 @@ switch lower(PROFILE)
         error('RunOptimRigAware:profile', ...
               'PROFILE must be a, b, c or d (got "%s").', PROFILE);
 end
-if ~exist('TAGSTEM','var'); TAGSTEM = 'rigaware'; end
 TAG          = sprintf('%s_%s', TAGSTEM, lower(PROFILE));
 MAX_RUN_TIME = 300;
 
 if ~isfile(SEEDSNAP)
+    build = 'BuildFlooredSeed';
+    if strcmp(SPEC.name,'rigaware'); build = 'BuildRigAwareSeed'; end
     error('RunOptimRigAware:noSeed', ...
         ['%s not found. Build it first:\n' ...
          '    OPTS = struct(''segments'', struct(''rsK80'', 1:4));\n' ...
          '    run(''Analyses/DataPooling/WritePooledTarget.m'')\n' ...
-         '    run(''Analyses/RecoveryOscillation/BuildRigAwareSeed.m'')'], SEEDSNAP);
+         '    run(''Analyses/RecoveryOscillation/%s.m'')'], SEEDSNAP, build);
 end
 
-fprintf(['RunOptimRigAware  profile %s -> tag %s\n' ...
+fprintf(['RunOptimRigAware  campaign %s, profile %s -> tag %s\n' ...
+         '  %s\n' ...
+         '  seed %s (expect %.4f)\n' ...
          '  budget %.1f h | N_DRAW %d | SIMPLEX %d | KICK %.2f | SURR %d | workers %d\n\n'], ...
-        upper(PROFILE), TAG, TIME_HRS, N_DRAW, SIMPLEX_EVALS, KICK_FRAC, SURR_EVALS, NWORKERS);
+        SPEC.name, upper(PROFILE), TAG, SPEC.note, SEEDSNAP, SEED_EXPECT, ...
+        TIME_HRS, N_DRAW, SIMPLEX_EVALS, KICK_FRAC, SURR_EVALS, NWORKERS);
 
 run(fullfile(root, 'Analyses', 'FeatureWeighting', 'RunOptimSpreadW.m'));

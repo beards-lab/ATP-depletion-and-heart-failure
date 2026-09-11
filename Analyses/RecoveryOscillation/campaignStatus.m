@@ -1,8 +1,9 @@
 function campaignStatus(tags)
-%CAMPAIGNSTATUS  Where is each profile of the rig-aware campaign, really?
+%CAMPAIGNSTATUS  Where is each profile of a campaign, really?
 %
-%   campaignStatus                       % rigaware_a .. rigaware_d
-%   campaignStatus({'rigaware_a'})
+%   campaignStatus                       % floored_a .. floored_d
+%   campaignStatus('rigaware')           % the superseded one
+%   campaignStatus({'floored_a'})        % one profile
 %
 % Answers the three questions you actually have when a long campaign looks
 % wrong, and answers them from the STATE FILES rather than the logs, because a
@@ -26,13 +27,21 @@ function campaignStatus(tags)
 %
 % See also RunOptimRigAware, RunRigAwareReport, analyzeOptIterUniqueness
 
-if nargin < 1 || isempty(tags)
-    tags = {'rigaware_a','rigaware_b','rigaware_c','rigaware_d'};
-end
+% A campaign NAME ('floored', 'rigaware') expands to its four tags and, more
+% importantly, to ITS OWN seed: "vs seed" measured against another campaign's
+% baseline is worse than no number at all. An explicit tag list still works.
+if nargin < 1 || isempty(tags); tags = 'floored'; end
 if ischar(tags) || isstring(tags); tags = cellstr(tags); end
+isName = isscalar(tags) && any(strcmpi(tags{1}, {'floored','rigaware'}));
+if isName
+    spec = campaignSpec(tags{1});
+    tags = spec.tags;
+else
+    spec = campaignSpec(stemOf(tags{1}));
+end
 
 root   = fileparts(fileparts(fileparts(mfilename('fullpath'))));
-SEED   = 2.6858;                       % BuildRigAwareSeed.m
+SEED   = spec.seedExpect;              % this campaign's own seed
 MINUTES = containers.Map({'a','b','c','d'}, {38, 57, 25, 114});
 
 fprintf('\ncampaign status   seed %.4f   %s\n', SEED, datestr(now,'yyyy-mm-dd HH:MM')); %#ok<TNOW1,DATST>
@@ -91,7 +100,7 @@ fprintf(['Reading it:  a drop of less than 0.25 is inside the objective''s own p
          'roughness (Docs objective_noise_floor), so "no decrease" only means something\n' ...
          'once several rounds have been accepted and rejected. stall counts ROUNDS, not\n' ...
          'evaluations.\n\n' ...
-         'Logs:   Analyses/RecoveryOscillation/results/rigaware_<p>.log\n' ...
+         'Logs:   Analyses/RecoveryOscillation/results/' spec.stem '_<p>.log\n' ...
          'Detail: analyzeOptIterUniqueness(''<tag>'')  -- which parameters are actually moving\n\n']);
 end
 
@@ -107,4 +116,12 @@ function tf = iAlive(tag)
     catch
         tf = [];
     end
+end
+
+function stem = stemOf(tag)
+%STEMOF  'floored_a' -> 'floored'. An unrecognised stem falls back to the
+%   default campaign rather than erroring, so a one-off tag can still be
+%   inspected -- the seed column is then the default's and says so.
+    stem = regexprep(tag, '_[a-d]$', '');
+    if ~any(strcmpi(stem, {'floored','rigaware'})); stem = 'floored'; end
 end

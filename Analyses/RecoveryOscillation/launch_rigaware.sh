@@ -6,6 +6,11 @@
 #   ./launch_rigaware.sh                  # dry run: pre-flight all four
 #   GO=1 HOURS=30 ./launch_rigaware.sh    # the real thing
 #   GO=1 HOURS=30 PROFILES="a c" ./launch_rigaware.sh
+#   GO=1 CAMPAIGN=rigaware ./launch_rigaware.sh    # reproduce the old one
+#
+# CAMPAIGN picks what to start from (campaignSpec.m); it defaults to `floored`,
+# which is the one to run. `rigaware` already ran -- conclusions.md sec. 7 is
+# the record of it putting 110 % of its gain into force-velocity.
 #
 # Under SLURM, ask for one node with >= 20 cores and >= 32 GB and run this as
 # the job step -- four MATLAB sessions x ~5 workers each. Do NOT submit the
@@ -24,6 +29,11 @@ MATLAB="${MATLAB:-matlab}"
 HOURS="${HOURS:-30}"
 WORKERS="${WORKERS:-5}"
 PROFILES="${PROFILES:-a b c d}"
+CAMPAIGN="${CAMPAIGN:-floored}"
+case "$CAMPAIGN" in
+  floored|rigaware) ;;
+  *) echo "CAMPAIGN must be 'floored' or 'rigaware' (got '$CAMPAIGN')" >&2; exit 1 ;;
+esac
 if [ "${GO:-0}" = "1" ]; then DRY=false; else DRY=true
   echo "DRY RUN: pre-flighting only. Set GO=1 to start the search." >&2
 fi
@@ -55,13 +65,15 @@ fi
 echo "matlab   $(command -v "$MATLAB")"
 "$MATLAB" -nodisplay -nosplash -batch "fprintf('release  %s\n', version('-release'))" 2>/dev/null || true
 
+echo "campaign $CAMPAIGN"
+
 pids=()
 for p in $PROFILES; do
-    log="$res/rigaware_$p.log"
+    log="$res/${CAMPAIGN}_$p.log"
     echo "profile $p -> $log"
     "$MATLAB" -nodisplay -nosplash -batch \
-      "cd('$root'); addpath(genpath('.')); PROFILE='$p'; TIME_HRS=$HOURS; \
-       NWORKERS=$WORKERS; DRYRUN=$DRY; \
+      "cd('$root'); addpath(genpath('.')); CAMPAIGN='$CAMPAIGN'; PROFILE='$p'; \
+       TIME_HRS=$HOURS; NWORKERS=$WORKERS; DRYRUN=$DRY; \
        run('Analyses/RecoveryOscillation/RunOptimRigAware.m')" \
       > "$log" 2>&1 &
     pids+=($!)
@@ -70,7 +82,8 @@ done
 
 echo
 echo "launched ${#pids[@]} session(s): ${pids[*]}"
-echo "follow one with:  tail -f $res/rigaware_a.log"
+echo "follow one with:  tail -f $res/${CAMPAIGN}_a.log"
+echo "check progress:   $MATLAB -batch \"addpath(genpath('.')); campaignStatus('$CAMPAIGN')\""
 wait "${pids[@]}"
 echo "all sessions finished. consolidate with:"
-echo "  $MATLAB -batch \"run('Analyses/RecoveryOscillation/RunRigAwareReport.m')\""
+echo "  $MATLAB -batch \"CAMPAIGN='$CAMPAIGN'; run('Analyses/RecoveryOscillation/RunRigAwareReport.m')\""

@@ -7,6 +7,12 @@
 #   sbatch --account=beards1 --time=36:00:00 \
 #          --export=ALL,HOURS=30,PROFILES="a c" Analyses/RecoveryOscillation/rigaware.sbatch
 #
+# CAMPAIGN defaults to `floored` -- the objective with a one-preparation-width
+# deadband on every data term (conclusions.md sec. 9). The older `rigaware`
+# campaign already ran and put 110 % of its gain into force-velocity (sec. 7);
+# --export=ALL,CAMPAIGN=rigaware reproduces it, but do not relaunch it to make
+# progress.
+#
 # WHY A BATCH JOB AND NOT THE LAUNCHER DIRECTLY. launch_rigaware.sh runs the
 # four sessions in the FOREGROUND and waits. In an interactive salloc that ties
 # the run to your SSH session -- drop the connection, or hit the allocation's
@@ -57,9 +63,12 @@ echo "=== data pre-flight ==="
   "addpath(genpath('.')); ok = checkCampaignData(); exit(~ok)" \
   || { echo "DATA PRE-FLIGHT FAILED -- copy the required files into data/ and resubmit" >&2; exit 2; }
 
+CAMPAIGN="${CAMPAIGN:-floored}"
+
 echo
-echo "=== campaign ==="
+echo "=== campaign $CAMPAIGN ==="
 GO=1 \
+CAMPAIGN="$CAMPAIGN" \
 HOURS="${HOURS:-30}" \
 WORKERS="${WORKERS:-5}" \
 PROFILES="${PROFILES:-a b c d}" \
@@ -68,6 +77,6 @@ bash Analyses/RecoveryOscillation/launch_rigaware.sh
 echo
 echo "=== consolidating ==="
 "$MATLAB" -nodisplay -nosplash -batch \
-  "addpath(genpath('.')); run('Analyses/RecoveryOscillation/RunRigAwareReport.m')"
+  "addpath(genpath('.')); CAMPAIGN='$CAMPAIGN'; run('Analyses/RecoveryOscillation/RunRigAwareReport.m')"
 
 echo "done. results in Analyses/RecoveryOscillation/results/"

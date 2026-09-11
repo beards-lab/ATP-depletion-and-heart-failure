@@ -25,20 +25,26 @@
 % preparation-width; a campaign that lowers the total while raising those has
 % traded a solved feature for a broken one.
 %
-% Output -> results/rigaware_report.txt
-%           results/rigaware_report.png
-%           results/rigaware_report.mat
+% Output -> results/<campaign>_report.txt
+%           results/<campaign>_report.png
+%           results/<campaign>_report.mat
 
-clearvars -except TAGS; clc;
+clearvars -except TAGS CAMPAIGN; clc;
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here,'..','..'); cd(root); addpath(genpath(root));
 resDir = fullfile(here,'results'); if ~isfolder(resDir); mkdir(resDir); end
-if ~exist('TAGS','var') || isempty(TAGS)
-    TAGS = {'rigaware_a','rigaware_b','rigaware_c','rigaware_d'};
-end
 
-SEED     = 'rigaware_seed';
-SEED_EXP = 2.6858;
+% The baseline row MUST be the seed this campaign actually started from --
+% consolidating one campaign's snapshots against another's seed is how a
+% "-10 %" gets printed for a search that went nowhere. campaignSpec keeps the
+% two in step; TAGS still overrides for a partial run.
+if ~exist('CAMPAIGN','var'); CAMPAIGN = 'floored'; end
+SPEC = campaignSpec(CAMPAIGN);
+if ~exist('TAGS','var') || isempty(TAGS); TAGS = SPEC.tags; end
+
+SEED     = SPEC.seedTag;
+SEED_EXP = SPEC.seedExpect;
+OUTSTEM  = sprintf('%s_report', SPEC.stem);
 ROUGH    = 0.25;         % peak-to-peak numerical roughness of the objective
 
 if isempty(gcp('nocreate')); parpool('local', 5); end
@@ -68,11 +74,12 @@ for i = 1:numel(TAGS)
 end
 
 %% ---- the table ---------------------------------------------------------
-fid = fopen(fullfile(resDir,'rigaware_report.txt'),'w');
+fid = fopen(fullfile(resDir,[OUTSTEM '.txt']),'w');
 p = @(varargin) tee(fid, varargin{:});
 
-p('RIG-AWARE CAMPAIGN -- four searches, one objective\n');
+p('%s CAMPAIGN -- four searches, one objective\n', upper(SPEC.name));
 p('%s\n', repmat('=',1,96));
+p('%s\n', SPEC.note);
 p('seed %s = %.4f (expected %.4f)\n\n', SEED, C(1).cost, SEED_EXP);
 
 p('%-22s %9s %9s %9s %7s %7s %7s\n', ...
@@ -116,11 +123,21 @@ else
     d  = C(iBest).featCost - C(1).featCost;
     [~, o] = sort(d, 'ascend');
     p('%-24s %9s %9s %9s\n','feature','seed','best','change');
+    % The regression guard is RELATIVE to the term, not absolute. An absolute
+    % threshold is silent on exactly the campaign it matters for: the floored
+    % objective totals 0.91 against the unfloored 2.69, so a fixed 0.02 would
+    % never fire there -- and it already missed ktr (+13 % of itself) and
+    % rsK80 (+30 %) on the run it was written for.
+    REGRESS_FRAC = 0.20;                    % of the term's own seed value
+    NOTICE_FRAC  = 0.002;                   % ... and of the seed total, so a
+                                            % tiny term doubling is not news
     for i = o(:)'        % force a row: `for i = <column>` iterates ONCE
         if abs(d(i)) < 1e-4; continue; end
         warn = '';
-        if any(strcmp(nm{i}, {'rsK80','ktr','FV_normpowerAvg'})) && d(i) > 0.02
-            warn = '   <-- a SOLVED feature got worse';
+        if any(strcmp(nm{i}, {'rsK80','ktr','FV_normpowerAvg'})) && ...
+                d(i) > REGRESS_FRAC*C(1).featCost(i) && d(i) > NOTICE_FRAC*C(1).cost
+            warn = sprintf('   <-- a SOLVED feature got worse (+%.0f %%)', ...
+                           100*d(i)/max(C(1).featCost(i), eps));
         end
         p('%-24s %9.4f %9.4f %+9.4f%s\n', nm{i}, ...
           C(1).featCost(i), C(iBest).featCost(i), d(i), warn);
@@ -133,10 +150,9 @@ else
     p('direction the data cannot see.\n');
 end
 fclose(fid);
-
-save(fullfile(resDir,'rigaware_report.mat'), 'C', 'H');
-plotRigAware(C, H, resDir);
-fprintf('\nreport -> %s\n', fullfile(resDir,'rigaware_report.txt'));
+save(fullfile(resDir,[OUTSTEM '.mat']), 'C', 'H', 'SPEC');
+plotRigAware(C, H, resDir, OUTSTEM);
+fprintf('\nreport -> %s\n', fullfile(resDir,[OUTSTEM '.txt']));
 
 % ------------------------------------------------------------------------
 function C = addRow(C, tag)

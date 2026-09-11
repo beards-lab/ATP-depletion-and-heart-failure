@@ -1,0 +1,56 @@
+function S = campaignSpec(name)
+%CAMPAIGNSPEC  What a named campaign starts from, and what it writes.
+%
+%   S = campaignSpec('floored')
+%
+% One place holding the mapping, because five things need it and agreeing by
+% hand is how a report ends up consolidating one campaign against another
+% campaign's seed. The launcher, the SLURM job, the campaign script, the
+% consolidation report and campaignStatus all read it from here.
+%
+% S.stem        tag prefix; the profiles are <stem>_a .. <stem>_d
+% S.seedSnap    params/<...>.m the search starts from
+% S.seedTag     that snapshot's tag, for the report's baseline row
+% S.seedExpect  its cost HERE. RunOptimSpreadW refuses a seed more than 0.25
+%               away -- the objective's own peak-to-peak roughness, not a
+%               tolerance to tighten (Docs objective_noise_floor). Note that
+%               the Great Lakes nodes read this objective ~+0.015 high
+%               (different MATLAB release); that offset is inside the noise
+%               and cancels within a machine, but do not quote absolute costs
+%               across machines without it.
+% S.tags        the four profile tags
+% S.note        one line for the log, so a log says which campaign it is
+%
+% THE CAMPAIGNS
+%
+%   rigaware  the rsK80[1:4] objective (conclusions.md sec. 4). RAN, 14 h,
+%             and put 110 % of its gain into force-velocity (sec. 7). Kept so
+%             its result is reproducible -- do not relaunch it.
+%   floored   the same objective with every data term given a one-
+%             preparation-width deadband (sec. 9), seeded from the rigaware
+%             campaign's own best point so its F-V gain is kept and not paid
+%             for again. This is the one to run.
+
+if nargin < 1 || isempty(name); name = 'floored'; end
+name = lower(char(name));
+
+switch name
+    case 'rigaware'
+        S.stem       = 'rigaware';
+        S.seedTag    = 'rigaware_seed';
+        S.seedExpect = 2.6858;
+        S.note       = 'rsK80[1:4], unfloored -- SUPERSEDED, see conclusions.md sec. 7';
+    case 'floored'
+        S.stem       = 'floored';
+        S.seedTag    = 'floored_seed';
+        S.seedExpect = 0.9081;
+        S.note       = 'rsK80[1:4] + one-width deadband on every data term';
+    otherwise
+        error('campaignSpec:unknown', ...
+              'unknown campaign "%s" (expected ''rigaware'' or ''floored'')', name);
+end
+
+S.name     = name;
+S.seedSnap = fullfile('params', [S.seedTag '.m']);
+S.tags     = strcat(S.stem, {'_a','_b','_c','_d'});
+end

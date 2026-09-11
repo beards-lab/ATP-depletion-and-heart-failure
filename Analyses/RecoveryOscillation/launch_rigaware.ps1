@@ -8,6 +8,11 @@
 #   .\launch_rigaware.ps1 -Hours 30 -Go       # the real thing
 #   .\launch_rigaware.ps1 -Hours 30 -Go -Profiles a,c
 #
+# -Campaign picks what to start from (campaignSpec.m). It defaults to
+# `floored`, which is the one to run. `rigaware` already ran and is kept only
+# so its result reproduces -- conclusions.md sec. 7 is the record of it putting
+# 110 % of its gain into force-velocity.
+#
 # Each session parallelises INSIDE one objective evaluation over the five slack
 # segments, so it saturates at ~5-6 workers; four sessions want ~20 cores and
 # ~4 x 6 GB. Resume is automatic -- re-running the same command after a crash
@@ -20,6 +25,8 @@ param(
     [double]   $Hours     = 30,
     [int]      $Workers   = 5,
     [string[]] $Profiles  = @('a','b','c','d'),
+    [ValidateSet('floored','rigaware')]
+    [string]   $Campaign  = 'floored',
     [switch]   $Go,
     [string]   $Matlab    = "C:\Program Files\MATLAB\R2023a\bin\matlab.exe"
 )
@@ -35,10 +42,12 @@ if (-not $Go) {
     Write-Host "DRY RUN: pre-flighting $($Profiles.Count) profile(s). Add -Go to start the search." -ForegroundColor Yellow
 }
 
+Write-Host "campaign $Campaign"
+
 foreach ($p in $Profiles) {
-    $log = Join-Path $res "rigaware_$p.log"
-    $cmd = "cd('$root'); addpath(genpath('.')); PROFILE='$p'; TIME_HRS=$Hours; " +
-           "NWORKERS=$Workers; DRYRUN=$dry; " +
+    $log = Join-Path $res "${Campaign}_$p.log"
+    $cmd = "cd('$root'); addpath(genpath('.')); CAMPAIGN='$Campaign'; PROFILE='$p'; " +
+           "TIME_HRS=$Hours; NWORKERS=$Workers; DRYRUN=$dry; " +
            "run('Analyses/RecoveryOscillation/RunOptimRigAware.m')"
 
     Write-Host "profile $p -> $log"
@@ -56,5 +65,6 @@ foreach ($p in $Profiles) {
 }
 
 Write-Host ""
-Write-Host "launched. follow one with:  Get-Content -Wait '$res\rigaware_a.log'"
-Write-Host "consolidate when done:      matlab -batch `"run('Analyses/RecoveryOscillation/RunRigAwareReport.m')`""
+Write-Host "launched. follow one with:  Get-Content -Wait '$res\${Campaign}_a.log'"
+Write-Host "check progress:             matlab -batch `"addpath(genpath('.')); campaignStatus('$Campaign')`""
+Write-Host "consolidate when done:      matlab -batch `"CAMPAIGN='$Campaign'; run('Analyses/RecoveryOscillation/RunRigAwareReport.m')`""
