@@ -116,7 +116,7 @@ else
     d  = C(iBest).featCost - C(1).featCost;
     [~, o] = sort(d, 'ascend');
     p('%-24s %9s %9s %9s\n','feature','seed','best','change');
-    for i = o
+    for i = o(:)'        % force a row: `for i = <column>` iterates ONCE
         if abs(d(i)) < 1e-4; continue; end
         warn = '';
         if any(strcmp(nm{i}, {'rsK80','ktr','FV_normpowerAvg'})) && d(i) > 0.02
@@ -164,11 +164,13 @@ function C = addRow(C, tag)
     [Et, ~, featCost, featNames] = evaluateBakersExp(1, params0, true, false);
     fprintf('  %-22s %.4f\n', tag, Et);
 
-    % {{featNames}} not {featNames}: struct() unwraps ONE cell layer, so the
-    % single-brace form would build a 1 x nFeature struct array instead of one
-    % row holding a cell.
+    % {featNames}, NOT {{featNames}}. struct('f', C) with a cell C builds a
+    % struct ARRAY the size of C; wrapping it once, struct('f', {C}), passes a
+    % 1x1 cell and so yields a 1x1 struct whose field IS C. Wrapping twice
+    % leaves an extra layer, and featNames then comes back as a 1x1 cell --
+    % which is what made the per-feature table below index past the end.
     r = struct('name',tag, 'cost',Et, 'header',hdr, ...
-               'featCost',featCost, 'featNames',{{featNames}});
+               'featCost',featCost, 'featNames',{featNames});
     if isempty(C); C = r; else; C(end+1) = r; end
 end
 

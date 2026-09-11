@@ -5,5 +5,47 @@ seed rigaware_seed = 2.6858 (expected 2.6858)
 snapshot                  header   re-eval     delta vs seed  rounds   stall
 ------------------------------------------------------------------------------------------------
 rigaware_seed                NaN    2.6858       NaN    0.0%     NaN     NaN
+rigaware_a_opt               NaN    2.4088       NaN  -10.3%      13       0
+rigaware_b_opt               NaN    2.4183       NaN  -10.0%       2       0
+rigaware_c_opt               NaN    2.6758       NaN   -0.4%      65       1
+rigaware_d_opt               NaN    2.6756       NaN   -0.4%       1       0
 
-(no campaign snapshots yet -- seed only)
+BUDGET-MATCHED: where each profile stood at round 1 (the shortest run)
+profile                    @round      final     rounds
+rigaware_a                 2.6257     2.4153         13
+rigaware_b                 2.5803     2.4063          2
+rigaware_c                 2.6798     2.6598         65
+rigaware_d                 2.6748     2.6748          1
+A profile that is behind at the matched round but ahead at the end has
+bought its lead with evaluations, not with a better search.
+
+WHERE THE DROP CAME FROM  (per-feature cost; seed -> best)
+best = rigaware_a_opt (2.4088)
+
+feature                       seed      best    change
+FV_normpowerAvg             1.0743    0.7690   -0.3053
+peak1_y                     0.2619    0.2473   -0.0145
+A                           0.0845    0.0758   -0.0086
+vall2_dy                    0.1012    0.0928   -0.0084
+PS_steady22                 0.0420    0.0361   -0.0059
+ktr_rmse                    0.0084    0.0057   -0.0027
+vall_y                      0.0252    0.0232   -0.0020
+PS_restretchPeak            0.0066    0.0062   -0.0005
+PS_steady20                 0.0450    0.0454   +0.0004
+t0_crossing                 0.0185    0.0194   +0.0009
+restretchSlopeStart         0.0334    0.0356   +0.0022
+XTOR                        0.0043    0.0072   +0.0029
+steady                      0.0822    0.0858   +0.0036
+vall_t                      0.1751    0.1801   +0.0051
+peak2                       0.0563    0.0616   +0.0053
+rsK80                       0.0188    0.0244   +0.0056
+PS_rampupRMSE               0.1241    0.1306   +0.0066
+PS_holdDecayRMSE            0.0883    0.0954   +0.0071
+peak1_dSL                   0.2364    0.2446   +0.0082
+ktr                         0.0650    0.0737   +0.0087
+coolDownLS                  0.1340    0.1483   +0.0143
+
+NEXT: analyzeOptIterUniqueness('rigaware_a') -- are the solutions around the
+best cost UNIQUE (parameters reconverge) or DEGENERATE (different
+parameters, same cost)? A degenerate best is not a result, it is a
+direction the data cannot see.

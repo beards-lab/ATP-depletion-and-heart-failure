@@ -254,3 +254,76 @@ disk** rather than trusting its header ([StairsPrediction](../StairsPrediction/c
 a header was fake and a campaign was ranked on it), and it reports each
 profile's cost at the round count of the *shortest* run, so the ranking is
 budget-matched and not just wall-clock-matched.
+
+---
+
+## 7. The campaign ran, and it bought the wrong thing (2026-09-11)
+
+14 h on Great Lakes, four profiles, killed early (§8). Every snapshot
+re-evaluates here within 0.016 of its cluster header, so the numbers are real:
+
+| profile | rounds | cluster header | re-evaluated here | vs seed |
+|---|---|---|---|---|
+| **a** (control) | 13 | 2.4153 | **2.4088** | **−10.3 %** |
+| **b** (wide draw) | **2** | 2.4063 | **2.4183** | −10.0 % |
+| c (hard kick) | 65 | 2.6598 | 2.6758 | −0.4 % |
+| d (surrogate) | 1 | 2.6748 | 2.6756 | −0.4 % |
+
+The cluster reads the seed at **2.7008** against 2.6858 here — a systematic
++0.015 platform offset (different MATLAB release). It is inside the 0.076 σ
+noise and cancels in any within-machine comparison, but absolute costs must not
+be quoted across machines without it.
+
+**Then look at where the 10 % came from.**
+
+```
+total drop          2.6858 -> 2.4088   = -0.2770
+FV_normpowerAvg     1.0743 -> 0.7690   = -0.3053
+everything else, net                   = +0.0283
+```
+
+**The F–V term alone accounts for 110 % of the gain. Strip it and the fit got
+1.8 % WORSE** (non-FV 1.6115 → 1.6398). The terms the campaign existed to move
+did not move, or moved backwards:
+
+| | seed → best | |
+|---|---|---|
+| `peak1_y` | 0.2619 → 0.2473 | −0.0145, ~5 % of the term |
+| `peak1_dSL` | 0.2364 → 0.2446 | **worse** |
+| `vall_t` | 0.1751 → 0.1801 | **worse** |
+| `ktr` | 0.0650 → 0.0737 | **worse** — a solved rate |
+| `rsK80` | 0.0188 → 0.0244 | **worse** — a solved rate |
+| `coolDownLS` | 0.1340 → 0.1483 | **worse** |
+
+**This is the spreadw campaign again** (3.85 → 0.98, "88 % of it FV"), and the
+cause is structural, not bad luck. `FV_SHARE = 0.40` hands F–V 1.07 of a 2.69
+objective while its χ² is **0.10 — a third of one preparation-width**. It is the
+smoothest, most scale-blind, most buyable term in the set, and it already sits
+far inside the disagreement between its own two source curves (11.3 %, between
+LABS). Any search spends there first. **Lowering the pin 0.70 → 0.40 was not
+enough: 0.40 still defends a solved problem.**
+
+`c` is the control that proves the mechanism. Its draw is the six compulsory
+parameters only, it cannot reach F–V's levers, and it spent 65 rounds going
+nowhere (−0.4 %, every ±25 % kick returning 2.79–3.34 against 2.6598). `b`
+reached the same place as `a` in **2 rounds against 13** — the wider draw does
+search better, but what it found faster was still F–V.
+
+**Do not relaunch this objective.** The next campaign needs F–V *floored*, not
+merely de-weighted: a term below one preparation-width should stop paying.
+
+## 8. Why three of four died
+
+`a`, `b` and `d` end **mid-round, mid-simplex, with no error, no budget message
+and `stall = 0`** — `a` in round 14 at 2.4153, `b` in round 3 at 2.4063, both
+still descending. An abrupt end with nothing in the log is a signal, not a
+crash: four sessions × (1 client + 5 workers) = 24 MATLAB processes, and the
+narrowest profile (`c`) is the one that survived 20 h. Budget ~2 GB per
+process, or run two profiles rather than four.
+
+`d` is a separate, fixable defect: **10,380 `Failure at t=0. Unable to meet
+integration tolerances`** warnings, each with a full stack trace, produced a
+**19.8 MB** log in a single round. `surrogateopt` samples the raw 88-parameter
+box globally and most of that box is not integrable. Either give the surrogate
+tighter bounds or suppress that warning inside the objective — as it stands,
+profile `d` spends its budget writing a log.
