@@ -20,6 +20,13 @@ function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn,
 %                               variance, renormalised to mean 1. Combines with a
 %                               scalar weight: 'field|w:varfield|weight'.
 %                               e.g. 'FV_normpowerAvg|w:FV_normpowerVar|20'
+%     'field|fl:X'              NOISE FLOOR: subtract X from the residual and
+%                               clamp at 0, so a term inside the measurement's
+%                               own resolution stops paying and starts again if
+%                               it drifts out. A deadband, not a deletion.
+%                               Combines with the others:
+%                               'ktr|fl:0.0148|0.59'. See the note at the
+%                               subtraction for how to choose X.
 %     'f1|w1|lb1-ub1,f2|lb2-ub2'  grouped boundary check: one joint cost, one bar tile
 %     'field|@(X,Y_data) expr'  custom cost function (escape hatch)
 %
@@ -149,11 +156,18 @@ VAR_FLOOR_FRAC = 0.1;   % shrinkage floor on the variance used for weighting,
 w          = 1;
 range_tok  = '';
 wvec_field = '';
+floor_raw  = 0;
 
 for ti = 1:numel(tail_tokens)
     tok = tail_tokens{ti};
     if startsWith(tok, 'w:')
         wvec_field = tok(3:end);          % per-element weights from a DATA field
+    elseif startsWith(tok, 'fl:')
+        floor_raw = str2double(tok(4:end));   % NOISE FLOOR, see below
+        if isnan(floor_raw) || floor_raw < 0
+            error('evalFeatureCost:badFloor', ...
+                  'floor token "%s" is not a non-negative number', tok);
+        end
     elseif isRangeToken(tok)
         range_tok = tok;
     else
@@ -212,6 +226,33 @@ else
         % all-zero / non-finite variance => leave wvec = 1 (uniform)
     end
 
-    c = sum(wvec .* abs(fd/n_F - fs/n_F).^costExp, 'omitnan') + sum(isnan(fs)) * NAN_COST;
+    c = sum(wvec .* abs(fd/n_F - fs/n_F).^costExp, 'omitnan');
+
+    % NOISE FLOOR ('fl:X'). Subtract X from the residual and clamp at zero, so
+    % a term that is already within the measurement's own resolution stops
+    % paying -- and starts paying again the moment it drifts back out.
+    %
+    % WHY. Without it, an objective is a fixed budget that a search will spend
+    % wherever the gradient is smoothest, and that is whichever term is already
+    % best determined. The rigaware campaign is the demonstration: F-V held
+    % 40 % of the objective at chi-2 0.10 -- a third of one preparation-width,
+    % well inside the disagreement between its own two source curves -- and the
+    % search put 110 % of a 14-hour gain into it while every feature the
+    % campaign existed to fix went backwards (Analyses/RecoveryOscillation
+    % sec. 7). Capping or re-pinning the WEIGHT cannot fix that: any nonzero
+    % weight on a smooth, nearly-solved term still buys the cheapest descent.
+    % A floor is different in kind -- it removes the reward entirely below the
+    % noise, and it is a DEADBAND, not a deletion, so the term still defends
+    % itself against regression.
+    %
+    % SETTING IT. The cost here is a sum of squared relative residuals, so a
+    % model one preparation-width from the data scores nEl*s^2 with s the
+    % relative between-preparation spread. BuildWeightedObjective emits
+    % fl: FLOOR_CHI2 * nEl * s^2. The NaN penalty is deliberately added AFTER
+    % the floor: a NaN is a broken evaluation, not a small residual.
+    if floor_raw > 0
+        c = max(0, c - floor_raw);
+    end
+    c = c + sum(isnan(fs)) * NAN_COST;
 end
 end

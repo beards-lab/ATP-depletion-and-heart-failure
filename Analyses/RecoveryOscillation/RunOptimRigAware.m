@@ -92,6 +92,8 @@
 %      that can leave the basin.
 
 clc;
+% TAGSTEM/SEEDSNAP/SEED_EXPECT are guarded below so one campaign file serves
+% both the rigaware and the floored runs without a copy.
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here, '..', '..');
 cd(root); addpath(genpath(root));
@@ -100,8 +102,17 @@ if ~exist('PROFILE','var');  PROFILE  = 'a'; end
 if ~exist('TIME_HRS','var'); TIME_HRS = 30;  end
 if ~exist('NWORKERS','var'); NWORKERS = 5;   end
 
-SEEDSNAP    = fullfile('params', 'rigaware_seed.m');
-SEED_EXPECT = 2.6858;   % BuildRigAwareSeed.m, cost-neutral at pooled8_opt.
+% Seed is a knob: the floored campaign reuses this whole file and only changes
+% what it starts from and what that scores.
+%   rigaware_seed  2.6858  BuildRigAwareSeed.m   -- the rsK80[1:4] objective
+%   floored_seed   0.9081  BuildFlooredSeed.m    -- the same, with every data
+%                                                   term given a one-width
+%                                                   deadband (sec. 7: the
+%                                                   unfloored run put 110 % of
+%                                                   its gain into F-V)
+if ~exist('SEEDSNAP','var');    SEEDSNAP    = fullfile('params','rigaware_seed.m'); end
+if ~exist('SEED_EXPECT','var'); SEED_EXPECT = 2.6858; end
+%                       BuildRigAwareSeed.m, cost-neutral at pooled8_opt.
                         % The engine rejects a seed more than 0.25 away -- the
                         % objective's own peak-to-peak roughness, not a
                         % tolerance to tighten (Docs objective_noise_floor).
@@ -115,7 +126,8 @@ switch lower(PROFILE)
         error('RunOptimRigAware:profile', ...
               'PROFILE must be a, b, c or d (got "%s").', PROFILE);
 end
-TAG          = sprintf('rigaware_%s', lower(PROFILE));
+if ~exist('TAGSTEM','var'); TAGSTEM = 'rigaware'; end
+TAG          = sprintf('%s_%s', TAGSTEM, lower(PROFILE));
 MAX_RUN_TIME = 300;
 
 if ~isfile(SEEDSNAP)

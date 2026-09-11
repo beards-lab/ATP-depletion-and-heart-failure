@@ -38,7 +38,7 @@
 % Output -> results/weighted_objective.mat, results/weight_table.txt
 %           params/<SEEDTAG>.m  (the reweighted seed snapshot)
 
-clearvars -except BASE SEEDTAG SPREAD_SOURCE POOLED_TARGET FN_RENAME ADD_FEATS ...
+clearvars -except BASE SEEDTAG SPREAD_SOURCE POOLED_TARGET FN_RENAME ADD_FEATS FLOOR_CHI2 ...
                   FV_SHARE SHARE_CAP KAPPA ANCHOR_GUARD ANCHOR_ENTRY; clc;
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here, '..', '..');
@@ -87,6 +87,10 @@ DEDUPE   = true;               % drop the duplicated rsR2 boundary entry
 % target isolates the reweighting, and vice versa.
 if ~exist('POOLED_TARGET','var'); POOLED_TARGET = false;    end
 if ~exist('SPREAD_SOURCE','var'); SPREAD_SOURCE = 'spread'; end
+% FLOOR_CHI2 -- deadband, in preparation-widths, below which a data term stops
+% paying. 0 = off (previous behaviour exactly). 1.0 = "being inside the
+% measurement's own resolution is free". See the block where it is applied.
+if ~exist('FLOOR_CHI2','var');    FLOOR_CHI2    = 0;        end
 SPREAD_SOURCE = validatestring(SPREAD_SOURCE, {'spread','pooled'});
 
 % --- objective CONDITIONING guards (engineering, not data) ---------------
@@ -258,6 +262,13 @@ isAdded = ismember(prim, ADD_FEATS);
 n   = numel(fn0);
 sF  = nan(1,n); zF = nan(1,n); isData = false(1,n);
 for i = 1:n
+    % A BOUNDARY entry is not a data term, whatever it is named. evalFeatureCost
+    % never reads feats_data for one -- it scores the simulation against a fixed
+    % range -- so 1/s^2 is meaningless for it and rewriting its weight silently
+    % destroys a hand-set guardrail. This bit the anchor guard
+    % 'steady[1]|52.5-87.7|5': `steady` is in MAP, so it was being treated as a
+    % fit term and its deliberate weight of 5 rewritten to 0.46.
+    if any(cellfun(@isRangeTok, strsplit(fn0{i}, '|'))); continue; end
     k = find(strcmp(MAP(:,1), prim{i}), 1);
     if isempty(k); continue; end
     src = MAP{k,2};
@@ -336,6 +347,37 @@ for i = find(isData)
     fnNew{i} = strjoin(tk, '|');
 end
 
+%% ---- noise floors ------------------------------------------------------
+% FLOOR_CHI2 > 0 gives every data term a deadband: it stops paying once it is
+% within FLOOR_CHI2 preparation-widths of the target, and starts paying again
+% if it drifts back out. The cost is a sum of squared relative residuals, so
+% one preparation-width over nEl elements is nEl*s^2.
+%
+% This is the fix for the failure the rigaware campaign demonstrated. A fixed
+% objective budget is spent wherever descent is cheapest, and that is whichever
+% term is already best determined: F-V held 40 % of the objective at chi-2 0.10
+% and absorbed 110 % of a 14-hour gain while every feature the campaign existed
+% to fix went backwards. Re-pinning the WEIGHT cannot fix that -- any nonzero
+% weight on a smooth, nearly-solved term still buys the cheapest descent. The
+% floor removes the reward below the noise instead, without removing the term's
+% defence of itself.
+floorRaw = zeros(1,n);
+if FLOOR_CHI2 > 0
+    nFloored = 0;
+    for i = find(isData)
+        if ~isfinite(s(i)) || s(i) <= 0; continue; end
+        nEl = iNumEl(fnNew{i}, features_data);
+        if nEl < 1; continue; end
+        floorRaw(i) = FLOOR_CHI2 * nEl * s(i)^2;
+        tk = strsplit(fnNew{i}, '|');
+        tk = [tk(1:end-1), {sprintf('fl:%.6g', floorRaw(i))}, tk(end)];  % before the weight
+        fnNew{i} = strjoin(tk, '|');
+        nFloored = nFloored + 1;
+    end
+    fprintf(['FLOOR_CHI2 = %.2f : %d data terms given a deadband at %.2f ' ...
+             'preparation-width(s)\n'], FLOOR_CHI2, nFloored, FLOOR_CHI2);
+end
+
 %% ---- report -----------------------------------------------------------
 lines = {};
 lines{end+1} = sprintf('%-20s %8s %8s %9s %9s %9s %9s %9s %9s', ...
@@ -395,6 +437,24 @@ fid = fopen(fullfile(resDir,'weight_table.txt'),'w'); fprintf(fid,'%s\n',txt); f
 
 %% ---- optional absolute-force anchor guard ------------------------------
 if ANCHOR_GUARD
+    % Drop every existing guard on the same feature+range before adding the
+    % canonical one, REGARDLESS of the weight it carries. The BASE snapshot may
+    % already have one (it was built with the guard on), and until the isData
+    % fix above a boundary entry could have its weight silently rewritten --
+    % rigaware_a_opt carries both 'steady[1]|52.5-87.7|5' and a corrupted
+    % '...|0.547416'. Two guards on one range double it and neither is the
+    % number anyone chose.
+    [aF, aR] = iGuardKey(ANCHOR_ENTRY);
+    dup = false(1, numel(fnNew));
+    for i = 1:numel(fnNew)
+        [f2, r2] = iGuardKey(fnNew{i});
+        dup(i) = ~isempty(f2) && strcmp(f2, aF) && strcmp(r2, aR);
+    end
+    if any(dup)
+        fprintf('\nANCHOR_GUARD: replacing %d existing guard(s) on %s|%s: %s\n', ...
+                nnz(dup), aF, aR, strjoin(fnNew(dup), ' , '));
+        fnNew(dup) = [];
+    end
     [ca,~,~] = evalFeatureCost(features_data, features_model, {ANCHOR_ENTRY});
     fnNew{end+1} = ANCHOR_ENTRY;
     fprintf('\nANCHOR_GUARD on: appended %s  (costs %.4g at the seed)\n', ANCHOR_ENTRY, ca);
@@ -482,14 +542,45 @@ save(fullfile(resDir,'weighted_objective.mat'), ...
 %% ---- verify neutrality -------------------------------------------------
 pv = params0; pv.fn = fnNew;
 [cv,~,~] = evalFeatureCost(features_data, features_model, fnNew);
-fprintf('\nNEUTRALITY CHECK: old total %.4f  ->  new total %.4f  (delta %.2e)\n', ...
-        TOT0, sum(cv), sum(cv)-TOT0);
+if FLOOR_CHI2 > 0
+    % Cost-neutrality is deliberately broken by a floor: the floor's whole job
+    % is to stop paying for residual that is inside the noise, so the total MUST
+    % fall. Report what it removed rather than flagging it as drift.
+    fprintf(['\nFLOORED TOTAL: %.4f  ->  %.4f   (%.4f = %.0f %% of the objective was\n' ...
+             '  residual inside one preparation-width, and now earns nothing)\n'], ...
+            TOT0, sum(cv), TOT0-sum(cv), 100*(TOT0-sum(cv))/TOT0);
+    fprintf('  the seed for the next campaign is %.4f, NOT %.4f\n', sum(cv), TOT0);
+else
+    fprintf('\nNEUTRALITY CHECK: old total %.4f  ->  new total %.4f  (delta %.2e)\n', ...
+            TOT0, sum(cv), sum(cv)-TOT0);
+end
 
 function tf = isRangeTok(t)
     tf = ~isempty(regexp(t, '^-?[\d.]+\s*-\s*-?[\d.]+$', 'once'));
 end
 
 function o = ternary(c, a, b); if c; o = a; else; o = b; end; end
+
+function [feat, rng] = iGuardKey(entry)
+%IGUARDKEY  Identify a boundary entry by feature+selector and range, ignoring
+% its weight, so two guards on the same range are recognised as the same guard.
+    feat = ''; rng = '';
+    if contains(entry, ',') || contains(entry, '@'); return; end   % grouped/custom
+    tk = strsplit(entry, '|');
+    ir = find(cellfun(@isRangeTok, tk), 1);
+    if isempty(ir); return; end
+    feat = tk{1}; rng = tk{ir};
+end
+
+function n = iNumEl(entry, fd)
+%INUMEL  How many elements this fn entry actually scores, selector included.
+% The floor is nEl*s^2, so it has to count the elements that survive a
+% selector like rsK80[1:4] -- not the raw field length.
+    n = 0;
+    [nm, sel] = parseFeatSelector(strtok(entry, '|'));
+    if ~isfield(fd, nm); return; end
+    n = numel(applyFeatSelector(double([fd.(nm)]), sel));
+end
 
 function w = iRenorm(w, cRaw, isBudget, pinned, num, FV_SHARE, SHARE_CAP)
 % Free (unpinned) data terms carry whatever budget the pins left over, so the

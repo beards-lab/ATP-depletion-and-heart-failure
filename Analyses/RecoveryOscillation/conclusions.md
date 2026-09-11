@@ -327,3 +327,63 @@ integration tolerances`** warnings, each with a full stack trace, produced a
 box globally and most of that box is not integrable. Either give the surrogate
 tighter bounds or suppress that warning inside the objective — as it stands,
 profile `d` spends its budget writing a log.
+
+## 9. The fix: a floor, not another pin (2026-09-11)
+
+§7's failure is not fixable by re-weighting. Any nonzero weight on a smooth,
+nearly-solved term still offers the cheapest descent in the problem, so a fixed
+budget will always be spent there — 0.70 → 0.40 was tried and §7 is the result.
+What has to change is not how much a term is worth but **whether it pays at all
+once it is inside the noise**.
+
+`evalFeatureCost` gains an `fl:X` token: subtract X from the residual, clamp at
+zero. The cost is a sum of squared relative residuals, so one preparation-width
+over `nEl` elements is `nEl*s²`; `BuildWeightedObjective` gains `FLOOR_CHI2` and
+emits `fl: FLOOR_CHI2 * nEl * s²` for every data term. Ten tests in
+[`TestFeatFloor.m`](../../Workbench/Tests/TestFeatFloor.m), including the two
+properties that matter: it is a **deadband, not a deletion** — a floored term
+still costs more as it drifts further out, so it defends itself — and the NaN
+penalty is applied *after* the floor, because a NaN is a broken evaluation, not
+a small residual.
+
+`BuildFlooredSeed.m` → `params/floored_seed.m`, from `rigaware_a_opt` (the
+campaign's best, 2.4088 here) at `FLOOR_CHI2 = 1`:
+
+```
+2.4088 -> 0.9081   (1.5007 = 62 % of the objective was residual inside
+                    one preparation-width, and now earns nothing)
+```
+
+and the composition is the point:
+
+| | before | after |
+|---|---|---|
+| **FV_normpowerAvg** | **40 %** | **0 %** |
+| `ktr` | 3 % | 1.0 % |
+| `rsK80` | 1 % | 0 % |
+| **re-stretch block** | ~28 % | **47.7 %** |
+| `peak1_y` + `peak1_dSL` | ~20 % | **34 %** |
+
+F–V, `ktr` and `rsK80` can no longer be bought. The search has nothing cheap
+left, which is the whole intent.
+
+**Watch this instead:** the unfloored trace-least-squares terms are now the
+second block — `coolDownLS` 16.3 %, `PS_rampupRMSE` 14.4 %, `PS_holdDecayRMSE`
+10.5 %, together **41 %**. They are *correctly* unfloored (§2: they sit 2–6×
+above their own noise), but `coolDownLS` is anchored to 03/27's raw trace in
+absolute kPa while the feature block targets the pooled level
+([DataPooling §8](../DataPooling/conclusions.md)), so it pulls against the
+pooled target. If the next campaign's gain lands there, that contradiction is
+the reason and the fix is to rescale the trace windows by `Fref/Fss22`.
+
+**Two bugs found on the way, both of which had already propagated:**
+
+* `isData` classified by bare feature name, so the **boundary** entry
+  `steady[1]|52.5-87.7|5` counted as a fit term and had its deliberate weight
+  of 5 rewritten to 0.46 — a 10× weakening of the anchor guard. Boundary
+  entries never read `feats_data`, so `1/s²` is meaningless for them.
+* Because of that, `rigaware_a_opt` carries the guard **twice**, at 5 and at
+  0.547416. Both cost 0 at every point evaluated so far, so nothing published
+  is wrong, but the guard's strength was not the number anyone chose. The
+  anchor block now replaces every existing guard on the same feature+range
+  rather than appending.
