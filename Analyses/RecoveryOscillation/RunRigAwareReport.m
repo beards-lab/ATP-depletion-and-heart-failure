@@ -29,7 +29,7 @@
 %           results/<campaign>_report.png
 %           results/<campaign>_report.mat
 
-clearvars -except TAGS CAMPAIGN; clc;
+clearvars -except TAGS CAMPAIGN PARAMSDIR; clc;
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here,'..','..'); cd(root); addpath(genpath(root));
 resDir = fullfile(here,'results'); if ~isfolder(resDir); mkdir(resDir); end
@@ -42,29 +42,45 @@ if ~exist('CAMPAIGN','var'); CAMPAIGN = 'floored'; end
 SPEC = campaignSpec(CAMPAIGN);
 if ~exist('TAGS','var') || isempty(TAGS); TAGS = SPEC.tags; end
 
+% Where the SNAPSHOTS are. A campaign run on the cluster comes back as a
+% directory of its own (params/rigaware/), so the report has to be able to
+% look somewhere other than params/ without the files being moved first --
+% moving them is how a resumed run silently overwrites the state it resumed
+% from. The SEED is always read from params/, because the seed is the
+% repository's, not the run's.
+if ~exist('PARAMSDIR','var') || isempty(PARAMSDIR); PARAMSDIR = 'params'; end
+SEEDDIR  = 'params';
+
 SEED     = SPEC.seedTag;
 SEED_EXP = SPEC.seedExpect;
 OUTSTEM  = sprintf('%s_report', SPEC.stem);
+if ~strcmp(PARAMSDIR, 'params')
+    sub = char(extractAfter(string(strrep(PARAMSDIR,'\','/')), 'params/'));
+    if isempty(sub); [~, sub] = fileparts(PARAMSDIR); end
+    if ~strcmp(sub, SPEC.stem)          % params/rigaware + stem rigaware would
+        OUTSTEM = sprintf('%s_report_%s', SPEC.stem, sub);   % repeat the word
+    end
+end
 ROUGH    = 0.25;         % peak-to-peak numerical roughness of the objective
 
 if isempty(gcp('nocreate')); parpool('local', 5); end
 
 %% ---- re-evaluate everything from disk ----------------------------------
 C = struct([]);
-C = addRow(C, SEED);
+C = addRow(C, fullfile(SEEDDIR, [SEED '.m']));
 for i = 1:numel(TAGS)
-    f = fullfile('params', [TAGS{i} '_opt.m']);
+    f = fullfile(PARAMSDIR, [TAGS{i} '_opt.m']);
     if ~isfile(f)
         fprintf('  %s: no snapshot yet -- skipping\n', TAGS{i}); continue
     end
-    C = addRow(C, [TAGS{i} '_opt']);
+    C = addRow(C, f);
 end
 if isempty(C); error('RunRigAwareReport:nothing','no snapshots found'); end
 
 %% ---- read each campaign's own history ----------------------------------
 H = struct([]);
 for i = 1:numel(TAGS)
-    sf = fullfile('params', [TAGS{i} '_state.mat']);
+    sf = fullfile(PARAMSDIR, [TAGS{i} '_state.mat']);
     if ~isfile(sf); continue; end
     S = load(sf); st = S.state;
     h = struct('tag', TAGS{i}, 'round', st.round, 'stall', st.stall, ...
@@ -143,6 +159,32 @@ else
           C(1).featCost(i), C(iBest).featCost(i), d(i), warn);
     end
 
+    % THE SEC. 7 TEST, made permanent. A campaign can lower the total while
+    % every term it existed to move goes backwards, if one smooth nearly-solved
+    % term is cheap enough to buy. Splitting the drop into F-V and everything
+    % else is the one line that catches it, and it is not obvious from the
+    % per-feature list because F-V is a single row among twenty.
+    iFV = find(strcmp(nm,'FV_normpowerAvg'), 1);
+    if ~isempty(iFV)
+        dTot = C(iBest).cost - C(1).cost;
+        dFV  = d(iFV);
+        nfv0 = C(1).cost - C(1).featCost(iFV);
+        nfv1 = C(iBest).cost - C(iBest).featCost(iFV);
+        p('\nF-V OR THE REST?  (the sec. 7 test)\n');
+        p('  total            %8.4f -> %8.4f   = %+.4f\n', C(1).cost, C(iBest).cost, dTot);
+        p('  FV_normpowerAvg  %8.4f -> %8.4f   = %+.4f  (%.0f %% of the drop)\n', ...
+          C(1).featCost(iFV), C(iBest).featCost(iFV), dFV, 100*dFV/min(dTot,-eps));
+        p('  everything else  %8.4f -> %8.4f   = %+.4f\n', nfv0, nfv1, nfv1-nfv0);
+        if nfv1 > nfv0
+            p('  VERDICT: the non-F-V fit got WORSE. The campaign bought F-V.\n');
+        elseif dTot < 0 && dFV/dTot > 0.6
+            p('  VERDICT: over half the drop is F-V. Read the feature list before\n');
+            p('           calling this progress.\n');
+        else
+            p('  VERDICT: the drop is not mostly F-V.\n');
+        end
+    end
+
     p('\nNEXT: analyzeOptIterUniqueness(''%s'') -- are the solutions around the\n', ...
       strrep(C(iBest).name,'_opt',''));
     p('best cost UNIQUE (parameters reconverge) or DEGENERATE (different\n');
@@ -155,21 +197,25 @@ plotRigAware(C, H, resDir, OUTSTEM);
 fprintf('\nreport -> %s\n', fullfile(resDir,[OUTSTEM '.txt']));
 
 % ------------------------------------------------------------------------
-function C = addRow(C, tag)
+function C = addRow(C, snapPath)
 %ADDROW  Re-evaluate one snapshot from disk, and read the cost its header
-%   claims so the two can be compared.
+%   claims so the two can be compared. SNAPPATH is a full path, so a campaign
+%   returned from the cluster can be scored where it landed.
     % The header line writeParamsToMFile emits for a gallery snapshot:
     %   % param_opt_iter #9 | cost 2.7095 | round 9 | direct
     % Matched only inside a COMMENT and only as a whole word -- a loose
     % pattern picks up `params0.drawForceOnset = 0` (that string ends in
     % "et") and invents a header of 0 for a file that has none.
-    f = fullfile('params', [tag '.m']);
+    [~, tag] = fileparts(snapPath);
     hdr = NaN;
-    txt = fileread(f);
+    txt = fileread(snapPath);
     m = regexp(txt, '(?m)^\s*%[^\r\n]*?cost\s+([-\d.eE+]+)', 'tokens', 'once');
     if ~isempty(m); hdr = str2double(m{1}); end
 
-    params0 = getParams(loadParams(tag), [], true, false);
+    % By PATH, not by tag: two copies of rigaware_a_opt.m exist (params/ and
+    % params/rigaware/) and loadParams' search order would silently pick the
+    % wrong one.
+    params0 = getParams(loadParams(snapPath), [], true, false);
     params0.RunForceVelocity = true; params0.RunKtr = false; params0.RunSlack = true;
     params0.RunStairs = false; params0.RunForceVelocityTime = false;
     params0.RunSlackPassive = true; params0.EvalFeatures = true;

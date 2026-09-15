@@ -440,3 +440,104 @@ cannot reach the levers that matter and `d` spends its budget writing a log.
 whether the number fell, it is whether `peak1_y` and `peak1_dSL` fell. The
 report flags a protected term (`rsK80`, `ktr`, F–V) that grows by more than
 20 % of itself, which is what §7 needed and did not have.
+
+---
+
+## 11. The campaign was resumed, and this time it moved the overshoot (2026-09-15)
+
+`params/rigaware/` is a **continuation** of §7, not a new run: same unfloored
+objective (`rsK80[1:4]`, no `fl:` tokens), same seed, resumed from the §7 state.
+Rounds 13→22 for `a`, 2→15 for `b`, 65→98 for `c`. Every snapshot re-evaluated
+here.
+
+| profile | rounds | §7 best | now | vs seed | stall |
+|---|---|---|---|---|---|
+| a (control) | 13 → **22** | 2.4088 | 2.2944 | −14.6 % | 1 — **converged** |
+| **b (wide draw)** | 2 → **15** | 2.4183 | **2.0271** | **−24.5 %** | 0 — **still descending** |
+| c (hard kick) | 65 → **98** | 2.6758 | 2.6758 | −0.4 % | 0 |
+| d (surrogate) | — | 2.6756 | 2.6756 | −0.4 % | no state file returned |
+
+### The profile question is now settled, and on equal evaluations
+
+`b` did 15 rounds × 90 evaluations = **1350**; `a` did 22 × 60 = **1320**. Same
+budget to within 2 %, and `b` is **0.267 lower**. This is not `b` being further
+along — it is `b` searching better, which is what §6 predicted for the right
+reason: the four open terms are four readings of one overshoot, and a
+10-parameter draw does not span the direction that moves them together.
+
+`a`'s history flattens (2.284 for four rounds, then a failed kick at 2.406);
+`b`'s is **monotone over all 15 rounds** and was still falling when the run
+ended. **`b` is not converged.**
+
+`c` is finished as an idea. Its 98 rounds are a 49-cycle sawtooth — incumbent
+2.66, kick to 2.8–10.7, revert to 2.66, repeat — so the six compulsory
+parameters genuinely cannot move this objective, and 33 further rounds bought
+**nothing**. Do not give it cores again.
+
+### Is it F–V again? Half the disease, not all of it
+
+```
+total          2.6858 -> 2.0271   = -0.6587
+F-V            1.0743 -> 0.5087   = -0.5657   86 % of the drop
+everything else 1.6115 -> 1.5184  = -0.0930
+```
+
+86 % is still F–V, so the **headline number remains mostly unreal** and §9's
+diagnosis stands unchanged. But the difference from §7 is the one that matters:
+there the non-F–V fit got **1.8 % worse**; here it got **5.8 % better**, and the
+gain is in the right place — `peak1_y` −29 %, `peak1_dSL` −21 %, `vall_y` −48 %.
+
+### The honest test: score it where F–V pays nothing
+
+Every candidate re-evaluated under the **floored** objective, so F–V is
+deadbanded to zero and only movement outside one preparation-width counts:
+
+| | floored cost | |
+|---|---|---|
+| `floored_seed` ( = §7's `rigaware_a_opt`) | 0.9081 | the current campaign seed |
+| `rigaware/rigaware_a_opt` | 0.8961 | −1.3 % |
+| **`rigaware/rigaware_b_opt`** | **0.8072** | **−11.1 %** |
+
+**The gain is real and it is in the defect.** Under the floor, where F–V
+contributes exactly nothing:
+
+```
+peak1_y     0.1558 -> 0.1033   -34 %     <- the lengthening overshoot
+peak1_dSL   0.1535 -> 0.1046   -32 %     <- and where that peak sits
+vall_t      0.0990 -> 0.0896    -9 %
+A, steady, vall2_dy, PS_steady22          all improved
+```
+
+This is the **first movement on the open structural defect** in this whole
+line of work. §7's campaign did not manage it; `b` did.
+
+### What it cost, read through the floor
+
+The unfloored table flags `rsK80` at **+91 %** — but under the floor `rsK80`
+still pays **exactly zero**: even after that regression it is inside one
+preparation-width. The floor is doing precisely its job, telling us the
+headline regression is not worth defending. What the floor does *not* forgive:
+
+* **`doublePeak` 0.0000 → 0.0056.** A shape guardrail that was exactly zero at
+  every point evaluated so far is now nonzero. The model is starting to produce
+  a second peak. **This is the one to watch**, because it is a qualitative
+  change in the trace, not a quantitative one.
+* `PS_holdDecayRMSE` +17 %, `coolDownLS` +4 % — the unfloored trace-LSQ block
+  again, exactly where §9 said to watch it.
+* `ktr` +24 % of a small floored term (0.0091 → 0.0114).
+
+### What to do
+
+**Re-seed the floored campaign from `params/rigaware/rigaware_b_opt.m`, not from
+`rigaware_a_opt`.** It is 11 % better on the objective the campaign will
+actually use, and the improvement is in the two terms that campaign exists to
+move. `BuildFlooredSeed.m` needs one line changed — `BASE = 'rigaware/rigaware_b_opt'`.
+
+**Run profile `b` alone, or `b` and `a`.** `c` and `d` have now spent two
+campaigns producing nothing between them; §8's advice to run two profiles rather
+than four is reinforced by the result as well as by the memory ceiling.
+
+**Before adopting `b`, check it is not degenerate**:
+`analyzeOptIterUniqueness('rigaware_b')`. Fifteen monotone rounds of a
+16-parameter draw is exactly the shape that produces a sloppy solution, and a
+best cost reached along a direction the data cannot see is not a result.
