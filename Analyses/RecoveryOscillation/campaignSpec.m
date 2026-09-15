@@ -29,9 +29,21 @@ function S = campaignSpec(name)
 %   floored   the same objective with every data term given a one-
 %             preparation-width deadband (sec. 9), seeded from the rigaware
 %             campaign's own best point so its F-V gain is kept and not paid
-%             for again. This is the one to run.
+%             for again. NEVER RAN -- the compute went to MechanismAblation,
+%             which used floored_seed as its base. Superseded by `lean5`.
+%   lean5     `floored` plus the three things that campaign taught us:
+%             slack cycle 5 is scored again (it is a DIFFERENT manoeuvre --
+%             the only re-stretch to ~2.0 um SL -- and carries a real ATP
+%             signal, z = 3.01); the draw pool loses the twelve parameters
+%             MechanismAblation measured as inert, deleted or redundant and
+%             gains `xrate`; and coolDownLS is retired in favour of rsK80 x2.
+%             Seed by BuildLean5Seed.m. THIS IS THE ONE TO RUN.
+%
+% A NOTE ON COMPARING COSTS ACROSS CAMPAIGNS: don't. Each seed is the previous
+% optimum reweighted with lambda chosen for cost-neutrality, so the numbers
+% reset at every generation. Only within a campaign is a drop a fit improvement.
 
-if nargin < 1 || isempty(name); name = 'floored'; end
+if nargin < 1 || isempty(name); name = 'lean5'; end
 name = lower(char(name));
 
 switch name
@@ -44,10 +56,21 @@ switch name
         S.stem       = 'floored';
         S.seedTag    = 'floored_seed';
         S.seedExpect = 0.9081;
-        S.note       = 'rsK80[1:4] + one-width deadband on every data term';
+        S.note       = 'rsK80[1:4] + one-width deadband -- NEVER RAN, superseded by lean5';
+    case 'lean5'
+        S.stem       = 'lean5';
+        S.seedTag    = 'lean5_seed';
+        % Measured by the pre-flight on THIS machine, not copied from the
+        % snapshot header (which reads 2.3167 -- the UNFLOORED cost-neutral
+        % total). Reading an expected cost off a header is how a campaign ends
+        % up refusing a good seed; see Docs objective_noise_floor.
+        S.seedExpect = 0.9800;
+        S.note       = ['cycle 5 scored again + lean pool (12 out, xrate in) ' ...
+                        '+ coolDownLS retired, rsK80 x2, FV pin 0.25'];
     otherwise
         error('campaignSpec:unknown', ...
-              'unknown campaign "%s" (expected ''rigaware'' or ''floored'')', name);
+              ['unknown campaign "%s" (expected ''rigaware'', ''floored'' ' ...
+               'or ''lean5'')'], name);
 end
 
 S.name     = name;

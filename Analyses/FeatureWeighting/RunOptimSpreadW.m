@@ -115,6 +115,23 @@ cfg.pool = { ...
 % levers, and passive is now 24 % of the objective.
 cfg.compulsory = {'k2','kstiff2','ka','v_ref_reg','k_cr','eta_M'};
 
+% POOL_OVERRIDE / COMPULSORY_OVERRIDE -- a campaign may replace the pool
+% wholesale. Guarded like every other knob so an unset caller gets exactly the
+% behaviour above. Used by the `lean5` campaign, which drops the twelve
+% parameters MechanismAblation measured as inert, deleted or redundant and adds
+% `xrate` (Analyses/MechanismAblation/conclusions.md sec. 7.5). The zero-base
+% filter below still applies to an override, so a campaign cannot smuggle in a
+% parameter whose base value is 0 and which therefore cannot be scaled.
+if exist('POOL_OVERRIDE','var') && ~isempty(POOL_OVERRIDE)
+    fprintf('POOL_OVERRIDE: %d entries replace the default %d\n', ...
+            numel(POOL_OVERRIDE), numel(cfg.pool));
+    cfg.pool = POOL_OVERRIDE;
+end
+if exist('COMPULSORY_OVERRIDE','var') && ~isempty(COMPULSORY_OVERRIDE)
+    cfg.compulsory = COMPULSORY_OVERRIDE;
+end
+fprintf('compulsory every round: %s\n', strjoin(cfg.compulsory, ', '));
+
 keep = true(1, numel(cfg.pool));
 for i = 1:numel(cfg.pool)
     f = cfg.pool{i}; us = strfind(f,'__');
