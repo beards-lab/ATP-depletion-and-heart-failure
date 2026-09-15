@@ -1,0 +1,16 @@
+CANDIDATE SETS RANKED BY 2 mM FIT   core spreadw_iter_018   H0 = 384.9823
+
+rank id     DOF       cost     conv  gates                              tier  rationale
+1    P1       2     7.6055      yes  k2,k_1                             C     ATP + Pi contamination (reverse stroke)
+2    P2       3     7.6055      yes  k2,k1,k_1                          C     ATP + Pi both directions of the stroke
+3    P3       3     7.6055      yes  k2,ksrd2sr,k_1                     AC    ATP steps + Pi reverse stroke
+4    H1       3     8.2033      yes  k2,kah,kamh                        X     REFERENCE: the incumbent, hydrolysis gates (not defensible)
+5    C4       3     8.2559      yes  k2,ksrd2sr,kmsrd                   AB    ATP steps + SRX-ADP exit
+6    C5       4     8.2559      yes  k2,ksr0,ksrd2sr,kmsrd              AB    full defensible SRX branch (4 DOF)
+7    C6       2     8.2725      yes  k2,kmsrd                           AB    ATP binding + SRX-ADP exit only
+8    C2       2     9.0401      yes  k2,ksr0                            A     ATP binding + SRX entry from the ATP-bound state
+9    C3       3     9.0401      yes  k2,ksr0,ksrd2sr                    A     all three steps where free ATP is a substrate
+10   C1       2    11.3223      yes  k2,ksrd2sr                         A     both true ATP-binding steps: dissociation + SRX nucleotide exchange
+11   C0       1    11.6198      yes  k2                                 A     canonical ATP binding alone (irreducible minimum)
+12   X1       2    11.6198      yes  k2,ka                              X     CONTROL: attachment gate (no nucleotide exchange)
+13   X2       3    11.6198      yes  k2,eta_M,kSE_M                     X     CONTROL: what H4 actually used -- mechanical, not chemistry
