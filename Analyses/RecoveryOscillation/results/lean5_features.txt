@@ -1,0 +1,39 @@
+SCORED FEATURES -- lean5_a_opt   total 0.5121   24 entries
+
+feature                kind        nEl     weight      floor      cost  share%  chi2/el
+--------------------------------------------------------------------------------------------
+peak1_dSL              CHI2-pool     5     0.0514      1.338    0.1317   25.7%     2.91
+vall_t                 CHI2-pool     5    0.04324      1.591    0.1180   23.0%     2.72
+PS_holdDecayRMSE       UNFLOORED     -   0.004466          -    0.0908   17.7%        -
+PS_rampupRMSE          UNFLOORED     -   0.002233          -    0.0801   15.6%        -
+PS_steady20            CHI2-spread    -    0.06105     0.2253    0.0349    6.8%        -
+PS_steady22            CHI2-spread    -    0.06105     0.2253    0.0344    6.7%        -
+rsK80                  CHI2-pool     5      1.037     0.1427    0.0219    4.3%     1.15
+ktr_rmse               GUARD         -        0.1          -    0.0002    0.0%        -
+k2                     GUARD         -      0.001          -    0.0001    0.0%        -
+ktr                    CHI2-pool     5     0.4641     0.1482    0.0001    0.0%     1.00
+A                      CHI2-pool     5     0.4762     0.1444    0.0000    0.0%     0.02
+XTOR                   GUARD         -          1          -    0.0000    0.0%        -
+t0_crossing            CHI2-spread    -     0.1638     0.4198    0.0000    0.0%        -
+restretchSlopeStart    CHI2-pool     5     0.3341     0.2059    0.0000    0.0%     0.81
+peak1_y                CHI2-pool     5     0.4777      0.144    0.0000    0.0%     0.78
+vall_y                 CHI2-pool     5     0.4812     0.1429    0.0000    0.0%     0.11
+peak2                  CHI2-pool     5     0.5177     0.1329    0.0000    0.0%     0.15
+steady                 CHI2-pool     5     0.5538     0.1242    0.0000    0.0%     0.10
+vall2_dy               CHI2-pool     5     0.2969     0.2316    0.0000    0.0%     0.98
+doublePeak             UNFLOORED     -         10          -    0.0000    0.0%        -
+PS_restretchPeak       CHI2-spread    -     0.0651      1.056    0.0000    0.0%        -
+rsR2                   GUARD         5        0.5          -    0.0000    0.0%     4.62
+FV_normpowerAvg        CHI2-spread    -       1083    0.05153    0.0000    0.0%        -
+steady                 GUARD         5          5          -    0.0000    0.0%     0.10
+--------------------------------------------------------------------------------------------
+  CHI2-pool     11 entries    0.2716    53.0 % of total
+  CHI2-spread    5 entries    0.0693    13.5 % of total
+  UNFLOORED      3 entries    0.1709    33.4 % of total
+  GUARD          5 entries    0.0003     0.1 % of total
+
+WATCH: the UNFLOORED terms are 33.4 % of the objective. They carry no
+measured spread, so no deadband can be computed for them -- which means they
+are the only terms left that a search can keep buying after everything else
+has reached its floor. Their share RISES as the fit improves: they were ~18 %
+at the lean5 seed and are 33 % here.

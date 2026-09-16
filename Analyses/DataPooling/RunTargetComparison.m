@@ -232,7 +232,14 @@ for g = 1:nS
     plot(1000*TG, BAND(g,:,1), '-','Color',cB,'LineWidth',1.5);
     m = out_slack.t-relM(g) >= TG(1) & out_slack.t-relM(g) <= TG(end);
     plot(1000*(out_slack.t(m)-relM(g)), out_slack.Force(m)/aMod, '-','Color',cM,'LineWidth',1.5);
-    xlim([310 420]); ylim([0.4 1.15]); xlabel('time from release (ms)');
+    % Start 40 ms before the re-stretch, not on top of it. At 310 ms the first
+    % peak sits on the left edge and the approach to it is off-screen, so the
+    % panel shows the recovery but not the transient that starts it -- which is
+    % the part the model gets wrong (peak height AND its timing).
+    % y-range must clear the MODEL's first peak, not just the data's. At 1.15
+    % the model's overshoot is clipped in segments 1-4 -- which hides the
+    % single largest discrepancy in the whole fit behind the axis box.
+    xlim([270 420]); ylim([0.55 1.28]); xlabel('time from release (ms)');
     if g == 1; ylabel('F / F_{ref}'); end
     title(sprintf('seg %d: the re-stretch recovery', g),'FontSize',9);
 end

@@ -356,11 +356,12 @@ Add-Card $s ($M+2*($t+20)) 134 $t 330 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null
 Add-Text $s ($M+2*($t+20)+20) 152 ($t-40) 24 "UGLY" 18 $CHERRY $true 1 | Out-Null
 Add-Text $s ($M+2*($t+20)+20) 178 ($t-40) 20 "genuinely wrong" 11 $GREY $false 1 | Out-Null
 Add-Bullets $s ($M+2*($t+20)+20) 206 ($t-40) 246 @(
- "rsT0 at 3.14 sd -- the ONLY feature beyond 2 sd, and it is UNSCORED, so an honest out-of-sample miss",
+ "THE RE-STRETCH TRANSIENT IS MISTIMED. peak1_dSL (where the first peak sits) and vall_t (when the valley occurs) are the two largest terms in the objective -- 49 % between them, both ~3 preparation-widths out. Their AMPLITUDES are fine: peak1_y, vall_y and peak2 all sit at their floor",
+ "So the model's double peak is too SHARP and too EARLY, not the wrong size",
+ "rsT0 at 3.14 sd -- the only feature beyond 2 sd, and UNSCORED, so an honest out-of-sample miss",
  "rsK80 per-cycle SHAPE: model climbs 51 -> 64 s-1 where the data is flat at ~47 then steps to 54",
- "Recovery too fast in segments 2-4: model plateaus by 360 ms, data still climbing at 420 ms",
  "F-V drifted to 2 sd -- invisible to the objective"
-) 11 $INK | Out-Null
+) 10.5 $INK | Out-Null
 Add-Note $s "Putting cycle 5 back improved rsK80's LEVEL (chi-2 1.4 -> 1.15) but bought none of the shape."
 
 # =============================================================================
@@ -369,8 +370,65 @@ Add-Note $s "Putting cycle 5 back improved rsK80's LEVEL (chi-2 1.4 -> 1.15) but
 $s = New-Slide $PAPER
 Add-Title $s "Model vs pooled timecourse -- all five slack cycles" $INK
 Add-Pic $s (Join-Path $figD 'target_timecourse.png') $M 116 ($W-2*$M) 336 | Out-Null
-Add-Text $s $M 462 ($W-2*$M) 40 "Top: full segments, grey band = between-preparation SD. Bottom: the re-stretch recovery window. Segment 5 is the odd one -- it re-stretches to ML 1.000, not 1.101, and plateaus at 0.76 of reference. It is the only probe of how the recovery depends on the length it recovers at." 12 $GREY $false 1 | Out-Null
-Add-Note $s "The visible defect: in segments 2-4 the red model curve reaches its plateau well before the data, which is still climbing at the right edge of the window."
+Add-Text $s $M 462 ($W-2*$M) 44 "Bottom row now opens 40 ms BEFORE the re-stretch, so the whole transient is in frame. The model's double peak is too SHARP: it overshoots the first peak (peak1_y +13 % on the pooled value), dips deeper and earlier, then rebuilds the second peak too slowly. Segments 1-4 all do it; segment 5 is tracked well." 11.5 $GREY $false 1 | Out-Null
+Add-Note $s ("Widening the window changed the diagnosis. At the old 310-420 ms limits the first peak sat on the left edge and the model's overshoot was clipped by the 1.15 y-limit, so the eye read 'recovery too fast'. " + `
+             "Note what the feature table says, though: vall_y -- the valley DEPTH -- is at chi-2 0.11, essentially exact, while vall_t (its TIMING) is the second largest cost in the objective. " + `
+             "So the error is in WHEN the transient happens more than in how deep it goes, which is consistent with peak1_dSL and vall_t being the two dominant terms and with peak1_y/vall_y/peak2 all sitting at their floor.")
+
+# =============================================================================
+# 13b  EVERY SCORED FEATURE
+# =============================================================================
+# Source: Analyses/RecoveryOscillation/RunScoredFeatureTable.m ->
+#         results/lean5_features.txt. Split into what PAYS and what sits at its
+#         floor, because 7 of 24 entries carry the entire objective and a flat
+#         24-row table hides that.
+$s = New-Slide $PAPER
+Add-Title $s "Every scored feature -- all 24 terms" $INK
+Add-Text $s $M 100 ($W-2*$M) 20 "lean5_a_opt, total 0.5121. SEVEN entries carry 100 % of it; the other seventeen sit inside their deadband and pay nothing." 12.5 $GREY $false 1 | Out-Null
+
+# --- left: the terms that pay
+Add-Card $s $M 130 560 340 $OFFW | Out-Null
+Add-Text $s ($M+20) 146 520 20 "PAYING" 15 $CHERRY $true 1 | Out-Null
+$hdrF = @('feature','kind','cost','share','chi2/el')
+$cxF = @(0, 150, 290, 370, 450); $cwF = @(145, 135, 75, 75, 75)
+for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+20+$cxF[$c]) 172 $cwF[$c] 18 $hdrF[$c] 10.5 $GREY $true 1 | Out-Null }
+$pay = @(
+ @('peak1_dSL','chi2-pool','0.1317','25.7%','2.91'),
+ @('vall_t','chi2-pool','0.1180','23.0%','2.72'),
+ @('PS_holdDecayRMSE','UNFLOORED','0.0908','17.7%','-'),
+ @('PS_rampupRMSE','UNFLOORED','0.0801','15.6%','-'),
+ @('PS_steady20','chi2-spread','0.0349','6.8%','-'),
+ @('PS_steady22','chi2-spread','0.0344','6.7%','-'),
+ @('rsK80','chi2-pool','0.0219','4.3%','1.15')
+)
+$yF = 194
+foreach ($r in $pay) {
+    $unf = ($r[1] -eq 'UNFLOORED')
+    $tc = if ($unf) { $CHERRY } else { $INK }
+    for ($c=0; $c -lt 5; $c++) {
+        Add-Text $s ($M+20+$cxF[$c]) $yF $cwF[$c] 18 $r[$c] 11 $tc $unf 1 | Out-Null
+    }
+    $yF += 22
+}
+Add-Text $s ($M+20) 360 520 20 "The top two are TIMING features with 76-84 % between-prep spread -- tiny weights, wide floors, and still ~3 preparation-widths out." 10.5 $NAVY $false 1 | Out-Null
+Add-Text $s ($M+20) 396 520 60 "The two UNFLOORED terms are 33 % between them. They carry no measured spread, so no deadband can be computed -- they are the only terms a search can keep buying once everything else has floored. Their share RISES as the fit improves: ~18 % at the seed, 33 % here." 10.5 $CHERRY $false 1 | Out-Null
+
+# --- right: the terms at zero
+Add-Card $s ($M+580) 130 ($W-$M-580-$M) 340 (Hex2Ole 0xE9 0xEE 0xE9) | Out-Null
+Add-Text $s ($M+600) 146 240 20 "AT FLOOR -- cost 0.0000" 15 $GREEN $true 1 | Out-Null
+Add-Text $s ($M+600) 170 240 18 "chi2 per element in brackets" 10 $GREY $false 1 | Out-Null
+Add-Bullets $s ($M+600) 194 240 268 @(
+ "ktr (1.00)   A (0.02)",
+ "peak1_y (0.78)   vall_y (0.11)",
+ "peak2 (0.15)   steady (0.10)",
+ "vall2_dy (0.98)",
+ "restretchSlopeStart (0.81)",
+ "t0_crossing   PS_restretchPeak",
+ "FV_normpowerAvg",
+ "GUARDS: XTOR, k2, ktr_rmse,",
+ "doublePeak, rsR2 (4.62), steady[1]"
+) 10.5 $INK | Out-Null
+Add-Note $s "rsR2 shows chi2 4.62 but is a BOUNDARY entry, not a fit term -- it is scored against a fixed 0.4-1.0 range and RecoveryOscillation showed a noise-free model could reach only 0.834, so it can never be a fit target."
 
 # =============================================================================
 # 14  FEATURE RESIDUALS
@@ -571,7 +629,19 @@ Add-Note $s ""
 
 # =============================================================================
 $nSlides = $pres.Slides.Count
-if (Test-Path $out) { Remove-Item $out -Force }
+# A PowerPoint COM instance from a previous run (an export, say) can still hold
+# the output file for a few seconds after Quit(). Deleting it then throws, the
+# script dies BEFORE SaveAs, and the old deck is left in place looking like a
+# successful build -- which is how a "21 slides" deck survived adding a 22nd.
+# Retry, then fail loudly rather than silently leaving stale output.
+for ($try = 1; $try -le 10; $try++) {
+    if (-not (Test-Path $out)) { break }
+    try { Remove-Item $out -Force -ErrorAction Stop; break }
+    catch {
+        if ($try -eq 10) { throw "cannot replace $out -- still locked after 10 tries" }
+        Start-Sleep -Seconds 2
+    }
+}
 $pres.SaveAs($out)
 $pres.Close()
 $pp.Quit()
