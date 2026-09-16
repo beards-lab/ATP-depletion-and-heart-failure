@@ -1,0 +1,7 @@
+CANDIDATE SETS RANKED BY 2 mM FIT   core lean5_a_opt   H0 = 16.0478
+
+rank id     DOF       cost     conv  gates                              tier  rationale
+1    C4       3    13.4969       NO  k2,ksrd2sr,kmsrd                   AB    ATP steps + SRX-ADP exit
+2    C0       1    13.9521      yes  k2                                 A     canonical ATP binding alone (irreducible minimum)
+3    P1       2    13.9521      yes  k2,k_1                             C     ATP + Pi contamination (reverse stroke)
+4    H1       3    13.9521      yes  k2,kah,kamh                        X     REFERENCE: the incumbent, hydrolysis gates (not defensible)

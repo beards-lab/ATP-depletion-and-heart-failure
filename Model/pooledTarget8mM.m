@@ -1,7 +1,7 @@
 function PT = pooledTarget8mM()
 % POOLEDTARGET8MM  Frozen 8 mM pooled fit target (GENERATED -- do not hand-edit).
 %
-%   Written by Analyses/DataPooling/WritePooledTarget.m on 2026-09-15 20:04
+%   Written by Analyses/DataPooling/WritePooledTarget.m on 2026-09-16 13:15
 %   from 3 preparations: 03/27, 04/03, 04/10
 %   anchor Fss22 | rundown 1 | shrink 1 | phi 0.452
 %
@@ -57,6 +57,7 @@ P.FrefPrep = [79.759200000000007 69.979699999999994 58.306017239494508];
 P.level    = 1.3200976519782204;   % 2 mM / 8 mM force level
 P.sLevel   = 0.085991157749140748;
 P.dof      = 4.7432462685374208;
+P.cond     = 8;   % mM MgATP this target describes
 P.nP       = 3;
 P.days     = {'03/27', '04/03', '04/10'};
 

@@ -1,4 +1,4 @@
-function [fd, info] = pooledTargetFeatures(fd, mode)
+function [fd, info] = pooledTargetFeatures(fd, mode, cond)
 % POOLEDTARGETFEATURES  Swap the single-preparation slack target for the pooled one.
 %
 %   FD = POOLEDTARGETFEATURES(FD)          replace every pooled feature
@@ -47,7 +47,25 @@ if isnumeric(mode) || islogical(mode)
 end
 mode = validatestring(mode, {'all','shape','level'});
 
-PT = pooledTarget8mM();
+% COND selects which frozen target to inject: 8 (default) or 2 mM. Both are
+% built by the same WritePooledTarget from the same per-preparation anchor, so
+% the ratio between them is the measured ATP effect and not a gauge choice.
+%
+% This matters beyond error bars. rsK80 is in NO curated .mat file -- not even
+% the 8 mM one -- so injection HERE is its only source on the data side. Before
+% the 2 mM target existed the low-ATP leg simply could not score it, which
+% silently removed the strongest ATP-carrying feature (z = 3.42) from the
+% low-ATP objective.
+if nargin < 3 || isempty(cond); cond = 8; end
+switch round(cond)
+    case 8; PT = pooledTarget8mM();
+    case 2; PT = pooledTarget2mM();
+    otherwise
+        error('pooledTargetFeatures:cond', ...
+            ['no pooled target for %g mM MgATP. Build one first:\n' ...
+             '    COND = %g; run(''Analyses/DataPooling/WritePooledTarget.m'')'], ...
+            cond, round(cond));
+end
 nEl = size(PT.val, 2);
 
 info = struct('applied', {{}}, 'added', {{}}, 'kept', {{}}, 'Fref', PT.Fref, 'mode', mode);

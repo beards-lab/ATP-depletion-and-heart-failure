@@ -23,14 +23,33 @@
 % Output -> Model/pooledTarget8mM.m
 %           results/pooled_target_report.txt   (old single-prep vs new pooled)
 
-clearvars -except OPTS; clc;
+clearvars -except OPTS COND; clc;   % COND must survive, or it silently writes 8 mM
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here, '..', '..');
 cd(root); addpath(genpath(root));
 resDir = fullfile(here, 'results'); if ~isfolder(resDir); mkdir(resDir); end
 
-OUTF     = fullfile(root, 'Model', 'pooledTarget8mM.m');
-REF_FILE = 'protocol_03_27_2026_8mM_slack.mat';   % the single-prep target it replaces
+% COND -- which ATP condition to freeze. 8 (default) or 2.
+%
+% The 2 mM target exists because the low-ATP leg had NO pooled target at all,
+% and therefore no error bar and -- the part that actually bit -- no way to
+% score rsK80. On the data side rsK80 is not in any curated .mat file; it is
+% INJECTED by pooledTargetFeatures from the frozen target. No pooled target
+% meant no rsK80, so the 2 mM fit was being scored without its strongest
+% ATP-carrying feature (z = 3.42).
+%
+% Both conditions are divided by the SAME per-preparation anchor (that
+% preparation's 8 mM Fss22) and multiplied back by the SAME pooled level Fref,
+% which is what keeps the 2 mM / 8 mM ratio a measurement rather than a
+% definition. The 2 mM target therefore carries the real ATP effect in its
+% absolute values; only its SPREAD is measured at 2 mM.
+if ~exist('COND','var') || isempty(COND); COND = 8; end
+if ~ismember(COND, [2 8])
+    error('WritePooledTarget:cond', 'COND must be 8 or 2 (got %g)', COND);
+end
+FNAME    = sprintf('pooledTarget%dmM', COND);
+OUTF     = fullfile(root, 'Model', [FNAME '.m']);
+REF_FILE = sprintf('protocol_03_27_2026_%dmM_slack.mat', COND);  % what it replaces
 
 if ~exist('OPTS','var'); OPTS = struct(); end     % passed through to buildPooledTarget
 
@@ -40,7 +59,14 @@ Fref = T.scale.mean;
 nF   = numel(T.name);
 isF  = strcmp(T.cls, 'F');
 
-val = T.m8;
+% Values and spread for the selected condition. Force features are rescaled by
+% the SAME Fref in both, so the ratio between the two frozen targets is the
+% measured ATP effect.
+if COND == 8
+    val = T.m8;  sUse = T.s8;  sRawUse = T.s8raw;
+else
+    val = T.m2;  sUse = T.s2;  sRawUse = T.s2raw;
+end
 val(isF, :) = val(isF, :) * Fref;                 % back into kPa (or kPa/s)
 
 %% ---- what it replaces --------------------------------------------------
@@ -60,8 +86,8 @@ if isfield(S, 'features_data')
 end
 
 lines = {};
-lines{end+1} = sprintf('pooled 8 mM target -- %d preparations (%s), anchor %s', ...
-    T.nP, strjoin(T.scale.days, ', '), T.opts.anchor);
+lines{end+1} = sprintf('pooled %d mM target -- %d preparations (%s), anchor %s', ...
+    COND, T.nP, strjoin(T.scale.days, ', '), T.opts.anchor);
 lines{end+1} = sprintf('Fref = %.2f kPa (CV %.1f %%, per prep %s), moderated dof = %.2f', ...
     Fref, 100*T.scale.cv, strtrim(sprintf('%.1f ', T.scale.perPrep)), T.d0 + T.nP - 1);
 lines{end+1} = '';
@@ -77,7 +103,7 @@ for k = 1:nF
         chg = sprintf('%9s', '-');
     end
     lines{end+1} = sprintf('%-22s %4s %12.4g %12.4g %s %8.1f%% %9.1f', ...
-        T.name{k}, T.cls{k}, mo, mn, chg, 100*T.s8(k), 1/T.s8(k)^2);  %#ok<SAGROW>
+        T.name{k}, T.cls{k}, mo, mn, chg, 100*sUse(k), 1/sUse(k)^2);  %#ok<SAGROW>
 end
 lines{end+1} = repmat('-', 1, 86);
 lines{end+1} = ['NOTE the force block moves as ONE number: every ''F'' feature is ' ...
@@ -97,8 +123,9 @@ fprintf(fid, '%s\n', txt); fclose(fid);
 % Docs objective_noise_floor), so a target that does not round-trip exactly
 % would be indistinguishable from search noise and impossible to audit.
 fid = fopen(OUTF, 'w');
-fprintf(fid, 'function PT = pooledTarget8mM()\n');
-fprintf(fid, '%% POOLEDTARGET8MM  Frozen 8 mM pooled fit target (GENERATED -- do not hand-edit).\n%%\n');
+fprintf(fid, 'function PT = %s()\n', FNAME);
+fprintf(fid, '%% %s  Frozen %d mM pooled fit target (GENERATED -- do not hand-edit).\n%%\n', ...
+             upper(FNAME), COND);
 fprintf(fid, '%%   Written by Analyses/DataPooling/WritePooledTarget.m on %s\n', ...
              char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm')));
 fprintf(fid, '%%   from %d preparations: %s\n', T.nP, strjoin(T.scale.days, ', '));
@@ -107,7 +134,7 @@ fprintf(fid, '%%   anchor %s | rundown %d | shrink %d | phi %.4g\n', ...
 fprintf(fid, '%%\n');
 fprintf(fid, '%% Fields\n');
 fprintf(fid, '%%   name/cls  feature name and class ("F" force-dimension, "0" scale-free)\n');
-fprintf(fid, '%%   val       pooled 8 mM value, ABSOLUTE units, one column per slack segment\n');
+fprintf(fid, '%%   val       pooled %d mM value, ABSOLUTE units, one column per slack segment\n', COND);
 fprintf(fid, '%%   s/sraw    relative between-preparation SD, moderated / raw (the chi-2 scale)\n');
 fprintf(fid, '%%   seg       which slack cycles s was measured on. The objective MUST score the\n');
 fprintf(fid, '%%             feature on those cycles and no others -- a chi-2 is only a chi-2\n');
@@ -125,8 +152,8 @@ for k = 1:nF
     fprintf(fid, '    %s; ... %% %s\n', strtrim(sprintf('%.17g ', val(k,:))), T.name{k});
 end
 fprintf(fid, '    ];\n');
-writeRow(fid, 'P.s',    T.s8);
-writeRow(fid, 'P.sraw', T.s8raw);
+writeRow(fid, 'P.s',    sUse);
+writeRow(fid, 'P.sraw', sRawUse);
 fprintf(fid, 'P.seg      = {%s};\n', strjoin(cellfun(@(v) mat2str(v), T.seg, 'uni', 0), ', '));
 writeRow(fid, 'P.r',    T.r);
 writeRow(fid, 'P.sr',   T.sr);
@@ -136,7 +163,12 @@ fprintf(fid, 'P.FrefCV   = %.17g;\n', T.scale.cv);
 fprintf(fid, 'P.FrefPrep = [%s];\n', strtrim(sprintf('%.17g ', T.scale.perPrep)));
 fprintf(fid, 'P.level    = %.17g;   %% 2 mM / 8 mM force level\n', T.level);
 fprintf(fid, 'P.sLevel   = %.17g;\n', T.sLevel);
-fprintf(fid, 'P.dof      = %.17g;\n', T.d0 + T.nP - 1);
+% dof behind the spread ACTUALLY written -- the 2 mM spreads get their own
+% empirical-Bayes prior, so quoting the 8 mM dof on a 2 mM target would
+% misstate the confidence interval on every number in it.
+if COND == 8; d0Use = T.d0; else; d0Use = T.d0_2; end
+fprintf(fid, 'P.dof      = %.17g;\n', d0Use + T.nP - 1);
+fprintf(fid, 'P.cond     = %d;   %% mM MgATP this target describes\n', COND);
 fprintf(fid, 'P.nP       = %d;\n', T.nP);
 fprintf(fid, 'P.days     = {%s};\n', strjoin(cellfun(@(s) ['''' s ''''], T.scale.days, 'uni', 0), ', '));
 fprintf(fid, '\nPT = P;\nend\n');
