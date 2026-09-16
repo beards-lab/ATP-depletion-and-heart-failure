@@ -118,7 +118,14 @@ p0.recalculateDataFeats = true;   % 2 mM curated file predates rsK80; re-extract
 %   The two conditions are therefore NOT on the same footing, and the 2 mM
 %   numbers carry no error bar. Building a pooled 2 mM target is the obvious
 %   next step and is not done.
-p0.UsePooledTarget = false;
+% A pooled 2 mM target now exists (Model/pooledTarget2mM), built from the same
+% three preparations and the SAME per-preparation anchor, so the ratio between
+% the two targets is the measured ATP effect. runSlackExperiment picks the one
+% matching params.MgATP. Leaving this ON is what lets the 2 mM leg score rsK80
+% at all -- on the data side that feature exists only by injection from a
+% pooled target, and without it the low-ATP fit was missing its strongest ATP
+% signal (z = 3.42).
+p0.UsePooledTarget = true;
 
 prim = @(c) cellfun(@(s) regexprep(strtok(s,'|'),'\[.*$',''), c, 'uni', 0);
 fn2 = p0.fn; [~,iu]=unique(fn2,'stable'); fn2=fn2(iu);
@@ -126,6 +133,16 @@ fn2 = fn2(~startsWith(prim(fn2),'PS_'));
 
 p2 = p0; p2.MgATP=2; p2.MgADP=0; p2.Pi=0.8;
 p2.velocitytableonfile='protocol_03_27_2026_2mM_slack.mat';
+
+% The fn was weighted and floored on 8 mM spreads. Put it on the 2 mM scale, or
+% the residual comes from one condition and the scale from another and the
+% terms stop being chi-2. Not a wash: 2 mM is systematically wider, so the
+% 8 mM floors are too narrow here and every term would overpay.
+[fn2, rsInfo] = rescaleFnToCondition(fn2, 2);
+if ~isempty(rsInfo.changed)
+    fprintf('rescaled %d terms to the 2 mM spread (s2/s8 = %.2f-%.2f)\n', ...
+        numel(rsInfo.changed), min(rsInfo.q), max(rsInfo.q));
+end
 p2.fn = fn2;
 rep = checkFeatureCoverage(p2);
 if ~rep.ok

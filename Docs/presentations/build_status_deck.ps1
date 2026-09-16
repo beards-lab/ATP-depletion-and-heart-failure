@@ -466,34 +466,37 @@ Add-Note $s "H4 never converged: 21 gates x 4 steps needs about 84 evaluations p
 # =============================================================================
 $s = New-Slide $PAPER
 Add-Title $s "Defensible gate sets -- P1 and C4 recalibrated" $INK
-Add-Text $s $M 104 ($W-2*$M) 22 "The gate machinery was ported from lowatp-2state onto the lean5 core. Ranking below is on the OLD core; the recalibration is running." 13 $GREY $false 1 | Out-Null
+Add-Text $s $M 104 ($W-2*$M) 22 "Recalibrating P1 and C4 onto the lean5 core did not reproduce the old ranking -- and finding out why exposed a hole in the low-ATP objective." 13 $GREY $false 1 | Out-Null
 
-# --- the old-core ranking (measured), with the two sets in question flagged ---
-$hdr2 = @('id','gates','DOF','2 mM cost','tier')
-$colX2 = @(0, 90, 400, 490, 660); $colW2 = @(80, 300, 80, 150, 190)
-for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+$colX2[$c]) 142 $colW2[$c] 20 $hdr2[$c] 12 $GREY $true 1 | Out-Null }
+$hdr2 = @('id','gates','old core','lean5 core','fitted exponents')
+$colX2 = @(0, 75, 360, 470, 600); $colW2 = @(70, 280, 105, 125, 250)
+for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+$colX2[$c]) 140 $colW2[$c] 20 $hdr2[$c] 12 $GREY $true 1 | Out-Null }
 $sets = @(
- @('P1','k2, k_1','2','7.61','C  Pi contamination'),
- @('H1','k2, kah, kamh','3','8.20','X  not defensible'),
- @('C4','k2, ksrd2sr, kmsrd','3','8.26','AB  ATP steps + SRX-ADP exit'),
- @('C0','k2 alone','1','11.62','A  irreducible minimum')
+ @('C4','k2, ksrd2sr, kmsrd','8.26','13.50  (not conv)','k2 +0.300, kmsrd +0.300'),
+ @('C0','k2 alone','11.62','13.95','k2 +0.300'),
+ @('P1','k2, k_1','7.61','13.95','k2 +0.300, k_1 0.000'),
+ @('H1','k2, kah, kamh','8.20','13.95','k2 +0.300, rest 0.000')
 )
-$y2 = 166
+$y2 = 164
 foreach ($r in $sets) {
     $hl = ($r[0] -eq 'P1' -or $r[0] -eq 'C4')
-    if ($hl) { Add-Card $s ($M-10) ($y2-5) ($W-2*$M+20) 32 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null }
+    if ($hl) { Add-Card $s ($M-10) ($y2-5) ($W-2*$M+20) 30 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null }
     $tc = if ($hl) { $CHERRY } else { $INK }
-    for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+$colX2[$c]) $y2 $colW2[$c] 22 $r[$c] 13 $tc $hl 1 | Out-Null }
-    $y2 += 36
+    for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+$colX2[$c]) $y2 $colW2[$c] 20 $r[$c] 12.5 $tc $hl 1 | Out-Null }
+    $y2 += 34
 }
+Add-Text $s $M 306 ($W-2*$M) 20 "On the new core every set collapses to ONE lever -- k2 at +0.300 -- and every extra gate goes to exactly zero. C0 = P1 = H1 to four decimals." 13 $NAVY $true 1 | Out-Null
 
-Add-Card $s $M 322 ($W-2*$M) 62 (Hex2Ole 0xE9 0xEE 0xE9) | Out-Null
-Add-Text $s ($M+24) 334 ($W-2*$M-48) 20 "Port VERIFIED: 8 mM bit-identical, |delta| = 0.000e+00, and the gate bites at 2 mM." 14 $GREEN $true 1 | Out-Null
-Add-Text $s ($M+24) 358 ($W-2*$M-48) 20 "Two caveats on the new core: rsK80 is NOT scorable on the 2 mM data (18 features, not 19) -- and it is the strongest ATP feature (z = 3.42). And H0 = 16.05 there vs 385 on the old core is NOT a better start: it is mostly the 8 mM deadbands still applying." 10.5 $INK $false 1 | Out-Null
-Add-Card $s $M 396 ($W-2*$M) 92 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null
-Add-Text $s ($M+28) 412 ($W-2*$M-56) 22 "P1 fits best and explains least" 16 $CHERRY $true 1 | Out-Null
-Add-Text $s ($M+28) 440 ($W-2*$M-56) 40 "k_1 is the reverse stroke driven by Pi REBINDING, so P1 says the 2 mM solution differs in Pi as well as ATP. Pi predicts LOWER force; the data show force x1.34 HIGHER. If Pi contamination is present it is being over-compensated by something else." 12 $INK $false 1 | Out-Null
-Add-Note $s "Port verified: 8 mM bit-identical, |delta| = 0.000e+00, and the gate bites at 2 mM."
+Add-Card $s $M 336 ($W-2*$M) 72 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null
+Add-Text $s ($M+24) 348 ($W-2*$M-48) 20 "Do not read that as 'one gate is enough'. The fit had no rsK80." 14 $CHERRY $true 1 | Out-Null
+Add-Text $s ($M+24) 372 ($W-2*$M-48) 30 "rsK80 is in NO curated .mat file -- not even the 8 mM one. On the data side it exists ONLY by injection from a pooled target. There was no pooled 2 mM target, so the low-ATP fit was scored WITHOUT its strongest ATP-carrying feature (z = 3.42), against one preparation, with 8 mM-sized deadbands." 10.5 $INK $false 1 | Out-Null
+
+Add-Card $s $M 418 ($W-2*$M) 66 (Hex2Ole 0xE9 0xEE 0xE9) | Out-Null
+Add-Text $s ($M+24) 430 ($W-2*$M-48) 20 "Fixed: a pooled 2 mM target now exists, and the re-run is in flight." 14 $GREEN $true 1 | Out-Null
+Add-Text $s ($M+24) 454 ($W-2*$M-48) 26 "Same three preparations, same per-prep anchor, its OWN spread s2 -- and the ratio between the two frozen targets reproduces the measured effect: steady x1.331, ktr x0.544, rsK80 x0.382, rsK x0.338.  Port verified throughout: 8 mM bit-identical, |delta| = 0.000e+00." 10.5 $INK $false 1 | Out-Null
+Add-Note $s ("P1 fits best on the OLD core and explains least: k_1 is the reverse stroke driven by Pi rebinding, " + `
+             "so P1 says the 2 mM solution differs in Pi as well as ATP. Pi predicts LOWER force; the data show " + `
+             "force x1.34 HIGHER. Port verified throughout: 8 mM bit-identical, |delta| = 0.000e+00.")
 
 # =============================================================================
 # 19  TWO HARD LIMITS
@@ -528,7 +531,8 @@ Add-Note $s "The 8 mM core is fitted to a 3-preparation pooled target; the 2 mM 
 $s = New-Slide $PAPER
 Add-Title $s "Current challenges and tasks" $INK
 $tasks = @(
- @('1','Pooled 2 mM target','the two conditions are not on the same footing; 2 mM has no error bar at all'),
+ @('DONE','Pooled 2 mM target + condition-aware scoring','built today: own spread s2, own prior, and rsK80 finally scorable at 2 mM. Re-fit in flight'),
+ @('1','Re-weight the 2 mM objective from s2 throughout','the values are pooled now; BuildWeightedObjective still derives every weight from the 8 mM spread'),
  @('2','Put the staircase in the objective','free out-of-sample test, known wrong in three specific ways, features and weights already derived'),
  @('3','Fix the two unfloored RMSE terms','18% of the objective, unprincipled, same species as the retired coolDownLS'),
  @('4','Narrow the F-V floor (per-term FLOOR_CHI2)','it drifted to 2 sd while paying exactly zero'),
@@ -536,14 +540,22 @@ $tasks = @(
  @('6','A third [ATP], ideally 20 mM','the only way to separate Hill from power gates -- currently unidentifiable in principle'),
  @('7','More preparations (n = 3 -> 6)','weights known only to a factor of ~18; protocol already designed (8-4-2-8 / 2-8-2)')
 )
-$y = 126
+# Eight rows at 48 pt pitch from y = 118 ends at 502 -- inside the 540 pt slide.
+# The first row is a completed item, so it is keyed on the LABEL, not on a cast:
+# [int]"DONE" throws.
+$y = 118
 foreach ($t in $tasks) {
-    $fill = if ([int]$t[0] -le 2) { Hex2Ole 0xF2 0xE2 0xE4 } else { $OFFW }
-    Add-Card $s $M $y ($W-2*$M) 48 $fill | Out-Null
-    Add-Text $s ($M+18) ($y+13) 30 22 $t[0] 15 $CHERRY $true 1 | Out-Null
-    Add-Text $s ($M+54) ($y+6) 330 38 $t[1] 13 $INK $true 1 | Out-Null
-    Add-Text $s ($M+396) ($y+6) ($W-2*$M-414) 38 $t[2] 11.5 $GREY $false 1 | Out-Null
-    $y += 54
+    $done = ($t[0] -eq 'DONE')
+    if ($done)            { $fill = Hex2Ole 0xE9 0xEE 0xE9; $lc = $GREEN }
+    elseif ($t[0] -le '2') { $fill = Hex2Ole 0xF2 0xE2 0xE4; $lc = $CHERRY }
+    else                  { $fill = $OFFW;                  $lc = $CHERRY }
+    Add-Card $s $M $y ($W-2*$M) 44 $fill | Out-Null
+    $lw = if ($done) { 52 } else { 30 }
+    $ls = if ($done) { 11 } else { 15 }
+    Add-Text $s ($M+16) ($y+13) $lw 22 $t[0] $ls $lc $true 1 | Out-Null
+    Add-Text $s ($M+76) ($y+4) 320 38 $t[1] 12.5 $INK $true 1 | Out-Null
+    Add-Text $s ($M+408) ($y+4) ($W-2*$M-426) 38 $t[2] 11 $GREY $false 1 | Out-Null
+    $y += 48
 }
 Add-Note $s "Also pending: delete the dead switches. UseSerialStiffness is listed in CLAUDE.md as a key behavioural switch and is read nowhere in the ODE."
 
