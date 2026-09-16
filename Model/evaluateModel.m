@@ -67,6 +67,47 @@ if isfield(params, 'RemoveField') && ~isempty(params.RemoveField)
     end
 end
 
+%% ---- General 8 mM-inert ATP gates ---------------------------------------
+% PORTED from lowatp-2state. Two functional forms, both EXACTLY 1 at
+% MgATP = MgATP_ref for any coefficients, so the high-ATP fit is bit-identical
+% whatever the optimiser does and the gate only ever moves the low-ATP
+% condition. That is the asymmetry the whole low-ATP programme rests on.
+%
+%   AtpGateForm = 'power' (legacy):  rate_eff = rate * (ATP/ATP_ref)^p
+%   AtpGateForm = 'hill'          :  rate_eff = rate * Corr_ref*ATP^p/(K^p+ATP^p)
+%                                    Corr_ref = (K^p + ATP_ref^p)/ATP_ref^p
+%
+% K -> Inf recovers the power law exactly, which is why KAtp_* defaults to Inf
+% and old snapshots are byte-identical. p < 0 makes a step ATP-INHIBITED.
+%
+% Applied HERE, once per simulation, rather than in dPUdT (the ODE RHS, which
+% would pay a dynamic-field lookup on every call). `params` is a local copy, so
+% this cannot leak back to the caller and cannot be applied twice. It must sit
+% ABOVE the first use of kstiff2/kSE/dr further down this file.
+if isfield(params, 'UseAtpPowerGates') && params.UseAtpPowerGates
+    rATP = params.MgATP / params.MgATP_ref;
+    if rATP ~= 1
+        gated = {'k2','kmsrd','kah','kamh','ka','kd','k1','k_1', ...
+                 'ksr0','ksr2srd','ksrd2sr','tau_reg','A0','eta_M', ...
+                 'kstiff2','kSE','kSE_M','mu_neg','dr','dr2','P_bound_max'};
+        useHill = isfield(params,'AtpGateForm') && strcmpi(params.AtpGateForm,'hill');
+        for gi = 1:numel(gated)
+            pn = ['pAtp_' gated{gi}];
+            if isfield(params, pn) && params.(pn) ~= 0 && isfield(params, gated{gi})
+                nATP = params.(pn);            % Hill coefficient == power-law exponent
+                kn   = ['KAtp_' gated{gi}];
+                if useHill && isfield(params,kn) && isfinite(params.(kn)) && params.(kn) > 0
+                    KnATP   = params.(kn) ^ nATP;
+                    corrRef = (KnATP + params.MgATP_ref^nATP) / params.MgATP_ref^nATP;
+                    fATP    = corrRef * params.MgATP^nATP / (KnATP + params.MgATP^nATP);
+                else
+                    fATP = rATP ^ nATP;        % the K -> Inf limit of the Hill form
+                end
+                params.(gated{gi}) = params.(gated{gi}) * fATP;
+            end
+        end
+    end
+end
 
 if isfield(params, 'ksrm')
     error('Change ksrm to kmsr!!')
