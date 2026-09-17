@@ -11,7 +11,12 @@
 
 $ErrorActionPreference = 'Stop'
 $root = 'C:\home\git\ATP-wt-floored'
-$out  = Join-Path $root 'Docs\presentations\status-2026-09-16.pptx'
+# Output path, overridable: the usual deck is often open in PowerPoint while
+# this runs, and PowerPoint holds an exclusive lock. Rather than closing
+# someone's window (and any unsaved state in it), build alongside:
+#   $env:DECK_OUT = '...\status-2026-09-16-v2.pptx'; .\build_status_deck.ps1
+if ($env:DECK_OUT) { $out = $env:DECK_OUT }
+else { $out = Join-Path $root 'Docs\presentations\status-2026-09-16.pptx' }
 $figR = Join-Path $root 'Analyses\RecoveryOscillation\results'
 $figD = Join-Path $root 'Analyses\DataPooling\results'
 
@@ -526,32 +531,72 @@ $s = New-Slide $PAPER
 Add-Title $s "Defensible gate sets -- P1 and C4 recalibrated" $INK
 Add-Text $s $M 104 ($W-2*$M) 22 "Recalibrating P1 and C4 onto the lean5 core did not reproduce the old ranking -- and finding out why exposed a hole in the low-ATP objective." 13 $GREY $false 1 | Out-Null
 
-$hdr2 = @('id','gates','old core','lean5 core','fitted exponents')
-$colX2 = @(0, 75, 360, 470, 600); $colW2 = @(70, 280, 105, 125, 250)
-for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+$colX2[$c]) 140 $colW2[$c] 20 $hdr2[$c] 12 $GREY $true 1 | Out-Null }
-$sets = @(
- @('C4','k2, ksrd2sr, kmsrd','8.26','13.50  (not conv)','k2 +0.300, kmsrd +0.300'),
- @('C0','k2 alone','11.62','13.95','k2 +0.300'),
- @('P1','k2, k_1','7.61','13.95','k2 +0.300, k_1 0.000'),
- @('H1','k2, kah, kamh','8.20','13.95','k2 +0.300, rest 0.000')
+Add-Card $s $M 134 ($W-2*$M) 96 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null
+Add-Text $s ($M+24) 146 ($W-2*$M-48) 22 "RETRACTED: the ranking that stood here." 15 $CHERRY $true 1 | Out-Null
+Add-Text $s ($M+24) 172 ($W-2*$M-48) 50 "It was produced with recalculateDataFeats = true, set in an attempt to make rsK80 scorable at 2 mM. It cannot do that -- the slack re-extraction branch is disabled -- but it DOES reach runFVExperiment, and re-extracting the 2 mM force-velocity data takes the F-V term from 0.0000 to 10.8651, i.e. 84 % of the objective. Every cost from that run, and the 'every set collapses onto k2' conclusion, is void." 10.5 $INK $false 1 | Out-Null
+
+Add-Text $s $M 244 ($W-2*$M) 20 "On a clean objective: 19 terms, pooled 2 mM target, chi-2 rescaled to the 2 mM spread" 12.5 $GREY $true 1 | Out-Null
+$cln = @(
+ @('H0 -- no ATP gates at all','18.46'),
+ @('k2 = 0.44 (the one gate)','2.134'),
+ @('k_1 added, scanned -0.6 .. +0.6','no improvement in ANY direction')
 )
-$y2 = 164
-foreach ($r in $sets) {
-    $hl = ($r[0] -eq 'P1' -or $r[0] -eq 'C4')
-    if ($hl) { Add-Card $s ($M-10) ($y2-5) ($W-2*$M+20) 30 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null }
-    $tc = if ($hl) { $CHERRY } else { $INK }
-    for ($c=0; $c -lt 5; $c++) { Add-Text $s ($M+$colX2[$c]) $y2 $colW2[$c] 20 $r[$c] 12.5 $tc $hl 1 | Out-Null }
-    $y2 += 34
+$y2 = 272
+foreach ($r in $cln) {
+    Add-Card $s $M $y2 ($W-2*$M) 34 $OFFW | Out-Null
+    Add-Text $s ($M+22) ($y2+8) 420 20 $r[0] 12.5 $INK $true 1 | Out-Null
+    Add-Text $s ($M+470) ($y2+8) 340 20 $r[1] 12.5 $CHERRY $true 1 | Out-Null
+    $y2 += 40
 }
-Add-Text $s $M 306 ($W-2*$M) 20 "On the new core every set collapses to ONE lever -- k2 at +0.300 -- and every extra gate goes to exactly zero. C0 = P1 = H1 to four decimals." 13 $NAVY $true 1 | Out-Null
 
-Add-Card $s $M 336 ($W-2*$M) 72 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null
-Add-Text $s ($M+24) 348 ($W-2*$M-48) 20 "Do not read that as 'one gate is enough'. The fit had no rsK80." 14 $CHERRY $true 1 | Out-Null
-Add-Text $s ($M+24) 372 ($W-2*$M-48) 30 "rsK80 is in NO curated .mat file -- not even the 8 mM one. On the data side it exists ONLY by injection from a pooled target. There was no pooled 2 mM target, so the low-ATP fit was scored WITHOUT its strongest ATP-carrying feature (z = 3.42), against one preparation, with 8 mM-sized deadbands." 10.5 $INK $false 1 | Out-Null
+Add-Card $s $M 396 ($W-2*$M) 90 (Hex2Ole 0xE9 0xEE 0xE9) | Out-Null
+Add-Text $s ($M+24) 408 ($W-2*$M-48) 20 "k_1 really has no leverage here -- and that part survives the bug, because the scan was run clean." 14 $GREEN $true 1 | Out-Null
+Add-Text $s ($M+24) 432 ($W-2*$M-48) 46 "Every direction is worse, monotonically: -0.6 costs +4.16, +0.6 costs +0.94. So P1 collapsing onto C0 is not a search failure. Why did it pay 4.0 on the old core? That objective had NO deadbands, so the features k_1 can move were still paying; here they sit inside their floor. Testable, not proven." 10.5 $INK $false 1 | Out-Null
 
-Add-Card $s $M 418 ($W-2*$M) 66 (Hex2Ole 0xE9 0xEE 0xE9) | Out-Null
-Add-Text $s ($M+24) 430 ($W-2*$M-48) 20 "Fixed: a pooled 2 mM target now exists, and the re-run is in flight." 14 $GREEN $true 1 | Out-Null
-Add-Text $s ($M+24) 454 ($W-2*$M-48) 26 "Same three preparations, same per-prep anchor, its OWN spread s2 -- and the ratio between the two frozen targets reproduces the measured effect: steady x1.331, ktr x0.544, rsK80 x0.382, rsK x0.338.  Port verified throughout: 8 mM bit-identical, |delta| = 0.000e+00." 10.5 $INK $false 1 | Out-Null
+# =============================================================================
+# 18b  WHERE THE 2 mM COST IS
+# =============================================================================
+$s = New-Slide $PAPER
+Add-Title $s "The 2 mM objective -- where the cost actually is" $INK
+Add-Text $s $M 100 ($W-2*$M) 20 "core lean5_a_opt, pAtp_k2 = 0.44, total 2.134 over 19 terms. Twelve pay; seven sit at their floor." 12.5 $GREY $false 1 | Out-Null
+
+Add-Card $s $M 128 590 300 $OFFW | Out-Null
+$hdr3 = @('feature','cost','share','model','target','chi2/el')
+$cx3 = @(0, 155, 225, 300, 390, 480); $cw3 = @(150, 65, 70, 85, 85, 70)
+for ($c=0; $c -lt 6; $c++) { Add-Text $s ($M+22+$cx3[$c]) 144 $cw3[$c] 18 $hdr3[$c] 10.5 $GREY $true 1 | Out-Null }
+$rows3 = @(
+ @('vall_t','0.6025','28.2%','0.01443','0.005167','9.76'),
+ @('vall2_dy','0.5745','26.9%','-26.97','-14.38','9.35'),
+ @('rsK80','0.2493','11.7%','24.41','18.66','2.68'),
+ @('peak1_dSL','0.2384','11.2%','0.04745','0.02111','4.47'),
+ @('ktr','0.2003','9.4%','36.62','26.02','3.91'),
+ @('ktr_rmse','0.1017','4.8%','-','-','-'),
+ @('t0_crossing','0.0781','3.7%','-','-','-'),
+ @('vall_y','0.0662','3.1%','54.88','79.01','1.96'),
+ @('restretchSlopeStart','0.0141','0.7%','1250','1693','1.20'),
+ @('peak2','0.0061','0.3%','69.73','91.45','1.09'),
+ @('steady','0.0024','0.1%','86.02','87.16','0.01')
+)
+$y3 = 166
+foreach ($r in $rows3) {
+    $hl = ([double]($r[2] -replace '%','') -ge 9)
+    $tc = if ($hl) { $CHERRY } else { $INK }
+    for ($c=0; $c -lt 6; $c++) { Add-Text $s ($M+22+$cx3[$c]) $y3 $cw3[$c] 18 $r[$c] 10.5 $tc $hl 1 | Out-Null }
+    $y3 += 23
+}
+
+Add-Card $s ($M+610) 128 ($W-$M-610-$M) 300 (Hex2Ole 0xF2 0xE2 0xE4) | Out-Null
+Add-Text $s ($M+632) 146 240 20 "This is not a low-ATP problem" 14 $CHERRY $true 1 | Out-Null
+Add-Bullets $s ($M+632) 174 240 240 @(
+ "vall_t, vall2_dy and peak1_dSL are the SAME re-stretch timing block that dominates 8 mM -- amplified here",
+ "At 8 mM they sit at chi-2 2.7-2.9; at 2 mM, 4.5-9.8",
+ "A gate is inert at 8 mM BY CONSTRUCTION, so it cannot fix a defect that is already present at 8 mM. It can only address the ATP-DEPENDENT part of the gap",
+ "So the 2 mM cost has a floor set by the 8 mM structural defect, and no amount of gate fitting goes below it"
+) 10.5 $INK | Out-Null
+
+Add-Card $s $M 440 ($W-2*$M) 50 (Hex2Ole 0xE9 0xEE 0xE9) | Out-Null
+Add-Text $s ($M+24) 452 ($W-2*$M-48) 30 "The one genuinely ATP-specific miss: ktr. The model slows to x0.657 where the data slow to x0.544 -- so the low-ATP kinetics are under-delivered by about a third, and that IS something a gate could in principle buy." 12 $GREEN $true 1 | Out-Null
+Add-Note $s "Two independent probes say the gate space is near-flat at the incumbent: the k_1 scan finds no direction that helps, and a 3-iteration pattern search at steps 0.25/0.125/0.062 found no improvement on any rotated coordinate or random multi-gate move."
 Add-Note $s ("P1 fits best on the OLD core and explains least: k_1 is the reverse stroke driven by Pi rebinding, " + `
              "so P1 says the 2 mM solution differs in Pi as well as ATP. Pi predicts LOWER force; the data show " + `
              "force x1.34 HIGHER. Port verified throughout: 8 mM bit-identical, |delta| = 0.000e+00.")
