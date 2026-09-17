@@ -102,10 +102,20 @@ p0.PlotEachSeparately=0; p0.PlotFeatureFitting=0; p0.PlotFullscreen=0;
 p0.RunKtr=false; p0.RunStairs=false; p0.RunForceVelocityTime=false;
 p0.RunSlackPassive=false; p0.RunSlack=true; p0.RunForceVelocity=true;
 p0.mods={}; p0.g=ones(1,0);
-p0.recalculateDataFeats = true;   % 2 mM curated file predates rsK80; re-extract it
-                                  % rather than drop it -- rsK80 is the STRONGEST
-                                  % ATP-carrying feature (z = 3.42), so dropping it
-                                  % would score the low-ATP fit without its main signal.
+% recalculateDataFeats MUST STAY FALSE. It was briefly set true here, on the
+% theory that it would re-extract rsK80 for the 2 mM data. It does not: the
+% slack re-extraction branch in runSlackExperiment sits behind `if false &&`.
+% What it DOES reach is runFVExperiment, which honours the flag -- and
+% re-extracting the 2 mM force-velocity data blows the FV term from 0.0000 to
+% 10.8651, i.e. from nothing to 84 % of the objective. Measured:
+%
+%     recalculateDataFeats = 0 :  total  2.1337   FV term  0.0000
+%     recalculateDataFeats = 1 :  total 12.9988   FV term 10.8651
+%
+% Every number from the run that had it on is therefore void, including the
+% "every gate set collapses onto k2" ranking. rsK80 comes from the pooled
+% 2 mM target instead (pooledTargetFeatures), which is the real fix.
+p0.recalculateDataFeats = false;
 
 % THE POOLED TARGET IS 8 mM ONLY. The lean5 core carries UsePooledTarget = 1,
 % which replaces the slack features_data with Model/pooledTarget8mM -- three
