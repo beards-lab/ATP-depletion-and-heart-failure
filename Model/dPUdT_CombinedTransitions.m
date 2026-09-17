@@ -499,8 +499,36 @@ end
 % must bind ATP before it can let go, so R2 x gATP_R2. Normalised so gATP_R2 = 1 at
 % MgATP_ref (8 mM) -> the high-ATP fit is untouched for ANY K_T2. Inert when off.
 if params.UseAtpDetachR2
-    gATP_R2 = (params.MgATP/(params.MgATP + params.K_T2)) ...
-            / (params.MgATP_ref/(params.MgATP_ref + params.K_T2));
+    % STRAIN-DEPENDENT ATP GATING (UseStrainDepAtpGate), ported from
+    % lowatp-2state.
+    %
+    % Physiology: positive strain inhibits ADP release (Nyitrai & Geeves 2004 --
+    % the accepted basis of load-dependent detachment). A head cannot bind ATP
+    % until ADP has left, so for a STRAINED post-stroke head the ATP-binding
+    % step sits in SERIES behind a strain-slowed step and becomes more
+    % rate-controlling => the APPARENT Km for ATP-dependent detachment RISES
+    % with positive strain:
+    %
+    %     Km_eff(s) = K_T2 * (1 + kAtpStrain * max(0, s - sAtpStrain0))
+    %
+    % WHY IT MATTERS HERE. A strain-UNIFORM gate scales every detachment
+    % equally, so it cannot suppress the post-stretch recovery MORE than the
+    % isometric one. The measured residual needs exactly that: rsK is x0.428 in
+    % the model against x0.382 in the data, while ktr is x0.657 against x0.544.
+    % One scalar cannot fix both; a strain-dependent Km can, because only the
+    % post-stretch window runs at high strain.
+    %
+    % Km_s is a vector over the strain grid. gATP_R2 = 1 at MgATP_ref for ANY
+    % Km_s, so 8 mM stays BIT-IDENTICAL whatever kAtpStrain does -- including
+    % the ktr overstretch peak that falsified the R2 ceiling (which acted at
+    % 8 mM and so could not dodge that constraint). Inert when off.
+    if isfield(params, 'UseStrainDepAtpGate') && params.UseStrainDepAtpGate
+        Km_s = params.K_T2 * (1 + params.kAtpStrain * max(0, s - params.sAtpStrain0));
+    else
+        Km_s = params.K_T2;
+    end
+    gATP_R2 = (params.MgATP ./ (params.MgATP + Km_s)) ...
+           ./ (params.MgATP_ref ./ (params.MgATP_ref + Km_s));
     R2 = R2 .* gATP_R2;
 end
 

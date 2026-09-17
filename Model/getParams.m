@@ -344,6 +344,24 @@ end
     params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
     params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
 
+    % Strain-dependent ATP gating of R2 detachment (ported from lowatp-2state).
+    % Positive strain inhibits ADP release, putting the ATP-binding step in
+    % series behind a strain-slowed step, so the APPARENT Km(ATP) for
+    % detachment rises with strain:
+    %     Km_eff(s) = K_T2 * (1 + kAtpStrain * max(0, s - sAtpStrain0))
+    % Still MgATP_ref-normalised => 8 mM bit-identical for ANY setting. This is
+    % what lets low ATP suppress the post-stretch recovery (rsK) more than the
+    % isometric one (ktr) -- a separation a strain-uniform gate cannot express.
+    %
+    % REQUIRES UseAtpDetachR2 = true: this shapes THAT gate's Km, it is not a
+    % gate of its own. And note it is a SEPARATE path from the pAtp_* power
+    % gates -- pAtp_k2 scales the rate constant k2 in evaluateModel, while this
+    % scales the assembled flux R2 inside the ODE. Turning both on multiplies
+    % them, which is double-gating unless you mean it.
+    params0.UseStrainDepAtpGate = false;
+    params0.kAtpStrain  = 0;        % 1/strain; 0 => strain-uniform (legacy)
+    params0.sAtpStrain0 = 0;        % strain (um) above which the ATP step bites
+
     % --- General 8 mM-inert ATP power gates (applied in evaluateModel) ------
     % PORTED from lowatp-2state so the low-ATP hypothesis ladder can be refitted
     % on THIS core. rate_eff = rate * (MgATP/MgATP_ref)^p, which is exactly 1 at

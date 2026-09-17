@@ -1,0 +1,8 @@
+% lowatp5 best, iter 13, 2 mM cost 1.942078
+params0.pAtp_k2 = 0.44;
+params0.pAtp_k_1 = 0.03125;
+params0.pAtp_k1 = 0;
+params0.pAtp_ksrd2sr = -0.03125;
+params0.pAtp_kmsrd = 0.25;
+params0.pAtp_ksr0 = 0;
+params0.pAtp_kah = -0.15625;
