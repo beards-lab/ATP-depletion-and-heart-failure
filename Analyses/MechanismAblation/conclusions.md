@@ -374,6 +374,79 @@ estimator (`rsK80 = ln4/(t80−t20)` with the amplitude taken from steady state)
 
 ---
 
+## 10. Why a deterministic model failed to reproduce a cost
+
+The model has no randomness, so the guard failures (§1) needed an explanation.
+Measured, not argued — `RunReproDiagnostic.m`:
+
+**A. The objective is bit-reproducible.** Four evaluations of the identical
+struct on an idle machine:
+
+```
+rep 1..4 : 0.9080770467   spread max-min = 0, std = 0
+```
+
+Exactly zero. So the 0.052/0.055 divergences were not floating-point, not
+parallel-reduction order, not solver adaptivity.
+
+**B. The one non-deterministic thing in the objective is the clock.**
+
+```matlab
+elapsed  = toc(ticId);                    % evaluateModel.m:102
+value(3) = elapsed - params.MaxRunTime;   % an ODE EVENT function
+isterminal(3) = 1;                        % ...that terminates the integration
+```
+
+`MaxRunTime` is a **wall-clock-valued ODE event**. Whether a parameter set takes
+the normal branch or the terminated branch depends on machine load. Both guard
+failures occurred while two campaign instances were competing for the box —
+precisely the condition that trips it.
+
+Note the *direction*: the stored `best_cost` was **lower** than the truth
+(0.8561 stored, 0.9081 on re-evaluation). A truncated trace can *lower* a cost
+when a term is a mean over whatever window survives — which `coolDownLS` is
+(`mean(resid.^2)`). That is a second, independent argument for §8.
+
+**C. Storage rounding is a real defect, but a smaller one.**
+`writeParamsToMFile` serialises scalars with `%g` — six significant digits
+(`Auxiliary/writeParamsToMFile.m:33`). Round-tripping the incumbent through it:
+
+| format | cost | Δ |
+|---|---|---|
+| `%g` (current) | 0.9121077730 | **+0.00403** |
+| `%.17g` | 0.9080770467 | **0 (exact)** |
+
+So a snapshot is **not** the point that was fitted — it is a 6-significant-digit
+quantisation of it, worth ~0.4 % of the cost. That is ~7 % of the 0.055 noise
+floor: real, one line to fix, and not the cause of the guard failures.
+
+A detail worth recording: the precision scan found **0 of 297 scalars lose
+anything at `%g`** — because they are *already* 6-significant-digit values,
+having been written by `writeParamsToMFile` at some point in their history. The
++0.004 comes from the array-valued parameters (the piecewise strain-dependence
+knots), which still carry full precision. The quantisation of the scalars is not
+absent; it is already baked in.
+
+**Recommendations**
+
+1. `writeParamsToMFile`: `%g` → `%.17g`, both branches (scalar and array). One
+   line each, and `BuildLeanSeed.m` already demonstrates the exact round-trip.
+2. Do not make `MaxRunTime` tighter to save time — it is the thing that makes
+   the objective non-deterministic, and tightening it makes trips *more* likely
+   (§6). Bound a run by rounds and wall-clock budget instead.
+3. Never compare a cost to a snapshot header (already in
+   `Docs objective_noise_floor`); this measures why.
+
+**On the F-V weight.** Reducing the pin from 0.40 was requested, and it turns
+out to be a no-op: under the floored objective F-V sits at chi-2 0.0515 against
+a floor of 0.0515, so it **already pays exactly nothing** — it does not appear
+in the seed's cost composition at all. Its weight of 1804 only bites if F-V
+leaves its own noise band, which is the deadband's intended "defends itself
+against regression" property. The pin is no longer worth arguing about; the
+deadband already removed its leverage.
+
+---
+
 ## 9. PROPOSAL (not implemented): where to record that a knob is abandoned
 
 There is currently nowhere to write "this was measured dead". The knowledge

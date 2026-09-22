@@ -108,4 +108,19 @@ end
 % 't0_crossing|SLdiff' scores it against the length ladder). runSlackExperiment
 % aliases it when reading the file; keep the alias true after the swap.
 if isfield(fd, 't0'); fd.t0_crossing = fd.t0; end
+
+% A_over_steady is DERIVED, so it has to be rebuilt from the pooled A and
+% steady rather than left at the single preparation's ratio that
+% extractSlackAttributes computed from the raw trace. Recomputing it here keeps
+% the ratio target consistent with the two values it is a ratio of.
+if isfield(fd,'A') && isfield(fd,'steady') && numel(fd.A) == numel(fd.steady)
+    fd.A_over_steady = fd.A(:)' ./ fd.steady(:)';
+end
+
+% ktr_shape is DERIVED the same way -- rebuild it from the POOLED ktr rather
+% than leave the single preparation's ladder behind. See extractSlackAttributes
+% for why the ratio exists at all.
+if isfield(fd,'ktr') && numel(fd.ktr) > 1 && isfinite(fd.ktr(1)) && fd.ktr(1) ~= 0
+    fd.ktr_shape = fd.ktr(:)' / fd.ktr(1);
+end
 end

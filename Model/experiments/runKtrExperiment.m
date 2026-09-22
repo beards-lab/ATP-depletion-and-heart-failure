@@ -1,7 +1,7 @@
-function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
+function [E_ktr, out_ktr, features_model, features_data] = runKtrExperiment(params0, Ktr_mean)
 %RUNKTRTEXPERIMENT Run the ktr (rate of force redevelopment) protocol.
 %
-%   [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
+%   [E_ktr, out_ktr, features_model, features_data] = runKtrExperiment(params0, Ktr_mean)
 %
 %   Replicates the ktr experimental protocol: rapid shortening to 80% ML,
 %   brief hold, then re-stretch to 105% ML, hold, return to 100% ML.
@@ -18,8 +18,22 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
 %               squared deviation of simulated Ktr from Ktr_mean(1) (fallback).
 %     out_ktr - Output struct from evaluateModel (time-shifted so t=0 at
 %               the start of force redevelopment).
+%     features_model, features_data - redevelopment-rate features
+%               (extractKtrAttributes). Populated only for the file-driven path
+%               and only when the protocol actually ENDS on a release into an
+%               isometric hold, i.e. is a ktr manoeuvre -- the FV2 ramp files
+%               are driven through this same runner but end on a LENGTHENING
+%               ramp, so they emit nothing. Empty structs otherwise.
+%
+%               These are what lets OptimizeOn='Feats' see this protocol at
+%               all: without them the ktr block contributes only E_ktr, which
+%               the feature objective never reads. See
+%               Analyses/KtrProtocolVsSlackKtr/conclusions.md.
 
     if nargin < 2; Ktr_mean = []; end
+
+    features_model = struct();
+    features_data  = struct();
 
     modelFcn = str2func(params0.modelFcn);
     params = params0;
@@ -52,6 +66,32 @@ function [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean)
         % MSE against normalized experimental force trace
         Fi    = interp1(out_ktr.t, F_norm, datatable(:, 1), 'linear', 'extrap');
         E_ktr = mean((datatable(:, 3) - Fi).^2) * 10;
+
+        % Redevelopment-rate features, so OptimizeOn='Feats' can see this
+        % protocol. Only for a real ktr manoeuvre: the last ramp must be a
+        % RELEASE into an isometric hold. The FV2 ramp files share this runner
+        % but end on a lengthening ramp, so they fall through and emit nothing.
+        isKtrShaped = size(velocitytable, 1) >= 4 && velocitytable(end-2, 2) < -1 ...
+                      && velocitytable(end-1, 2) == 0 ...
+                      && (velocitytable(end, 1) - velocitytable(end-1, 1)) > 0.03;
+        if isKtrShaped
+            features_model = extractKtrAttributes(out_ktr.t, F_norm, velocitytable);
+            features_data  = extractKtrAttributes(datatable(:, 1), datatable(:, 3), velocitytable);
+
+            % POOLED TARGET. The protocol file is ONE preparation, and 03/27 is
+            % both the strongest (Fss22 80.1 kPa) and the fastest (k63 49.4
+            % against a 3-day mean of 43.2). Scoring against it while taking the
+            % deadband from the 3-day spread mixes two populations and makes the
+            % term roughly twice as permissive as intended. Under
+            % UsePooledTarget, swap in the 3-preparation mean -- the same thing
+            % pooledTargetFeatures does for the slack block, which deliberately
+            % leaves this protocol alone. Measured by
+            % Analyses/RefitStrategy/PlanRefit2.m from the three curated files:
+            %   03/27 49.4 | 04/03 42.1 | 04/10 38.1  -> mean 43.19, rel SD 0.132
+            if isfield(params, 'UsePooledTarget') && ~isequal(params.UsePooledTarget, false)
+                features_data.ktrP_k63 = 43.19;
+            end
+        end
 
         Ktr = NaN;   % not extracted for file-driven protocol
     else

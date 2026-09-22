@@ -28,7 +28,24 @@ function features = extractSlackAttributes(data_t, data_y, data_SL, velocitytabl
 % Named constants
 FORCE_THRESHOLD_KPA   = 10;    % minimum force (kPa) to include in active-phase window
 PEAK_MIN_DISTANCE_S   = 0.001;  % minimum time between detected peaks (s)
-PEAK_MIN_PROMINENCE   = 0.1;   % minimum peak prominence for findpeaks (kPa)
+% PEAK PROMINENCE. This used to be a fixed 0.1 kPa, which is 0.07-0.11 SIGMA of
+% the recordings' own noise (1.36 / 1.32 / 0.91 kPa on 03/27 / 04/03 / 04/10).
+% findpeaks then returned 11-15 "peaks" per re-stretch, almost all noise
+% ripples, and the code below takes peak1_t(1) -- the FIRST in time, not the
+% largest -- so on 7 of 15 preparation x segment cells it locked onto a ripple
+% on the rising limb instead of the overshoot. The real overshoot has
+% prominence 12-19 kPa; the ripples taken instead had 0.21-2.01 kPa. That put
+% peak1_dSL at 0.5-1.8 SAMPLES of ramp travel on those cells and manufactured a
+% non-monotonic "arc" in the pooled target that the model was then penalised for
+% not reproducing. See Analyses/RestretchPeakAudit.
+%
+% The rule is now noise-relative, with an absolute floor as a fraction of the
+% window's own force range so it still behaves on a SMOOTH model trace where
+% sigma ~ 0. A threshold sweep gives identical results at 3, 4 and 6 sigma
+% (between-preparation spread 0.641 -> 0.171), i.e. a plateau, so k = 3 sits
+% safely inside it.
+PEAK_PROM_K_SIGMA     = 3;      % prominence floor in units of the trace's noise sigma
+PEAK_PROM_MIN_FRAC    = 0.05;   % ... and at least this fraction of the window's force range
 MARKER_SIZE           = 12;    % plot marker size
 % Smoothing windows (data path only, useSmoothing=true).
 % FAST:  Savitzky-Golay for the re-stretch peak section.  11 ms preserves
@@ -99,6 +116,13 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         data_SL = interp1(data_t, data_SL, t_rs, 'linear');
         data_t  = t_rs;
     end
+
+    % Noise level of THIS trace, for the peak-prominence rule above. High-pass
+    % by subtracting a 9-point moving median, then take a MAD-based sigma so the
+    % handful of large residuals at the ramp edges do not inflate it. A smooth
+    % model trace gives sigma ~ 0, and the PEAK_PROM_MIN_FRAC floor takes over.
+    hp = data_y(:) - movmedian(data_y(:), 9);
+    noise_sigma = 1.4826 * median(abs(hp - median(hp)));
 
     % each set starts with negative velocity
     segments = find(velocitytable(:, 2) < -1)';
@@ -295,7 +319,9 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         %    prominence threshold is already reliable here.
         feats.v_restretch = velocity_segment(3, 2);
         y_sm = y;   % raw — smoothing not applied to this fast section
-        [peak1_y, peak1_t, ~, peak1_prom] = findpeaks(y_sm, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', PEAK_MIN_PROMINENCE);
+        peak_prom = max(PEAK_PROM_K_SIGMA * noise_sigma, ...
+                        PEAK_PROM_MIN_FRAC * (max(y_sm) - min(y_sm)));
+        [peak1_y, peak1_t, ~, peak1_prom] = findpeaks(y_sm, t, 'MinPeakDistance', PEAK_MIN_DISTANCE_S, 'MinPeakProminence', peak_prom);
 
         if ~isempty(peak1_y)
             p1_time_abs = peak1_t(1);
@@ -558,9 +584,23 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             feats.t0_crossing = NaN;
         end
 
-        
-    
-        % get rid of empty, substitute with NaN instead    
+        % A/steady -- the post-slack plateau as a FRACTION of the restretched
+        % plateau. Scoring A and steady separately leaves this unconstrained,
+        % and it is what reads optically: a model can sit inside both deadbands
+        % and still have a visibly wrong slack plateau. It also deserves a much
+        % tighter deadband than either parent, because the preparation's own
+        % strength is common-mode and cancels in the ratio -- measured across
+        % the three 8 mM preparations, rel SD 0.078 against 0.266 for A and
+        % 0.236 for steady, i.e. 3.4x tighter
+        % (Analyses/RefitStrategy/PlanRefit2.m).
+        if isfield(feats,'A') && isfield(feats,'steady') && ...
+                isscalar(feats.A) && isscalar(feats.steady) && feats.steady ~= 0
+            feats.A_over_steady = feats.A / feats.steady;
+        else
+            feats.A_over_steady = NaN;
+        end
+
+        % get rid of empty, substitute with NaN instead
         fn = fieldnames(feats);
         for i_elem = 1:length(fn)
             current_value = feats.(fn{i_elem});
@@ -589,6 +629,27 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             end
         end
 
+    end
+
+    % ktr_shape -- ktr across the ladder, divided by its own first segment.
+    %
+    % The five slack segments are not repeats: they are a ladder of increasing
+    % release depth (SL held at 2.04 / 2.00 / 1.96 / 1.92 / 1.88 um), so `ktr`
+    % is really ktr(SL). All three 8 mM preparations fall across it (-4.9 %,
+    % -23.3 %, -15.2 %); the model rises. Scoring `ktr` alone cannot see that,
+    % because its between-preparation spread is dominated by each heart's own
+    % overall rate (rel SD 0.104 on the level against 0.041 on the shape), and
+    % the resulting deadband is ~2.6x wider than the shape it is meant to
+    % police. Dividing by segment 1 cancels the per-heart rate, exactly as
+    % A_over_steady cancels the per-heart force.
+    %
+    % Element 1 is identically 1 by construction and carries no information --
+    % score with a selector, e.g. 'ktr_shape[2:5]'.
+    if isfield(features,'ktr') && numel(features.ktr) > 1 && ...
+            isfinite(features.ktr(1)) && features.ktr(1) ~= 0
+        features.ktr_shape = features.ktr(:)' / features.ktr(1);
+    elseif isfield(features,'ktr')
+        features.ktr_shape = nan(1, numel(features.ktr));
     end
 
 end

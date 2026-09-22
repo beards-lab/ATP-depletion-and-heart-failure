@@ -639,6 +639,22 @@ end
         end
     end
     
+%% Step 6b-guard: parameters a live switch divides by
+    % dPUdT_CombinedTransitions.m:322 divides the slack-release term by
+    % x_M_slack, so a snapshot that zeroes it while leaving the switch on
+    % silently yields Inf forces rather than an error. That combination is
+    % reachable: BuildLeanSeed sets x_M_slack = 0 when it DELETES the
+    % mechanism, so re-enabling the flag alone (an obvious thing to try) hits
+    % it. Fail here, where the message can name the fix.
+    if params.UseMaxwellDashpot && params.UseMaxwellTensionOnly && ...
+            (~isfinite(params.x_M_slack) || params.x_M_slack <= 0)
+        error('getParams:xMSlack', ...
+              ['UseMaxwellTensionOnly is on but x_M_slack = %g. The slack-release ' ...
+               'term divides by it (dPUdT_CombinedTransitions.m:322), so this gives ' ...
+               'Inf. Set a positive slack length (default 0.01 um) or turn the ' ...
+               'switch off.'], params.x_M_slack);
+    end
+
 %% Step 6c (deferred): Pack flat MEX parameter array
     % Requires: UseFastPPval=true (pchip cache), strain grid (params.s), and
     % all numerical params to be resolved. Called here so params.s is available.

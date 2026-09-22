@@ -85,9 +85,15 @@ for i_feat = 1:numel(fn)
     end
 
     % ── NORMAL scatter plot (existing logic) ─────────────────────────────
+    % Tokens that are MODIFIERS, not an X-axis field name. evalFeatureCost grew
+    % 'w:<varfield>' (per-element inverse-variance weights) and 'fl:<x>' (noise
+    % floor); both are non-numeric, so without this they were mistaken for an X
+    % field and the tile rendered as "(no data)". Keep in sync with
+    % evalFeatureCost.m's token loop.
     feat_x = '';
     if ~has_cost_fn && numel(tokens) >= 2 && ...
-            ~strcmp(tokens{2}, '_') && isnan(str2double(tokens{2}))
+            ~strcmp(tokens{2}, '_') && isnan(str2double(tokens{2})) && ...
+            ~startsWith(tokens{2}, 'w:') && ~startsWith(tokens{2}, 'fl:')
         feat_x = tokens{2};
     end
 

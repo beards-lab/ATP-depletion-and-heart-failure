@@ -19,7 +19,8 @@ function [o, k63] = seedWindow(p, PU0, LXBpivot, t0, dur, B, P)
 %   captured window's own values so replays are comparable to the original.
 
     p = getParams(p, p.g, true);
-    n = p.NumberOfStates*p.ss + 7 + p.UseRegistrationAvailability + p.UseD0State;
+    % same formula as getParams.m:594 -- keep in sync when a tail state is added
+    n = p.NumberOfStates*p.ss + 7 + p.UseRegistrationAvailability + p.UseD0State + p.UseLoadRealign;
     assert(numel(PU0) == n, 'seedWindow:len', ...
            'PU0 has %d elements, this paramset needs %d — getParams would silently rebuild it.', ...
            numel(PU0), n);

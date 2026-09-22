@@ -1,5 +1,12 @@
 # ktr vs post-slack vs post-restretch — do the three force rises share one rate? (2026-07-28)
 
+> **2026-09-17 follow-up.** Defect 2 below (`tau_reg` inside the ktr timescale) was **not** adopted
+> and is still live two paramsets later. It is re-established on the current best 8 mM set, priced
+> against the current feature objective (where it turns out to cost **nothing**), and the reason it
+> keeps getting lost is fixed — the ktr protocol now emits features, so the objective can see it.
+> The landing zone is **below 1 ms**, not the 1–5 ms predicted here.
+> → [`../KtrProtocolVsSlackKtr/conclusions.md`](../KtrProtocolVsSlackKtr/conclusions.md)
+
 Data only, 8 mM ATP, three protocol days (03/27, 04/03, 04/10).
 Reproduce: `CompareRecoveryRates.m` → `results/recovery_rates_traces.png`, `results/recovery_rates_summary.png`.
 

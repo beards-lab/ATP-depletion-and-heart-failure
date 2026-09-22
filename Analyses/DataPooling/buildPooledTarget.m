@@ -151,11 +151,35 @@ T.srShape = std(Sp,0,1,'omitnan')./abs(T.rShape);
 % value drives d0 -> 0 exactly when the features genuinely differ, so the
 % shrinkage disables itself instead of manufacturing agreement. (This is
 % limma's moderated variance / fitFDist, the standard low-replicate remedy.)
-T.d0 = 0; T.s0 = NaN;
+% THE OTHER END OF THE SAME ESTIMATOR. fitFDist can also return d0 = Inf --
+% "the observed variances are no MORE dispersed than sampling alone explains",
+% i.e. shrink everything to the common prior. That happened the moment the
+% peak-detector fix (Analyses/RestretchPeakAudit) removed the two wild
+% features: with peak1_dSL and vall_t down from 52 %/57 % to 18 %/19 %, the
+% remaining 20 spreads span only 4-38 % and read as exchangeable. The formula
+% has no limit at d0 = Inf and silently produced s = NaN for every feature,
+% which would have poisoned every floor and weight downstream.
+%
+% Two things are needed. (1) The correct limit: as d0 -> Inf the moderated
+% variance is exactly the prior s0. (2) A CAP, because collapsing all twenty
+% features onto one common variance -- making every weight equal -- is far too
+% strong a claim from n = 3, and it would undo the whole point of weighting by
+% measured precision. D0_CAP = 5 (2.5x the data's own d = 2) keeps at least
+% ~29 % of each feature's own variance while still compressing the range. This
+% is a judgement call; it is reported below so it can be argued with.
+D0_CAP = 5;
+T.d0 = 0; T.s0 = NaN; T.d0raw = 0;
 if opts.shrink
     dd = nP-1;
     m  = isfinite(T.s8raw) & T.s8raw > 0;
     [T.d0, T.s0] = fitFDist(T.s8raw(m).^2, dd);
+    T.d0raw = T.d0;
+    if ~isfinite(T.d0) || T.d0 > D0_CAP
+        T.d0 = D0_CAP;
+        warning('buildPooledTarget:d0capped', ...
+                ['fitFDist returned d0 = %g (variances look exchangeable); ' ...
+                 'capped at %g so the weights do not collapse to uniform.'], T.d0raw, D0_CAP);
+    end
     T.s8(m) = sqrt((T.d0*T.s0 + dd*T.s8raw(m).^2)/(T.d0 + dd));
 end
 T.z = abs(T.r-1) ./ sqrt(T.s8.^2 + T.sr.^2);

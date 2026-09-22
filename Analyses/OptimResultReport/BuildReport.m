@@ -79,7 +79,11 @@ K = load(fullfile(root,'data','protocol_03_27_2026_velocitytable_ktr.mat'));
 dtk = K.datatable; vtk = K.velocitytable; t0k = vtk(2,1);
 wk  = dtk(:,1) > 1.5965 & dtk(:,1) < 1.6005;  ovD = max(dtk(wk,3));
 tr  = 1.6035;
-t90 = @(t,F) t(find(F >= 0.9*mean(F(end-100:end)), 1)) - tr;
+% Guarded: `end-100` underflows when the recovery window has <101 samples, and
+% find() returns empty when F never reaches 90 % of its own tail mean. Both
+% assign empty into a scalar and abort the whole report. NaN instead -- a
+% missing t90 is a blank cell, not a lost report.
+t90 = @(t,F) min([reshape(t(find(F >= 0.9*mean(F(max(1,end-100):end)), 1)), 1, []), NaN]) - tr;
 mdk = dtk(dtk(:,1) > tr, :);  t90D = t90(mdk(:,1), movmean(mdk(:,3),21));
 
 S  = load(fullfile(root,'data','protocol_03_27_2026_velocitytable_stairs.mat'));

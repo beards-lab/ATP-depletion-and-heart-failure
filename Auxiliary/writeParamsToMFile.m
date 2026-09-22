@@ -35,8 +35,12 @@ function writeParamsToMFile(filename, params, modNames, comment)
              % fprintf("Writing %s\n", nam);            
              fprintf(fid, "params0.%s = '%s';\r\n", nam, par);
         elseif iscell(par)
-            % fprintf("Writing %s\n", nam);
-            fprintf(fid, "params0.%s = {'%s'};\r\n", nam, strjoin(params.fn, "', '")); 
+            % Write THIS field, not params.fn. It used to hardcode params.fn
+            % here, so every cell-valued field came back from disk holding the
+            % feature list: that is what silently corrupted params0.leanPool in
+            % every optimiser snapshot (lean_opt, refit3_opt, ...), leaving the
+            % next campaign with an empty parameter pool and nothing to tune.
+            fprintf(fid, "params0.%s = {'%s'};\r\n", nam, strjoin(par, "', '"));
         elseif any(size(par) > 1) ...
             && nam ~= "s" ...
             && nam ~= "g" ...

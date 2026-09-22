@@ -363,7 +363,18 @@ end
 % still catches the gross-divergence bug this guard exists for (a snapshot
 % written at cost ~174 when the incumbent was ~9.7).
 try
-    verifyCost = evaluateBakersExp(ones(1,1), setMods(state.best_params, {}), true, false);
+    % Compare like with like. The guard protects the FILE about to be written,
+    % and writeParamsToMFile deliberately omits the derived/cached fields, so a
+    % reload rebuilds them. The in-memory struct still carries whatever was
+    % cached during the search -- and getParams only rebuilds PU0 on a SIZE
+    % mismatch, so a stale-but-right-length PU0 survives and shifts the cost.
+    % That produced a spurious 3.5 % "divergence" on refit4 (in-memory 0.3015
+    % vs 0.2911) while the written file reloaded at 0.2909, i.e. correct.
+    vp = setMods(state.best_params, {});
+    for fDrop = {'PU0','s','cached','mex_vals'}
+        if isfield(vp, fDrop{1}); vp = rmfield(vp, fDrop{1}); end
+    end
+    verifyCost = evaluateBakersExp(ones(1,1), vp, true, false);
 catch
     verifyCost = Inf;   % a throw here (3-state timeout) -> ~isfinite passes the assert
 end

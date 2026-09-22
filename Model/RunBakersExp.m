@@ -47,8 +47,15 @@ if params0.RunKtr
     if ~exist('Ktr_mean', 'var')
         LoadData;
     end
-    [E_ktr, out_ktr] = runKtrExperiment(params0, Ktr_mean);
+    [E_ktr, out_ktr, fm_ktr, fd_ktr] = runKtrExperiment(params0, Ktr_mean);
     E(end+1) = E_ktr;
+    % ktrP_* features (empty unless the protocol file really is a ktr manoeuvre).
+    % E_ktr is a trace MSE that OptimizeOn='Feats' never reads, so WITHOUT these
+    % the whole protocol is invisible to the feature objective -- which is how
+    % tau_reg drifted to a value the ktr protocol rejects at 5x the data noise
+    % floor. See Analyses/KtrProtocolVsSlackKtr/conclusions.md.
+    features_model = mergeStructs(features_model, fm_ktr);
+    features_data  = mergeStructs(features_data,  fd_ktr);
     out = out_ktr;
 end
 
