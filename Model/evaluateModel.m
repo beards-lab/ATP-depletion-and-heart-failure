@@ -158,7 +158,15 @@ for vs = 1:length(T) - 1
     params.Vums = params.v*params.ML; % velocity in um/s
 
 
-    opts = odeset('Events', @movingWindow, 'AbsTol', 1e-4, 'RelTol', 1e-2);
+    % Integrator settings. Defaults reproduce every existing fit exactly; the
+    % overrides exist so numerical precision can be varied and tested.
+    relTol = 1e-2; absTol = 1e-4;
+    if isfield(params, 'odeRelTol') && ~isempty(params.odeRelTol), relTol = params.odeRelTol; end
+    if isfield(params, 'odeAbsTol') && ~isempty(params.odeAbsTol), absTol = params.odeAbsTol; end
+    opts = odeset('Events', @movingWindow, 'AbsTol', absTol, 'RelTol', relTol);
+    if isfield(params, 'odeMaxStep') && ~isempty(params.odeMaxStep) && params.odeMaxStep > 0
+        opts = odeset(opts, 'MaxStep', params.odeMaxStep);
+    end
 
     % test odess
     %         tic
@@ -215,7 +223,10 @@ for vs = 1:length(T) - 1
             else
                 nds = params.WindowsOverflowStepCount;
             end
-            
+            if isfield(params, 'LogWindowShifts') && params.LogWindowShifts && (ie == 1 || ie == 2)
+                logWindowShift(fcn, ts, ie, nds, PU0, params);
+            end
+
             if ie == 1
                 % move right
                 PU0(1:ss-nds) = PU0(1+nds:ss);
@@ -289,7 +300,13 @@ for vs = 1:length(T) - 1
                 end
             end
         end
-        [t,PU, te, ye, ie] = ode15s(fcn,[ts tend],PU0, opts, params);
+        % Output grid: solver steps by default; a fixed grid (odeOutputDt, s) makes
+        % the trace the features read independent of where the steps happened to land.
+        tspan = [ts tend];
+        if isfield(params, 'odeOutputDt') && ~isempty(params.odeOutputDt) && params.odeOutputDt > 0 && tend - ts > 2*params.odeOutputDt
+            tspan = unique([ts, ts + params.odeOutputDt:params.odeOutputDt:tend, tend]);
+        end
+        [t,PU, te, ye, ie] = ode15s(fcn,tspan,PU0, opts, params);
 
         % te contains the times when events occurred
         % ye contains the solutions at the times when events occurred
@@ -435,7 +452,7 @@ else
 end
 Ns = params.NumberOfStates; % number of strain-dependent states
 if length(T) > 1.5e4    
-    Tnew = linspace(T(1), T(end), 1e4)
+    Tnew = linspace(T(1), T(end), 1e4);
     PU = interp1(T, PU, Tnew);
     T = Tnew;
 end

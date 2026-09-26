@@ -441,7 +441,18 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
         end
     end
     % params0.PlotFeatureFitting = true;
-    features_model = extractSlackAttributes(out_slack.t, out_slack.Force, out_slack.SL, velocitytable, features_model, out_slack, params0.PlotFeatureFitting, [], out_slack.datatable);
+    % With a fixed output grid (odeOutputDt, Analyses/StrainWindowNoise) the
+    % parallel chunks each emit their start instant, so the merged trace repeats
+    % one timestamp per seam and extractSlackAttributes' resampling interp1
+    % fails ("Sample points must be unique"). Same filter the cost function
+    % above already applies; gated on odeOutputDt so runs without it stay
+    % bit-identical.
+    tF = out_slack.t; fF = out_slack.Force; sF = out_slack.SL;
+    if isfield(params0, 'odeOutputDt') && ~isempty(params0.odeOutputDt) && params0.odeOutputDt > 0
+        keepT = makeMonotonous(tF);
+        tF = tF(keepT); fF = fF(keepT); sF = sF(keepT);
+    end
+    features_model = extractSlackAttributes(tF, fF, sF, velocitytable, features_model, out_slack, params0.PlotFeatureFitting, [], out_slack.datatable);
 
     % 0-target guardrail features: the model's own value IS the penalty, so the
     % data target is 0 by definition. The file's features_data omits them, which

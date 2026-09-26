@@ -110,7 +110,15 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
     % acquisition rate.
     TARGET_FS = 1000;  % Hz
     actual_fs = 1 / median(diff(data_t));
-    if actual_fs < TARGET_FS * 0.99
+    % A model trace on a fixed output grid (params.odeOutputDt > 0) is ALWAYS read
+    % at exactly TARGET_FS, the rate the data are curated at. Without this the
+    % decision rests on the MEDIAN step of the whole trace, which the 94 s
+    % pre-slack hold dominates: how that hold happens to be sampled then flips
+    % the re-stretch features between 1 and 2 kHz reads, and the sample-count
+    % windows below with them (rsT20 12 %, peak1_dSL 20 %; Analyses/StrainWindowNoise).
+    fixedGrid = isstruct(out) && isfield(out, 'params') && isfield(out.params, 'odeOutputDt') ...
+                && ~isempty(out.params.odeOutputDt) && out.params.odeOutputDt > 0;
+    if actual_fs < TARGET_FS * 0.99 || (fixedGrid && actual_fs > TARGET_FS * 1.01)
         t_rs    = (data_t(1) : 1/TARGET_FS : data_t(end))';
         data_y  = interp1(data_t, data_y,  t_rs, 'linear');
         data_SL = interp1(data_t, data_SL, t_rs, 'linear');

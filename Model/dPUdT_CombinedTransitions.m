@@ -317,9 +317,22 @@ if params.UseMaxwellDashpot
         % This is what stops a stretch-then-release (ktr restretch to 105% then
         % return to 100%) leaving a force floor across the redevelopment window;
         % passive cycles restretch monotonically and hold, so they are untouched.
-        dx_dash_dt = params.kSE_M * max(0, dSLc) ...
+        % ...continuous, but max(0, dSLc) still has a CORNER at dSLc = 0, which is
+        % exactly the isometric steady state: charging switches between kSE_M and 0
+        % there, inside a force feedback loop, and ode15s chatters across it (at
+        % RelTol 1e-3 an isometric hold stalls). SmoothRectifierEps > 0 replaces
+        % both rectifiers with SiLU, u/(1+exp(-u/eps)): C-infinity, exactly 0 at 0.
+        ep = params.SmoothRectifierEps;
+        if ep > 0
+            chargeV  =  dSLc / (1 + exp(-dSLc/ep));
+            releaseV = -dSLc / (1 + exp( dSLc/ep));
+        else
+            chargeV  = max(0, dSLc);
+            releaseV = max(0, -dSLc);
+        end
+        dx_dash_dt = params.kSE_M * chargeV ...
                    - X_visc / params.eta_M ...
-                   - X_visc * max(0, -dSLc) / params.x_M_slack;
+                   - X_visc * releaseV / params.x_M_slack;
     else
         dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
     end
@@ -417,28 +430,22 @@ if params.UsePieceWiseStrainDep
         % s (ss×1) >= b_row (1×k) → (ss×k); sum along dim 2 → (ss×1)
         % b(si) with b column and si (ss×1) always returns (ss×1)  ← key invariant
 
-        b = params.cached.pwsdR1D_brk; c = params.cached.pwsdR1D_cof;
-        si = max(1, min(size(c,1), sum(s >= b(1:end-1)', 2)));
-        dx = s - b(si); R1D = params.kd  * p1 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
-
-        b = params.cached.pwsd_brk;    c = params.cached.pwsd_cof;
-        si = max(1, min(size(c,1), sum(s >= b(1:end-1)', 2)));
-        dx = s - b(si); R12 = params.k1  * p1 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
-
-        b = params.cached.pwsdR21_brk; c = params.cached.pwsdR21_cof;
-        si = max(1, min(size(c,1), sum(s >= b(1:end-1)', 2)));
-        dx = s - b(si); R21 = params.k_1 * p2 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
-
-        s2 = s + params.dr2 - params.dr;
-        b = params.cached.pwsd2_brk;   c = params.cached.pwsd2_cof;
-        si = max(1, min(size(c,1), sum(s2 >= b(1:end-1)', 2)));
-        dx = s2 - b(si); R2 = params.k2  * p2 .* (((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4));
+        cl = params.ClampStrainDepExtrapolation;
+        R1D = params.kd  * p1 .* pwEval(params.cached.pwsdR1D_brk, params.cached.pwsdR1D_cof, s, cl);
+        R12 = params.k1  * p1 .* pwEval(params.cached.pwsd_brk,    params.cached.pwsd_cof,    s, cl);
+        R21 = params.k_1 * p2 .* pwEval(params.cached.pwsdR21_brk, params.cached.pwsdR21_cof, s, cl);
+        R2  = params.k2  * p2 .* pwEval(params.cached.pwsd2_brk,   params.cached.pwsd2_cof,   s + params.dr2 - params.dr, cl);
     else
         % Original path: piecewise cubic (pchip) evaluation via ppval.
-        R1D = params.kd*p1.*ppval(params.PieceWiseStrainDepR1D, s);
-        R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, s);
-        R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, s);
-        R2  = params.k2*p2.*ppval(params.PieceWiseStrainDep2, s + params.dr2 - params.dr);
+        kx = @(pp, x) x;
+        if params.ClampStrainDepExtrapolation
+            kx = @(pp, x) min(max(x, pp.breaks(1)), pp.breaks(end));
+        end
+        R1D = params.kd*p1.*ppval(params.PieceWiseStrainDepR1D, kx(params.PieceWiseStrainDepR1D, s));
+        R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, kx(params.PieceWiseStrainDep, s));
+        R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, kx(params.PieceWiseStrainDepR21, s));
+        s2  = s + params.dr2 - params.dr;
+        R2  = params.k2*p2.*ppval(params.PieceWiseStrainDep2, kx(params.PieceWiseStrainDep2, s2));
     end
 
 elseif params.UseUniformTransitionFunc
@@ -516,6 +523,7 @@ R3m = params.k3m*p3;
 
 % to PT state directly (or to the apo pool D0 when UseD0State — see below)
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+
 
 % D0 -> PT: the torn head binds ATP and rejoins the cycle. Saturating in
 % [MgATP] so k_D0T is the ATP-saturated ceiling and K_D0T sets where the step
@@ -837,6 +845,7 @@ catch e
     disp([num2str(t) ' : ' e.message]);
 end
 
+
 % if ~params.UseCa
     dNP = 0;
 
@@ -953,6 +962,19 @@ if any(isnan(f)) || t > 76 % && any(PD > 0)
 end
 
 % disp('oj')
+end
+
+function y = pwEval(b, c, x, clampToKnots)
+% Piecewise-cubic evaluation on pre-unpacked breaks b ((k+1)x1) and coefs c
+% (kx4). Interior breaks pick the segment; beyond the outer knots the end cubic
+% is extrapolated, unless clampToKnots holds x at the knot range (constant
+% extrapolation at the edge-knot value).
+if clampToKnots
+    x = min(max(x, b(1)), b(end));
+end
+si = max(1, min(size(c,1), sum(x >= b(1:end-1)', 2)));
+dx = x - b(si);
+y = ((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4);
 end
 
 function [s_i0, s_i1, s_i0k] = attachmentPoint(s0, dS, ss)
