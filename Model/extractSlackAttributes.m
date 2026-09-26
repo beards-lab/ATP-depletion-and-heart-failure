@@ -118,7 +118,29 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
     % windows below with them (rsT20 12 %, peak1_dSL 20 %; Analyses/StrainWindowNoise).
     fixedGrid = isstruct(out) && isfield(out, 'params') && isfield(out.params, 'odeOutputDt') ...
                 && ~isempty(out.params.odeOutputDt) && out.params.odeOutputDt > 0;
-    if actual_fs < TARGET_FS * 0.99 || (fixedGrid && actual_fs > TARGET_FS * 1.01)
+    % READ GRID (opt-in: params.FeatureReadGrid = 'data'). The rule above reads
+    % the model at 1 kHz on a grid that starts at the trace's first stored time
+    % -- or on raw solver steps, whichever the median step says -- while the data
+    % are read at 4 kHz. So a feature moved with where the solver stepped and
+    % with the grid's phase (bit-identical ODE states gave rsT20 costs 0.052 vs
+    % 0.035), and sample-count constructions read the model differently from
+    % the data (restretchSlopeStart 27 %, peak1_t 19 %). With the switch the
+    % model is read ALWAYS at the data's own rate (0.25 ms), on a grid anchored
+    % on absolute time, so no read depends on the solver's steps or on the
+    % trace's first stored point. Analyses/FeatureRobustness.
+    readDataGrid = isstruct(out) && isfield(out, 'params') && isfield(out.params, 'FeatureReadGrid') ...
+                   && ischar(out.params.FeatureReadGrid) && strcmpi(out.params.FeatureReadGrid, 'data');
+    if readDataGrid
+        READ_DT = 2.5e-4;                          % the curated data's sampling interval
+        % Where chunks overlap, the LATER chunk wins (makeMonotonous): the parallel
+        % path merges the init hold, which runs isometric to the END of cycle 1's
+        % release, over the head of cycle 1.
+        iu = makeMonotonous(data_t); tu = data_t(iu);
+        t_rs    = (ceil(tu(1) / READ_DT) : floor(tu(end) / READ_DT))' * READ_DT;
+        data_y  = interp1(tu, data_y(iu),  t_rs, 'linear');
+        data_SL = interp1(tu, data_SL(iu), t_rs, 'linear');
+        data_t  = t_rs;
+    elseif actual_fs < TARGET_FS * 0.99 || (fixedGrid && actual_fs > TARGET_FS * 1.01)
         t_rs    = (data_t(1) : 1/TARGET_FS : data_t(end))';
         data_y  = interp1(data_t, data_y,  t_rs, 'linear');
         data_SL = interp1(data_t, data_SL, t_rs, 'linear');
@@ -198,7 +220,14 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         % the hold's own plateau (13 time constants in, measured outside the
         % rise), rate from the 20-80 % band only, no threshold, no fit.
         winH = data_t > velocity_segment(2) & data_t < velocity_segment(3);
-        [feats.ktr80, feats.ktrfit] = holdRate80(data_t(winH), data_y(winH));
+        [feats.ktr80, feats.ktrfit, t20hold] = holdRate80(data_t(winH), data_y(winH));
+        % tOn20 -- force-redevelopment ONSET as a level crossing: the time from
+        % the release start to the 20 % crossing of this hold's rise. A crossing
+        % on a steep flank, read the same way off model and data; the model's
+        % t0_crossing (first sample with LSE >= 0) has no data counterpart and
+        % the data's `t0` is a free-fit onset. Analyses/FeatureRobustness: data
+        % noise 2.8 %, ATP z 2.67 (t0: 1.05).
+        feats.tOn20 = t20hold - t_seg;
 
         % ── Fit 2: additive underdamped sinusoid ─────────────────────────
         % F(τ) = F0 + A·(1−exp(−k·τ)) + B·exp(−gam·τ)·sin(ω·τ)
@@ -206,6 +235,11 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         %   B≥0: overshoot first (sin>0), then diminishing oscillations
         %   gam independent of k → oscillations can persist many cycles (gam ≪ k)
         %   To disable oscillation: set B lower bound to upper bound (both 0).
+        % SkipOscillationFit (opt-in): no objective term reads ktr2_*, and this
+        % six-parameter fit is ~25 % of the extraction time, serial on the client
+        % after the parallel cycles. The fields stay, as NaN.
+        skipOsc = isstruct(out) && isfield(out, 'params') && isfield(out.params, 'SkipOscillationFit') ...
+                  && ~isempty(out.params.SkipOscillationFit) && out.params.SkipOscillationFit;
         if ~isnan(feats.ktr)
             sp_A = feats.A - F0;  sp_k = feats.ktr;  sp_t0 = feats.t0;
         else
@@ -215,6 +249,7 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             F0 + A .* (1 - exp(-k .* max(x - t0, 0))) ...
             + B .* exp(-gam .* max(x - t0, 0)) .* sin(omega .* max(x - t0, 0));
         try
+            if skipOsc; error('extractSlackAttributes:skipOsc', 'skipped'); end
             [ao, gof_o] = fit(t, y, y_osc, ...
                 'StartPoint', [sp_A,  sp_k,  10,  sp_k/5, 20,  sp_t0], ...
                 'Lower',      [10,    0.01,  0,   0.1,    1,   0.0  ], ...
@@ -487,8 +522,9 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         % discriminability z 3.2 -> 6.8, and the value is invariant to the
         % crossing smoother (47.7/47.5/47.5 at 2/5/10 ms).
         [feats.rsK, feats.rsA, feats.rsT0, feats.rsR2, feats.rsK63, ...
-         feats.rsK80, feats.rsT20, feats.rsKfit, feats.rsTfit] = ...
-            fitRestretchRecovery(t, y, y_light, feats.steady, RESTRETCH_VALL_WIN_S);
+         feats.rsK80, feats.rsT20, feats.rsKfit, feats.rsTfit, feats.rsT20e, feats.rsTfitE] = ...
+            fitRestretchRecovery(t, y, y_light, feats.steady, RESTRETCH_VALL_WIN_S, ...
+                                 velocity_segment(4, 1) - t_seg);
 
         % Guardrail: least-squares error of cool-down window vs data
         if ~isempty(datatable)
@@ -583,6 +619,14 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             % we start from end of slack instead of start - that gives it enough time to buckle
             t_short_start = velocity_segment(2);  % row 2 col 1 of 5×4 segment matrix
             mask_cross = t_out >= t_short_start & t_out <= t_rstr;
+            % Under FeatureReadGrid, drop samples a later chunk overlaps. In the
+            % parallel ('AllPar' on a pool) path the merged trace carries the init
+            % hold's last, still ISOMETRIC point at t = vs(2), inside cycle 1's
+            % window, so the rule below found LSE >= 0 at the window's first
+            % sample and cycle 1 read the constant vs(2) - vs(1) = 2.2 ms.
+            if readDataGrid
+                mask_cross = mask_cross & makeMonotonous(t_out);
+            end
             if any(mask_cross) && isfield(out, 'LXB') && isfield(out, 'SL')
                 LXB_c = out.LXB(mask_cross);
                 SL_c  = out.SL(mask_cross);
@@ -590,7 +634,17 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
                 % First point where LXB ≥ SL (crossed from below: LSE ≤ 0, force ≤ 0)
                 cross_idx = find(LXB_c <= SL_c, 1, 'first');
                 if ~isempty(cross_idx)
-                    feats.t0_crossing = t_c(cross_idx) - t_seg;
+                    tc = t_c(cross_idx);
+                    % under FeatureReadGrid: the zero crossing of LSE = SL - LXB,
+                    % interpolated, not the first stored sample past it
+                    if readDataGrid && cross_idx > 1
+                        g1 = SL_c(cross_idx-1) - LXB_c(cross_idx-1);
+                        g2 = SL_c(cross_idx)   - LXB_c(cross_idx);
+                        if g2 ~= g1
+                            tc = t_c(cross_idx-1) + (0 - g1) / (g2 - g1) * (t_c(cross_idx) - t_c(cross_idx-1));
+                        end
+                    end
+                    feats.t0_crossing = tc - t_seg;
                 else
                     feats.t0_crossing = NaN;
                 end
@@ -701,7 +755,7 @@ end
 
 
 % =========================================================================
-function [k, A, t0, r2, k63, k80, t20, kfit, tfit] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin)
+function [k, A, t0, r2, k63, k80, t20, kfit, tfit, t20e, tfitE] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin, tEnd)
 %FITRESTRETCHRECOVERY First-order fit of the force rise after a re-stretch.
 %
 %   [K, A, T0, R2, K63, K80, T20] = fitRestretchRecovery(T, Y, Y_ANCHOR, STEADY, VALLWIN)
@@ -746,7 +800,8 @@ function [k, A, t0, r2, k63, k80, t20, kfit, tfit] = fitRestretchRecovery(t, y, 
 %   SD 17.2 % -> 6.1 %, 2 mM/8 mM discriminability z 3.2 -> 6.8.
 
     k = NaN; A = NaN; t0 = NaN; r2 = NaN; k63 = NaN; k80 = NaN; t20 = NaN;
-    kfit = NaN; tfit = NaN;
+    kfit = NaN; tfit = NaN; t20e = NaN; tfitE = NaN;
+    if nargin < 6; tEnd = NaN; end
 
     t = t(:); y = y(:); y_anchor = y_anchor(:);
     if numel(y_anchor) ~= numel(y); y_anchor = y; end
@@ -810,6 +865,16 @@ function [k, A, t0, r2, k63, k80, t20, kfit, tfit] = fitRestretchRecovery(t, y, 
         % The same rate and delay from EVERY sample in the 20-80 % band, not
         % two crossings: see bandRateFit. Same amplitude, same anchor.
         [kfit, tfit] = bandRateFit(tt, zx, 0.20, 0.80);
+        % T20E / TFITE -- the same delay measured from the RAMP END (TEND, a
+        % protocol time) instead of from the argmin of the valley. The location
+        % of a flat minimum is ill-conditioned (sqrt(noise/curvature)) and
+        % quantized to one sample, so T20 inherits it in full: its between-heart
+        % spread equals its own measurement noise and noise biases it -11 %.
+        % Anchored on the ramp end: data noise 21 % -> 10 % (T20E) / 7 % (TFITE),
+        % bias -2.5 % (TFITE), ATP z 2.27 -> 3.20 / 2.76, numerical noise < 0.1 %.
+        % Analyses/FeatureRobustness.
+        t20e  = t20  + t(iB) - tEnd;
+        tfitE = tfit + t(iB) - tEnd;
         % diagnostics only: inert unless a caller sets the global to a struct
         global RSK80_DIAG %#ok<GVMIS,TLEV>
         if isstruct(RSK80_DIAG)
@@ -822,7 +887,7 @@ function [k, A, t0, r2, k63, k80, t20, kfit, tfit] = fitRestretchRecovery(t, y, 
 end
 
 % =========================================================================
-function [k80, kfit] = holdRate80(t, y)
+function [k80, kfit, t20] = holdRate80(t, y)
 %HOLDRATE80 Force-redevelopment rate over an isometric hold, 20-80 % band.
 %
 %   K80 = HOLDRATE80(T, Y) for the hold that follows a slack release:
@@ -836,7 +901,7 @@ function [k80, kfit] = holdRate80(t, y)
 %   removes noise without shifting the crossing times.
     HOLD_TAIL_S = 0.040;
     SMOOTH_S    = 0.005;
-    k80 = NaN; kfit = NaN;
+    k80 = NaN; kfit = NaN; t20 = NaN;
     t = t(:); y = y(:);
     ok = isfinite(t) & isfinite(y); t = t(ok); y = y(ok);
     if numel(t) < 40 || ~(t(end) > t(1)); return; end

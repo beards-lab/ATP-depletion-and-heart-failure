@@ -23,13 +23,16 @@
 % Output -> Model/pooledTarget8mM.m
 %           results/pooled_target_report.txt   (old single-prep vs new pooled)
 
-clearvars -except OPTS; clc;
+clearvars -except OPTS OUTF; clc;
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here, '..', '..');
 cd(root); addpath(genpath(root));
 resDir = fullfile(here, 'results'); if ~isfolder(resDir); mkdir(resDir); end
 
-OUTF     = fullfile(root, 'Model', 'pooledTarget8mM.m');
+% OUTF may be set by the caller, to write somewhere other than Model/ first
+% (the file is written in place, so a campaign reading it mid-write would see
+% half a target -- stage, verify, then move it in).
+if ~exist('OUTF','var') || isempty(OUTF); OUTF = fullfile(root, 'Model', 'pooledTarget8mM.m'); end
 REF_FILE = 'protocol_03_27_2026_8mM_slack.mat';   % the single-prep target it replaces
 
 if ~exist('OPTS','var'); OPTS = struct(); end     % passed through to buildPooledTarget

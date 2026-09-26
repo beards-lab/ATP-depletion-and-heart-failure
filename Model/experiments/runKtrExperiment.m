@@ -75,7 +75,19 @@ function [E_ktr, out_ktr, features_model, features_data] = runKtrExperiment(para
                       && velocitytable(end-1, 2) == 0 ...
                       && (velocitytable(end, 1) - velocitytable(end-1, 1)) > 0.03;
         if isKtrShaped
-            features_model = extractKtrAttributes(out_ktr.t, F_norm, velocitytable);
+            if isfield(params, 'FeatureReadGrid') && ischar(params.FeatureReadGrid) ...
+                    && strcmpi(params.FeatureReadGrid, 'data')
+                % Read the model at the DATA's own time stamps (opt-in): the raw
+                % output is solver steps or a 0.5 ms grid, and extractKtrAttributes'
+                % smoother is sized in samples. Later chunk wins where segments
+                % overlap. Analyses/FeatureRobustness.
+                km = makeMonotonous(out_ktr.t(:)); tk = out_ktr.t(:); tk = tk(km);
+                Fk = F_norm(:); Fk = Fk(km);
+                tq = datatable(datatable(:, 1) >= tk(1) & datatable(:, 1) <= tk(end), 1);
+                features_model = extractKtrAttributes(tq, interp1(tk, Fk, tq, 'linear'), velocitytable);
+            else
+                features_model = extractKtrAttributes(out_ktr.t, F_norm, velocitytable);
+            end
             features_data  = extractKtrAttributes(datatable(:, 1), datatable(:, 3), velocitytable);
 
             % POOLED TARGET. The protocol file is ONE preparation, and 03/27 is

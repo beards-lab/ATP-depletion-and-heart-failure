@@ -66,7 +66,13 @@ FEAT = { 'A','F'; 'Am','F'; 'peak1_y','F'; 'vall_y','F'; 'peak2','F'
          'ktr','0'; 'rsK','0'; 'rsT0','0'; 'rsR2','0'; 't0','0'
          'peak1_t','0'; 'vall_t','0'; 'vall2_t','0'; 'peak1_dSL','0'
          'rsK80','0'; 'rsT20','0'; 'ktr80','0'
-         'rsKfit','0'; 'rsTfit','0'; 'ktrfit','0' };
+         'rsKfit','0'; 'rsTfit','0'; 'ktrfit','0'
+         'rsT20e','0'; 'rsTfitE','0'; 'tOn20','0' };
+% rsT20e / rsTfitE = the re-stretch recovery delay measured from the RAMP END
+% instead of from the argmin of the valley, and tOn20 = the hold's
+% redevelopment onset as a 20 % level crossing (Analyses/FeatureRobustness:
+% rsT20's between-prep spread equals its own measurement noise and noise
+% biases it -11 %; rsTfitE 7 % noise, -2.5 % bias, ATP z 2.76).
 % *fit = the same rates and delay from a weighted log-linear regression over
 % the whole 20-80 % band instead of two crossings (Analyses/KtrSegmentSlope,
 % bandRateFit): on the model's numerically rough traces a two-point rate

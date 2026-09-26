@@ -302,8 +302,13 @@ for vs = 1:length(T) - 1
         end
         % Output grid: solver steps by default; a fixed grid (odeOutputDt, s) makes
         % the trace the features read independent of where the steps happened to land.
+        % odeOutputMaxSegment (s) limits the fixed grid to segments no longer than
+        % that: long holds and slow ramps carry no rate feature, and a 0.5 ms grid
+        % over them is most of the dense-output cost.
         tspan = [ts tend];
-        if isfield(params, 'odeOutputDt') && ~isempty(params.odeOutputDt) && params.odeOutputDt > 0 && tend - ts > 2*params.odeOutputDt
+        denseSeg = ~isfield(params, 'odeOutputMaxSegment') || isempty(params.odeOutputMaxSegment) ...
+                   || (T(vs+1) - T(vs)) <= params.odeOutputMaxSegment;
+        if denseSeg && isfield(params, 'odeOutputDt') && ~isempty(params.odeOutputDt) && params.odeOutputDt > 0 && tend - ts > 2*params.odeOutputDt
             tspan = unique([ts, ts + params.odeOutputDt:params.odeOutputDt:tend, tend]);
         end
         [t,PU, te, ye, ie] = ode15s(fcn,tspan,PU0, opts, params);
