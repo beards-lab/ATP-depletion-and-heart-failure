@@ -86,6 +86,7 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 
 | Analysis | Status | One line | Conclusion |
 |---|---|---|---|
+| **TriSegCoupling** | scoping | Can this model run inside a TriSeg wall? **Yes** — the series-elastic interface already matches, there is no advection term, and the 119 s/beat measured cost is ~16x Jacobian + ~20-50x MEX away from workable. The blocker is **no calcium activation**, not compute. | [conclusions](TriSegCoupling/conclusions.md) |
 | **AttachedPool_vs_ATPase** | findings | Reconciles attached-pool / ATP-turnover / k_tr / V_max at baseline; the turnover *target* was misset, leaving a fixable throttled-hydrolysis gap. | [conclusions](AttachedPool_vs_ATPase/conclusions.md) |
 | **BindingSiteOccupancy** | findings | Audits attachment-saturation: the strain axis is *not* a binding-site axis, so existing per-bin "occupancy" is mis-grounded; evaluates a faithful global form. | [conclusions](BindingSiteOccupancy/conclusions.md) |
 | **RestretchMechanisms** | findings | Explains the last-slack restretch double-peak; Phase-1 fit overshoots peak1 (+20%); points to kSE / attachment-shift tuning. | [conclusions](RestretchMechanisms/conclusions.md) |
