@@ -132,6 +132,13 @@ T = struct();
 T.name = FEAT(:,1)'; T.cls = FEAT(:,2)';
 [T.m8, T.m2] = deal(nan(nF,nEl));
 [T.s8, T.s8raw, T.r, T.sr, T.z] = deal(nan(1,nF));
+% s2 -- the between-preparation spread at 2 mM, measured the same way as s8.
+% It was not computed before because the 2 mM condition was only ever used
+% through the RATIO (T.r / T.sr). A pooled 2 mM TARGET needs its own chi-2
+% scale, and borrowing s8 for it would assert that the two conditions are
+% equally reproducible -- which is exactly the kind of thing this file exists
+% to measure rather than assume.
+[T.s2, T.s2raw] = deal(nan(1,nF));
 T.seg = repmat({1:nEl}, 1, nF);   % segments behind each s, see segmentsFor
 Rp = nan(nP,nF);                                % per-prep 2 mM / 8 mM ratio
 for k = 1:nF
@@ -141,6 +148,7 @@ for k = 1:nF
     sg         = segmentsFor(opts, T.name{k}, nEl);
     T.seg{k}   = sg;
     T.s8raw(k) = relSD(V8(:,sg));
+    T.s2raw(k) = relSD(V2(:,sg));   % same segments, same estimator
     for p = 1:nP
         qq = V2(p,:)./V8(p,:); qq = qq(isfinite(qq) & qq > 0);
         if ~isempty(qq); Rp(p,k) = exp(mean(log(qq))); end
@@ -149,6 +157,7 @@ for k = 1:nF
     T.sr(k) = std(Rp(:,k),'omitnan')/abs(T.r(k));
 end
 T.s8 = T.s8raw;
+T.s2 = T.s2raw;
 
 % LEVEL vs SHAPE. Under a per-preparation scale every force feature carries the
 % same ATP effect on the LEVEL, so nine force ratios are nine copies of one
@@ -188,7 +197,7 @@ T.srShape = std(Sp,0,1,'omitnan')./abs(T.rShape);
 % ~29 % of each feature's own variance while still compressing the range. This
 % is a judgement call; it is reported below so it can be argued with.
 D0_CAP = 5;
-T.d0 = 0; T.s0 = NaN; T.d0raw = 0;
+T.d0 = 0; T.s0 = NaN; T.d0raw = 0; T.d0_2 = 0; T.s0_2 = NaN; T.d0raw_2 = 0;
 if opts.shrink
     dd = nP-1;
     m  = isfinite(T.s8raw) & T.s8raw > 0;
@@ -201,6 +210,15 @@ if opts.shrink
                  'capped at %g so the weights do not collapse to uniform.'], T.d0raw, D0_CAP);
     end
     T.s8(m) = sqrt((T.d0*T.s0 + dd*T.s8raw(m).^2)/(T.d0 + dd));
+    % The 2 mM spreads get their OWN prior. Sharing 8 mM's would smuggle the
+    % high-ATP dispersion into the low-ATP chi-2 scale.
+    m2 = isfinite(T.s2raw) & T.s2raw > 0;
+    [T.d0_2, T.s0_2] = fitFDist(T.s2raw(m2).^2, dd);
+    T.d0raw_2 = T.d0_2;
+    if ~isfinite(T.d0_2) || T.d0_2 > D0_CAP      % same cap, same reason as 8 mM
+        T.d0_2 = D0_CAP;
+    end
+    T.s2(m2) = sqrt((T.d0_2*T.s0_2 + dd*T.s2raw(m2).^2)/(T.d0_2 + dd));
 end
 T.z = abs(T.r-1) ./ sqrt(T.s8.^2 + T.sr.^2);
 

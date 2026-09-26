@@ -67,6 +67,7 @@ P.FrefPrep = [79.759200000000007 69.979699999999994 58.306017239494508];
 P.level    = 1.3200976519782204;   % 2 mM / 8 mM force level
 P.sLevel   = 0.085991157749140748;
 P.dof      = 7;
+P.cond     = 8;   % mM MgATP this target describes
 P.nP       = 3;
 P.days     = {'03/27', '04/03', '04/10'};
 

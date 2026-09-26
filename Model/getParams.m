@@ -353,6 +353,67 @@ end
     params0.K_T2 = 2.5;             % Km(ATP) (mM) of R2's ATP-binding detachment step
     params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
     params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
+
+    % Strain-dependent ATP gating of R2 detachment (ported from lowatp-2state).
+    % Positive strain inhibits ADP release, putting the ATP-binding step in
+    % series behind a strain-slowed step, so the APPARENT Km(ATP) for
+    % detachment rises with strain:
+    %     Km_eff(s) = K_T2 * (1 + kAtpStrain * max(0, s - sAtpStrain0))
+    % Still MgATP_ref-normalised => 8 mM bit-identical for ANY setting. This is
+    % what lets low ATP suppress the post-stretch recovery (rsK) more than the
+    % isometric one (ktr) -- a separation a strain-uniform gate cannot express.
+    %
+    % REQUIRES UseAtpDetachR2 = true: this shapes THAT gate's Km, it is not a
+    % gate of its own. And note it is a SEPARATE path from the pAtp_* power
+    % gates -- pAtp_k2 scales the rate constant k2 in evaluateModel, while this
+    % scales the assembled flux R2 inside the ODE. Turning both on multiplies
+    % them, which is double-gating unless you mean it.
+    params0.UseStrainDepAtpGate = false;
+    params0.kAtpStrain  = 0;        % 1/strain; 0 => strain-uniform (legacy)
+    params0.sAtpStrain0 = 0;        % strain (um) above which the ATP step bites
+
+    % --- General 8 mM-inert ATP power gates (applied in evaluateModel) ------
+    % PORTED from lowatp-2state so the low-ATP hypothesis ladder can be refitted
+    % on THIS core. rate_eff = rate * (MgATP/MgATP_ref)^p, which is exactly 1 at
+    % MgATP_ref for ANY p -- so the 8 mM fit is bit-identical whatever these
+    % become, and the gates only ever move the low-ATP condition. That asymmetry
+    % is the whole point: many low-ATP degrees of freedom at zero high-ATP cost.
+    % All zero => inert. Verified bit-identical at 8 mM after the port.
+    params0.UseAtpPowerGates = false;
+    params0.pAtp_k2      = 0;   % strong-bridge detachment (ADP release + ATP binding)
+    params0.pAtp_kmsrd   = 0;   % SRX-ADP return
+    params0.pAtp_kah     = 0;   % hydrolysis / re-priming (PT -> PD)
+    params0.pAtp_kamh    = 0;   % reverse priming (PD -> PT)
+    params0.pAtp_ka      = 0;   % attachment
+    params0.pAtp_kd      = 0;   % pre-stroke detachment
+    params0.pAtp_k1      = 0;   % power stroke (Pi release)
+    params0.pAtp_k_1     = 0;   % reverse stroke (Pi rebinding)
+    params0.pAtp_ksr0    = 0;   % SRX entry from the ATP-bound state
+    params0.pAtp_ksr2srd = 0;   % SRX -> SRX-ADP
+    params0.pAtp_ksrd2sr = 0;   % SRX-ADP -> SRX (nucleotide exchange)
+    params0.pAtp_tau_reg = 0;   % registration-availability recovery time
+    params0.pAtp_A0      = 0;   % registration-availability floor
+    params0.pAtp_eta_M   = 0;   % Maxwell dashpot viscosity
+    % Tier B -- shape/stiffness levers, weaker physiological claim.
+    params0.pAtp_kstiff2     = 0;
+    params0.pAtp_kSE         = 0;
+    params0.pAtp_kSE_M       = 0;
+    params0.pAtp_mu_neg      = 0;
+    params0.pAtp_dr          = 0;
+    params0.pAtp_dr2         = 0;
+    params0.pAtp_P_bound_max = 0;
+
+    % Saturable (Hill) variant of the same gates. KAtp = Inf reproduces the power
+    % law EXACTLY (its unsaturated limit), so every snapshot stays byte-identical
+    % under either form. With data at only two [ATP] the pair (p, K) is not
+    % jointly identifiable -- one must be fixed (Analyses/AtpGateHillForm).
+    params0.AtpGateForm = 'power';
+    atpGated = {'k2','kmsrd','kah','kamh','ka','kd','k1','k_1', ...
+                'ksr0','ksr2srd','ksrd2sr','tau_reg','A0','eta_M', ...
+                'kstiff2','kSE','kSE_M','mu_neg','dr','dr2','P_bound_max'};
+    for i_atpg = 1:numel(atpGated)
+        params0.(['KAtp_' atpGated{i_atpg}]) = Inf;   % Inf => power law (inert)
+    end
     
     % strain-associated parameters
     params0.alpha0 = 0;

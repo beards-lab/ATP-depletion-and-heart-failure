@@ -104,7 +104,9 @@ function [E_ktr, out_ktr, features_model, features_data] = runKtrExperiment(para
             % every ktr-protocol feature (k63, the scored k80, F20) is pooled the
             % same way and cannot go stale after a re-curation.
             if isfield(params, 'UsePooledTarget') && ~isequal(params.UsePooledTarget, false)
-                PK = pooledKtrTarget();
+                % condition-matched: a 2 mM run is scored against the 2 mM pool
+                condK = 8; if isfield(params, 'MgATP') && ~isempty(params.MgATP); condK = params.MgATP; end
+                PK = pooledKtrTarget(condK);
                 for jk = 1:numel(PK.name)
                     features_data.(PK.name{jk}) = PK.val(jk);
                 end

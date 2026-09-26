@@ -50,7 +50,14 @@ end
 % cost_raw is the unweighted per-feature error; cost is the weighted total
 cmap = containers.Map(fn, num2cell(cost));
 
-figure(80085); clf;
+% 24 tiles at the default figure size overlap into illegibility, which is half
+% the reason a scored feature can look unscored. Size it on CREATION only, so a
+% window the user has already moved or resized is left alone.
+isNewFig = isempty(findobj('Type', 'figure', 'Number', 80085));
+hFig = figure(80085); clf;
+if isNewFig
+    set(hFig, 'Position', [40 40 1500 900]);
+end
 plotMultipleFeatures(feats_cell, labels, colors, markers, fn, [], [], cmap);
 
 % Append a "culprits" tile: bar chart of per-feature cost, sorted desc.

@@ -58,7 +58,14 @@ function [E_slack, out_slack, features_model, features_data] = runSlackExperimen
     % in the one place that owns that job.
     if isfield(params, 'UsePooledTarget') && ~isequal(params.UsePooledTarget, false) ...
             && ~isempty(fieldnames(features_data))
-        features_data = pooledTargetFeatures(features_data, params.UsePooledTarget);
+        % Pick the target for the condition being simulated. Without this the
+        % 2 mM run would be scored against the 8 mM pooled mean and the ATP
+        % effect itself would be reported as model error -- so the low-ATP leg
+        % previously had to switch pooling OFF entirely, which cost it rsK80
+        % (injected only from a pooled target) along with its error bars.
+        cond = 8;
+        if isfield(params, 'MgATP') && ~isempty(params.MgATP); cond = params.MgATP; end
+        features_data = pooledTargetFeatures(features_data, params.UsePooledTarget, cond);
     end
 
     

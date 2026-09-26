@@ -1,0 +1,38 @@
+LOW-ATP DIAGNOSIS   core lean5_a_opt   pAtp_k2 0.440
+2 mM objective (pooled 2 mM target, 2 mM scale) = 2.1337 over 19 terms
+
+feature                      cost   share      model     target   chi2/el
+----------------------------------------------------------------------------
+vall_t                     0.6025   28.2%    0.01443   0.005167      9.76
+vall2_dy                   0.5745   26.9%     -26.97     -14.38      9.35
+rsK80                      0.2493   11.7%      24.41      18.66      2.68
+peak1_dSL                  0.2384   11.2%    0.04745    0.02111      4.47
+ktr                        0.2003    9.4%      36.62      26.02      3.91
+ktr_rmse                   0.1017    4.8%        NaN        NaN         -
+t0_crossing                0.0781    3.7%        NaN        NaN         -
+vall_y                     0.0662    3.1%      54.88      79.01      1.96
+restretchSlopeStart        0.0141    0.7%       1250       1693      1.20
+peak2                      0.0061    0.3%      69.73      91.45      1.09
+steady                     0.0024    0.1%      86.02      87.16      0.01
+k2                         0.0001    0.0%        NaN        NaN         -
+A                          0.0000    0.0%       64.3      66.67      0.04
+XTOR                       0.0000    0.0%        NaN        NaN         -
+peak1_y                    0.0000    0.0%      106.5       93.7      0.49
+steady                     0.0000    0.0%      86.02      87.16      0.01
+doublePeak                 0.0000    0.0%        NaN        NaN         -
+rsR2                       0.0000    0.0%      0.991     0.8667      0.76
+FV_normpowerAvg            0.0000    0.0%        NaN        NaN         -
+----------------------------------------------------------------------------
+PAYING: 12 of 19 terms. 7 are inside their deadband and contribute exactly 0.
+
+Q3  k_1 scan at fixed k2 -- total AND the features it moves
+pAtp_k_1      total      delta
+   -0.60     6.2902    +4.1565
+   -0.40     4.2209    +2.0872
+   -0.20     2.8984    +0.7647
+    0.00     2.1337    +0.0000
+    0.20     2.2237    +0.0900
+    0.40     2.6222    +0.4885
+    0.60     3.0773    +0.9436
+
+k_1 buys NOTHING anywhere on this grid -- not a search failure, no leverage.

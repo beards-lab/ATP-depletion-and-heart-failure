@@ -85,16 +85,26 @@ for i_feat = 1:numel(fn)
     end
 
     % ── NORMAL scatter plot (existing logic) ─────────────────────────────
-    % Tokens that are MODIFIERS, not an X-axis field name. evalFeatureCost grew
-    % 'w:<varfield>' (per-element inverse-variance weights) and 'fl:<x>' (noise
-    % floor); both are non-numeric, so without this they were mistaken for an X
-    % field and the tile rendered as "(no data)". Keep in sync with
-    % evalFeatureCost.m's token loop.
-    feat_x = '';
-    if ~has_cost_fn && numel(tokens) >= 2 && ...
-            ~strcmp(tokens{2}, '_') && isnan(str2double(tokens{2})) && ...
-            ~startsWith(tokens{2}, 'w:') && ~startsWith(tokens{2}, 'fl:')
-        feat_x = tokens{2};
+    % Classify the tail tokens EXACTLY as evalFeatureCost/evalOneSubEntry does.
+    % Anything looser mistakes a modifier for an X-axis field name, and the tile
+    % then renders "(no data)" for a feature that is being scored perfectly
+    % well -- which is what every 'fl:' and 'w:' entry used to do here.
+    feat_x     = '';
+    floor_raw  = 0;
+    wvec_field = '';
+    if ~has_cost_fn
+        for ti = 2:numel(tokens)
+            tok = tokens{ti};
+            if startsWith(tok, 'w:')
+                wvec_field = tok(3:end);               % per-element weights
+            elseif startsWith(tok, 'fl:')
+                floor_raw = str2double(tok(4:end));    % noise floor (deadband)
+            elseif isRangeToken(tok) || ~isnan(str2double(tok))
+                continue;                              % bounds / scalar weight
+            elseif isempty(feat_x) && ~strcmp(tok, '_')
+                feat_x = tok;                          % X-axis field name
+            end
+        end
     end
 
     plotted_any = false;
@@ -129,6 +139,56 @@ for i_feat = 1:numel(fn)
             'VerticalAlignment', 'middle', 'Color', [0.6 0.6 0.6]);
         hold(ax, 'off');
         continue;
+    end
+
+    % Noise floor (deadband) around the data series.
+    % 'fl:X' makes a term stop paying while the residual is inside the
+    % measurement's own resolution, so a series sitting anywhere in this band
+    % scores exactly 0. Drawn because otherwise a pooled target -- a mean over
+    % three preparations, which HAS a spread -- reads as a bare point, and a
+    % model comfortably inside the envelope looks like a miss.
+    % evalFeatureCost sums squared relative residuals, so deviations d_i over
+    % nEl points cost sum(w_i*(d_i/n_F)^2) with n_F = mean(data). The half-width
+    % drawn here is the d_i that makes that sum EXACTLY equal the floor -- so it
+    % is the equal-deviation contour, not a per-point pass/fail: a series may sit
+    % outside the band at one segment and still score zero if it is well inside
+    % at the others. Only the total is capped.
+    if floor_raw > 0 && ~isempty(feats_cell{1}) && isfield(feats_cell{1}, feat_y)
+        vd  = applyFeatSelector(feats_cell{1}.(feat_y), sel_y);
+        vd  = double(vd(:))';
+        n_F = mean(vd, 'omitnan');
+        if n_F == 0; n_F = 1; end
+        % Per-element weights ('w:FIELD'), mirroring evalFeatureCost: variance
+        % shrunk to at least 10% of its own mean, inverse-variance, renormalised
+        % to mean 1. Without it the F-V envelope -- whose weights span 20x --
+        % would be drawn flat, and that is exactly the term whose scale-blindness
+        % has trapped searches before.
+        wv = ones(size(vd));
+        if ~isempty(wvec_field) && isfield(feats_cell{1}, wvec_field)
+            vv = double(feats_cell{1}.(wvec_field)); vv = vv(:)';
+            vbar = mean(vv, 'omitnan');
+            if numel(vv) == numel(vd) && isfinite(vbar) && vbar > 0
+                vv = max(vv, 0.1 * vbar);
+                wv = (1 ./ vv) / mean(1 ./ vv, 'omitnan');
+            end
+        end
+        hw  = abs(n_F) * sqrt(floor_raw ./ (numel(vd) * wv));
+        xb  = 1:numel(vd);
+        if ~isempty(feat_x) && isfield(feats_cell{1}, feat_x)
+            xcand = double(feats_cell{1}.(feat_x));
+            if numel(xcand) == numel(vd); xb = xcand(:)'; end
+        end
+        ok = isfinite(vd) & isfinite(xb);
+        xo = xb(ok); vo = vd(ok); ho = hw(ok);
+        if nnz(ok) == 1
+            xo = xo + [-0.3 0.3]; vo = vo([1 1]); ho = ho([1 1]);  % one segment: a stub
+        end
+        if numel(xo) >= 2
+            hb = fill(ax, [xo fliplr(xo)], [vo+ho fliplr(vo-ho)], colors(1,:), ...
+                      'FaceAlpha', 0.12, 'EdgeColor', 'none', ...
+                      'DisplayName', 'floor');
+            uistack(hb, 'bottom');
+        end
     end
 
     if has_cost_fn

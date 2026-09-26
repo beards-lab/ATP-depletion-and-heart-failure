@@ -39,7 +39,7 @@
 %           params/<SEEDTAG>.m  (the reweighted seed snapshot)
 
 clearvars -except BASE SEEDTAG SPREAD_SOURCE POOLED_TARGET FN_RENAME ADD_FEATS FLOOR_CHI2 ...
-                  FV_SHARE SHARE_CAP KAPPA ANCHOR_GUARD ANCHOR_ENTRY; clc;
+                  FV_SHARE SHARE_CAP KAPPA ANCHOR_GUARD ANCHOR_ENTRY FN_DROP W_BOOST; clc;
 here = fileparts(mfilename('fullpath'));
 root = fullfile(here, '..', '..');
 cd(root); addpath(genpath(root));
@@ -126,7 +126,29 @@ CAND         = {'rsT0','rsT20','vall2_t','Am','peak1_t','rsA'};
 % mix the audited target with the unaudited estimator.
 % This is a rename, not an addition: the weight is re-derived from the new
 % feature's own spread and the term count does not change.
+%
+% A source containing '[' matches the WHOLE first token, selector included, so
+% a segment restriction can be lifted: {'rsK80[1:4]','rsK80'} puts slack cycle
+% 5 back. Without the bracket the match is on the bare name and any selector is
+% preserved, which is the original behaviour.
 if ~exist('FN_RENAME','var'); FN_RENAME = cell(0,2); end
+
+% FN_DROP -- primary feature names to REMOVE from the objective entirely.
+% Unlike a rename this changes the term count, so the dropped term's old
+% contribution leaves the cost-neutrality budget with it and lambda re-spreads
+% that mass over what remains. Used to retire `coolDownLS`, an unbounded raw
+% MSE that is not a preparation-width chi-2 like every other data term and
+% that dominated the movers of nearly every MechanismAblation arm
+% (Analyses/MechanismAblation/conclusions.md sec. 8).
+if ~exist('FN_DROP','var'); FN_DROP = {}; end
+
+% W_BOOST -- {name, factor} pairs multiplying a data term's derived weight,
+% applied AFTER lambda and after the FV pin, then pinned so the renormalisation
+% does not undo them. A boost is a deliberate departure from w = lambda*R/s^2,
+% so it breaks that term's chi-2 reading and must be justified in the caller.
+% The one in use: rsK80 x2, inheriting the post-re-stretch role that dropping
+% coolDownLS vacated (MechanismAblation sec. 8).
+if ~exist('W_BOOST','var'); W_BOOST = cell(0,2); end
 
 % ANCHOR_GUARD -- optional insurance for the ABSOLUTE FORCE LEVEL, which the
 %   FV pin quietly weakens. extractForceVelocityAttributes normalises the
@@ -212,16 +234,42 @@ fn0 = params0.fn;
 % are computed on the entry set that will actually be optimised.
 renamed = {};
 for r = 1:size(FN_RENAME,1)
+    src = FN_RENAME{r,1};
+    % A bracketed source addresses the whole token (name AND selector), so the
+    % selector can be replaced or lifted. A bare source matches the name only
+    % and leaves any selector in place.
+    withSel = contains(src, '[');
     for i = 1:numel(fn0)
         tk = strsplit(fn0{i}, '|');
-        if ~strcmp(regexprep(tk{1}, '\[.*$', ''), FN_RENAME{r,1}); continue; end
-        tk{1} = regexprep(tk{1}, ['^' FN_RENAME{r,1}], FN_RENAME{r,2});
+        if withSel
+            if ~strcmp(tk{1}, src); continue; end
+            tk{1} = FN_RENAME{r,2};
+        else
+            if ~strcmp(regexprep(tk{1}, '\[.*$', ''), src); continue; end
+            tk{1} = regexprep(tk{1}, ['^' src], FN_RENAME{r,2});
+        end
         fn0{i} = strjoin(tk, '|');
-        renamed{end+1} = sprintf('%s -> %s', FN_RENAME{r,1}, FN_RENAME{r,2}); %#ok<SAGROW>
+        renamed{end+1} = sprintf('%s -> %s', src, FN_RENAME{r,2}); %#ok<SAGROW>
     end
 end
 if ~isempty(renamed)
     fprintf('FN_RENAME: %s\n', strjoin(unique(renamed,'stable'), ' , '));
+end
+
+% Drop retired terms. Done here, before the base evaluation, so the dropped
+% term is absent from cRaw and therefore from the neutrality budget -- its mass
+% is released to the survivors rather than silently preserved.
+if ~isempty(FN_DROP)
+    primD = cellfun(@(s) regexprep(strtok(s,'|'), '\[.*$',''), fn0, 'uni', 0);
+    kill  = ismember(primD, FN_DROP);
+    if any(kill)
+        fprintf('FN_DROP: removing %s\n', strjoin(fn0(kill), ' , '));
+        fn0 = fn0(~kill);
+    end
+    miss = setdiff(FN_DROP, primD);
+    if ~isempty(miss)
+        fprintf('FN_DROP: not present, nothing to drop: %s\n', strjoin(miss, ', '));
+    end
 end
 
 % Added entries carry weight 1 for now; the loop below gives them lambda/s^2.
@@ -317,6 +365,22 @@ if FV_SHARE > 0 && ~isempty(iFV) && cRaw(iFV) > 0
     pinned(iFV) = true;
     wNew = iRenorm(wNew, cRaw, isBudget, pinned, num, FV_SHARE, SHARE_CAP);
     fprintf('  FV pinned at %.0f %% of the seed total (ARBITRARY — see header)\n', 100*FV_SHARE);
+end
+
+% Deliberate weight boosts. Pinned after boosting so iRenorm redistributes the
+% cost off the OTHER free terms rather than undoing the boost it was just told
+% to make.
+for b = 1:size(W_BOOST,1)
+    iB = find(strcmp(prim, W_BOOST{b,1}) & isData, 1);
+    if isempty(iB) || cRaw(iB) <= 0
+        fprintf('  W_BOOST: %s is not a scored data term — skipped\n', W_BOOST{b,1});
+        continue;
+    end
+    wNew(iB)   = wNew(iB) * W_BOOST{b,2};
+    pinned(iB) = true;
+    wNew = iRenorm(wNew, cRaw, isBudget, pinned, num, FV_SHARE, SHARE_CAP);
+    fprintf('  W_BOOST: %s weight x%.3g -> %.1f %% of the seed total\n', ...
+            W_BOOST{b,1}, W_BOOST{b,2}, 100*wNew(iB)*cRaw(iB)/TOT_SEED);
 end
 
 nCap = 0;
