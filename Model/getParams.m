@@ -207,8 +207,16 @@ end
         'A0', 0.7, ...             % isometric registration availability floor, A_reg in [A0,1]; A0=1 => mechanism neutral. Used when UseRegistrationAvailability
         'v_ref_reg', 0.8, ...      % sliding speed (um/s, same units as Vums; ~0.4 ML/s) at which availability is half-recovered. Used when UseRegistrationAvailability
         'tau_reg', 0.02, ...       % registration relaxation time (s, ~1/ktr) so ktr stays single-order. Used when UseRegistrationAvailability
+        'RegAvailLengtheningGain', 0, ... % with RegAvailShorteningOnly: lengthening speed counts at this fraction (second-head recruitment under stretch). 0 => shortening-only exactly
         'RegAvailShorteningOnly', false, ... % if true, availability tracks SHORTENING speed only (max(0,-vel)); restretch/lengthening does not boost attachment -> preserves post-restretch undershoot while keeping the FV shoulder
         'UseD0State', false, ...   % nucleotide-free detached state D0. A head torn off under strain (XB_Ripped) never bound ATP, so it cannot re-prime until it does: it lands in D0 and leaves only via ATP binding. Appends +1 scalar ODE state at the tail (after A_reg). false => nothing appended, byte-identical to the legacy state vector
+        'UseYieldGate', false, ... % stretched-side-only forced detachment: logistic gate in s, p1 -> PD at k_yield1, p2 -> PT (or D0 when UseD0State) at k_yield2. Analyses/OverstretchedHeads
+        's_yield', 0.012, ...      % strain (um) at which the yield gate is half engaged; used when UseYieldGate
+        'w_yield', 0.0015, ...     % logistic width of the yield gate (um); used when UseYieldGate
+        'k_yield1', 0, ...         % fully engaged extra p1 detachment rate (s^-1); used when UseYieldGate
+        'k_yield2', 0, ...         % fully engaged extra p2 rupture rate (s^-1); used when UseYieldGate
+        'YieldHop1', 0, ...        % share of the p1 yield flux that rebinds at once (weak binding in rapid equilibrium) instead of detaching to PD; used when UseYieldGate
+        'YieldHopShift', 0, ...    % where the rebinding p1 heads land: 0 = zero strain; >0 = slip back by this much (um) to the neighbouring actin site (d_actin 0.0055 = one monomer); used when UseYieldGate and YieldHop1 > 0
         'k_D0T', 500, ...          % [ATP]-saturated ceiling on D0 -> PT (s^-1); used when UseD0State
         'K_D0T', 0.15, ...         % MgATP half-saturation of the D0 -> PT step (mM); used when UseD0State
         'D0FromR2', 0, ...         % fraction of the normal R2 (p2 -> PT) flux routed via D0 instead of straight to PT. 0 = only torn bridges transit D0. Used when UseD0State

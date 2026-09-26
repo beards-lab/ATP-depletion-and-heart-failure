@@ -46,6 +46,8 @@ PEAK_MIN_DISTANCE_S   = 0.001;  % minimum time between detected peaks (s)
 % safely inside it.
 PEAK_PROM_K_SIGMA     = 3;      % prominence floor in units of the trace's noise sigma
 PEAK_PROM_MIN_FRAC    = 0.05;   % ... and at least this fraction of the window's force range
+PEAK_VERTEX_HW        = 1.0e-3; % half-width (s) of the quadratic fit that locates the re-stretch peak between samples
+VALL_VERTEX_HW        = 2.0e-3; % ... and the valley, which is broader
 MARKER_SIZE           = 12;    % plot marker size
 % Smoothing windows (data path only, useSmoothing=true).
 % FAST:  Savitzky-Golay for the re-stretch peak section.  11 ms preserves
@@ -387,6 +389,15 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             feats.peak1_t   = p1_time_abs - t(1);
             feats.peak1_SL  = SL(find(t >= p1_time_abs, 1));
             feats.peak1_dSL = feats.peak1_SL - feats.SLslack;
+            % Sub-sample peak location (Analyses/OverstretchedHeads): the vertex
+            % of a least-squares quadratic over +-PEAK_VERTEX_HW around the
+            % sample peak. The sample peak moves in whole read steps (1 ms on a
+            % model trace = 28 % of peak1_dSL), so it is a step function of the
+            % parameters; the vertex is continuous, and on the 4 kHz data it
+            % averages ~9 samples instead of trusting one noisy maximum.
+            tq = vertexTime(t, y_sm, find(t >= p1_time_abs, 1), PEAK_VERTEX_HW, -1);
+            feats.peak1_tq   = tq - t(1);
+            feats.peak1_dSLq = interp1(t, SL, tq, 'linear') - feats.SLslack;
 
             % Guardrail: penalize spurious 2nd peak if present (graded by prominence)
             if numel(peak1_prom) >= 2
@@ -410,12 +421,15 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
                 t_after = t(idx_after);
                 feats.vall_y = min_val;
                 feats.vall_t = t_after(min_idx_rel) - t(1);
+                tvq = vertexTime(t, y_sm, find(t >= t_after(min_idx_rel), 1), VALL_VERTEX_HW, +1);
+                feats.vall_tq = tvq - t(1);
                 if plotResults
                     plot(t_after(min_idx_rel) + t_seg, min_val, 'bv', 'MarkerSize', ms, 'LineWidth', 2);
                 end
             else
                 feats.vall_y = NaN;
                 feats.vall_t = NaN;
+                feats.vall_tq = NaN;
             end
 
         else
@@ -423,8 +437,11 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             feats.peak1_t   = NaN;
             feats.peak1_SL  = NaN;
             feats.peak1_dSL = NaN;
+            feats.peak1_tq  = NaN;
+            feats.peak1_dSLq = NaN;
             feats.vall_y    = NaN;
             feats.vall_t    = NaN;
+            feats.vall_tq   = NaN;
             feats.doublePeak = 0;
         end
 
@@ -973,4 +990,21 @@ function tx = firstCrossing(tt, z, lev)
     else
         tx = tt(i-1) + (lev - z1) / (z2 - z1) * (tt(i) - tt(i-1));
     end
+end
+
+function tq = vertexTime(tt, yy, i0, hw, sgn)
+%VERTEXTIME sub-sample extremum: vertex of a least-squares quadratic fitted over
+%   tt(i0)+-hw. SGN = -1 for a maximum, +1 for a minimum. Falls back to tt(i0)
+%   when the window holds < 3 points, the curvature has the wrong sign, or the
+%   vertex leaves the window (a monotone or flat stretch has no vertex to find).
+    tq = NaN;
+    if isempty(i0) || i0 < 1 || i0 > numel(tt); return; end
+    tq = tt(i0);
+    w = abs(tt - tt(i0)) <= hw + 1e-12;
+    if nnz(w) < 3; return; end
+    x = tt(w) - tt(i0);
+    c = [x.^2, x, ones(size(x))] \ yy(w);
+    if ~(sgn * c(1) > 0); return; end
+    xv = -c(2) / (2*c(1));
+    if abs(xv) <= hw; tq = tt(i0) + xv; end
 end

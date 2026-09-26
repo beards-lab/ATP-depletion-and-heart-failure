@@ -67,7 +67,12 @@ FEAT = { 'A','F'; 'Am','F'; 'peak1_y','F'; 'vall_y','F'; 'peak2','F'
          'peak1_t','0'; 'vall_t','0'; 'vall2_t','0'; 'peak1_dSL','0'
          'rsK80','0'; 'rsT20','0'; 'ktr80','0'
          'rsKfit','0'; 'rsTfit','0'; 'ktrfit','0'
-         'rsT20e','0'; 'rsTfitE','0'; 'tOn20','0' };
+         'rsT20e','0'; 'rsTfitE','0'; 'tOn20','0'
+         'peak1_tq','0'; 'vall_tq','0'; 'peak1_dSLq','0' };
+% *q = the same peak / valley located between samples, at the vertex of a local
+% quadratic (Analyses/OverstretchedHeads): the sample versions move in whole
+% read steps on the model (1 ms = 28 % of peak1_dSL) and ride on single noisy
+% samples in the data (jitter 10 % -> 5 %, vall_t between-prep spread 19 -> 12 %).
 % rsT20e / rsTfitE = the re-stretch recovery delay measured from the RAMP END
 % instead of from the argmin of the valley, and tOn20 = the hold's
 % redevelopment onset as a 20 % level crossing (Analyses/FeatureRobustness:

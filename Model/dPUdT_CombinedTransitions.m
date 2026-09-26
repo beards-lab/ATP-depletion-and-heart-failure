@@ -524,6 +524,27 @@ R3m = params.k3m*p3;
 % to PT state directly (or to the apo pool D0 when UseD0State — see below)
 XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
 
+% Yield gate: forced detachment of heads dragged past an elastic limit on the
+% STRETCHED side only. A saturating logistic in s, so it is a bounded rate
+% (k_yield at full engagement, never the exp() blow-up of XB_Ripped) and it is
+% ~0 at isometric and shortening strains, where no head reaches s_yield
+% (Analyses/OverstretchedHeads). p1 (weak, pre-stroke, nucleotide ADP.Pi kept)
+% ruptures to PD with the ordinary R1D flux; p2 ruptures with XB_Ripped, i.e.
+% to PT, or to the apo pool D0 when UseD0State. Inert when off.
+% YieldHop1 is the share of the p1 yield flux that REBINDS at once near zero
+% strain instead of detaching to PD: a weak bond is in rapid equilibrium with
+% actin (k+ >> k-, Brenner), so a torn weak head re-forms the bond further
+% along the filament rather than joining the rate-limited ka*PD attachment.
+% Mass-conserving, so it moves no bound population (and so no A_def).
+J1y = 0;
+if params.UseYieldGate
+    gYield = 1 ./ (1 + exp(-(s - params.s_yield) / params.w_yield));
+    J1y = params.k_yield1 * gYield .* p1;
+    hop1 = 0; if isfield(params, 'YieldHop1'), hop1 = min(1, max(0, params.YieldHop1)); end   % a split: an optimiser multiplier must not push it past 1
+    R1D = R1D + (1 - hop1) * J1y;
+    J1y = hop1 * J1y;
+    XB_Ripped = XB_Ripped + params.k_yield2 * gYield .* p2;
+end
 
 % D0 -> PT: the torn head binds ATP and rejoins the cycle. Saturating in
 % [MgATP] so k_D0T is the ATP-saturated ceiling and K_D0T sets where the step
@@ -841,10 +862,31 @@ try
         dp1 = dp1 + att_norm .* f_sat .* RD1;
     end
 catch e
-    
+
     disp([num2str(t) ' : ' e.message]);
 end
 
+% Yield-gate rebinding of weak heads (see the gate above): leave the stretched
+% bins and land either at the zero-strain attachment point (YieldHopShift = 0,
+% the rapid-equilibrium limit), or YieldHopShift back along the filament -- the
+% head slips to the NEIGHBOURING actin site and rebinds still strained, the A1
+% analogue of UseA2AttachmentShift (d_actin = 5.5 nm is one monomer). Linear
+% split over the two bins around the target, as there. Mass-conserving.
+if any(J1y > 0)
+    dp1 = dp1 - J1y;
+    hopShift = 0; if isfield(params, 'YieldHopShift'), hopShift = params.YieldHopShift; end
+    if hopShift > 0
+        s_tgt = s - hopShift;
+        yL = max(1, min(ss-1, 1 + floor((s_tgt - s(1)) / dS)));  yR = yL + 1;
+        wR = min(1, max(0, (s_tgt - s(yL)) ./ (s(yR) - s(yL))));
+        dp1 = dp1 + accumarray(yL, J1y .* (1 - wR), [ss, 1]) + accumarray(yR, J1y .* wR, [ss, 1]);
+    else
+        [y_i0, y_i1, y_i0k] = attachmentPoint(s(1), dS, ss);
+        hopmass = sum(J1y) * dS;
+        dp1(y_i0) = dp1(y_i0) + y_i0k       * (hopmass/dS);
+        dp1(y_i1) = dp1(y_i1) + (1 - y_i0k) * (hopmass/dS);
+    end
+end
 
 % if ~params.UseCa
     dNP = 0;
@@ -890,6 +932,12 @@ if params.UseRegistrationAvailability
     % post-restretch undershoot is preserved while the FV (shortening) shoulder is kept.
     if isfield(params, 'RegAvailShorteningOnly') && params.RegAvailShorteningOnly
         vreg = max(0, -vel);
+        % Partial lengthening recruitment (second-head binding under stretch,
+        % Brunello 2007): lengthening counts at RegAvailLengtheningGain of its
+        % speed. 0 => shortening-only exactly (Analyses/OverstretchedHeads).
+        if isfield(params, 'RegAvailLengtheningGain') && params.RegAvailLengtheningGain > 0
+            vreg = vreg + params.RegAvailLengtheningGain * max(0, vel);
+        end
     else
         vreg = abs(vel);
     end
