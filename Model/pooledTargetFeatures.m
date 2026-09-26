@@ -123,4 +123,14 @@ end
 if isfield(fd,'ktr') && numel(fd.ktr) > 1 && isfinite(fd.ktr(1)) && fd.ktr(1) ~= 0
     fd.ktr_shape = fd.ktr(:)' / fd.ktr(1);
 end
+% ktr80_shape -- same derivation as the model side (extractSlackAttributes):
+% the pooled ktr80 ladder divided by its own mean over the segments.
+if isfield(fd,'ktr80') && numel(fd.ktr80) > 1
+    mk = mean(fd.ktr80, 'omitnan');
+    if isfinite(mk) && mk > 0; fd.ktr80_shape = fd.ktr80(:)' / mk; end
+end
+if isfield(fd,'ktrfit') && numel(fd.ktrfit) > 1
+    mk = mean(fd.ktrfit, 'omitnan');
+    if isfinite(mk) && mk > 0; fd.ktrfit_shape = fd.ktrfit(:)' / mk; end
+end
 end

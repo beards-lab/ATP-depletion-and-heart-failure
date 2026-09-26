@@ -124,6 +124,18 @@ if ~isfield(cfg, 'TIME_BUDGET_HRS') || isempty(cfg.TIME_BUDGET_HRS); cfg.TIME_BU
 if ~isfield(cfg, 'RESUME')          || isempty(cfg.RESUME);          cfg.RESUME = false; end
 if ~isfield(cfg, 'MaxRunTime')      || isempty(cfg.MaxRunTime);      cfg.MaxRunTime = 45; end
 if ~isfield(cfg, 'KICK_FRAC')       || isempty(cfg.KICK_FRAC);       cfg.KICK_FRAC = 0.1; end
+% NOISE-AWARE ACCEPTANCE (off by default). The objective is a rough function
+% of the parameters -- discrete strain-grid shifts and onset/window choices
+% make the model trace jump ~1 % under a 1e-6 parameter change
+% (memory: objective-noise-floor; Analyses/KtrSegmentSlope/RunNumericalNoise.m).
+% A simplex returns the LUCKIEST vertex it saw, so accepting on that one
+% evaluation banks noise: refit7's round 2 accepted 0.3355, which was the
+% minimum of nine 1e-6-perturbed evaluations spanning 0.3355-0.4160 and did
+% not survive its own snapshot. With CONFIRM_N > 0 a candidate is re-evaluated
+% at CONFIRM_N copies perturbed by CONFIRM_EPS, and the MEAN is what is
+% compared and stored -- for the incumbent too, from the baseline on.
+if ~isfield(cfg, 'CONFIRM_N')       || isempty(cfg.CONFIRM_N);       cfg.CONFIRM_N = 0; end
+if ~isfield(cfg, 'CONFIRM_EPS')     || isempty(cfg.CONFIRM_EPS);     cfg.CONFIRM_EPS = 1e-6; end
 
 DEBUG           = cfg.DEBUG;
 N_DRAW          = cfg.N_DRAW;
@@ -204,6 +216,18 @@ else
     figure;
     state.best_cost = evaluateBakersExp(ones(1,1), setMods(params0, {}), true, true);
     toc
+    state.best_raw  = state.best_cost;    % the unperturbed value (what a reload gives)
+    if cfg.CONFIRM_N > 0
+        fc = state.best_cost;
+        for q = 1:cfg.CONFIRM_N
+            fc(end+1) = evaluateBakersExp(ones(1,1), ...
+                setMods(perturbPool(params0, cfg.pool, cfg.CONFIRM_EPS), {}), true, false); %#ok<AGROW>
+        end
+        state.best_cost = mean(fc); state.best_sd = std(fc);
+        state.best_samples = fc;          % every evaluation of the incumbent, pooled
+        fprintf('[%s] Baseline confirmed over %d evaluations: %s -> mean %.4f (SD %.4f)\n', ...
+                cfg.tag, numel(fc), mat2str(round(fc,4)), state.best_cost, state.best_sd);
+    end
     state.round     = 0;
     state.stall     = 0;
     state.history   = [];
@@ -292,8 +316,37 @@ for r = state.round+1 : N_ROUNDS
         featCostR = []; featNamesR = {};
     end
 
+    % --- noise-aware confirmation (only for a candidate that looks better) ---
+    f_accept = f_round;
+    if cfg.CONFIRM_N > 0 && f_round < state.best_cost - IMPROVE_TOL
+        fc = f_round;
+        for q = 1:cfg.CONFIRM_N
+            gq = g_round .* (1 + cfg.CONFIRM_EPS * randn(size(g_round)));
+            fc(end+1) = safeCostClamp(gq, pr, glb, gub); %#ok<AGROW>
+        end
+        f_accept = mean(fc);
+        fprintf('[%s]   confirm %s -> mean %.4f (SD %.4f) vs incumbent %.4f\n', cfg.tag, ...
+                mat2str(round(fc,4)), f_accept, std(fc), state.best_cost);
+        % THE INCUMBENT ITSELF IS NOT A CANDIDATE. When the simplex finds no
+        % better vertex it hands back its starting point (g = 1), and a fresh
+        % 3-sample mean of the SAME point beats the stored one by luck about
+        % half the time. refit8 round 15 banked exactly that: raw 0.1375 again,
+        % "IMPROVED" 0.1532 -> 0.1409 with no parameter change. Fold those
+        % samples into the incumbent's pooled estimate instead.
+        if max(abs(g_round(:) - 1)) < 1e-12
+            if ~isfield(state,'best_samples') || isempty(state.best_samples)
+                state.best_samples = state.best_cost;
+            end
+            state.best_samples = [state.best_samples(:)', fc(2:end)];
+            state.best_cost = mean(state.best_samples);
+            fprintf('[%s]   (that was the incumbent itself -> pooled over %d evaluations: %.4f)\n', ...
+                    cfg.tag, numel(state.best_samples), state.best_cost);
+            f_accept = Inf;               % never "improves" on itself
+        end
+    end
+
     % --- accept / stall ---
-    if f_round < state.best_cost - IMPROVE_TOL
+    if f_accept < state.best_cost - IMPROVE_TOL
         % ACCEPT: this is the ONLY branch that may update the incumbent
         % (state.best_params / state.best_cost) and the ONLY branch that
         % writes SNAP_BEST to disk. Works identically whether the winning
@@ -304,7 +357,9 @@ for r = state.round+1 : N_ROUNDS
         baked.mods = {}; baked.g = [];
         state.params      = baked;          % running base tracks the incumbent
         state.best_params = baked;          % <-- persist the BEST (survives kicks)
-        state.best_cost   = f_round;
+        state.best_cost   = f_accept;       % the confirmed mean when CONFIRM_N > 0
+        state.best_raw    = f_round;        % the unperturbed value a reload reproduces
+        if cfg.CONFIRM_N > 0; state.best_samples = fc; end   % a new incumbent starts its own pool
         state.stall       = 0;
         state.pendingKick = [];             % a kick that paid off is consumed
         writeParamsToMFile(SNAP_BEST, state.best_params);
@@ -327,7 +382,7 @@ for r = state.round+1 : N_ROUNDS
         state = recordOptIter(state, getParams(pr, g_round, false, true), f_round, r, drawn, isKickRound, false, '', cfg.tag, featCostR, featNamesR);
         state.pendingKick = [];
         state.stall = state.stall + 1;
-        fprintf('[%s]   no improvement (%.4f >= %.4f), stall=%d\n', cfg.tag, f_round, state.best_cost, state.stall);
+        fprintf('[%s]   no improvement (%.4f >= %.4f), stall=%d\n', cfg.tag, f_accept, state.best_cost, state.stall);
         if state.stall >= STALL_LIMIT && KICK_FRAC > 0
             % ARM a kick: perturb a copy of the incumbent BEST on the SAME
             % draw and retry it next round. state.best_params is NOT touched;
@@ -378,15 +433,20 @@ try
 catch
     verifyCost = Inf;   % a throw here (3-state timeout) -> ~isfinite passes the assert
 end
-verifyTol  = max(1e-2, 0.02*abs(state.best_cost));
+% Compare like with like: with confirmation on, best_cost is a MEAN over
+% perturbed copies, while this re-evaluates the unperturbed point -- that is
+% best_raw, which it must reproduce.
+refCost = state.best_cost;
+if cfg.CONFIRM_N > 0 && isfield(state, 'best_raw'); refCost = state.best_raw; end
+verifyTol  = max(1e-2, 0.02*abs(refCost));
 % A huge re-eval (>=1e5) is a transient MaxRunTime/instability penalty (common
 % under CPU load), NOT a real divergence -- the incumbent was already validated
 % during its improving round. Skip the guard then; it still catches a genuine
 % divergence, which is O(10-100), not O(1e6).
-assert(abs(verifyCost - state.best_cost) < verifyTol || ~isfinite(verifyCost) || verifyCost >= 1e5, ...
+assert(abs(verifyCost - refCost) < verifyTol || ~isfinite(verifyCost) || verifyCost >= 1e5, ...
     'optimizeFeatures:incumbentMismatch', ...
-    '[%s] state.best_params re-evaluates to %.6f but state.best_cost=%.6f (tol %.4g) -- refusing to write a divergent snapshot.', ...
-    cfg.tag, verifyCost, state.best_cost, verifyTol);
+    '[%s] state.best_params re-evaluates to %.6f but the recorded value is %.6f (tol %.4g) -- refusing to write a divergent snapshot.', ...
+    cfg.tag, verifyCost, refCost, verifyTol);
 writeParamsToMFile(SNAP_BEST, state.best_params);
 save(STATE_FILE, 'state');
 nImpr = 0;
@@ -503,6 +563,25 @@ function [glb, gub] = gMultBox(name, pr, bounds)
         glb = 0.35; gub = 3;
     elseif strcmp(name, 'v_ref_reg')
         glb = 0.25; gub = 5;
+    elseif any(strcmp(name, {'sigma1','sigma_srd1'}))
+        % FORCE-SENSITIVITY SCALES THAT SIT UNDER A POSITIVE EXPONENT.
+        %   RSR2PT  = kmsr *exp(+F_SR/sigma1)    *P_SR
+        %   RSRD2PD = kmsrd*exp(+F_SR/sigma_srd1)*P_SRD
+        % F_SR is a force in kPa and reaches ~90 on the re-stretch peaks, so a
+        % small sigma makes these rates astronomically large and the ODE
+        % unintegrable -- "Leaking probs" and a 1e9 sentinel, which the search
+        % then has to waste whole rounds mapping. The generic DEF_LO = 0.4 box
+        % lets sigma1 (31.1) reach 12 and sigma_srd1 (22.8) reach 7, i.e.
+        % exp(90/7) = 3e5. Floor them instead at a value where the exponential
+        % stays comparable with the rest of the cycle (O(100-400 /s)).
+        % Note safeCostClamp admits g down to glb*0.8, so the floor is divided
+        % by 0.8 to make SIGMA_FLOOR_KPA the true limit.
+        SIGMA_FLOOR_KPA = 15;
+        glb = 0.5; gub = 3.0;
+        if isfinite(cur) && cur > 0
+            glb = max(glb, SIGMA_FLOOR_KPA / (cur * 0.8));
+        end
+        if gub <= glb; gub = glb * 2; end
     elseif strcmp(name, 'A0')
         % A0 is an availability floor and must stay < 1: cap its multiplier
         % so A0*gub <= 0.98.
@@ -540,4 +619,23 @@ function v = currentVal(name, pr)
         v = NaN;
     end
     if ~isscalar(v) || ~isnumeric(v); v = NaN; end
+end
+
+function p = perturbPool(p, pool, eps)
+    % Multiply every nonzero pool parameter by (1 + eps*randn) -- a copy of the
+    % point that differs only below any physical meaning, used to measure the
+    % objective's numerical scatter at that point (CONFIRM_N).
+    for i = 1:numel(pool)
+        nm = pool{i}; us = strfind(nm, '__');
+        if isempty(us)
+            if isfield(p, nm) && isscalar(p.(nm)) && isnumeric(p.(nm)) && p.(nm) ~= 0
+                p.(nm) = p.(nm) * (1 + eps*randn);
+            end
+        else
+            b = nm(1:us(1)-1); ix = str2double(nm(us(1)+2:end));
+            if isfield(p, b) && numel(p.(b)) >= ix && p.(b)(ix) ~= 0
+                v = p.(b); v(ix) = v(ix) * (1 + eps*randn); p.(b) = v;
+            end
+        end
+    end
 end

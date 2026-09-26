@@ -178,6 +178,20 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
             feats.ktr_rmse = NaN;
         end
 
+        % ── ktr80: the AUDITED hold-redevelopment rate ───────────────────
+        % `ktr` above is a free-amplitude fit on the part of the hold where
+        % force exceeds FORCE_THRESHOLD_KPA. That cut removes the smooth
+        % model's fast early foot but hardly any of the noisy data's, so it is
+        % biased 9-11 % on model traces against 1.6 % on data
+        % (Analyses/KtrProtocolVsSlackKtr), and the free amplitude trades off
+        % against k, so a tiny change in the trace moves k: refit6's best
+        % scored ktr_shape 0.0827 in the campaign and 0.0978 on re-evaluation.
+        % ktr80 is rsK80's construction applied to the hold: amplitude from
+        % the hold's own plateau (13 time constants in, measured outside the
+        % rise), rate from the 20-80 % band only, no threshold, no fit.
+        winH = data_t > velocity_segment(2) & data_t < velocity_segment(3);
+        [feats.ktr80, feats.ktrfit] = holdRate80(data_t(winH), data_y(winH));
+
         % ── Fit 2: additive underdamped sinusoid ─────────────────────────
         % F(τ) = F0 + A·(1−exp(−k·τ)) + B·exp(−gam·τ)·sin(ω·τ)
         %   τ = max(t−t0, 0);  F(0)=F0, F(∞)=F0+A ✓
@@ -465,7 +479,7 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         % discriminability z 3.2 -> 6.8, and the value is invariant to the
         % crossing smoother (47.7/47.5/47.5 at 2/5/10 ms).
         [feats.rsK, feats.rsA, feats.rsT0, feats.rsR2, feats.rsK63, ...
-         feats.rsK80, feats.rsT20] = ...
+         feats.rsK80, feats.rsT20, feats.rsKfit, feats.rsTfit] = ...
             fitRestretchRecovery(t, y, y_light, feats.steady, RESTRETCH_VALL_WIN_S);
 
         % Guardrail: least-squares error of cool-down window vs data
@@ -652,11 +666,34 @@ RESTRETCH_VALL_WIN_S  = 0.080;  % search span for the post-restretch minimum (va
         features.ktr_shape = nan(1, numel(features.ktr));
     end
 
+    % ktr80_shape -- the ladder from the robust rate, divided by its MEAN over
+    % the segments rather than by segment 1. Dividing by one segment puts that
+    % segment's noise into every element at full weight (all four ktr_shape
+    % elements moved together when ktr(1) moved); the mean spreads it at 1/n.
+    % No element is identically 1, so all of them are scored.
+    if isfield(features,'ktr80') && numel(features.ktr80) > 1
+        mk = mean(features.ktr80, 'omitnan');
+        if isfinite(mk) && mk > 0
+            features.ktr80_shape = features.ktr80(:)' / mk;
+        else
+            features.ktr80_shape = nan(1, numel(features.ktr80));
+        end
+    end
+    % the same ladder from the band-regression rate (bandRateFit)
+    if isfield(features,'ktrfit') && numel(features.ktrfit) > 1
+        mk = mean(features.ktrfit, 'omitnan');
+        if isfinite(mk) && mk > 0
+            features.ktrfit_shape = features.ktrfit(:)' / mk;
+        else
+            features.ktrfit_shape = nan(1, numel(features.ktrfit));
+        end
+    end
+
 end
 
 
 % =========================================================================
-function [k, A, t0, r2, k63, k80, t20] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin)
+function [k, A, t0, r2, k63, k80, t20, kfit, tfit] = fitRestretchRecovery(t, y, y_anchor, steady, vallWin)
 %FITRESTRETCHRECOVERY First-order fit of the force rise after a re-stretch.
 %
 %   [K, A, T0, R2, K63, K80, T20] = fitRestretchRecovery(T, Y, Y_ANCHOR, STEADY, VALLWIN)
@@ -701,6 +738,7 @@ function [k, A, t0, r2, k63, k80, t20] = fitRestretchRecovery(t, y, y_anchor, st
 %   SD 17.2 % -> 6.1 %, 2 mM/8 mM discriminability z 3.2 -> 6.8.
 
     k = NaN; A = NaN; t0 = NaN; r2 = NaN; k63 = NaN; k80 = NaN; t20 = NaN;
+    kfit = NaN; tfit = NaN;
 
     t = t(:); y = y(:); y_anchor = y_anchor(:);
     if numel(y_anchor) ~= numel(y); y_anchor = y; end
@@ -761,10 +799,95 @@ function [k, A, t0, r2, k63, k80, t20] = fitRestretchRecovery(t, y, y_anchor, st
         if isfinite(t20) && isfinite(t80) && t80 > t20
             k80 = log(4) / (t80 - t20);
         end
+        % The same rate and delay from EVERY sample in the 20-80 % band, not
+        % two crossings: see bandRateFit. Same amplitude, same anchor.
+        [kfit, tfit] = bandRateFit(tt, zx, 0.20, 0.80);
+        % diagnostics only: inert unless a caller sets the global to a struct
+        global RSK80_DIAG %#ok<GVMIS,TLEV>
+        if isstruct(RSK80_DIAG)
+            RSK80_DIAG(end+1).tB = t(iB); %#ok<NASGU>
+            RSK80_DIAG(end).B = B; RSK80_DIAG(end).Aext = Aext;
+            RSK80_DIAG(end).t20 = t20; RSK80_DIAG(end).t80 = t80; RSK80_DIAG(end).k80 = k80;
+            RSK80_DIAG(end).tt = tt; RSK80_DIAG(end).zx = zx;
+        end
     end
 end
 
 % =========================================================================
+function [k80, kfit] = holdRate80(t, y)
+%HOLDRATE80 Force-redevelopment rate over an isometric hold, 20-80 % band.
+%
+%   K80 = HOLDRATE80(T, Y) for the hold that follows a slack release:
+%       B   = minimum of the smoothed trace in the first half of the hold
+%       P   = median of the smoothed trace over its last HOLD_TAIL_S
+%       z   = (y - B) / (P - B)
+%       K80 = ln(4) / (t80 - t20),   t_x = first upward crossing of z = x
+%             after the minimum
+%   Same estimator for model and data. A 5 ms moving MEDIAN is used for the
+%   crossings: on a monotone rise a median returns the centre sample, so it
+%   removes noise without shifting the crossing times.
+    HOLD_TAIL_S = 0.040;
+    SMOOTH_S    = 0.005;
+    k80 = NaN; kfit = NaN;
+    t = t(:); y = y(:);
+    ok = isfinite(t) & isfinite(y); t = t(ok); y = y(ok);
+    if numel(t) < 40 || ~(t(end) > t(1)); return; end
+    [t, iu] = unique(t); y = y(iu);                 % model output repeats stamps
+    nx = max(3, round(SMOOTH_S / median(diff(t))));
+    ys = movmedian(y, nx);
+    half = find(t <= t(1) + 0.5*(t(end) - t(1)));
+    [B, iB] = min(ys(half));
+    P = median(ys(t >= t(end) - HOLD_TAIL_S));
+    if ~isfinite(B) || ~isfinite(P) || P - B <= 0; return; end
+    z = (ys(iB:end) - B) / (P - B);
+    tt = t(iB:end);
+    t20 = firstCrossing(tt, z, 0.20);
+    t80 = firstCrossing(tt, z, 0.80);
+    if isfinite(t20) && isfinite(t80) && t80 > t20
+        k80 = log(4) / (t80 - t20);
+    end
+    kfit = bandRateFit(tt, z, 0.20, 0.80);
+end
+
+function [k, tlo] = bandRateFit(tt, z, lo, hi)
+%BANDRATEFIT First-order rate (and delay) from every sample in a z-band.
+%
+%   For z = 1 - exp(-k (t - t0)),  ln(1 - z) = k*t0 - k*t  is EXACTLY linear
+%   in t, so a regression of ln(1-z) on t over the band returns the same k as
+%   ln((1-lo)/(1-hi)) / (t_hi - t_lo) on a clean exponential -- but it uses
+%   every sample in the band instead of two crossing times.
+%
+%   Why that matters (Analyses/KtrSegmentSlope/RunNumericalNoise.m): the
+%   model's recovery traces jitter ~1 % under a 1e-6 parameter change, and a
+%   two-point rate inherits the jitter of both points in full. With the model
+%   still 5-10 % from the data the cost noise is ~2*residual*jitter, which came
+%   to 19-27 % of the rsK80 / rsT20 / ktr80_shape terms -- enough for the
+%   search to bank a lucky evaluation (refit7 round 2: 0.3355 in memory,
+%   0.3707 on reload). A regression averages the jitter away.
+%
+%   The band is the FIRST PASSAGE: from the first sample at z >= lo to the
+%   first at z >= hi, so a later oscillation cannot re-enter the fit.
+%   Weights (1-z)^2 undo the 1/(1-z) noise amplification of the log, i.e. the
+%   fit is close to least squares in z itself.
+%   TLO is the time the fitted curve crosses LO -- the delay, likewise from
+%   the whole band.
+    k = NaN; tlo = NaN;
+    i1 = find(z >= lo, 1);
+    i2 = find(z >= hi, 1);
+    if isempty(i1) || isempty(i2) || i2 - i1 < 3; return; end
+    idx = i1:i2;
+    zz = min(z(idx), 1 - 1e-6);
+    x = tt(idx); y = log(1 - zz); w = (1 - zz).^2;
+    W = sum(w); xm = sum(w.*x)/W; ym = sum(w.*y)/W;
+    sxx = sum(w.*(x - xm).^2);
+    if ~(sxx > 0); return; end
+    slope = sum(w.*(x - xm).*(y - ym)) / sxx;
+    if ~(slope < 0); return; end
+    k = -slope;
+    a = ym - slope*xm;                            % y = a + slope*t
+    tlo = (log(1 - lo) - a) / slope;
+end
+
 function tx = firstCrossing(tt, z, lev)
 %FIRSTCROSSING first upward crossing of LEV, linearly interpolated. NaN if none.
     tx = NaN;

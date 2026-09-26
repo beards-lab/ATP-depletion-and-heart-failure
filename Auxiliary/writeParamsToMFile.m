@@ -28,9 +28,14 @@ function writeParamsToMFile(filename, params, modNames, comment)
         if isa(par, 'function_handle') || isa(par, 'struct')
             fprintf("Skipping %s\r\n", nam);
             continue;     
-        elseif length(par) == 1        
-            % fprintf("Writing %s\n", nam);
-            fprintf(fid, 'params0.%s = %g;\r\n', nam, par);            
+        elseif length(par) == 1
+            % %.17g, not %g. %g keeps 6 significant digits, and on 2026-09-23
+            % that alone moved refit7's accepted best from 0.3355 to 0.3707
+            % (+10 %) on reload -- the parameters differed by 1.1e-6, but the
+            % model's re-stretch recovery is numerically rough at that level
+            % (Analyses/KtrSegmentSlope/RunNumericalNoise.m). A snapshot must
+            % reproduce the point the optimiser accepted, bit for bit.
+            fprintf(fid, 'params0.%s = %.17g;\r\n', nam, par);
         elseif ischar(par) && ~isempty(par)
              % fprintf("Writing %s\n", nam);            
              fprintf(fid, "params0.%s = '%s';\r\n", nam, par);

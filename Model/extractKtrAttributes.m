@@ -27,7 +27,7 @@ function feats = extractKtrAttributes(t, F_norm, velocitytable)
 %   F_NORM must already be normalised by the pre-shortening isometric force.
 
     SMOOTH = 0.002;                          % median span for the crossing (s)
-    feats = struct('ktrP_k63', NaN, 'ktrP_F20', NaN);
+    feats = struct('ktrP_k63', NaN, 'ktrP_F20', NaN, 'ktrP_k80', NaN);
 
     t = t(:); F_norm = F_norm(:);
     keep = [true; diff(t) > 0];              % model output can repeat timestamps
@@ -51,4 +51,31 @@ function feats = extractKtrAttributes(t, F_norm, velocitytable)
     if tw(end) >= 0.020
         feats.ktrP_F20 = interp1(tw, yw, 0.020, 'linear');
     end
+
+    % ktrP_k80 -- the SCORED rate. k63 measures from an onset (the last
+    % sample below 0.05), and the onset of a noisy trace near zero is exactly
+    % where a crossing is least well defined; it also carries the dead time.
+    % ln(4)/(t80 - t20) needs no onset at all -- for P(1-exp(-k(t-t0))) the
+    % t0 cancels -- and reads only the band where the rise is steepest. P is
+    % still pinned at F_iso = 1 (the window is truncated; never float it).
+    % 5 ms moving median: on a monotone rise it returns the centre sample,
+    % so it removes noise without shifting either crossing.
+    nx = max(3, round(0.005 / median(diff(tw))));
+    zx = movmedian(yw, nx);
+    i0 = find(zx < 0.05, 1, 'last'); if isempty(i0); i0 = 1; end
+    t20 = crossUp(tw(i0:end), zx(i0:end), 0.20);
+    t80 = crossUp(tw(i0:end), zx(i0:end), 0.80);
+    if isfinite(t20) && isfinite(t80) && t80 > t20
+        feats.ktrP_k80 = log(4) / (t80 - t20);
+    end
+end
+
+function tx = crossUp(tt, z, lev)
+% first upward crossing of LEV, linearly interpolated; NaN if none
+    tx = NaN;
+    i = find(z >= lev, 1);
+    if isempty(i); return; end
+    if i == 1; tx = tt(1); return; end
+    z1 = z(i-1); z2 = z(i);
+    if z2 == z1; tx = tt(i); else; tx = tt(i-1) + (lev - z1)/(z2 - z1)*(tt(i) - tt(i-1)); end
 end

@@ -65,7 +65,16 @@ FEAT = { 'A','F'; 'Am','F'; 'peak1_y','F'; 'vall_y','F'; 'peak2','F'
          'steady','F'; 'vall2_dy','F'; 'rsA','F'; 'restretchSlopeStart','F'
          'ktr','0'; 'rsK','0'; 'rsT0','0'; 'rsR2','0'; 't0','0'
          'peak1_t','0'; 'vall_t','0'; 'vall2_t','0'; 'peak1_dSL','0'
-         'rsK80','0'; 'rsT20','0' };
+         'rsK80','0'; 'rsT20','0'; 'ktr80','0'
+         'rsKfit','0'; 'rsTfit','0'; 'ktrfit','0' };
+% *fit = the same rates and delay from a weighted log-linear regression over
+% the whole 20-80 % band instead of two crossings (Analyses/KtrSegmentSlope,
+% bandRateFit): on the model's numerically rough traces a two-point rate
+% inherits both points' jitter.
+% ktr80 is the audited HOLD-redevelopment rate (Analyses/KtrSegmentSlope):
+% rsK80's construction on the slack hold -- plateau amplitude, 20-80 % band,
+% no force threshold. It replaces the free-amplitude `ktr`, whose threshold
+% cut biased it 9-11 % on model traces and 1.6 % on data.
 % rsK80 / rsT20 are the audited re-stretch rate and delay
 % (Analyses/RestretchMetricAudit): the amplitude comes from `steady` instead of
 % from the tail of the fit window, and the rate is read off the 20-80 % band of

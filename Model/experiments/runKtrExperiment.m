@@ -88,8 +88,14 @@ function [E_ktr, out_ktr, features_model, features_data] = runKtrExperiment(para
             % leaves this protocol alone. Measured by
             % Analyses/RefitStrategy/PlanRefit2.m from the three curated files:
             %   03/27 49.4 | 04/03 42.1 | 04/10 38.1  -> mean 43.19, rel SD 0.132
+            % Now computed from the three curated files by pooledKtrTarget, so
+            % every ktr-protocol feature (k63, the scored k80, F20) is pooled the
+            % same way and cannot go stale after a re-curation.
             if isfield(params, 'UsePooledTarget') && ~isequal(params.UsePooledTarget, false)
-                features_data.ktrP_k63 = 43.19;
+                PK = pooledKtrTarget();
+                for jk = 1:numel(PK.name)
+                    features_data.(PK.name{jk}) = PK.val(jk);
+                end
             end
         end
 
