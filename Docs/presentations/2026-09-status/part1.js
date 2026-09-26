@@ -104,7 +104,7 @@ function addSlides(pres, S) {
     S.image(s, img, { x: M + 0.6, y: TOP, w: W - 2 * M - 1.2, h: 3.55 }, pngSize(img));
     s.addText("Slack–restretch ladder, prep 03/27 (EMC poster). Grey: 2 mM, black: 8 mM data; red/blue lines: the poster-era model fit (not the current one).",
       { x: M, y: 4.72, w: W - 2 * M, h: 0.3, fontFace: F, fontSize: 11, italic: true, color: C.mute, align: "center", margin: 0 });
-    S.card(s, { x: M, y: 5.08, w: 6.05, h: 1.85 }, "RV trabeculae (Baker lab): protocols", [
+    S.card(s, { x: M, y: 5.08, w: 6.05, h: 1.85 }, "Mouse RV trabeculae (Baker lab): protocols", [
       "5× slack–restretch ladder (release to ML 1.02 → 0.94, restretch at 3–7 ML/s)",
       "ktr (Brenner) protocol; passive stretches",
       "FV: borrowed Baker 2022 curve at 8 mM; in-prep FV2 ramps (2 preps)",
@@ -114,7 +114,7 @@ function addSlides(pres, S) {
       "Fref = 69.35 kPa (CV 15.5 %); weights w = 1/s² from between-prep spread",
     ], { fontSize: 14, bar: C.maize });
     S.footer(s, "Sources: Analyses/DataPooling/results/pooled_target_report.txt; Docs/experiments/pooled-metrics-2026-09.md; poster image: Docs/presentations/2026-EMC.pptx");
-    s.addNotes("SPECIES FLAG: the EMC poster says mouse RV trabeculae, the abstract Key Points say rat. I have deliberately not stated a species here; Tony, please confirm. " +
+    s.addNotes("Species: mouse right-ventricular trabeculae (confirmed; the abstract's 'rat' was an error). " +
       "n = 3 preparations (an earlier deck said 4; one prep was dropped). " +
       "Normalisation: each prep is divided by its own 8 mM pre-slack isometric force Fss22, one divisor per prep shared by both ATP runs, so the 2/8 ratio stays a measurement. " +
       "Rundown correction explains about half of the between-prep force variance (anchor CV 22 % -> 15.5 %). " +
@@ -160,7 +160,7 @@ function addSlides(pres, S) {
     S.bullets(s, [
       { text: "Steady force ×1.33 (rundown-corrected ×1.36; pooled ×1.32 ± 8.6 %, n = 3)", bold: false },
       { text: "rsK80 ×0.38: the most ATP-discriminating feature (z = 3.6)", bold: true },
-      "Slack ktr ×0.53 (ktr80 ×0.57) vs ktr protocol ×0.74; slack ktr is compliance-contaminated",
+      "Headline kinetics: slack ktr ×0.53 (pooled, 3 preps; ktrfit ×0.57). The ktr protocol gives ×0.74 (reviewer point: compliance)",
       "With the protocol ktr, force × ktr ≈ 0.97: roughly constant turnover",
       "Timing: t0 ×1.42, rsT20 ×1.72",
       { text: "Supersedes earlier ×1.18–1.23 / “~20 kPa” (uncorrected)", color: C.bad },

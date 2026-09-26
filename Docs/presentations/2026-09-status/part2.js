@@ -66,7 +66,7 @@ function addSlides(pres, S) {
       "(3) the objective was noisy at the ~20 % level (see slide 14), so small cost differences at the time meant little; " +
       "(4) the poster said 'reproduces all key features' - that overstated it. The post-restretch 80 ms window (rsK) and the held-out staircase were not fit; " +
       "the poster's own captions say rsK and ktr drops at 2 mM are under-reproduced. " +
-      "Also note: the poster says 'mouse'; the abstract key points say 'rat' - needs resolving before anything else goes out.");
+      "Species: mouse (the abstract's 'rat' was an error).");
   }
 
   // ---------------------------------------------------------------- 11. what changed

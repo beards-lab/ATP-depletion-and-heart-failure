@@ -27,7 +27,7 @@ function feats = extractKtrAttributes(t, F_norm, velocitytable)
 %   F_NORM must already be normalised by the pre-shortening isometric force.
 
     SMOOTH = 0.002;                          % median span for the crossing (s)
-    feats = struct('ktrP_k63', NaN, 'ktrP_F20', NaN, 'ktrP_k80', NaN);
+    feats = struct('ktrP_k63', NaN, 'ktrP_F20', NaN, 'ktrP_k80', NaN, 'ktrP_k80_extrap', 0);
 
     t = t(:); F_norm = F_norm(:);
     keep = [true; diff(t) > 0];              % model output can repeat timestamps
@@ -67,7 +67,34 @@ function feats = extractKtrAttributes(t, F_norm, velocitytable)
     t80 = crossUp(tw(i0:end), zx(i0:end), 0.80);
     if isfinite(t20) && isfinite(t80) && t80 > t20
         feats.ktrP_k80 = log(4) / (t80 - t20);
+    elseif isfinite(t20)
+        % EXTRAPOLATION. The hold is ~58 ms; a slow redevelopment (low ATP,
+        % slowed detachment) never reaches 0.80 inside it and k80 was NaN. Fit
+        % A*(1-exp(-k*(t-t0))) to the rise from the 20 % crossing on and read
+        % t20/t80 off the fitted curve. Only reached when the crossing is
+        % missing, so every trace that had a k80 keeps it bit-for-bit.
+        % A floats (bounded 0.8..1.2): on a truncated span that biases k low
+        % (~86 %, see header) -- flagged by ktrP_k80_extrap = 1.
+        feats.ktrP_k80 = iExtrapK80(tw(i0:end), zx(i0:end), t20);
+        feats.ktrP_k80_extrap = 1;
     end
+end
+
+function k80 = iExtrapK80(tt, z, t20)
+% A*(1-exp(-k*(t-t0))) fitted from the 20 % crossing on; k80 from the fitted
+% curve's own 20 % and 80 % crossings. NaN if the fit cannot reach 0.80.
+    k80 = NaN;
+    w = tt >= t20;
+    if nnz(w) < 10; return; end
+    tf = tt(w); zf = z(w);
+    sse = @(q) sum((zf - q(1)*(1 - exp(-q(2)*(tf - q(3))))).^2) ...
+             + 1e3*(max(0, 0.8 - q(1)) + max(0, q(1) - 1.2) + max(0, -q(2)));
+    kg = -log(max(1e-3, 1 - zf(end))) / max(tf(end) - tf(1), 1e-3);   % crude start
+    q  = fminsearch(sse, [1, max(kg, 5), tf(1) - 0.2/max(kg, 5)], ...
+                    optimset('Display', 'off', 'MaxFunEvals', 4000, 'MaxIter', 4000));
+    A = q(1); k = q(2);
+    if A <= 0.8 || k <= 0; return; end
+    k80 = k * log(4) / log((A - 0.2) / (A - 0.8));   % = ln4/(t80-t20) of the fit
 end
 
 function tx = crossUp(tt, z, lev)

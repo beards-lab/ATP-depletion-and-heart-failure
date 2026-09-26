@@ -236,7 +236,7 @@ params0.OptimizeOn = 'Feats';
 params0.PieceWiseStrainDepR21X_logOffset = 1.11572;
 params0.PieceWiseStrainDepR1DX_logOffset = 1.04618;
 params0.PieceWiseStrainDep2X_logOffset = 0.997989;
-params0.PieceWiseStrainDepX_logOffset = 1.00551;
+params0.PieceWiseStrainDepX_logOffset = 1;
 % Reset the modifiers, as they are already applied
 params0.mods = {};
 params0.g = [];

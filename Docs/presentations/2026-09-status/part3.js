@@ -153,7 +153,7 @@ function addSlides(pres, S) {
       "A forward-limb partner to decouple F0 and ktr",
       "ADP/Pi gates once Pi enters the RHS (Pi does nothing in dPUdT_CombinedTransitions today)",
       "Strain-dependent ATP binding site; SRX gates revisited on pooled data",
-      "ktr probe: slack ktr (×0.53) vs ktr protocol (×0.74), reviewer point",
+      "ktr probe: slack ktr (×0.53) is the headline; reconcile with the protocol (×0.74)",
       "Joint 8 + 2 mM fit",
     ], { fontSize: 14, bar: C.maize });
     S.footer(s, "Sources: ATP-wt-lowatp/Analyses/AtpEffectHypotheses/conclusions.md; floored-campaign: Docs/experiments/status-2026-09-16.md §6, §9; project plan (levers list). Most levers tested on earlier cores.");

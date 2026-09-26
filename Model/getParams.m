@@ -531,8 +531,11 @@ end
     pwsdX = params.PieceWiseStrainDepX;
     pwsdP = params.PieceWiseStrainDepParams;
 
-    % params.PieceWiseStrainDepFun = @(x)pchip(pwsdX, pwsdP, x);   
-    params.PieceWiseStrainDep = pchip(pwsdX, pwsdP);
+    % params.PieceWiseStrainDepFun = @(x)pchip(pwsdX, pwsdP, x);
+    % R12 knots shift by log(offset)/10 like R2/R1D/R21. Until 2026-09-26 this
+    % offset was declared but never applied (every snapshot's value was inert);
+    % all snapshots were reset to 1 when it was wired in, so no fit moved.
+    params.PieceWiseStrainDep = pchip(pwsdX + log(params.PieceWiseStrainDepX_logOffset)/10, pwsdP);
 
     % R2: own piecewise if provided, otherwise fall back to PieceWiseStrainDep shape
     if isfield(params, 'PieceWiseStrainDep2X') && isfield(params, 'PieceWiseStrainDep2Params') ...
