@@ -128,6 +128,12 @@ function addSlides(pres, S) {
       "Bottom right: the 2 mM slack and FV2 traces at the best g against the pooled 2 mM data.");
   }
 
+  // full-slide best fit, set A (part4.js)
+  require("./part4").addBestFit(pres, S, "k2only");
+
+  // steady force with its spread (part4.js)
+  require("./part4").addSteady(pres, S);
+
   // ------------------------------------------------------------------ 16
   {
     const s = pres.addSlide();
@@ -161,6 +167,9 @@ function addSlides(pres, S) {
       "SRX and mechanical gates either did nothing or bent compliance. Pi goes the wrong way on force. The 15-config test shows a conflict: whatever fixes the 8 mM rsK level makes the ATP ratio worse. " +
       "Caveat: most of these ran on earlier cores. Right: what is still untested. The top item needs the re-stretch defect fixed first. The ktr-probe choice matters because the slack ktr is compliance-contaminated.");
   }
+
+  // second-lever sensitivity + hydrolysis check (part4.js) right after the levers slide
+  require("./part4").addSlides(pres, S);
 
   // ------------------------------------------------------------------ 17
   {

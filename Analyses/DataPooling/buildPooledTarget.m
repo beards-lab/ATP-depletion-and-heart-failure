@@ -242,6 +242,7 @@ T.scale = struct('anchor',opts.anchor, 'perPrep',ancC(:,1)', 'raw',anc(:,1)', ..
                  'mean',mean(ancC(:,1)), 'cv',std(ancC(:,1))/mean(ancC(:,1)), ...
                  'cvRaw',std(anc(:,1))/mean(anc(:,1)), 'lift',lift, 'days',{days});
 T.opts = opts; T.nP = nP;
+T.Y = Y;   % per-prep normalised values (prep x cond x feature x segment), for plotting
 
 %% ---- report ------------------------------------------------------------
 if nargout == 0 || true
