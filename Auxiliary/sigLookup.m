@@ -11,13 +11,22 @@ function y = sigLookup(sig, t)
 %     y   — smoothed signal values (N×1)
 %     m   — Catmull-Rom slopes (N×1), units/s
 %
-%   Uses cubic Hermite basis with Catmull-Rom slopes for C1 continuity.
+%     hermite — optional logical. true: cubic Hermite with Catmull-Rom slopes
+%               (C1). Absent/false: NEAREST SAMPLE (the passive-force driveSig
+%               path since a811fc0; it enters the force balance only).
+%
+%   A signal that drives a stiff kinetic state (the Ca input of
+%   calciumActivation) must use hermite = true: nearest-sample makes it a
+%   staircase whose every step is a derivative jump ode15s has to resolve.
 %   Uniform grid means index k = floor((t-t0)*Fs)+1 — no binary search.
-k   = max(1, min(sig.N - 1, 1 + round((t - sig.t0) * sig.Fs)));
-y = sig.y(k);
-return;
+if ~isfield(sig, 'hermite') || ~sig.hermite
+    k = max(1, min(sig.N - 1, 1 + round((t - sig.t0) * sig.Fs)));
+    y = sig.y(k);
+    return;
+end
 
 
+    t   = min(max(t, sig.t0), sig.t0 + (sig.N - 1)/sig.Fs);   % clamp (no cubic extrapolation)
     k   = max(1, min(sig.N - 1, 1 + floor((t - sig.t0) * sig.Fs)));
     tau = (t - (sig.t0 + (k-1)/sig.Fs)) * sig.Fs;   % in [0, 1)
 

@@ -6,7 +6,8 @@ function [f, outputs, rates] = dPUdT_CombinedTransitions(t,PU,params)
 %   parameters PARAMS. Intended for use with ode15s via evaluateModel.
 %
 %   State vector layout:
-%     PU = [p1(1..ss), p2(1..ss), [p3(1..ss),] P_SR, NP, SL, LSE, PD, [P_SRD,] [x_dash]]
+%     PU = [p1(1..ss), p2(1..ss), [p3(1..ss),] P_SR, NP, SL, LSE, PD, [P_SRD,] [x_dash],
+%           [A_reg], [D0], [A_def], [Ca-activation states at params.ca.idx]]
 %     where ss = params.ss is the number of strain bins.
 %     p1, p2, [p3] — strain-discretized cross-bridge state probability distributions
 %     P_SR          — super-relaxed (SRX) fraction
@@ -62,7 +63,8 @@ end
 
 P_SR = max(0, PU(Ns*ss+1));  % always read; transitions gated separately below
 
-% if ~params.UseCa
+% NP slot is inert (always 0). Ca activation is the separate tail block
+% params.ca.idx, handled by calciumActivation.m (see the ka_eff gates below).
     NP = 0;
 
 % if ~params.UseSLInput
@@ -222,6 +224,7 @@ end
 PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD + D0)); % unattached permissive fraction - (D0 is 0 unless UseD0State)
     
 
+N_ov_geom = N_overlap;                % geometric overlap, read by CaModel 'myosim'
 if params.UseOverlapFactor
     N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
 end    
@@ -388,6 +391,14 @@ end
 % stripped under load are unavailable until re-equilibration. A_def = 0 when off.
 if params.UseLoadRealign
     ka_eff = ka_eff * (1 - A_def);
+end
+% Ca-activation layer (calciumActivation.m): thin-filament availability of sites
+% for attachment. CaModel = 'none' (ca.model 0) is saturating Ca: no call, no
+% state, byte-identical to the calibrated model.
+caOn = isfield(params, 'ca') && params.ca.model > 0;
+if caOn
+    [eff_Ca, dCa, diag_Ca] = calciumActivation(t, PU(params.ca.idx), p1_0 + p2_0 + p3_0, params, N_ov_geom);
+    ka_eff = ka_eff * eff_Ca(1);
 end
 RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
 
@@ -916,7 +927,7 @@ if any(J1y > 0)
     end
 end
 
-% if ~params.UseCa
+% NP slot is inert; Ca-activation derivatives are appended at the tail.
     dNP = 0;
 
 if params.UseA2Popping
@@ -1017,6 +1028,13 @@ if params.UseLoadRealign
     dA_def = params.k_cr * loss * g_load - A_def/params.tau_cr;
     if A_def >= params.Adef_max; dA_def = min(0, dA_def); end   % hold the ceiling
     f = [f; dA_def];
+end
+
+% Ca-activation states, appended LAST (params.ca.idx); diagnostics [Ca, gate]
+% appended to the END of outputs so indices 1..14 are untouched.
+if caOn
+    f = [f; dCa];
+    outputs = [outputs, diag_Ca];
 end
 
 % RdetSRX appended LAST so existing rates(1..16) indices are untouched.

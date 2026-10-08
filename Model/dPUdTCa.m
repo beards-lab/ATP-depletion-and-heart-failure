@@ -18,7 +18,7 @@ p1 = PU(1:ss);
 p2 = PU(ss+1:2*ss);
 p3 = PU(2*ss +1:3*ss);
 U_NR = PU(3*ss+1);
-if params.UseCa
+if isfield(params, 'UseCa') && params.UseCa   % legacy NP branch; getParams retires UseCa
     NP = PU(3*ss + 2);
 else
     NP = 0;
@@ -319,7 +319,7 @@ catch e
     disp('vole')
 end
 
-if params.UseCa
+if isfield(params, 'UseCa') && params.UseCa   % legacy NP branch; getParams retires UseCa
     Jon  = params.k_on*Ca_i*NP*(1 + params.K_coop*(1 - NP));
     Joff = params.k_off*(Pu/N_overlap)*(1 + params.K_coop*NP);
     dNP = - Jon + Joff; % dN_LV / dt 

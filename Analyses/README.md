@@ -193,3 +193,5 @@ per-run *force scale*.
 **Methodology that's settled.** PassiveForceID justifies direct subtraction of the high-Ca
 passive trace to recover the cross-bridge-only force — treat this as the standard passive
 correction in downstream fits.
+
+- `HumanTwitch/` — human iPSC-EHT twitch with a fixed literature Ca transient: humanizing-trajectory fits (0.77 %) vs free fits (0.30 %); see `HumanTwitch/conclusions.md`.

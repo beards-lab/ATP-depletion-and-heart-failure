@@ -188,6 +188,11 @@ i_tf0 = 0;
 % which causes ode15s to use a deficient Jacobian → thousands of tiny timesteps.
 % Left as a no-op until a representative non-zero state is available for pattern computation.
 
+% Ca-activation beat knots (onsets + within-beat kinks of the transient/clamp
+% pulse) become extra segment boundaries, each inheriting its segment's
+% velocity, so ode15s is restarted at every input discontinuity.
+[T, params.Velocity] = mergeCaKnots(T, params);
+
 % vs for VelocitySegment
 for vs = 1:length(T) - 1
     ts = T(vs);
@@ -590,6 +595,14 @@ end
             out.f_lattice(i) = outputs(13);
             out.f_saturation(i) = outputs(14);
         end
+        if isfield(params, 'ca') && params.ca.model > 0
+            nBase = 12 + 2*(Ns == 3);        % Ca diagnostics are appended last
+            out.Ca(i)     = outputs(nBase + 1);
+            out.CaGate(i) = outputs(nBase + 2);
+            if params.ca.nStates > 0
+                out.CaState(i, :) = PU(j, params.ca.idx);
+            end
+        end
         
         
 
@@ -616,4 +629,40 @@ end
 %             out.ps0_t(i) = max([[p1(1), p2(1), p3(1)], p1(end), p2(end), p3(end)]);
 %         end
     end
+end
+
+function [T, V] = mergeCaKnots(T, params)
+% Insert the Ca-activation beat knots (params.ca.beatKnots after every beat
+% onset CaFirstBeat + k*CaPeriod) strictly inside (T(1), T(end)) as extra
+% segment boundaries. Each new segment keeps the velocity of the original
+% segment it lies in. No-op unless a Ca model with a timed input is active.
+V = params.Velocity;
+if ~isfield(params, 'ca') || isempty(params.ca.beatKnots) || numel(T) < 2
+    return;
+end
+ca = params.ca;
+kFirst = max(0, floor((T(1) - ca.t1)/ca.T));
+kLast  = floor((T(end) - ca.t1)/ca.T);
+if kLast < kFirst
+    return;
+end
+kn = ca.t1 + (kFirst:kLast)'*ca.T + ca.beatKnots(:)';
+kn = kn(:)';
+kn = kn(kn > T(1) & kn < T(end));
+tol = 1e-12*max(1, abs(T(end)));
+kn = kn(min(abs(kn - T(:)), [], 1) > tol);
+if isempty(kn)
+    return;
+end
+Tn  = sort([T(:)', kn]);
+seg = zeros(1, numel(Tn) - 1);
+for i = 1:numel(seg)
+    seg(i) = min(numel(T) - 1, find(T <= Tn(i), 1, 'last'));
+end
+if isscalar(V)
+    V = V*ones(1, numel(seg));
+else
+    V = V(seg);
+end
+T = Tn;
 end

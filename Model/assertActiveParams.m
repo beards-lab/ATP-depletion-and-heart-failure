@@ -144,10 +144,18 @@ if isfield(params0, 'UseLatticeSpacing') && params0.UseLatticeSpacing
 end
 
 % =========================================================
-% CALCIUM / TROPONIN KINETICS  (UseCa)
+% CALCIUM / THIN-FILAMENT ACTIVATION  (CaModel; 'none' = saturating, no params)
 % =========================================================
-if isfield(params0, 'UseCa') && params0.UseCa
-    active = [active, {'K_coop', 'k_on', 'k_off'}];
+if isfield(params0, 'CaModel') && ~strcmp(params0.CaModel, 'none')
+    active = [active, {'CaPeriod', 'CaFirstBeat'}];
+    if strcmp(params0.CaModel, 'clamp')
+        active = [active, {'CaClampDuration'}];
+    elseif any(strcmp(params0.CaModel, {'twoState', 'myosim'}))
+        active = [active, {'tf_K_coop', 'tf_k_on', 'tf_k_off'}];
+        if isfield(params0, 'CaInput') && strcmp(params0.CaInput, 'const')
+            active = [active, {'pCa'}];
+        end
+    end
 end
 
 if isfield(params0, 'UseVelGaussAttachment') && params0.UseVelGaussAttachment

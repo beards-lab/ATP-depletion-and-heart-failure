@@ -435,8 +435,8 @@ bounds.kstiff2_n.lb = 100; bounds.kstiff2_n.ub = 50000; bounds.kstiff2_n.weight 
 % P3 stiffness (when UseKstiff3=1; otherwise model uses kstiff2). [NO-CITE]
 bounds.kstiff3.lb = 5000; bounds.kstiff3.ub = 100000; bounds.kstiff3.weight = 1;
 
-% Calcium / troponin parameters (active when UseCa=1; SATURATING in current
-% configs, so not rate-limiting -> low weight despite good data).
+% Thin-filament parameters of CaModel = 'twoState' (tf_*; inert for the default
+% CaModel = 'none', i.e. saturating Ca). Defaults are Marzban 2020 (rat).
 % NOTE: cTnC Ca-off rate is strongly context-dependent — isolated cTnC ~700–1000
 % s^-1, full thin filament + cycling S1 ~13 s^-1 (all at 15 °C). Model k_off=307
 % sits in the isolated/complex range. Re-cited to rat cardiac cTnC.
@@ -447,9 +447,9 @@ bounds.kstiff3.lb = 5000; bounds.kstiff3.ub = 100000; bounds.kstiff3.weight = 1;
 %     [OK — cardiac cTnC] WT site-II koff 700–800 s^-1 at 4 °C; kon ~200–400 uM^-1 s^-1.
 %   Dobesh 2002 https://doi.org/10.1152/ajpheart.00859.2001      PMID:11834476
 %     [OK — cardiac] Cooperativity / SL-dependence; nH ~3–4 (constrains K_coop).
-bounds.K_coop.lb = 1; bounds.K_coop.ub = 20; bounds.K_coop.weight = 1;
-bounds.k_on.lb = 10; bounds.k_on.ub = 200; bounds.k_on.weight = 1;
-bounds.k_off.lb = 50; bounds.k_off.ub = 1000; bounds.k_off.weight = 1;
+bounds.tf_K_coop.lb = 1; bounds.tf_K_coop.ub = 20; bounds.tf_K_coop.weight = 1;
+bounds.tf_k_on.lb = 10; bounds.tf_k_on.ub = 200; bounds.tf_k_on.weight = 1;
+bounds.tf_k_off.lb = 50; bounds.tf_k_off.ub = 1000; bounds.tf_k_off.weight = 1;
 
 % Lattice spacing geometry (when UseLatticeSpacing=1).
 %   Irving 2000 https://doi.org/10.1016/S0006-3495(00)76481-4   PMID:10777745

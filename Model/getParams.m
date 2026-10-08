@@ -81,7 +81,14 @@ end
         'Ca', 1000,...
         'Velocity', 0,...
         'UseCalculatedN', true, ... % Use dS and Slim_m / Slim_p
-        'UseCa', false,...
+        'CaModel', 'none', ...     % Ca-activation (thin-filament) model: 'none' = saturating Ca, no state, no call (the calibrated model, byte-identical); 'clamp' = prescribed attachment availability (rectangular pulse per beat, no state); 'twoState' = Tewari/Campbell/Marzban cooperative N state with bound-head feedback (+1 state); 'myosim' = the same kinetics in the MyoSim form (sites switchable only inside the overlap, gate = free ON sites; +1 state N_on). See calciumActivation.m
+        'CaInput', 'const', ...    % Ca source for CaModel 'twoState' / 'myosim': 'const' (pCa), 'analytic' (caTransient kind fired every CaPeriod), 'signal' (measured trace from LoadCaMat)
+        'pCa', 4.51, ...           % constant pCa for CaInput 'const' (4.51 = the Beard 2022 activating solution)
+        'CaTransientKind', 'rice2008', ... % caTransient kind for CaInput 'analytic'
+        'CaPeriod', 1, ...         % beat period (s) of the analytic transient / clamp pulse; one fixed frequency
+        'CaFirstBeat', 0, ...      % onset of beat 1 (s); before it Ca sits at the transient's diastolic (end-of-cycle) value, or the clamp gate at 0
+        'CaClampDuration', 0.010, ... % clamp pulse length (s) per beat for CaModel 'clamp'; >= CaPeriod holds activation on
+        'LoadCaMat', '', ...       % measured Ca(t) (uM) driving-signal .mat under data\ for CaInput 'signal' (sig struct from preprocessDrivingSignal.m)
         'UseOverlap', false, ...
         'UseOverlapFactor', false, ...
         'UsePassive', false, ... % parallel passive stiffness
@@ -287,6 +294,15 @@ end
     params0.K_coop = 5.7;
     params0.k_on   = g0(1)*100;
     params0.k_off  = g0(2)*1.5*100;
+    % The three above are the LEGACY dPUdTCa.m constants, and every snapshot
+    % carries them, so they cannot be re-defaulted. CaModel = 'twoState' uses
+    % its own tf_* set (Marzban 2020 rat, Rat-Cardiac-Energetic
+    % dXdT_cardiovascular_mechanics.m:75-77; k_off "manually tuned" there).
+    % Not portable between cores: on this one they give pCa50 5.33, nH 3.33
+    % (Analyses/CalciumTwitch/conclusions.md §2.2).
+    params0.tf_K_coop = 9.6846;   % cooperativity (-)
+    params0.tf_k_on   = 101.185;  % N -> permissive, per unit Ca (1/(uM s))
+    params0.tf_k_off  = 723.852;  % permissive -> N (1/s)
     params0.datatable = [];
     
     
@@ -462,6 +478,16 @@ end
     params0.dr2_R = 0.01;
             
     %% Step 1: Fill missing fields from defaults
+
+    % UseCa is retired: CaModel = 'none' is the off state. Old snapshots all
+    % carry UseCa = 0, which is dropped silently; UseCa = 1 has no meaning any more.
+    if isfield(params, 'UseCa')
+        if params.UseCa
+            error('getParams:UseCa', ['UseCa is retired. Set params.CaModel instead ' ...
+                '(''none'' | ''clamp'' | ''twoState'' | ''myosim''); see calciumActivation.m.']);
+        end
+        params = rmfield(params, 'UseCa');
+    end
 
     params = fillInDefaults(params, params0);
 
@@ -664,8 +690,15 @@ end
     end
     
     
+    %% Step 7b: Ca-activation layer (calciumActivation.m)
+    % Everything the RHS needs is resolved here into the struct params.ca, so the
+    % hot path does no string compares or pchip calls. A struct is deliberately
+    % skipped by writeParamsToMFile, so none of this leaks into snapshots.
+    params.ca = buildCaLayer(params);
+
     %% Step 8: Initialize state vector PU0
-    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseD0State + params.UseLoadRealign;
+    expected_PU0 = params.NumberOfStates * params.ss + 7 + params.UseRegistrationAvailability + params.UseD0State + params.UseLoadRealign ...
+                 + params.ca.nStates;
     PU0_size_mismatch = isfield(params, 'PU0') && ~isempty(params.PU0) && numel(params.PU0) ~= expected_PU0;
     if ~isfield(params, 'PU0') || isempty(params.PU0) || updateInit || PU0_size_mismatch
         % only during init - otherwise keep it
@@ -702,10 +735,13 @@ end
         else
             A_def0 = [];
         end
+        % Ca-activation states: appended LAST, at params.ca.idx. [] for 'none'
+        % and 'clamp' => nothing appended => byte-identical state vector.
+        Ca0 = params.ca.x0;
         if params.NumberOfStates == 2
-            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0, A_def0];
+            params.PU0 = [p0, p0, U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0, A_def0, Ca0];
         elseif params.NumberOfStates == 3
-            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0, A_def0];
+            params.PU0 = [p0, p0, p0,U_SR,NP,SL0,LSE, PuATP, U_SRD, x_dash, A_reg0, D0_0, A_def0, Ca0];
 		end
 		
 		if params.UseSuperRelaxedADP
@@ -732,6 +768,10 @@ end
 %% Step 6c (deferred): Pack flat MEX parameter array
     % Requires: UseFastPPval=true (pchip cache), strain grid (params.s), and
     % all numerical params to be resolved. Called here so params.s is available.
+    if params.UseCompiledMex && params.ca.model
+        error('getParams:CaMex', ['CaModel = ''%s'' is not implemented in the C MEX ' ...
+            '(dPUdT_core_mex.c). Use the MATLAB RHS (UseCompiledMex = false).'], params.CaModel);
+    end
     if params.UseCompiledMex && params.UseFastPPval && isfield(params,'s')
         params.mex_vals = packMexVals(params);
     end
@@ -769,6 +809,75 @@ end
 end
 
 %%
+function ca = buildCaLayer(params)
+% Resolve the Ca-activation switches into the numeric struct read by
+% dPUdT_CombinedTransitions / calciumActivation. Ids: model 0 none, 1 clamp,
+% 2 twoState, 3 myosim; input 1 const, 2 analytic, 3 signal.
+    models = {'none', 'clamp', 'twoState', 'myosim'};
+    inputs = {'const', 'analytic', 'signal'};
+    model = find(strcmp(params.CaModel, models)) - 1;
+    input = find(strcmp(params.CaInput, inputs));
+    if isempty(model)
+        error('getParams:CaModel', 'Unknown CaModel ''%s''. Use one of: %s.', ...
+            params.CaModel, strjoin(models, ', '));
+    end
+    if isempty(input)
+        error('getParams:CaInput', 'Unknown CaInput ''%s''. Use one of: %s.', ...
+            params.CaInput, strjoin(inputs, ', '));
+    end
+    if ~(params.CaPeriod > 0)
+        error('getParams:CaPeriod', 'CaPeriod must be positive (got %g).', params.CaPeriod);
+    end
+
+    ca = struct('model', model, 'input', input, 'nStates', 0, 'idx', [], 'x0', [], ...
+        'T', params.CaPeriod, 't1', params.CaFirstBeat, 'beatKnots', [], ...
+        'Ca_const', 10^(6 - params.pCa), 'kind', params.CaTransientKind, 'opt', struct(), ...
+        'Cadia', NaN, 'sig', [], 'clampD', params.CaClampDuration, ...
+        'k_on', params.tf_k_on, 'k_off', params.tf_k_off, 'K_coop', params.tf_K_coop, ...
+        'useOverlapFactor', logical(params.UseOverlapFactor));
+
+    % thin-filament states, appended after every other optional tail state
+    base = params.NumberOfStates*params.ss + 7 + params.UseRegistrationAvailability ...
+         + params.UseD0State + params.UseLoadRealign;
+    switch model
+        case 1  % clamp: gate = 1 for clampD after every beat onset, else 0
+            ca.beatKnots = [0, min(ca.clampD, ca.T)];
+        case 2  % twoState: N = non-permissive fraction, starts fully off
+            ca.nStates = 1;
+            ca.x0 = 1;
+        case 3  % myosim: N_on = permissive fraction of all sites, starts fully off
+            ca.nStates = 1;
+            ca.x0 = 0;
+    end
+    ca.idx = base + (1:ca.nStates);
+
+    % Ca source (only a model with Ca-driven kinetics reads it)
+    if model >= 2
+        switch input
+            case 2  % analytic: precompute the kind's coefficients and kinks once
+                opt = struct();
+                if isfield(params, 'CaTransientOpt') && isstruct(params.CaTransientOpt)
+                    opt = params.CaTransientOpt;
+                end
+                opt.T = ca.T;
+                [~, opt] = caTransient(ca.kind, 0, opt);
+                ca.opt = opt;
+                ca.beatKnots = unique([0, opt.kinks]);
+                ca.Cadia = caTransient(ca.kind, ca.T - 1e-4, opt);  % end-of-cycle level
+            case 3  % signal: measured trace, Hermite-interpolated (C1) by sigLookup
+                if isempty(params.LoadCaMat)
+                    error('getParams:LoadCaMat', 'CaInput = ''signal'' needs LoadCaMat.');
+                end
+                tmp = load(['data\' params.LoadCaMat], 'sig');
+                ca.sig = tmp.sig;
+                if ~isfield(ca.sig, 'm')   % Catmull-Rom slopes, units/s
+                    ca.sig.m = gradient(ca.sig.y(:))*ca.sig.Fs;
+                end
+                ca.sig.hermite = true;
+        end
+    end
+end
+
 function params = fillInDefaults(params, defaults)
     % thanks to Adam Danz from MatlabCentral
     % List fields in both structs

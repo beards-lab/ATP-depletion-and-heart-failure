@@ -7,6 +7,16 @@ measured on this machine (R2023a, `params/fastgate_best.m`, the set TriSegCoupli
 8 mM MgATP, isometric at SL 2.2 µm with fixed ends, so the series elastic element is in the
 loop) unless marked *literature* or *estimate*.
 
+> **Update 2026-09-24 (branch `CaActivation`):** recommendation 1 is implemented. The gate
+> now lives in the production RHS behind `params.CaModel` (§7). `UseCa` is retired.
+>
+> **Update 2026-09-29:** twitch runs moved to SL 2.0 µm, because the snapshot's passive curve is
+> the high-Ca one and gives 9 kPa of diastolic force at 2.2 µm
+> ([Paced1Hz_report §0](Paced1Hz_report.md)). The first identification on data (Travis paced
+> control EHTs, human iPSC-derived) is in [EHT_identification_report.md](EHT_identification_report.md):
+> a good fit (fit C, RMS 0.81 %) that is **not unique**. Absolute Ca and `k_on` are exactly
+> degenerate, and the core speed (and with it the ATP cost) cannot be determined from the twitch.
+
 Reproduce: `RUN = [0 1 2 3 5 6 4]; run('Analyses/CalciumTwitch/RunTwitchProbe.m')` (~4 min).
 Figure: [`results/twitch_probe.png`](results/twitch_probe.png).
 
@@ -176,7 +186,7 @@ A twitch has **two** inputs: the Ca²⁺ signal and the mechanical boundary cond
 
 ### 3.1 Prescribed analytic Ca(t) (feed-forward; no state, no feedback)
 
-All four are implemented in [`caTransient.m`](caTransient.m). Metrics come from E0.
+All four are implemented in [`caTransient.m`](../../Model/caTransient.m) (moved to `Model/` on 2026-09-24). Metrics come from E0.
 
 | signal | origin | species, T | onset → peak (µM) | TTP | RT50 | where it already lives |
 |---|---|---|---|---|---|---|
@@ -310,12 +320,79 @@ reusable.**
      transition, one of them fitted only at saturating Ca.
    - The diastolic SRX fraction (0.139) has never been constrained.
 
+## 7. Production implementation (2026-09-24, branch `CaActivation`)
+
+The probe's gate is now part of the model and is selected by parameters. Checks:
+[`TestCaActivation.m`](TestCaActivation.m).
+
+### 7.1 Switches
+
+| layer | param | phase-1 options |
+|---|---|---|
+| thin filament | `CaModel` | `'none'` (default: saturating Ca, no state and no call, byte-identical to before); `'clamp'` (availability = 1 for `CaClampDuration` after each beat onset, otherwise 0; no state); `'twoState'` (§1.3 kinetics, +1 state `N`); `'myosim'` (added 2026-10-02: the same kinetics in the MyoSim form, sites switchable only inside the overlap and gate = free ON sites, +1 state `N_on`; identical to `'twoState'` at full overlap; [EHT_identification_report §8](EHT_identification_report.md)) |
+| Ca source (`twoState`, `myosim`) | `CaInput` | `'const'` (`pCa`); `'analytic'` (`caTransient` kind `CaTransientKind`, fired every `CaPeriod` from `CaFirstBeat`, with the end-of-cycle diastolic level before the first beat); `'signal'` (`LoadCaMat`, Hermite-interpolated) |
+| thin-filament constants | `tf_k_on`, `tf_k_off`, `tf_K_coop` | Marzban 2020 defaults |
+
+- **New names for the constants.** The legacy `k_on`/`k_off`/`K_coop` are kept for
+  `dPUdTCa.m`. Every snapshot carries their old values (59.655/307.17/5.7), so re-defaulting
+  them would have had no effect.
+- **Snapshots with `UseCa`.** `UseCa = 0` in a snapshot is dropped silently. `UseCa = 1`
+  raises an error.
+- **MEX.** `UseCompiledMex` together with any `CaModel` other than `'none'` raises an error.
+  A C port comes later.
+
+### 7.2 Where it lives
+
+- `Model/calciumActivation.m` holds the Ca source and the thin-filament models. It returns
+  effector multipliers (`eff(1)` scales `ka_eff`), the state derivatives, and the
+  diagnostics `[Ca, gate]`. It takes `params` read-only, which costs nothing because MATLAB
+  passes it copy-on-write.
+- `getParams` (`buildCaLayer`) resolves everything once into the struct `params.ca`:
+  numeric ids, state indices, `Ca_const`, the prepared transient and the beat knots. A
+  struct field is skipped by `writeParamsToMFile`, so none of this ends up in snapshots.
+- The Ca states form a tail block after `A_def`, at `params.ca.idx`. The `NP` slot stays
+  inert. Diagnostics are appended to the end of `outputs`. `evaluateModel` stores them as
+  `out.Ca`, `out.CaGate` and `out.CaState`, and merges the beat onsets and the transient's
+  kinks into its segments (`mergeCaKnots`), each new segment keeping its original velocity.
+- `Model/caTransient.m` has moved here from this folder. Its "prepared" call
+  (`[~, opt] = caTransient(kind, 0, opt)`) resolves every coefficient once, which cut about
+  5 µs of option handling per call. The output is bit-identical to the old version for all
+  four kinds.
+- `sigLookup` has a `sig.hermite` flag. The Ca signal uses the Hermite path, and the
+  passive-force `driveSig` keeps nearest-sample (§1.4).
+
+### 7.3 Verification (`TestCaActivation.m`, all pass)
+
+| check | result |
+|---|---|
+| `'none'` against HEAD's RHS and `getParams` (`fastgate_best`, `ExampleHighATP`; 4 states × 3 velocities) | max \|Δ(f, outputs, rates)\| = **0**; PU0 identical |
+| `twoState` force–pCa against `dPUdT_CaGate`, same integrator (pCa 6.0 → 4.51) | 11.414 / 17.761 / 33.859 / 74.431 / 77.832 kPa; max rel. diff 9e-8 |
+| `twoState` Rice 1 Hz twitch against the probe | F_dia 9.3184, F_dev 3.2116 kPa, TTP 66.50, RT50 87.27 ms; identical to the probe and to saved E3 |
+| `clamp` 10 ms pulse against the probe | F_dev 39.0030 kPa, TTP 10.50 ms; identical (56 % of F_ss) |
+| `evaluateModel` path (Rice, 2 Hz, first beat at 0.2 s) | all 4 knots hit; Ca 0.09–1.45 µM; `out.Ca`, `out.CaGate`, `out.CaState` filled |
+| guards | `UseCa = 1`, MEX + Ca, unknown `CaModel`: all raise errors; `UseCa = 0` removed |
+| `Example/RunExampleHighATP.m` battery, this branch against a pristine HEAD checkout | objective **0.9431** on both, full cost breakdown identical (the README's 0.96 predates HEAD) |
+
+**Cost.** Interleaved and randomized, 60 blocks, paired against HEAD in the same block. The
+machine was shared with another agent's runs, so absolute µs are unreliable.
+
+| model | median ratio to HEAD, clean run | median ratio to HEAD, heavily loaded run |
+|---|---|---|
+| `'none'` | +1.8 % | +0.7 % |
+| `twoState` + const | +9.2 % | −1.6 % |
+| `twoState` + Rice | +10.8 % (before `caTransient` was prepared) | +6.6 % |
+
+`'none'` is within noise. `twoState` stays at single-digit percent per RHS call. Isolated
+component times (clean run): `calciumActivation` with const Ca ≈ 2.3 µs; `caTransient` with
+Rice ≈ 4.4 µs before preparation.
+
 ## Files
 
 | file | role |
 |---|---|
 | [`dPUdT_CaGate.m`](dPUdT_CaGate.m) | probe RHS wrapper: one thin-filament state, gate on `ka`; identity at gate = 1 |
-| [`caTransient.m`](caTransient.m) | Rice 2008, Marzban 2020, Tewari/Piacentino, FiberSim two-compartment, constant pCa |
+| [`caTransient.m`](../../Model/caTransient.m) (now in `Model/`) | Rice 2008, Marzban 2020, Tewari/Piacentino, FiberSim two-compartment, constant pCa |
+| [`TestCaActivation.m`](TestCaActivation.m) | regression and parity checks for the production Ca layer (§7) |
 | [`RunTwitchProbe.m`](RunTwitchProbe.m) | E0 signals, E1 clamp, E2 force–pCa, E3 twitches, E5 `k_on` scan, E6 numerics, E4 figure |
 | `results/probe_E*.mat`, [`results/twitch_probe.png`](results/twitch_probe.png) | outputs |
 
