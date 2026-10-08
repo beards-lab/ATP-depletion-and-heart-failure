@@ -416,3 +416,23 @@ number and the first thing a referee will find.
 
 **Recommended cutoff: S4 without a 4 mM claim, S5 with one.** S2 is the point below
 which the methods are attackable; S6 is comfort, not necessity.
+
+---
+
+## 9. Model predictions for each proposed measurement (2026-10-06)
+
+`RunProtocolPredictions.m` → `results/pred_*.png`, `results/pred_summary.txt`. Core
+`robust1_seed` + k2 power gate (R2 ×0.54 at 2 mM); the run-down repeat uses the identified
+lesion (kSE ×0.65, SL −0.098 µm). Feeds the data-needs deck (claude.ai artifact "New Data Needs").
+
+| measurement | model prediction (vs 8 mM unless stated) |
+|---|---|
+| slack train at 4 mM | force ×1.13, slack k63 ×0.83 (2 mM: ×1.24 / ×0.69; data ×1.32 / ×0.55) |
+| 8 mM repeat after rundown | force ×0.86, slack k63 ×0.93, **protocol ktr k80 ×0.89** — the model has both ktr protocols fall together; the compliance hypothesis says protocol −3 % vs slack −12 %. The hi-res repeat burst decides it |
+| FV2 ramp | P/P₀ 0.25 / 0.20 / 0.15 at 8 / 4 / 2 mM; 2/8 = 0.60 (in-prep data 0.71, Baker 0.49) |
+| SL offset | F_iso/F_iso(2.2): 0.86 at 2.10, 0.92 at 2.15, 1.14 at 2.25, 1.35 at 2.30 |
+| third [ATP], power vs Hill (Km 3.2 mM) | 20 mM: force 0.80 vs 0.91, k80 1.20 vs 1.09; 4 mM: 1.15 vs 1.12 (indistinguishable); 0.5 mM: force 1.54 vs 1.68, k80 0.34 vs 0.32 |
+| release–hold–restretch | incumbent k63 56 → 71 (20 ms) → 47 s⁻¹ (80 ms); matches protocols.txt |
+| sawtooth | 0.1 ML/s: force on release 1.28 → 1.15 F₀ above the stretch limb (net work out; sign flips with registration availability off). No post-release overshoot on this core (the earlier SawtoothSRS core gave 1.2 F₀) |
+
+**SRX pathway on the hold series** (`RunSrxPathwayHold.m`, uncompensated, 8 mM): exit kmsrd ÷3 drops k63 at 5–20 ms holds by 30–45 % and removes the 20 ms peak; entry ksr0 ×3 stays within 5 % of the reference. Long holds (≥ 80 ms) and isometric force are unchanged. The series discriminates the exit pathway, not entry.

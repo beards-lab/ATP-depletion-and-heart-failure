@@ -7,4 +7,5 @@ pres.layout = "LAYOUT_WIDE";
 pres.title = "ATP-dependent cross-bridge model: where we stand";
 for (const p of ["./part1", "./part2", "./part3"]) require(p).addSlides(pres, S);
 require("./part2").addBackup(pres, S);   // backups last
+require("./part4").addFeatureTables(pres, S);
 pres.writeFile({ fileName: path.resolve(__dirname, "..", "2026-09-ProjectStatus.pptx") }).then((f) => console.log("wrote " + f));

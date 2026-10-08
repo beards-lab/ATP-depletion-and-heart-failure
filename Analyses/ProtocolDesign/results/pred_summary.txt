@@ -1,0 +1,37 @@
+RunProtocolPredictions  06-Oct-2026 05:14:47
+SLACK 8 mM                                             Fss22  70.93 kPa  slack k63(c2)  34.5 /s  restretch peak1  81.01 kPa
+SLACK 4 mM (prediction)                                Fss22  79.87 kPa  slack k63(c2)  28.6 /s  restretch peak1  95.93 kPa
+SLACK 2 mM                                             Fss22  88.10 kPa  slack k63(c2)  23.8 /s  restretch peak1 111.44 kPa
+SLACK 8 mM repeat, run-down (kSE x0.65, SL -0.098 um)  Fss22  60.73 kPa  slack k63(c2)  32.0 /s  restretch peak1  64.22 kPa
+  ratios vs 8 mM: 4 mM force 1.126 ktr 0.829 | 2 mM force 1.242 ktr 0.688 | rundown force 0.856 ktr 0.926
+KTR   8 mM                                             Fss20  53.42 kPa  k80  46.2 /s  k63  51.3 /s
+KTR   4 mM (prediction)                                Fss20  61.48 kPa  k80  39.0 /s  k63  44.4 /s
+KTR   2 mM                                             Fss20  69.17 kPa  k80  31.6 /s  k63  39.2 /s
+KTR   8 mM repeat, run-down (kSE x0.65, SL -0.098 um)  Fss20  42.37 kPa  k80  41.0 /s  k63  47.6 /s
+  BRACKET TEST: rundown/fresh  protocol k80 0.886  k63 0.929  |  slack k63 0.926
+  ATP 2/8:   protocol k80 0.682  k63 0.765  |  slack k63 0.688
+FV2   8 mM                 P/P0 0.252  (Fiso 71.16 kPa)
+FV2   4 mM (prediction)    P/P0 0.201  (Fiso 80.10 kPa)
+FV2   2 mM                 P/P0 0.152  (Fiso 88.24 kPa)
+  FV2 ratios: 4/8 0.797  2/8 0.603  (data 2/8 = 0.71 in-prep; Baker borrowed 0.49)
+SLOFF  SL [2.1 2.15 2.2 2.25 2.3]
+       F/F(2.2) [0.861 0.921 1 1.14 1.35]
+DOSE    0.5 mM  gate power 0.292 Hill 0.190 | Fiso  82.41 /  89.76 kPa | k80  15.5 /  14.9 /s
+DOSE    1.0 mM  gate power 0.397 Hill 0.335 | Fiso  76.21 /  80.19 kPa | k80  23.4 /  18.5 /s
+DOSE    2.0 mM  gate power 0.540 Hill 0.540 | Fiso  69.17 /  69.17 kPa | k80  31.6 /  31.6 /s
+DOSE    4.0 mM  gate power 0.735 Hill 0.779 | Fiso  61.48 /  59.98 kPa | k80  39.0 /  40.4 /s
+DOSE    8.0 mM  gate power 1.000 Hill 1.000 | Fiso  53.42 /  53.42 kPa | k80  46.2 /  46.2 /s
+DOSE   12.0 mM  gate power 1.197 Hill 1.105 | Fiso  48.79 /  51.04 kPa | k80  50.3 /  48.2 /s
+DOSE   20.0 mM  gate power 1.503 Hill 1.205 | Fiso  42.90 /  48.60 kPa | k80  55.4 /  50.5 /s
+  Hill Km = 3.17 mM
+RHR   hold    5 ms  k63  56.2 /s
+RHR   hold   10 ms  k63  62.5 /s
+RHR   hold   20 ms  k63  71.0 /s
+RHR   hold   40 ms  k63  55.9 /s
+RHR   hold   80 ms  k63  47.4 /s
+RHR   hold  160 ms  k63  48.8 /s
+RHR   hold  320 ms  k63  49.0 /s
+SAW   v 0.10 ML/s  regAvail 1  post-release overshoot 1.162 F0 at 0 ms after return
+SAW   v 0.10 ML/s  regAvail 0  post-release overshoot 1.000 F0 at 400 ms after return
+SAW   v 0.40 ML/s  regAvail 1  post-release overshoot 1.000 F0 at 381 ms after return
+SAW   v 0.40 ML/s  regAvail 0  post-release overshoot 1.000 F0 at 400 ms after return

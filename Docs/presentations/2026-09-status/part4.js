@@ -56,7 +56,7 @@ function addSlides(pres, S) {
 
   addBestFit(pres, S, "k2ksr0");
   addBestFit(pres, S, "k2ksr0kmsrd");
-  addFeatureTables(pres, S);
+  addFeaturePlots(pres, S);
 
   // ------------------------------------------------------------ can ATP change hydrolysis?
   {
@@ -147,8 +147,8 @@ function addFeatureTables(pres, S) {
   const pct = (x) => (typeof x === "number" && isFinite(x)) ? " ± " + Math.round(100 * x) + "%" : "";
   const zfill = (z) => (typeof z !== "number" || !isFinite(z)) ? null : z < 1 ? "D8F0DA" : z < 2 ? "FCEBC7" : "F8D3CF";
   const groups = [
-    { title: "Features (1/2): slack–restretch, 8 vs 2 mM", pick: (g) => g.startsWith("Slack") },
-    { title: "Features (2/2): ktr protocol, F–V, read-outs", pick: (g) => !g.startsWith("Slack") },
+    { title: "Backup: feature table (1/2), slack", pick: (g) => g.startsWith("Slack") },
+    { title: "Backup: feature table (2/2), ktr / F–V / read-outs", pick: (g) => !g.startsWith("Slack") },
   ];
   for (const G of groups) {
     const s = pres.addSlide();
@@ -184,5 +184,23 @@ function addFeatureTables(pres, S) {
   }
 }
 
-module.exports = { addSlides, addSteady, addBestFit, addFeatureTables };
+// Feature plots (PlotFeaturePanels.m): slack features over the five cycles; ktr protocol, F-V, read-outs.
+function addFeaturePlots(pres, S) {
+  const { C, M, W, TOP } = S;
+  const P = [
+    { f: "features_slack.png", title: "Features over the five slack cycles: 8 mM vs 2 mM", kicker: "A · B · C",
+      notes: "Bands: pooled data ± the SD the objective uses (n = 3). Dashed: models. Force features, re-stretch peak and t0 follow the data; the valley and second peak collapse at 2 mM (post-peak drop -31 vs -14.5 kPa), recovery time stays flat (data +68 %), valley time moves the wrong way. Slack ktr: only C sits in the 2 mM band; rsK80 is 20-25 % high in all sets." },
+    { f: "features_ktr_fv.png", title: "ktr protocol, force–velocity and model read-outs", kicker: "A · B · C",
+      notes: "Top: ktr-protocol features and the in-prep FV2 point (data ± SD; 8 mM model next to the 8 mM data, sets A/B/C next to the 2 mM data). Middle: Baker F-V (8 mM scored, 2 mM not scored) and power. Bottom: model read-outs against the objective's bounds (grey); attached fraction also against the literature 0.12-0.15 (green). XTOR sits at the objective's 15 s-1 ceiling at 8 mM." },
+  ];
+  for (const p of P) {
+    const s = pres.addSlide();
+    S.header(s, p.title, p.kicker);
+    S.image(s, RES + p.f, { x: M, y: TOP - 0.05, w: W - 2 * M, h: 5.8 }, pngSize(RES + p.f));
+    S.footer(s, "A: R2 ×0.54 · B: + ksr0 ×0.4 · C: + kmsrd ×0.4 (2 mM only; 8 mM = incumbent). Source: Analyses/LowATP_Refit9K2Sweep/PlotFeaturePanels.m");
+    s.addNotes(p.notes);
+  }
+}
+
+module.exports = { addSlides, addSteady, addBestFit, addFeatureTables, addFeaturePlots };
 if (require.main === module) S.buildStandalone(addSlides, "part4.pptx");

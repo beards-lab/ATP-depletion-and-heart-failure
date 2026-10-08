@@ -1,5 +1,17 @@
 # Review findings — corrections required before `01-introduction-and-methods.md` circulates
 
+> **Status 2026-10-07.** Decisions: **D1** — claim that the model reproduces every measured
+> aspect at 8 and 2 mM (approximately); both `ktr` probes reported as measurements; two-gate
+> claim withdrawn. **D2** — Pi accumulation is a quantified limitation with an analysis
+> design in `Analyses/PiAccumulation/plan.md`. **D3** — framed as the Beard 2022 follow-up;
+> Beard's conjectures credited; Beard 2022 used a *single* parameter set across ATP (n =
+> 12/6/6 trabeculae), not per-condition refits. §1 and §2 items below are applied in the
+> draft, re-checked against `params/robust1_seed.m` (the reported core), which differs from
+> `floored_seed` on several items (hop fluxes off, τ_reg 0.2 ms, P_bound_max 1.21, smooth
+> rectifier and extrapolation clamp on, `RunKtr = 1`). §3 (methodology) and §4 (novelty)
+> are reflected in §3 Limitations and §1 but not otherwise resolved; §4's missing
+> literature has not been added.
+
 Five independent reviews, 2026-09-18. Four completed; the citation audit failed partway
 (account spend limit) and is marked incomplete below.
 
