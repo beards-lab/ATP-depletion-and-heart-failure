@@ -126,3 +126,13 @@ P = getParams(P, [], true, false);  P.Vums = 0;  P.v = 0;
 
 Nothing of `CaTworld` is written into snapshots (it is a struct); `CaInput = 'tworld'` in a
 snapshot without a `CaTworld` field resolves to `'land'` from the stored 1 Hz endocardial state.
+
+## 6. Fitting the EHT twitch with T-World's Ca (2026-10-14)
+
+Tiers `tw1_isoT` (adult beat as granted, coupling `'signal'`) and `tw2_caH` (SERCA, ICaL, NCX
+multipliers freed, pre-paced) in `Analyses/HumanTwitch/`; comparison in `CompareTwitchFits.m`,
+[`results/twitch_fit_tw1_tw2.png`](results/twitch_fit_tw1_tw2.png),
+[`results/twitch_fit_tw1_tw2.csv`](results/twitch_fit_tw1_tw2.csv). rms 0.97 % as granted,
+0.75 % with the Ca handling freed (de Lange transient: 0.77 %); the identified net cycle factor
+is 0.22–0.24 against 0.45 with de Lange's Ca. The closed-loop `tw1_isoT_xb` stalled at 6.7 %
+for the §4 reason. Full account: `Docs/reference/tworld-ca-source.md` §7.

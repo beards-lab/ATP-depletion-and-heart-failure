@@ -21,14 +21,26 @@ pre = getf(th, 'pre', 2);  nb = getf(th, 'nb', 3);  T = getf(th, 'T', 1);
 shift = getf(th, 'shift', 0);
 if shift ~= 0, tb = mod(tb - shift, T); end
 P = base;
-P.CaModel = getf(th, 'CaModel', 'twoState');  P.CaInput = 'analytic';
+P.CaModel = getf(th, 'CaModel', 'twoState');  P.CaInput = getf(th, 'CaInput', 'analytic');
 P.CaTransientKind = getf(th, 'CaKind', 'risedecay');
 P.CaPeriod = T;  P.CaFirstBeat = pre;  P.CaTransientOpt = getf(th, 'CaOpt', struct());
+if strcmp(P.CaInput, 'tworld')                  % T-World myocyte as the Ca source (tworldCaLayer.m)
+    P.CaTworld = getf(th, 'CaTworld', struct());
+    if isfield(th, 'tw') && isstruct(th.tw)       % T-World parameter overrides fitted as 'tw' params
+        if ~isfield(P.CaTworld, 'param'), P.CaTworld.param = struct(); end
+        for f = string(fieldnames(th.tw))', P.CaTworld.param.(f) = th.tw.(f); end
+    end
+end
 for f = ["tf_k_on" "tf_k_off" "tf_K_coop"]
     if isfield(th, f), P.(f) = th.(f); end
 end
 P = getParams(P, [], true, false);
 P.Vums = 0;  P.v = 0;
+if isfield(P.ca, 'absTol') && ~isempty(P.ca.absTol)   % embedded T-World states (mM/mV) get their own AbsTol
+    a = odeget(opts, 'AbsTol')*ones(1, numel(P.PU0));
+    a(P.ca.absTolIdx) = P.ca.absTol;
+    opts = odeset(opts, 'AbsTol', a);
+end
 Ns = P.NumberOfStates;  ss = P.ss;
 kinks = P.ca.beatKnots(:)';                       % within-beat kinks (onset)
 knots = unique([0, pre + (0:nb)*T, reshape(pre + (0:nb-1)'*T + kinks, 1, [])]);
@@ -50,12 +62,13 @@ if nargout > 1
     Fp = force(tt, Y, P, tl - T + tb);
     S.F = Fl;  S.Fdia = F0;  S.drift = max(Fl - F0) - max(Fp - force(tt, Y, P, tl - T));
     z = zeros(size(tb));
-    [S.Ca, S.gate, S.bound, S.SRX, S.N, S.PD, S.PT, S.Fxb, S.Fpas, S.hydDRX, S.hydSRX, S.R2T] = deal(z);
+    [S.Ca, S.gate, S.bound, S.SRX, S.N, S.PD, S.PT, S.Fxb, S.Fpas, S.hydDRX, S.hydSRX, S.R2T, S.SL, S.LSE, S.PSR, S.PSRD] = deal(z);
     for i = 1:numel(tb)
         j = find(abs(tt - (tl + tb(i))) < 1e-9, 1);
         [~, o, r] = dPUdT_CombinedTransitions(tt(j), Y(j, :)', P);
         S.Ca(i) = o(end-1);  S.gate(i) = o(end);  S.bound(i) = o(5) + o(6);
-        S.SRX(i) = Y(j, Ns*ss+1) + Y(j, Ns*ss+6);
+        S.SRX(i) = Y(j, Ns*ss+1) + Y(j, Ns*ss+6);  S.PSR(i) = Y(j, Ns*ss+1);  S.PSRD(i) = Y(j, Ns*ss+6);
+        S.SL(i) = Y(j, Ns*ss+3);  S.LSE(i) = Y(j, Ns*ss+4);
         S.N(i)   = Y(j, P.ca.idx(1));
         if strcmp(P.CaModel, 'myosim'), S.N(i) = 1 - S.N(i); end
         S.PD(i)  = Y(j, Ns*ss+5);  S.PT(i) = o(9);

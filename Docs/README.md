@@ -22,6 +22,7 @@ The single map of the project's knowledge. **What do you want?**
 | [`RundownCorrection.md`](reference/RundownCorrection.md) | Correcting for preparation rundown (+ rendered PDF). |
 | [`sources.md`](reference/sources.md) | Literature links and provenance. |
 | [`update-mex.md`](reference/update-mex.md) | How-to: rebuild the MEX ODE core. |
+| [`tworld-ca-source.md`](reference/tworld-ca-source.md) | The T-World myocyte as a Ca source (`CaInput = 'tworld'`): pieces, schematic, equations, couplings, the troponin-buffer question. |
 | `Ensemble vs distributed elasticity model.xlsx` | Model-variant comparison table. |
 
 ## `notes/` — transient working notes

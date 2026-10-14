@@ -16,7 +16,9 @@ function cfg = tierConfigs(name)
 %   Stage 3 ("anything but the Ca transient"): individual multipliers on every rate, stiffness,
 %   SRX and gate parameter, wide thin-filament bounds.
 here = fileparts(mfilename('fullpath'));  res = fullfile(here, 'results');
-cfg.name = name;  cfg.seed = 'robust1_seed';  cfg.pre = 2;  cfg.nb = 2;  cfg.fdStep = 2e-3;  cfg.maxIter = 40;
+fullName = name;  prof = regexp(name, '^(?<base>.+?)__(?<par>\w+)__(?<k>\d+)$', 'names');
+if ~isempty(prof), name = prof.base; end        % profile point: build the base tier, then fix one parameter
+cfg.name = fullName;  cfg.seed = 'robust1_seed';  cfg.pre = 2;  cfg.nb = 2;  cfg.fdStep = 2e-3;  cfg.maxIter = 40;
 if endsWith(name, '_ex')            % variant on the EHT report's core (ExampleHighATP = spreadw_opt) instead of the HumanizeXB incumbent
     cfg.seed = fullfile(here, '..', '..', 'params', 'ExampleHighATP.m');  name = extractBefore(name, '_ex');
 end
@@ -71,6 +73,23 @@ switch name
                    P('r_kSE', 'scale', {'kSE'}, log10(0.01), log10(3), 0, true), ...
                    P('r_pas', 'scale', {'k_pas'}, log10(0.1), log10(3), 0, true), ...
                    P('SL0', 'abs', {'SL0'}, 1.9, 2.3, 2.0, false), tf];  cfg.maxIter = 50;
+    case {'tB', 'tB_caE1', 'tB_caE2', 'tB_caE3', 'tB_caE4'}
+        % case-B identifiability set (Ca transient treated as MEASURED): net factor on the six isoform
+        % rates, net factor on k1,k_1, SRX and series factors, thin filament, offset. caE1-4: the Ca shape
+        % perturbed by a realistic indicator error (TTP -/+ ~5 ms, peak->50 % -/+ ~10 ms).
+        cfg.par = [P('r_net', 'scale', iso, log10(0.05), log10(20), log10(0.45), true), ...
+                   P('r_Pi', 'scale', pi_, log10(0.05), log10(20), log10(2.08), true), ...
+                   P('r_SRX', 'scale', srx, log10(0.1), log10(15), 0, true), ...
+                   P('r_kSE', 'scale', {'kSE'}, log10(0.01), log10(3), 0, true), tf];
+        cfg.maxIter = 12;      % profile points start warm; 12 iterations suffice (wave 1 ran with 25)
+        switch name
+            case 'tB_caE1', cfg.ca.opt.tau_r = 0.022;  cfg.ca.opt.t50 = 0.253;
+            case 'tB_caE2', cfg.ca.opt.tau_r = 0.028;  cfg.ca.opt.t50 = 0.277;
+            case 'tB_caE3', cfg.ca.opt.tau_r = 0.022;  cfg.ca.opt.t50 = 0.277;
+            case 'tB_caE4', cfg.ca.opt.tau_r = 0.028;  cfg.ca.opt.t50 = 0.253;
+        end
+        cfg.profGrid = struct('r_net', log10([0.15 0.25 0.45 0.8 1.5 3 6 10]), ...
+                              'r_SRX', log10([0.15 0.3 1 3 8]), 'r_kSE', log10([0.1 0.3 0.6 1 2]));
     case 't2_allc'    % the combined tier INSIDE the literature corridor: r_iso 0.05-0.15 (isoform), r_T 3.7-8.4 (Q10 3-3.5 over 12-17 C)
         cfg.par = [P('r_iso', 'scale', iso, log10(0.05), log10(0.15), log10(0.1), true), ...
                    P('r_T', 'scale', cyc, log10(3.7), log10(8.4), log10(4.5), true), ...
@@ -99,6 +118,30 @@ switch name
                    P('tf_K_coop', 'tf', {}, 1, 100, 12, false), ...
                    P('shift', 'shift', {}, -0.150, 0.060, 0, false)];
         cfg.maxIter = 60;
+    case {'tw1_isoT', 'tw1_isoT_xb', 'tw2_caH'}
+        % T-World (ThirdParty/TWorld, CaInput 'tworld') as the Ca source instead of the de Lange
+        % transient: the adult human endocardial 1 Hz beat (0.097 -> 0.42 uM, TTP 54 ms) taken as
+        % granted ('signal' = its standalone-beat Ca; '_xb' = the 93 states embedded, the XB thin
+        % filament buffering the troponin Ca). Same free set as t1_isoT: iso x T + thin filament + shift.
+        cfg.CaInput = 'tworld';
+        cfg.CaTworld = struct('coupling', 'signal', 'prebeats', 0, 'state', 'TW_endo');
+        if strcmp(name, 'tw1_isoT_xb'), cfg.CaTworld.coupling = 'xb'; end
+        cfg.fixedScale = fixed(pi_, 0.3);
+        cfg.par = [hum, tf];  cfg.maxIter = 50;
+        if strcmp(name, 'tw2_caH')
+            % tier 2: T-World's Ca-handling levers freed (SERCA uptake = decay, ICaL = release trigger/amplitude,
+            % NCX = extrusion), each pre-paced 20 beats towards its own steady state (~16 s per evaluation).
+            cfg.CaTworld.prebeats = 20;
+            cfg.par = [cfg.par, P('Jup_Multiplier',   'tw', {}, log10(0.1), log10(3), 0, true), ...
+                                P('ICaL_Multiplier',  'tw', {}, log10(0.3), log10(3), 0, true), ...
+                                P('INaCa_Multiplier', 'tw', {}, log10(0.3), log10(3), 0, true)];
+            cfg.maxIter = 30;
+        end
+        % resolve the T-World layer once here, so every evaluation reuses it (tworldCaLayer caches on
+        % params.ca.tw; a changed 'tw' parameter changes the key and re-paces, as it must)
+        b2 = cfg.base;  b2.CaModel = 'twoState';  b2.CaInput = 'tworld';  b2.CaTworld = cfg.CaTworld;
+        b2.CaPeriod = 1;  b2.CaFirstBeat = cfg.pre;
+        b2 = getParams(b2, [], true, false);  cfg.base.ca = b2.ca;
     otherwise
         error('tierConfigs:name', 'unknown tier %s', name);
 end
@@ -106,6 +149,13 @@ end
 switch name
     case {'t2a_Pi', 't2b_SRX', 't2b_SRXc', 't2c_SE', 't2d_pas', 't2e_SL', 't2_all', 't2_allc', 't1_caFast', 't1_caSlow', 't1_caHiLvl'}
         cfg = warm(cfg, fullfile(res, 't1_isoT_fit.mat'));
+    case {'tB', 'tB_caE1', 'tB_caE2', 'tB_caE3', 'tB_caE4'}
+        cfg = warm(cfg, fullfile(res, 't1_isoT_fit.mat'));
+    case {'tw1_isoT', 'tw1_isoT_xb'}
+        cfg = warm(cfg, fullfile(res, 't1_isoT_fit.mat'));
+    case 'tw2_caH'
+        f = fullfile(res, 'tw1_isoT_fit.mat');  if ~exist(f, 'file'), f = fullfile(res, 't1_isoT_fit.mat'); end
+        cfg = warm(cfg, f);
     case 's3_free'          % from the best stage-2 tier (t2_all if present, else t1), expanded to individual rates
         f = fullfile(res, 't2_all_fit.mat');  if ~exist(f, 'file'), f = fullfile(res, 't1_isoT_fit.mat'); end
         cfg = warmS3(cfg, f, iso, pi_, srx);
@@ -113,6 +163,22 @@ switch name
         cfg = warmS3(cfg, fullfile(res, 't2_all_fit.mat'), iso, pi_, srx);
     case 's3_free_b'        % second start: literature human_v0 ratios at Q10 factor 5
         cfg = warmS3(cfg, '', iso, pi_, srx);
+end
+if ~isempty(prof)                                % fix the profiled parameter at its grid value
+    j = find(strcmp({cfg.par.name}, prof.par), 1);
+    if isempty(j), error('tierConfigs:prof', 'no parameter %s in %s', prof.par, prof.base); end
+    v = cfg.profGrid.(prof.par)(str2double(prof.k));  p = cfg.par(j);  cfg.par(j) = [];
+    if p.log, vv = 10^v; else, vv = v; end
+    switch p.type
+        case 'scale'
+            if ~isfield(cfg, 'fixedScale'), cfg.fixedScale = struct(); end
+            for f = string(p.fields), if isfield(cfg.fixedScale, f), cfg.fixedScale.(f) = cfg.fixedScale.(f)*vv; else, cfg.fixedScale.(f) = vv; end, end
+        case 'tf'
+            cfg.tfFixed.(p.name) = vv;
+        otherwise
+            error('tierConfigs:prof', 'cannot profile %s', p.type);
+    end
+    cfg.profFixed = struct('par', p.name, 'value', v, 'k', str2double(prof.k));
 end
 end
 

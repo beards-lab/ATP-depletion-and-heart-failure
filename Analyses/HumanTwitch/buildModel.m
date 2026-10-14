@@ -13,6 +13,8 @@ if isfield(cfg, 'fixedScale')
 end
 th = struct('CaKind', cfg.ca.kind, 'CaOpt', cfg.ca.opt, 'pre', cfg.pre, 'nb', cfg.nb);
 if isfield(cfg, 'CaModel'), th.CaModel = cfg.CaModel; end
+if isfield(cfg, 'CaInput'),  th.CaInput = cfg.CaInput; end      % 'tworld': T-World as the Ca source
+if isfield(cfg, 'CaTworld'), th.CaTworld = cfg.CaTworld; end    % its options (coupling, prebeats, param, ...)
 if isfield(cfg, 'tfFixed')
     for f = string(fieldnames(cfg.tfFixed))', th.(f) = cfg.tfFixed.(f); end
 end
@@ -22,6 +24,7 @@ for i = 1:numel(cfg.par)
         case 'scale', for f = string(p.fields), base.(f) = base.(f)*v; end
         case 'abs',   base.(p.fields{1}) = v;
         case 'tf',    th.(p.name) = v;
+        case 'tw',    th.tw.(p.name) = v;     % T-World parameter (getDefaultParameters.m name), absolute
         case 'shift', th.shift = v;
     end
 end
