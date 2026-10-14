@@ -82,7 +82,8 @@ end
         'Velocity', 0,...
         'UseCalculatedN', true, ... % Use dS and Slim_m / Slim_p
         'CaModel', 'none', ...     % Ca-activation (thin-filament) model: 'none' = saturating Ca, no state, no call (the calibrated model, byte-identical); 'clamp' = prescribed attachment availability (rectangular pulse per beat, no state); 'twoState' = Tewari/Campbell/Marzban cooperative N state with bound-head feedback (+1 state); 'myosim' = the same kinetics in the MyoSim form (sites switchable only inside the overlap, gate = free ON sites; +1 state N_on). See calciumActivation.m
-        'CaInput', 'const', ...    % Ca source for CaModel 'twoState' / 'myosim': 'const' (pCa), 'analytic' (caTransient kind fired every CaPeriod), 'signal' (measured trace from LoadCaMat)
+        'CaInput', 'const', ...    % Ca source for CaModel 'twoState' / 'myosim': 'const' (pCa), 'analytic' (caTransient kind fired every CaPeriod), 'signal' (measured trace from LoadCaMat), 'tworld' (the T-World myocyte, ThirdParty/TWorld; options in CaTworld, see tworldCaLayer.m)
+        'CaTworld', struct(), ...  % options of CaInput 'tworld' (a struct, so never written into snapshots): coupling 'signal' | 'land' | 'xb', prebeats, X0, state, param, absTol — see tworldCaLayer.m
         'pCa', 4.51, ...           % constant pCa for CaInput 'const' (4.51 = the Beard 2022 activating solution)
         'CaTransientKind', 'rice2008', ... % caTransient kind for CaInput 'analytic'
         'CaPeriod', 1, ...         % beat period (s) of the analytic transient / clamp pulse; one fixed frequency
@@ -812,9 +813,9 @@ end
 function ca = buildCaLayer(params)
 % Resolve the Ca-activation switches into the numeric struct read by
 % dPUdT_CombinedTransitions / calciumActivation. Ids: model 0 none, 1 clamp,
-% 2 twoState, 3 myosim; input 1 const, 2 analytic, 3 signal.
+% 2 twoState, 3 myosim; input 1 const, 2 analytic, 3 signal, 4 tworld.
     models = {'none', 'clamp', 'twoState', 'myosim'};
-    inputs = {'const', 'analytic', 'signal'};
+    inputs = {'const', 'analytic', 'signal', 'tworld'};
     model = find(strcmp(params.CaModel, models)) - 1;
     input = find(strcmp(params.CaInput, inputs));
     if isempty(model)
@@ -834,7 +835,8 @@ function ca = buildCaLayer(params)
         'Ca_const', 10^(6 - params.pCa), 'kind', params.CaTransientKind, 'opt', struct(), ...
         'Cadia', NaN, 'sig', [], 'clampD', params.CaClampDuration, ...
         'k_on', params.tf_k_on, 'k_off', params.tf_k_off, 'K_coop', params.tf_K_coop, ...
-        'useOverlapFactor', logical(params.UseOverlapFactor));
+        'useOverlapFactor', logical(params.UseOverlapFactor), ...
+        'tw', [], 'absTol', [], 'absTolIdx', []);   % T-World block (CaInput 'tworld'); per-state AbsTol for evaluateModel
 
     % thin-filament states, appended after every other optional tail state
     base = params.NumberOfStates*params.ss + 7 + params.UseRegistrationAvailability ...
@@ -874,6 +876,22 @@ function ca = buildCaLayer(params)
                     ca.sig.m = gradient(ca.sig.y(:))*ca.sig.Fs;
                 end
                 ca.sig.hermite = true;
+            case 4  % tworld: the T-World myocyte (ThirdParty/TWorld) is the Ca source
+                prev = [];
+                if isfield(params, 'ca') && isstruct(params.ca) && isfield(params.ca, 'tw')
+                    prev = params.ca.tw;             % reuse the pre-paced resolution if unchanged
+                end
+                tw = tworldCaLayer(params, ca, prev);
+                ca.tw = tw;
+                ca.beatKnots = unique([0, min(tw.stimDur, ca.T)]);   % stimulus on / off
+                ca.Cadia = tw.Cadia;
+                if tw.coupling > 1       % embedded: the 93 T-World states follow the thin-filament state
+                    ca.nStates = ca.nStates + tw.n;
+                    ca.x0 = [ca.x0, tw.x0];
+                    ca.idx = base + (1:ca.nStates);
+                    ca.absTolIdx = ca.idx(end - tw.n + 1:end);
+                    ca.absTol = tw.absTol;
+                end
         end
     end
 end

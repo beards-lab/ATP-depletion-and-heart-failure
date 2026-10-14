@@ -142,6 +142,7 @@ Legacy path (does **not** call `RunBakersExp`; builds its own `params0` and call
 - **`data/`** — experimental `.txt`/`.mat` data files; not tracked by git
 - **`Docs/`** — knowledge base (start at `Docs/README.md`): `reference/` (durable), `notes/` (working),
   `experiments/` (dated write-ups), `presentations/` (slides/posters), `ROADMAP.md`, and process docs.
+- **`ThirdParty/`** — vendored external models, verbatim, each in its own folder with a `README.md` giving author, repo, commit and copy date (`TWorld/`: the T-World human myocyte, GPL-3, used as an optional Ca source via `CaInput = 'tworld'`; see `Model/tworldCaLayer.m` and `Analyses/TWorldCoupling/`).
 - **`scripts/`** — infrastructure (`setup-gh.sh`, `rol.sbatch`).
 - **`_archive/`** — disk-only graveyard for stale `.mat`/`.png` dumps, old optimizer envs, dead code (gitignored; "archive, don't delete").
 

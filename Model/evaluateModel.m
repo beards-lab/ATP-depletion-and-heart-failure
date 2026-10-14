@@ -209,6 +209,18 @@ for vs = 1:length(T) - 1
     relTol = 1e-2; absTol = 1e-4;
     if isfield(params, 'odeRelTol') && ~isempty(params.odeRelTol), relTol = params.odeRelTol; end
     if isfield(params, 'odeAbsTol') && ~isempty(params.odeAbsTol), absTol = params.odeAbsTol; end
+    % Per-state AbsTol when the Ca layer embeds states on other scales (the
+    % T-World block, mM / mV; CaInput 'tworld'); the cross-bridge states keep absTol.
+    if isfield(params, 'ca') && isfield(params.ca, 'absTol') && ~isempty(params.ca.absTol) && isscalar(absTol)
+        if numel(PU0) == params.ca.idx(end)
+            a = absTol*ones(1, numel(PU0));
+            a(params.ca.absTolIdx) = params.ca.absTol;
+            absTol = a;
+        else
+            warning('evaluateModel:CaAbsTol', ...
+                'State length %d differs from the Ca layout %d; scalar AbsTol kept.', numel(PU0), params.ca.idx(end));
+        end
+    end
     opts = odeset('Events', @movingWindow, 'AbsTol', absTol, 'RelTol', relTol);
     if isfield(params, 'odeMaxStep') && ~isempty(params.odeMaxStep) && params.odeMaxStep > 0
         opts = odeset(opts, 'MaxStep', params.odeMaxStep);

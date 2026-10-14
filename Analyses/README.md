@@ -195,3 +195,4 @@ passive trace to recover the cross-bridge-only force — treat this as the stand
 correction in downstream fits.
 
 - `HumanTwitch/` — human iPSC-EHT twitch with a fixed literature Ca transient: humanizing-trajectory fits (0.77 %) vs free fits (0.30 %); see `HumanTwitch/conclusions.md`.
+- `TWorldCoupling/` — the T-World human myocyte (`ThirdParty/TWorld`) as a Ca source of the Ca layer (`CaInput = 'tworld'`): standalone-beat table, or its 93 states embedded with Land's or the XB thin filament buffering the troponin Ca. Embedding reproduces the standalone Ca to 5e-4 µM at ~2.5× the cost; the closed loop raises the Ca peak 37 % (EHT-fit thin filament) or 2.6× (Marzban), which hinges on whether the permissive fraction is the Ca-bound TnC. See `TWorldCoupling/conclusions.md`.
