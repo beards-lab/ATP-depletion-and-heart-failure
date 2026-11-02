@@ -16,14 +16,10 @@ ctrl1.csv
 PARAMETERS.xlsx
 UpdatePhysiolibraryToBodylight.bat
 ~*
-params/ModelOptParams_iter_*.m
-params/ModelOptParams_SRXTD_iter_*.m
-params/ModelOptParams_TL_iter_*.m
-params/ModelOptParams_TL1_iter_*.m
-params/ModelOptParams_TL2_iter_*.m
-params/ModelOptParams_TL3_iter_*.m
-params/ModelOptParams_TL4_iter_*.m
-params/ModelOptParams_TL5_iter_*.m
+# Generated parameter snapshots (writeParamsToMFile: <tag>_opt.m, _seed.m, _iter_*.m, abl*).
+# Already-tracked snapshots stay tracked; keep a new one deliberately with `git add -f`.
+# Hand-written .m code anywhere else is tracked as usual (#72).
+/params/*.m
 /Analysis/batch_output_extracted_v1
 data/
 *.fig
@@ -36,8 +32,6 @@ tools/*.exe
 *.log
 *.err
 /params/*/
-/params/abl*.m
 *.bak
-*.m
 /Analyses/LowATP_Refit9K2Sweep/results
 /Analyses/SRXDuringContraction/results
