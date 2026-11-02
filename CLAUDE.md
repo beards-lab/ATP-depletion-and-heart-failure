@@ -2,6 +2,35 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working with issues (project state lives on GitHub)
+
+Every bug, fix, open science question and refactor step is a GitHub issue in
+`beards-lab/ATP-depletion-and-heart-failure`; milestones are the real goals; the board is
+https://github.com/orgs/beards-lab/projects/3 (Backlog / Next / In progress / Review / Done,
+**WIP limit 2** on In progress for `needs-judgment` work). Not plan docs, not AI memory.
+
+- **Start** a session from an issue: read it **with its comments** (`gh issue view <n> --comments`);
+  the newest `## Hand-off` comment says where the last session stopped. Check its blockers. Move the
+  card to In progress.
+- **One issue → one short-lived branch `<n>-<slug>` → one PR** (`Closes #<n>`). Fork **paper work**
+  (Paper 1: saturating-Ca, 1-D, mouse, 8 + 2 mM) from **`ca-sat-1d-mouse`**; fork **everything else**
+  (Ca dynamics, humanization, reduced model, Pi/pH) from **`main`**, with new features behind flags
+  that default OFF. Merges flow `ca-sat-1d-mouse` → `main` only, never back. See
+  `decisions/0001-branch-and-release-model.md`. Until `ca-sat-1d-mouse` exists, fork paper work from
+  `PooledTarget-8mM`.
+- **Side findings become new issues**, never fixes on the current branch.
+- **Issue body:** Summary / Motivation / Acceptance criteria (a measurable check where possible) /
+  Out of scope / Pointers (files, branches, commits, analyses). Labels: one type (`bug`, `science`,
+  `analysis`, `objective`, `refactor`, `docs`, `data-request`, `chore`) plus `needs-judgment` /
+  `agent-ready` / `blocked` as they apply.
+- **End** every session with a `## Hand-off` comment on the issue (status, branch@commit, measured
+  values vs the acceptance check, open caveats, the one next step, issues filed) and move the card:
+  Review if it needs the PI's eyes, Done only for mechanical checks, else stay In progress.
+  Never close a `needs-judgment` issue yourself.
+- Decisions with lasting consequences (X over Y) go in `decisions/NNNN-title.md`.
+
+Claude Code users with the `/issue` and `/handoff` skills get this routine automated.
+
 ## Overview
 
 MATLAB codebase implementing a cardiac cross-bridge (sarcomere) model to study ATP depletion and heart failure. Based on [Beard et al. 2022](https://www.sciencedirect.com/science/article/pii/S0006349522006026). The model simulates strain-discretized probability distributions of myosin cross-bridge states and their time evolution via ODEs.
