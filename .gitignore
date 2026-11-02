@@ -39,3 +39,5 @@ tools/*.exe
 /params/abl*.m
 *.bak
 *.m
+/Analyses/LowATP_Refit9K2Sweep/results
+/Analyses/SRXDuringContraction/results

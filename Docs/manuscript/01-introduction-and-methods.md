@@ -4,6 +4,13 @@
 Markdown with inline LaTeX, intended to be pasted into Overleaf. Math uses `$…$` / `$$…$$`;
 citations use `\citep{}`/`\citet{}` against the accompanying `references.bib`.
 
+> ## Revision status (2026-11-02)
+>
+> §1 Introduction replaced by the Overleaf version (main.tex @ 51e26da); `references.bib`
+> replaced by the Overleaf bib (a superset). The old §1.1–1.6 subsections are gone, so the
+> §1.x cross-references below and in §2–3 are stale; the old §1.6 "Principal findings"
+> numbers belong in Results now. Git history (deb4103) has the previous text.
+>
 > ## Revision status (2026-10-07)
 >
 > The 2026-09-18 review findings ([`REVIEW-corrections.md`](REVIEW-corrections.md)) have been
@@ -36,212 +43,113 @@ Items needing a decision or a number from the bench are marked **[TODO]**.
 
 ## 1. Introduction
 
-### 1.1 The energetic deficit of the failing heart is transduced by the cross-bridge cycle
+<!-- Synced verbatim from Overleaf ("ATP Dependent Crossbridge Model", main.tex, commit 51e26da,
+2026-11-02). Overleaf is the source of truth for this section: edit there, then re-sync.
 
-The heart converts chemical free energy into mechanical work at a single molecular
-interface: the cyclical interaction of myosin cross-bridges with actin, powered by the
-hydrolysis of MgATP. Every beat, every unit of stroke work and every determinant of
-relaxation passes through that interface, and the currency it spends is the free energy
-of ATP hydrolysis, $\Delta G_\mathrm{ATP}$, set jointly by $[\mathrm{MgATP}]$,
-$[\mathrm{MgADP}]$ and $[\mathrm{P_i}]$.
+Introduction outline (working notes, remove before submission)
+1. ATP is reduced in the failing heart, and this may limit power.
+   - Myocardial ATP falls from about 8 mM to 3-4 mM in advanced failure as the
+     adenine nucleotide pool is depleted (Ingwall2002, Beard2022); also in TAC
+     rats (Lopez2020).
+   - Heart failure as a limitation of cardiac power output (BeardHummelJezek2021).
+   - Low MgATP lowers myofilament power by 20-25 % and ktr by ~20 %, with Fmax
+     and Vmax unchanged (Beard2022).
+   - Existing mechano-energetic models cannot simulate this: their cross-bridge
+     cycle is ATP-saturated, so energetic failure acts only through Pi
+     (Lopez2020, Tewari2016).
+2. No model reproduces the measured ATP sensitivity.
+   - Tewari cycle + Campbell SRX recruitment fails with one parameter set, even
+     for arbitrarily large K_MgATP (Beard2022, Tewari2016, Campbell2018).
+   - Other models give the direction only, or are untested in the 2-8 mM range
+     (Tran2010, Schmidt2024, Wang2026).
+3. Two candidate mechanisms (our postulates).
+   - H1, ATP-limited detachment. The post-stroke head detaches only after
+     binding MgATP. Apparent Km of whole-cycle outputs is 10-150 uM (Beard2022),
+     but the dissociation constant of ATP from the attached head is 0.1-1 mM by
+     sinusoidal analysis (Kawai1993, Fujita2002, Kawai2024). Not a paradox; a
+     discussion point.
+   - H2, ATP-dependent head availability. ATP turns thick filaments ON
+     (Rhodehamel2025); nucleotide-dependent availability shown for dATP
+     (Teitgen2024); SRX recruitment in the parent model (Campbell2018).
+   - Both proposed but not tested by Beard2022.
+4. Separating H1 and H2 needs non-physiological protocols.
+   - Force-velocity and a single ktr cannot separate them (Beard2022).
+   - Slack/re-stretch (recruitment), re-stretch (strain-dependent detachment),
+     stretch-hold staircase (thick-filament loading Linari2015, titin
+     viscoelasticity Jezek2025).
+   - Paired 8 and 2 mM recordings in the same trabecula.
+5. Aims, hypotheses, expected result.
+   - Aim 1: one parameter set reproduces all protocols at 8 mM.
+   - Aim 2: changing only ATP-dependent steps reproduces 2 mM.
+   - Expected: H1 dominant, H2 needed for kinetics; model can then be coupled
+     to energetics models (Bazil2016, Collins2026).
+-->
 
-In heart failure that currency is devalued. Phosphorus magnetic resonance spectroscopy
-shows a systematic fall in the myocardial phosphocreatine-to-ATP ratio — pooled
-PCr/ATP $\approx 1.96$ in healthy volunteers against $1.54$ in heart failure with
-reduced ejection fraction, a $21\,\%$ reduction, and $1.60$ in HFpEF — and the deficit
-predicts mortality independently of ejection fraction \citep{Bray2026,
-Neubauer1997}. Because the creatine kinase system buffers ATP at the expense of PCr,
-falls in PCr precede falls in ATP; by the decompensated stage the adenine nucleotide
-pool itself is depleted, cytosolic ADP and $\mathrm{P_i}$ rise, and $\Delta G_\mathrm{ATP}$
-falls to a level at which ATP-consuming processes begin to be thermodynamically
-constrained \citep{Lopez2020, Ingwall2002}.
+The pumping action of the heart is, at the molecular level, the summed output of myosin cross-bridges,
+each transducing the free energy of ATP hydrolysis into force and filament sliding \citep{hill1974}.
+Heart failure can be regarded as a limitation of cardiac power output
+\citep{BeardHummelJezek2021}, and the failing myocardium is simultaneously an
+energy-depleted one: myocardial ATP falls from approximately 8~mM in the healthy heart to
+3--4~mM in advanced heart failure as the adenine nucleotide pool is depleted
+\citep{Ingwall2002, Wu2009, lopez2024}, with comparable depletion observed in rats with decompensated
+pressure-overload hypertrophy \citep{Lopez2020}. Whether this depletion impairs contraction
+directly---by slowing cross-bridge cycling itself---or only indirectly, through the
+accompanying accumulation of hydrolysis products, remains unresolved. Here we address the
+ATP dependence of cross-bridge kinetics across the millimolar concentration range spanned
+by the healthy and failing heart.
 
-The component of this system we address here is the last step in that causal chain: how
-the concentration of MgATP at the myofilament modulates cross-bridge cycling, and
-therefore sarcomere-level force, shortening velocity, power and the *kinetics* of force
-development. Our target is a mechanistic, quantitative description of that modulation
-that is identifiable from mechanical measurements — the mechanical half of an
-ATP-supply/ATP-demand axis whose metabolic half already exists as a validated
-mitochondrial model \citep{Collins2026, Bazil2016}.
+The cross-bridge cycle couples the hydrolysis of ATP to the production of mechanical
+work: (i)~hydrolysis of ATP on the detached myosin head primes the lever arm; (ii)~the
+primed head binds actin; (iii)~phosphate release drives the working stroke, generating
+force and filament sliding; and (iv)~ADP dissociation followed by ATP binding dissociates
+myosin from actin. Cooke and Pate~\cite{pate1989} introduced a model of cross-bridge kinetics and force
+generation in which these state transitions depend explicitly on the concentrations of ATP,
+ADP and inorganic phosphate (P$_{\rm i}$), showing that maximum unloaded
+shortening velocity becomes ATP-limited only when ATP falls into the micromolar range. The
+corollary---that the cycle is effectively saturated at the millimolar concentrations
+prevailing in vivo---is supported by measurements in permeabilized mouse trabeculae, in
+which maximal force and maximal shortening velocity were insensitive to changes in MgATP
+over the millimolar range \citep{Beard2022}. Current models of myocardial
+mechano-energetics embody this view, and in the analysis of Lopez et al.~\cite{Lopez2020} energetic
+failure impaired contraction only through a concurrent rise in P$_{\rm i}$.
 
-### 1.2 What is currently thought to be known
+Maximal force and velocity, however, are not the quantities that fail in the failing heart.
+In demembranated trabeculae, lowering MgATP from 8 to 4~mM reduces peak power by
+20--25\,\% and the rate of tension redevelopment ($k_\mathrm{tr}$) by approximately 20\,\%,
+while leaving maximal force and unloaded shortening velocity unchanged \citep{Beard2022}.
+ATP depletion of the magnitude observed in heart failure may therefore contribute directly
+to contractile failure. Yet existing models cannot test this proposition, because their
+cross-bridge cycles are near-saturated with MgATP at millimolar concentrations. Beard et al.~\cite{Beard2022}
+were unable to reproduce the observed MgATP dependence using a strain-dependent cross-bridge
+model combining the cycle of Tewari et al.~\cite{Tewari2016} with force-dependent recruitment of myosin
+from the super-relaxed (SRX) state \citep{Campbell2018}: a single parameter set captured the
+force--velocity relation at each concentration but not its change with MgATP, and increasing
+the MgATP dissociation constant without bound did not resolve the discrepancy. Other
+metabolite-sensitive formulations reproduce the direction of the MgATP effect on force and
+$k_\mathrm{tr}$ \citep{Tran2010} or derive ATP-dependent rates from thermodynamic principles
+\citep{Schmidt2024, Wang2026}, but none have been tested against data on muscle function at ATP concentration in the rage of 2 to
+8~mM. The question is therefore what feature of cross-bridge cycling confers sensitivity to
+MgATP in a range where the cycle is conventionally held to be saturated.
 
-Three bodies of work define the status quo.
+Two mechanisms that could make the cross-bridge cycle sensitive to ATP concentration in this range
+were proposed, but not tested, by \cite{Beard2022}. First, a post-stroke head detaches from
+actin only after binding MgATP. The apparent $K_m$ of 10--150~$\mu$M for ATPase activity, force
+and shortening velocity \citep{Beard2022} is a property of the whole cycle, whereas the
+dissociation constant of MgATP from the attached head, measured by sinusoidal analysis, is
+0.1--1~mM in cardiac muscle \citep{Kawai1993, Fujita2002, Kawai2024}. At the upper end of
+this range, detachment would be reduced by about a quarter at and ATP concentration of 2~mM compared to 8~mM. Second, ATP shifts
+myosin heads from the ordered OFF state on the thick filament to the disordered ON state
+\citep{Rhodehamel2025}, so that a lower ATP may reduce the number of heads available to cycle,
+as proposed to be an effect of 2$'$-deoxy-ATP \citep{Teitgen2024}.
 
-**Nucleotide pharmacology of the cross-bridge.** In permeabilised fibres, the products
-and substrate of hydrolysis act at identifiable steps. Added $\mathrm{P_i}$ reduces
-isometric force approximately linearly in $\log[\mathrm{P_i}]$ while leaving $V_\mathrm{max}$
-essentially unchanged, placing the main force-generating transition after $\mathrm{P_i}$
-release; added MgADP raises isometric force and lowers $V_\mathrm{max}$, consistent with
-competitive occupancy of the nucleotide site slowing the ATP-binding step that terminates
-the working stroke \citep{Cooke1985, Gordon2000}. MgATP itself sets the rate of
-cross-bridge dissociation, so the conventional reading of ATP depletion is *slower
-detachment*: a larger attached fraction, higher isometric force, lower shortening
-velocity, and reduced power.
+Measurements of force-velocity relation and a standard $k_\mathrm{tr}$ estimates cannot separate these mechanisms,
+because slower detachment and fewer available heads both lower power and slow redevelopment.
+However, we found that assessment of force during a sequence of large rapid changes in length can potentially differentiate these potential mechanisms.
+Specifically, we designed a sequential slack and re-stretch protocol to assess sarcomere length-dependent force development and maximal unloaded velocity following slack, strain dependence of ratcheting and detachment transitions and stretch--hold steps loading the thick filament \citep{Linari2015}.
+The restretch part might be affected by the viscoelasticity of the titin, which has been found to be significantly augmented at high-Ca conditions, while the active contraction was completely suppressed  \citep{Jezek2025, Baker2025-rz} . The combination of force-velocity, slack-restretch, $k_\mathrm{tr}$ and high-Ca passive protocols at high (8mM) and low (2mM) ATP concentration present an information-rich dataset, suitable for identification of complex model with ATP sensitivity.
 
-**Direct measurement of the ATP effect in cardiac muscle.** \citet{Beard2022} measured
-isovelocity force–velocity relations in demembranated right-ventricular trabeculae from
-male C57BL/6J mice ($n = 12$ trabeculae at $8$ mM, $6$ at $4$ mM and $6$ at $2$ mM;
-one to two trabeculae per animal; curves averaged per condition) and found that halving
-MgATP from $8$ to $4$ mM — the range spanned by heart failure — lowered peak power
-($38.3 \pm 3.2 \to 29.9 \pm 1.8$ W/L, and $23.5 \pm 2.8$ W/L at $2$ mM) and the rate of
-tension redevelopment ($34.9 \to 28.1 \to 25.8\ \mathrm{s^{-1}}$), with maximal velocity
-not significantly changed. More recently, \citet{Rhodehamel2025}
-showed by small-angle X-ray diffraction that MgATP acts on the thick filament directly:
-raising $[\mathrm{ATP}]$ shifts myosin heads from quasi-helically ordered OFF states on
-the filament backbone to disordered ON states, accelerates both attachment and detachment
-rates, and raises power and $V_\mathrm{max}$ — so $[\mathrm{ATP}]$ is not only a substrate
-for the cycle but a regulator of how many heads are available to enter it.
-
-**Thick-filament regulation and its state in disease.** Myosin heads partition between a
-disordered-relaxed (DRX) pool available for actin binding and an energy-sparing
-super-relaxed (SRX) pool with ATP turnover an order of magnitude slower
-\citep{Hooijman2011, McNamara2015}. The partition is mechanosensitive: force borne by the
-thick filament recruits heads out of the OFF/SRX population, which is now the leading
-account of length-dependent activation and the Frank–Starling relation
-\citep{Linari2015, Campbell2018, Irving2017}. In failing human myocardium the SRX
-fraction is reduced and the DRX fraction raised, so resting myosin ATP consumption is
-elevated precisely where oxidative capacity is lowest \citep{Ma2026SRX}.
-
-**Computational models.** Strain-distribution (Huxley-type) cross-bridge models with
-explicit chemistry are the established vehicle for this problem
-\citep{Huxley1957, Razumova1999, Rice2008}. \citet{Tewari2016} built a metabolite-explicit
-cardiac cross-bridge model identified against complex-modulus data across MgATP and
-$\mathrm{P_i}$; \citet{Land2017} and \citet{Campbell2018} added series compliance and
-force-dependent OFF$\to$ON recruitment; \citet{Lopez2020} coupled a cross-bridge model to
-myocardial energetics to show that metabolite changes of the magnitude seen in
-decompensated failure are sufficient to impair pump function.
-
-### 1.3 The gap
-
-The conventional account is coherent but it does not, in fact, reproduce the measurements.
-The most direct test available is \citeauthor{Beard2022}'s own. Their strain-discretised
-model, in which $[\mathrm{MgATP}]$, $[\mathrm{MgADP}]$ and $[\mathrm{P_i}]$ enter the
-transition rates through rapid-equilibrium binding factors ($K_\mathrm{MgATP} = 0.5$ mM),
-was given a single parameter set adjusted to the force–velocity data at all three
-concentrations, and "does not reproduce the observed dependence of the force-velocity curve
-or the tension development kinetics on [MgATP]" \citep{Beard2022}. The same paper proposed,
-without testing them, the two directions taken here: that MgATP may act through the
-transition between super-relaxed and non-super-relaxed myosin, and that the detachment
-kinetics and their strain dependence may be mis-formulated. The present work is the
-follow-up to that study. It asks whether a model with those two additions can carry the
-measured ATP dependence with one parameter set, and quantifies the result.
-
-Two things are missing.
-
-*Mechanistically*, a model in which ATP enters only as a detachment substrate has too few
-degrees of freedom. In a cycle with a single strongly-bound state, the isometric force,
-the attached fraction and the rate of force redevelopment $k_\mathrm{tr}$ are welded
-together by the turnover identity $\mathrm{ATPase} = r(1-r)\,k_\mathrm{tr}$ with $r$ the
-duty ratio, so any change that raises force by slowing detachment necessarily changes
-$k_\mathrm{tr}$ by a coupled amount. Whether the measured pair of changes is compatible
-with that constraint is a testable question, and it has not been tested.
-
-*Experimentally*, the steady force–velocity relation is a weak instrument. It is a
-near-static summary of a cycle whose ATP sensitivity is kinetic, it cannot separate
-attachment from detachment, and it contains no information about how quickly the muscle
-re-recruits bridges after they are stripped. A dataset that constrains the mechanism has
-to contain transients.
-
-### 1.4 Hypotheses
-
-The puzzle is a $K_m$ paradox. The catalytic $K_m$ of cardiac actomyosin for MgATP is
-$10$–$150\ \mu$M, so $2$–$8$ mM is $10$–$100\times$ saturating, and a fourfold fall in
-that range should be mechanically silent — yet it costs a third of the peak power. We
-consider three non-exclusive accounts, each with the observable that would discriminate it.
-
-- **H1 — product or transport effects.** Low bath $[\mathrm{ATP}]$ acts through raised
-  $[\mathrm{MgADP}]$ occupancy \citep{Cooke1985}, or through metabolite gradients inside a
-  $\sim 100\ \mu$m preparation. *Weakness:* creatine kinase/phosphocreatine holds ADP low
-  in both this preparation and that of \citet{Rhodehamel2025}, which also sees an ATP
-  effect. Inorganic phosphate is *not* clamped by that buffer, and its build-up in the
-  core scales with ATPase, which is itself ATP-dependent (§3.1).
-  *Discriminating observable:* covariance of the effect with trabecula thickness; the effect
-  of added $\mathrm{P_i}$ at fixed MgATP.
-- **H2 — substrate-limited detachment and its strain dependence.** The post-stroke head
-  must bind ATP before it can release, so detachment carries a factor in $[\mathrm{ATP}]$,
-  and its strain dependence may be what is mis-formulated (the second of the
-  \citealp{Beard2022} conjectures). *Discriminating observable:* the force gain and the
-  slowing of redevelopment move together with one rate; the force–velocity relation at
-  intermediate loads.
-- **H3 — thick-filament availability.** $[\mathrm{ATP}]$ shifts heads between the ordered
-  OFF/SRX and the disordered ON/DRX states \citep{Rhodehamel2025}, as \citet{Beard2022}
-  conjectured, so low ATP changes the number of heads entering the cycle as well as the
-  rate at which they leave it. *Discriminating observable:* kinetics that change at fixed
-  isometric force — the $k_\mathrm{tr}$ manoeuvre against the slack recovery, and the
-  in-preparation force–velocity point.
-
-### 1.5 Approach
-
-We test these by building a cross-bridge model with enough structure to express them
-separately, and by calibrating it against a dataset that can tell them apart.
-
-The model extends that of \citet{Beard2022}, which already combined the metabolite-dependent
-cycle of \citet{Tewari2016} with the force-dependent OFF$\to$ON recruitment of
-\citet{Campbell2018}. It describes the myosin head population by densities over cross-bridge
-strain that are advected by filament sliding (a Huxley-type transport equation), coupled to
-lumped detached and super-relaxed pools. Three changes carry the ATP question:
-(i) the super-relaxed reservoir is resolved by nucleotide occupancy, so ATP can gate the
-return of folded heads to the cycle — the one place it can set head *availability*
-independently of cycling rate; (ii) every ATP gate is normalised to unity at $8$ mM, so
-adding a gate leaves the 8 mM fit unchanged for any $K_m$ and the 2 mM behaviour is a
-genuine extrapolation; and (iii) asymmetric, piecewise strain-dependent modifiers on the
-attached-state transitions, so the strain dependence of detachment is fitted rather than
-assumed. A viscoelastic titin element supplies the passive mechanics \citep{Jezek2025},
-and a thin-filament Ca$^{2+}$ activation layer after \citet{Campbell2018} extends the
-model from maximal activation to twitches (§2.3.12).
-
-The data are paired 8 mM and 2 mM MgATP recordings on the same demembranated
-right-ventricular trabecula, carrying a five-cycle slack/re-stretch train, a
-force-redevelopment ($k_\mathrm{tr}$) manoeuvre, a staircase of stretch–hold steps, and,
-on two of three preparations, an in-preparation isovelocity point — plus a passive run
-under PNB and mavacamten for the titin contribution. The full force–velocity relation at
-8 mM is taken from \citet{Beard2022}. Calibration targets
-*discrete features* of those records (rates, peaks, valleys, plateaux, delays) rather than
-whole traces, with weights derived from the measured between-preparation spread so that
-every term is a $\chi^2$ in units of one preparation-width.
-
-Two specific questions follow. **(i)** Can one parameter set carry all protocols at 8 mM
-simultaneously — i.e. is the framework adequate before any ATP perturbation is applied?
-**(ii)** Starting from that 8 mM model and changing only ATP-gated rates, how much of the
-measured 2 mM behaviour — in every protocol, not one summary statistic — does the model
-reproduce, and where does it fail?
-
-### 1.6 Principal findings
-
-**[TODO — replace the sweep numbers with the final joint 8 + 2 mM fit when it closes.]**
-
-*The measured ATP effect.* After correction for preparation rundown and pooling, 2 mM
-MgATP raises isometric force $\times 1.32 \pm 0.09$ and the first re-stretch peak
-$\times 1.40 \pm 0.12$, slows force redevelopment ($\times 0.74 \pm 0.14$ on the dedicated
-$k_\mathrm{tr}$ manoeuvre, $\times 0.57 \pm 0.10$ on the slack recovery), slows the
-post-re-stretch recovery ($\times 0.38 \pm 0.07$), lengthens the delay to force onset
-after slack ($\times 1.43 \pm 0.17$), and depresses relative force during shortening at
-$2\ ML\,\mathrm{s^{-1}}$ ($\times 0.715 \pm 0.012$). All six force-*shape* features are
-ATP-flat: low ATP makes cardiac muscle *stronger and slower* without reshaping its
-transients. The two $k_\mathrm{tr}$ probes are both reported as measurements. They differ
-because the slack recovery is about five times more sensitive to series compliance than the
-dedicated manoeuvre, and the low-ATP condition bears more force (§3.1).
-
-*The model at 8 mM.* A single parameter set reproduces the 8 mM behaviour of the slack
-train, the $k_\mathrm{tr}$ manoeuvre, the staircase and the force–velocity relation, with
-13 of 20 slack features inside one between-preparation standard deviation of the pooled
-target. The four features outside two SD are all re-stretch *timing* features.
-
-*The model at 2 mM.* From that 8 mM set, slowing a single physiological step — ATP-limited
-detachment of the post-stroke state, by $\approx\times 0.54$ — moves every ATP-sensitive
-feature in the measured direction and reproduces force ($\times 1.24$–$1.32$), the
-re-stretch peak ($\times 1.39$), the $k_\mathrm{tr}$ manoeuvre ($\times 0.68$), the
-post-re-stretch rate ($\times 0.49$) and the onset delay ($\times 1.54$) at roughly the
-measured size. Slowing the entry of heads into the super-relaxed pool at the same time
-($\times 0.4$, H3) brings the force–velocity point ($\times 0.74$) and the $k_\mathrm{tr}$
-manoeuvre ($\times 0.72$) onto the data. What the model does *not* reproduce is the timing
-of the re-stretch recovery: its time constant ($\times 1.0$ against $\times 1.68$) and the
-time of the post-peak valley ($\times 1.19$ against $\times 0.82$), and the valley is about
-twice too deep at 2 mM. These are the same features that carry the 8 mM misfit, so the
-remaining 2 mM error is the 8 mM re-stretch defect amplified, not missing ATP chemistry.
-In contrast to \citet{Beard2022}, therefore, one parameter set carries the ATP dependence of
-force, power and redevelopment kinetics.
+We used the data from these experiments to identify a strain-dependent cross-bridge model that matches data from all protocols at 2, 4, and 8~mM ATP with the goal of finding the simplest explanation for the dependency of muscle dynamics on ATP concentration. In practice we started by first identifying a model that reproduces all protocols at 8~mM MgATP with one parameter set. The next step was to test whether adjusting only the ATP-dependent
+steps of that model reproduces the responses at 2~mM. We tested two non-exclusive hypotheses: that low ATP slows detachment of the post-stroke state, and that low ATP reduces the availability of heads through the SRX pool. We found that both hypotheses were necessary to explain the observed data on muscle dynamics as a function of MgATP concentration.
 
 ---
 
@@ -251,76 +159,65 @@ force, power and redevelopment kinetics.
 
 #### 2.1.1 Preparation
 
-Mechanical measurements were made on demembranated right-ventricular trabeculae from
-adult mice, following the procedures of \citet{Beard2022}.
-**[TODO — Baker lab to supply: strain, sex, age; skinning protocol and detergent;
-activating and relaxing solution composition, ionic strength and pH; free
-$[\mathrm{Ca^{2+}}]$/pCa of the activating solution; creatine kinase / phosphocreatine
-buffering; bath temperature; how MgATP was varied at fixed ionic strength and fixed free
-$[\mathrm{Mg^{2+}}]$; cross-sectional area measurement; whether sarcomere length was
-measured optically or inferred from motor length.]**
+Demembranated right-ventricular trabeculae were prepared from adult (about 12-week-old) male
+and female C57BL/6J mice (Jackson Laboratory) as described previously
+\citep{Beard2022, Baker2025-rz}. The study was approved by the Animal Care and Use
+Subcommittee of the San Francisco Veterans Affairs Medical Center. In brief, trabeculae were
+demembranated in ice-cold relaxing solution containing 2\,\% Triton X-100 for 1 h, washed,
+and stored at $-20\,^\circ$C in a 1:1 mixture of relaxing solution and glycerol. Relaxing
+solution contained (in mM) 20 EGTA, 8, 4 or 2 MgATP, 12 creatine phosphate and 100 BES, pH 7.1
+(KOH), ionic strength 200 mM (KCl); in the preactivating solution 19.5 mM EGTA was replaced
+by HDTA, and the activating solution contained 20 mM Ca$^{2+}$-EGTA (pCa 4.51). All solutions
+contained 10 IU/mL creatine kinase and 1\,\% (v/v) protease inhibitor cocktail (P-8340,
+Sigma). Myosin was inhibited, where stated, with 50 $\mu$M para-nitroblebbistatin (PNB) plus
+50 $\mu$M mavacamten \citep{Baker2025-rz}.
 
-Motor length is reported as *muscle length* $ML$, normalised such that $ML = 1.0$
-corresponds to a nominal sarcomere length of $2.0\ \mu\mathrm{m}$; nominal sarcomere length is
-$SL = 2\,ML$ throughout. Stress is reported in kPa. An optical sarcomere-length channel was
-recorded on two of the three 2026 preparations (04/03, 04/10) but not on 03/27; the curated
-data used here carry a derived $SL$ only (Analyses/PassiveRundownATP), and the model
-therefore carries series compliance explicitly (§2.3.9) rather than assuming the
-half-sarcomere follows the motor. **[TODO: decide whether to use the recorded SL channel.]**
-
-Contractile activation was maintained throughout each run; the nucleotide condition
-(8 mM or 2 mM MgATP) was changed between runs on the same preparation, so the two
-conditions are paired within preparation and sequential in time.
+Trabeculae were mounted with aluminium T-clips between a force transducer (Model 400) and a
+servo-motor in a permeabilised fibre test system (Model 1400A; Aurora Scientific) at
+21\,$^\circ$C. Sarcomere length was measured by video (Model 900B, $40\times$ objective) in
+relaxing solution and set to 2.0 $\mu$m; this relaxed reference length defines muscle length
+$ML = 1$, and all length commands are expressed in $ML$. Force was normalised to
+cross-sectional area, assuming an elliptical cross-section from the measured width and
+thickness, and is reported in kPa.
 
 #### 2.1.2 Mechanical protocols
 
-Each run contained the following protocols (the within-run order is given per preparation in
-the data table, **[TODO]**):
+Each activation was preceded by 60 s in preactivating solution and lasted about 15 s at
+pCa 4.51. During it the motor applied the following sequence (Fig. **[TODO]**):
 
-1. **Force redevelopment ($k_\mathrm{tr}$).** From the isometric plateau at $ML=1.0$, a
-   rapid release to $ML=0.8$, a brief hold to allow attached bridges to detach, a
-   re-stretch to $ML=1.05$, a hold, and a return to $ML=1.0$, after which force
-   redevelops isometrically. The redevelopment rate is the primary kinetic observable.
-2. **Slack/re-stretch train.** Five cycles of rapid shortening (slack release) from
-   $ML=1.1$, an unloaded hold, and a re-stretch at a cycle-specific velocity, with the
-   re-stretch amplitude forming a ladder across cycles. Cycles 1–4 re-stretch to
-   $ML=1.10$; cycle 5 re-stretches to $ML=1.00$ by the smallest amount and at the slowest
-   ramp, and is therefore excluded from any amplitude-graded quantity (§2.2.3).
-3. **Staircase.** A sequence of constant-velocity stretch steps separated by isometric
-   holds, used here as a held-out prediction test (§2.5).
-4. **In-preparation force–velocity point (FV2).** A $34$ ms shortening ramp at
-   $2\ ML\,\mathrm{s^{-1}}$ (from $ML = 1.060$ to $0.990$) within a load-clamp sequence,
-   giving relative force during shortening on the same trabecula as the transients. Present
-   on the 04/03 and 04/10 preparations only.
-5. **Passive run.** After the active runs, the preparation was inhibited with PNB
-   ($50\ \mu$M) and mavacamten and the length protocol repeated, isolating the passive
-   (titin-dominated) stress. **[TODO: confirm the PNB identity and concentration, the
-   mavacamten concentration and incubation.]**
+1. **Force redevelopment ($k_\mathrm{tr}$).** From the isometric plateau at $ML = 1.0$, a
+   release to $0.8$ (held 5 ms), a stretch to $1.05$ (held 2 ms) and a return to $1.0$,
+   after which force redeveloped isometrically \citep{Beard2022}.
+2. **Staircase.** Four constant-velocity stretches ($0.5$–$1.5\ ML\,\mathrm{s^{-1}}$) from
+   $ML = 1.0$ to $1.01$, $1.04$, $1.07$ and $1.10$, each followed by a 140–180 ms isometric
+   hold.
+3. **Slack/re-stretch train.** Five cycles from $ML = 1.10$, each a rapid ($\approx 2$ ms)
+   release to $1.02$, $1.00$, $0.98$, $0.96$ or $0.94$, a 298 ms hold during which force
+   redeveloped at the shortened length, and a 20 ms re-stretch back to $1.10$ (at
+   $3.9$–$6.8\ ML\,\mathrm{s^{-1}}$); the fifth cycle returned to $1.00$ instead.
+4. **Force–velocity point (FV2).** A step to $ML = 1.06$ followed by a 35 ms shortening ramp
+   at $2\ ML\,\mathrm{s^{-1}}$, giving relative force during shortening in the same
+   trabecula.
 
-The full-range force–velocity relation is taken from the isovelocity dataset of
-\citet{Beard2022}: the averaged curves of $12$ (8 mM), $6$ (4 mM) and $6$ (2 mM)
-trabeculae at $0$, $0.5$, $1$, $2$, $3$, $4$, $5$ and $6\ ML\,\mathrm{s^{-1}}$. A
-single-trabecula Baker-laboratory isovelocity recording from 2021 (8 and 2 mM) bounds its
-reproducibility (the two differ by $11\,\%$ in normalised power). The FV2 point agrees with
-the borrowed 8 mM curve to $0.21$ SD, but at 2 mM the borrowed curves depress relative force
-at $2\ ML\,\mathrm{s^{-1}}$ by $51\,\%$ against $29\,\%$ measured in-preparation, so the
-borrowed curve is scored only at 8 mM and FV2 carries the 2 mM force–velocity information
-(Analyses/DataPooling §6).
+The full force–velocity relation was taken from the isovelocity data of \citet{Beard2022}
+(8, 4 and 2 mM MgATP; $0.5$–$6\ ML\,\mathrm{s^{-1}}$). The same length sequence was repeated
+after myosin inhibition with PNB plus mavacamten to measure the passive (titin-dominated)
+response.
 
-#### 2.1.3 Datasets
+#### 2.1.3 Experimental design
 
-| preparation | sex | ATP order | protocols | FV2 | used for |
-|---|---|---|---|---|---|
-| 03/27/2026 | M | 8 → 2 → 8 (bracket) → PNB+Mava | $k_\mathrm{tr}$, slack, staircase | no | all features; rundown calibration |
-| 04/03/2026 | F | 8 → 2 → PNB+Mava | $k_\mathrm{tr}$, slack, staircase, FV2, passive | yes | all features |
-| 04/10/2026 | M | **2 → 8** → PNB+Mava | as 04/03, passive at both ATP | yes | all features |
-| Baker legacy | ? | 8, 2 (0.2 unused) | $k_\mathrm{tr}$, slack, staircase | no | slack $k_\mathrm{tr}$ only |
+Low ATP was studied as a paired comparison within each trabecula, with every low-ATP
+activation bracketed by 8 mM activations so that rundown can be interpolated rather than
+modelled. Each trabecula was first activated at 8 mM, after which muscle length was readjusted
+to restore the relaxed sarcomere length of 2.0 $\mu$m. The sequence was then either
+8 → 4 → 8 → 2 → 8 mM or 8 → 2 → 8 → 4 → 8 mM, so that each low concentration occurs in
+both positions. Each order was run on one male and one female trabecula, giving four
+trabeculae (two male, two female), followed by the PNB-plus-mavacamten run.
 
-Force features are therefore $n = 3$, slack $k_\mathrm{tr}$ $n = 4$ and FV2 $n = 2$. The
-reversed order of 04/10 is deliberate, so that the rundown bias (§2.2.1) and the true ATP
-effect can be separated. Legacy amplitudes are excluded (different protocol, truncated
-recovery; Analyses/SlackDataAnalysis). **[TODO: animal identities, ages and species
-confirmation in publication form.]**
+> **[NOTE for co-authors]** §2.1.3 describes the target dataset, which has not been
+> acquired yet. The fits currently in the draft use three pilot trabeculae (03/27 M,
+> 04/03 F, 04/10 M; 8 and 2 mM only, with a single 8 mM bracket on 03/27), and §2.2.1
+> (rundown model) is written for them. Rewrite §2.2.1 once the bracketed data exist.
 
 ### 2.2 Data reduction
 
