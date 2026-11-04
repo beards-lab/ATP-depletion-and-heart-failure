@@ -122,7 +122,7 @@ plateau and the other two redevelopment rates are all essentially right. That is
 a much sharper statement than "the restretch shape is off", and it is only
 visible because the metric is now a rate.
 
-Figure: [`results/baseline_windows.png`](results/baseline_windows.png) — the model
+Figure: [`figures/baseline_windows.png`](figures/baseline_windows.png) — the model
 is done by ~30 ms where the data is still climbing at 80 ms.
 
 ### Step 5 — a strong, unlooked-for ATP result

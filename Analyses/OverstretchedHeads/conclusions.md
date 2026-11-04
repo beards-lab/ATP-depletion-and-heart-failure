@@ -63,7 +63,7 @@ saved state with the RHS's own rate functions (the rebuilt XB force matches the 
   them to 20–30 nm. p1 outnumbers p2 at the peak (p1:p2 1.0–1.3).
 * **They carry the valley and the second rise, not the first peak.** Heads beyond +15 nm
   carry 0–1 % of XB force *at* the first peak but 57–81 % within the next 40 ms
-  (`results/restretch_dwell_refit9_opt.png`).
+  (`figures/restretch_dwell_refit9_opt.png`).
 * **It is a lengthening-only phenomenon.** Share of attached heads beyond +15 nm on the
   *stretched* side: isometric plateau 0.0 %, slack shortening 0.0 %, re-stretch ≤ 66 %,
   ktr overstretch ≤ 82 %. So a mechanism acting on positive strain beyond ~12 nm is
@@ -192,7 +192,7 @@ Physiology, `ProbeRestretchDwell` on the final fits (`results/dwell_*.mat`):
 | ktr overstretch, beyond +15 nm | 82 % | 82 % | 67 % | 70 % |
 | isometric / shortening, stretched side | 0 % | 0 % | 0 % | 0 % |
 
-`results/restretch_dwell_refit9_vs_yieldB.png` shows it in the trace. B drops right after
+`figures/restretch_dwell_refit9_vs_yieldB.png` shows it in the trace. B drops right after
 the peak, when the data does, not in refit9's slow sag, and its stretched-head load is a
 fraction of refit9's. But through the rest of the ramp the data holds a high plateau (~80 kPa
 on seg 1) that neither model reaches. That is the missing lengthening recruitment of §8.

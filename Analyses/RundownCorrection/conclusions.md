@@ -18,10 +18,10 @@ collapses the cross-prep spread of the ATP force effect from **CV 20 % → 3–6
 
 | script | what it does | figure |
 |---|---|---|
-| `RunBracketExplainer.m` | what "the bracket" is, from the raw timecourses | `results/bracket_explained.png` |
-| `RunRundownCorrection.m` | builds + calibrates the correction on effective activated time | `results/rundown_correction.png` |
-| `RunRundownMechanisms.m` | data-side test: length–tension shape and sampling-matched `ktr` | `results/rundown_mechanism.png` |
-| `RunMechanismSimulation.m` | imposes each candidate lesion **on the model** and compares | `results/mechanism_simulation.png` |
+| `RunBracketExplainer.m` | what "the bracket" is, from the raw timecourses | `figures/bracket_explained.png` |
+| `RunRundownCorrection.m` | builds + calibrates the correction on effective activated time | `figures/rundown_correction.png` |
+| `RunRundownMechanisms.m` | data-side test: length–tension shape and sampling-matched `ktr` | `figures/rundown_mechanism.png` |
+| `RunMechanismSimulation.m` | imposes each candidate lesion **on the model** and compares | `figures/mechanism_simulation.png` |
 
 The whole analysis rests on one design feature: **03/27 recorded 8 mM twice**,
 fresh (t = 0) and again at the end of the session (t = +694 s, after the 2 mM and
@@ -33,7 +33,7 @@ numbering is not chronological.)*
 condition falls monotonically 68.43 → 56.45 kPa. The 2 mM run reads higher than
 both only because low ATP increases force.
 
-![The bracket, from the raw timecourses](results/bracket_explained.png)
+![The bracket, from the raw timecourses](figures/bracket_explained.png)
 
 *(a) the four raw 03/27 timecourses — 2 mM (orange) highest, 8 mM fresh (light blue),
 8 mM repeat (dark blue) lowest. (c) the damage staircase: force drops only during the
@@ -95,7 +95,7 @@ An alternative damage model — one universal kPa/s rate rather than
 slope-proportional — gives 1.335 / 1.341 / 1.486 (CV 6.2 %). **The answer is
 robust to which damage model is assumed.**
 
-![Calibration and validation](results/rundown_correction.png)
+![Calibration and validation](figures/rundown_correction.png)
 
 > **This supersedes the earlier wall-clock exponential treatment**, which
 > under-corrected (it ignored that damage accrues during activation) and therefore
@@ -158,22 +158,22 @@ numbers alone does **not** identify the lesion.
 > force half of the conclusion: the force loss looks like **fewer heads**, not lost
 > length. The `ktr` half (added series compliance) survives unchanged.
 
-![Model perturbation study](results/mechanism_simulation.png)
+![Model perturbation study](figures/mechanism_simulation.png)
 
 *Each lesion is tuned to reproduce the observed force loss exactly, so `ktr` (top
 right) and the length–tension shape (bottom middle) become free discriminators. Only
 the lesions whose "shift" bar beats their "scale" bar bend the curve as the data does.*
 
-![Data-side evidence: length-tension and ktr](results/rundown_mechanism.png)
+![Data-side evidence: length-tension and ktr](figures/rundown_mechanism.png)
 
 ## 4b. Revision — the five-segment profile overturns the force half
 
-`RunModelRundownFit.m` → `results/model_rundown_fit.png`. The bracket gives not one
+`RunModelRundownFit.m` → `figures/model_rundown_fit.png`. The bracket gives not one
 number but a **profile**: `ktr` and amplitude at each of the five slack segments, for
 fresh and repeat. A lesion tuned to the mean is fitting one number; a lesion that
 reproduces the profile is being tested against five.
 
-![Rundown as a decaying model parameter](results/model_rundown_fit.png)
+![Rundown as a decaying model parameter](figures/model_rundown_fit.png)
 
 **Observed** (repeat / fresh, sampling-matched):
 
@@ -241,14 +241,14 @@ because they are two consequences of one lesion.
 
 ## 5. Decay geometry: when rundown acts, and why it biases low ATP
 
-`RunDecayGeometry.m` → `results/decay_geometry.png`. Three isometric ML = 1.0
+`RunDecayGeometry.m` → `figures/decay_geometry.png`. Three isometric ML = 1.0
 windows are used: **W1** 68.20–69.20 s (before any perturbation — the only clean
 one), **W2** 71.20–72.35 s (after the ktr burst), **W3** 77.70–78.30 s (after the
 last slack). W2/W3 are post-perturbation recoveries; they sit at identical protocol
 times in every run so the bias cancels in between-run ratios, but they are not
 absolute isometric values.
 
-![Decay geometry](results/decay_geometry.png)
+![Decay geometry](figures/decay_geometry.png)
 
 ### 5a. The activation rise overlaps the decay — and it is ATP-dependent
 
@@ -331,13 +331,13 @@ the independent φ route.
 
 ## 5e. Can the refinements rescue a `ktr` correction? No — and now we know why
 
-`RunJointCorrection.m` → `results/joint_correction.png`. Re-derives φ on the
+`RunJointCorrection.m` → `figures/joint_correction.png`. Re-derives φ on the
 own-peak / `T_dec` footing (**φ = 0.581**, versus 0.452 on the `T_act` footing —
 the *product* φ·|s|·T is what the bracket constrains, so this is the same model
 re-expressed) and then asks the only question that matters for each observable:
 **does the correction reduce between-preparation scatter?**
 
-![Joint correction](results/joint_correction.png)
+![Joint correction](figures/joint_correction.png)
 
 **Force — yes.** Own-peak referencing plus damage over each run's own decay phase:
 
@@ -390,9 +390,9 @@ repeat run to be made properly.**
 
 ## 5f. Why the slack `ktr` falls with rundown — and why the two ktr protocols disagree about ATP
 
-`RunKtrProtocolSensitivity.m` → `results/ktr_protocol_sensitivity.png`.
+`RunKtrProtocolSensitivity.m` → `figures/ktr_protocol_sensitivity.png`.
 
-![ktr protocol sensitivity](results/ktr_protocol_sensitivity.png)
+![ktr protocol sensitivity](figures/ktr_protocol_sensitivity.png)
 
 Two observations needed one explanation:
 

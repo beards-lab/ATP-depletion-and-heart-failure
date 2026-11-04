@@ -115,7 +115,7 @@ L2 is what the optimiser minimises; `slope` is d`rsK`/d(amplitude) on the real
 
 **No variant is a net win.** The best is B4 at L2 7.59 against a baseline 6.51.
 
-![the paradox in three panels](results/paradox.png)
+![the paradox in three panels](figures/paradox.png)
 
 ---
 
@@ -465,7 +465,7 @@ whether the filament was loaded: `rsK` improves exactly as much (×1.23) but now
 **`ktr` breaks, 1.07 → 0.83** (cost 0.321 → 1.476). The force weighting is doing the
 separating, not the gain.
 
-![the compliant-realignment result](results/realign.png)
+![the compliant-realignment result](figures/realign.png)
 
 ### The bill: restretch transient SHAPE, and it is partly payable
 
@@ -763,7 +763,7 @@ run by this report and are excluded rather than scored as missing):
 | `peak2` (kPa) | 78.42 | 77.35 | 51.63 | 80.71 |
 | `ovrsht_dy` (kPa) | 1.33 | 1.41 | 0.05 | 0.05 |
 
-![timecourse](results/report_timecourse.png)
+![timecourse](figures/report_timecourse.png)
 
 The traces are the clearest statement: the hand-set M1 (red) obviously overshoots — it
 digs the valley to 42 kPa where the data is at 68. The reoptim (yellow) sits on the
@@ -819,7 +819,7 @@ first thing a longer run should cover.
 |---|---|
 | [`RunLoadRealign.m`](RunLoadRealign.m) | §8/§9 — M1 gain/τ/`F_cr` scans incl. the load-blind control, and both M2 dwell placements. Chunked: set `SEL` before running |
 | [`RunRealignCompensate.m`](RunRealignCompensate.m) | §8 — can `kA2re`/`eta_M` pay the shape bill |
-| [`PlotRealign.m`](PlotRealign.m) | `results/realign.png` |
+| [`PlotRealign.m`](PlotRealign.m) | `figures/realign.png` |
 
 ## 7. Files (Part 1)
 
@@ -831,7 +831,7 @@ first thing a longer run should cover.
 | [`RunSRXGate.m`](RunSRXGate.m) | §5 — the `σ_srd1` rescue attempt, with gate-alone controls |
 | [`RunDestControl.m`](RunDestControl.m) | §5 — the force-flat-exit control (`D0` destination), `k_D0T` scan |
 | [`RunParadoxProbe.m`](RunParadoxProbe.m) | §3 — diverted mass, `PD` depletion, transit-time arithmetic on the real protocol |
-| [`PlotParadox.m`](PlotParadox.m) | `results/paradox.png` |
+| [`PlotParadox.m`](PlotParadox.m) | `figures/paradox.png` |
 
 ## Caveats
 

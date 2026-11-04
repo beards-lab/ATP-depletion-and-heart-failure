@@ -174,7 +174,7 @@ A→PD 26.6 s⁻¹, A→PT 60.8 s⁻¹). The chase is dominated by one 23.5 s⁻
 cycle), with no mode slower than 43 ms. During contraction the SRX is not a separate
 kinetic population.
 
-![rate bridge](results/rate_bridge.png)
+![rate bridge](figures/rate_bridge.png)
 
 ## 2. Reconciling the time scales: what the force argument can and cannot do
 
@@ -252,7 +252,7 @@ against the Baker sets, SD = max(across-set SD, 13.6 %). `results/family.txt`:
 the window before the *first* slack, which is not yet steady. Cycles 2–5 read 0.034 for
 ref, matching the isometric value.)
 
-![family](results/family_cost.png)
+![family](figures/family_cost.png)
 
 **Findings.**
 
@@ -349,7 +349,7 @@ k₆₃ (s⁻¹) in protocol B:
 | MA × 10⁻³ (frozen, same size) | 72.8 | 88.3 | 74.4 | 49.9 | 51.1 | 53.1 | 53.4 |
 | SRX at restretch, ref | 0.37 | 0.41 | 0.31 | 0.07 | 0.05 | 0.05 | 0.05 |
 
-![protocols](results/protocols.png)
+![protocols](figures/protocols.png)
 
 * **Why B works.** In slack, the fast pool fills from 0.03 to ~0.5 within ~10 ms
   (entry `ksr0` ≈ 370 s⁻¹ at F = 0). Once force redevelops at the short length, it drains
@@ -417,11 +417,11 @@ redevelops only to ~26 kPa (`A` −68 %), and the slack features stop being extr
 (ktr "345 s⁻¹", no re-stretch peak). It is outside any physiological range; it is shown
 in the figures as the limit case.
 
-![dose response](results/kicks_dose.png)
+![dose response](figures/kicks_dose.png)
 
-![heat-map](results/kicks_heatmap.png)
+![heat-map](figures/kicks_heatmap.png)
 
-![traces](results/kicks_traces.png)
+![traces](figures/kicks_traces.png)
 
 **What is affected, and what is not.**
 
@@ -503,7 +503,7 @@ incumbent pool (×1) goes through the identical refit. The honest comparison is
 pinned-and-refitted vs control-refitted, not vs the incumbent. The incumbent is not at the
 minimum of this χ², so part of any refit's gain is available at ×1 too.
 
-![chi2](results/comp_chi2.png)
+![chi2](figures/comp_chi2.png)
 
 **Left: the verdict.** After refitting, every pinned pool fits the data about as well as the
 refitted control:
@@ -529,7 +529,7 @@ F–V rows). The rest is small floored terms (`rsTfitE`, `vall_y`, `peak1_y`) an
 artefactual gross-`XTOR` bound (§4). So the objective resists doubling mainly through its
 own F–V weighting choice.
 
-![residuals](results/comp_residuals.png)
+![residuals](figures/comp_residuals.png)
 
 **Feature by feature.** Pinning alone (orange squares) mostly throws the *rates*: ktr, ktr
 protocol k63/F(20 ms) and F–V power, as §6 predicts. After refitting (blue/green), every
@@ -538,7 +538,7 @@ and no single feature stays flagged. The largest leftovers (valley level, ktr-pr
 k63, valley time, rsK80, ≈ 1 SD) are the same ones the control keeps. They are
 incumbent-model misses, not SRX signatures.
 
-![knobs](results/comp_knobs.png)
+![knobs](figures/comp_knobs.png)
 
 **What does the compensating.** Two things are mixed here.
 
@@ -557,7 +557,7 @@ incumbent-model misses, not SRX signatures.
 **The pool can be traded against the cross-bridge rates, because what the data see is
 the redevelopment kinetics (§6), not the pool itself.**
 
-![traces](results/comp_traces.png)
+![traces](figures/comp_traces.png)
 
 **The demonstration.** On the left, force in the slack–restretch cycle and the ktr protocol:
 the compensated ×0.5 and ×2 fibres (solid) lie on the incumbent, and the uncompensated
@@ -598,7 +598,7 @@ own features. Noise = one preparation: the pooled between-preparation SD for the
 40, 80 ms, restretch); 10 % for protocol A (activation step, t50/t90). The same 13 knobs as
 §8 were used. Three analyses:
 
-![fisher](results/twin_fim.png)
+![fisher](figures/twin_fim.png)
 
 **(a) Fisher information: the best precision the data could give, all 13 knobs free.**
 Protocol B shrinks the pool uncertainty ~2.5× over the battery, and A + B ~3×. The
@@ -611,7 +611,7 @@ reads the *unloaded* refill. Taking the load sensitivities as known (the two bot
 gives ×/3.5 (σ₂ known) and ×/2.25 (σ₂ and σ_srd1 known). That still needs ~20–50
 preparations for ±20 % (middle panel).
 
-![profile](results/twin_profile.png)
+![profile](figures/twin_profile.png)
 
 **(b) Twin profile at ±20 %, the nonlinear check.** With the pool pinned at ×0.8 or ×1.2 and
 **nothing refitted**, the fibre is already only χ² 1.7 / 1.0 (battery), 0.5 / 0.4 (B) and
@@ -620,12 +620,12 @@ too small to see in one preparation. Refitting the 13 knobs to the battery takes
 to ≈ 0.01. **Protocol B, which was not used in that fit, stays at 0.1–0.2: it does not
 expose the hidden pool.** Fitting battery + B together hides it in both (≈ 0.01).
 
-![protocol B](results/twin_protocolB.png)
+![protocol B](figures/twin_protocolB.png)
 
 The release–hold curves of every pinned and refitted fibre lie inside the truth's
 one-preparation band at every hold time.
 
-![mc](results/twin_mc.png)
+![mc](figures/twin_mc.png)
 
 **(c) The proposed noised-seed test, linearised Monte Carlo** (4 000 draws, one preparation
 of measurement noise). Top row, data only: the estimate is unbounded (95 % range
@@ -658,7 +658,7 @@ each. Two drug models:
   heads entering SRX from DRX;
 * **D2 retention:** SRX outflow ÷3 (`kmsrd`), heads held in SRX, also under load.
 
-![drug srx](results/drug_srx.png)
+![drug srx](figures/drug_srx.png)
 
 **The predicted activated SRX.** The *fold change* is robust: D1 **×2.45** (×2.36–2.54
 for the ±20 % fibres, ×2.0–2.7 over ×0.5–×2); D2 **×1.5** (×1.40–1.51). The *absolute*
@@ -666,9 +666,9 @@ value under drug is not: it inherits the control uncertainty (D1: 0.041–0.125)
 increases activated SRX by ~2.5×" is a model prediction you can quote. "Activated SRX
 under drug is 7 %" is not.
 
-![drug effects](results/drug_effects.png)
+![drug effects](figures/drug_effects.png)
 
-![drug discrimination](results/drug_discrim.png)
+![drug discrimination](figures/drug_discrim.png)
 
 **Does the drug response identify the baseline pool?** For the twin fibres (identical at
 control, χ² 0.14–0.24), the drug effects on every measurable feature coincide: χ² of the

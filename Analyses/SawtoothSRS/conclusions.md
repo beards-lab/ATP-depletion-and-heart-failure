@@ -114,7 +114,7 @@ protocol reads cross-bridges, not titin.
 5.9 nm/HS. At 0.400 ML/s the cardiac verbatim window covers **4.0 nm/HS** — faithful. At
 2.625 ML/s it covers **26.2 nm/HS**, which is **1.7× past that case's own yield point**
 (15.7 nm/HS). The number it returns (8.60) is a chord drawn across the yield and down the
-far side, not a stiffness — see the orange dashed line in `results/traces.png`.
+far side, not a stiffness — see the orange dashed line in `figures/traces.png`.
 
 The two definitions cross at v = 0.45 ML/s **by construction** (that is where 10 ms and
 0.0045 L₀ are the same excursion), which is 6 % V_max. So:
@@ -122,7 +122,7 @@ The two definitions cross at v = 0.45 ML/s **by construction** (that is where 10
 > **Use the strain-matched window whenever the ramp speed changes.** The literal 10 ms
 > recipe is only transferable at ~0.4–0.45 ML/s, which the verbatim port happens to hit.
 
-The velocity sweep shows how badly the two diverge (`results/sweep.png`):
+The velocity sweep shows how badly the two diverge (`figures/sweep.png`):
 
 | v (ML/s) | % V_max | SRS 10 ms | SRS strain-matched | peak F/F₀ | yield (nm/HS) | hysteresis | post-release max |
 |---|---|---|---|---|---|---|---|
@@ -182,7 +182,7 @@ positive everywhere, and the attached fraction at the end of the release is
 indistinguishable from its isometric value (0.454–0.475 vs 0.455) — no memory at all. The
 mechanism also *reverses the sign of the force response during the shortening half*: ON,
 force **rises** to 1.24 during the release; OFF, it **falls** to 0.885
-(`results/mechanism.png`).
+(`figures/mechanism.png`).
 
 > ⚠️ **The ablation is an attribution test, not a rival model.** Switching the flag off
 > without refitting raises isometric force **65.73 → 119.33 kPa** and isometric attached
@@ -200,7 +200,7 @@ at slow speed. Neither has been used to constrain it.
 recovery hold, identical test sawtooth — and regresses the onset slope of **both** ramps,
 sweeping the recovery interval. Both events see exactly the same length input, so any
 difference is history alone. Table: `results/condtest_table.csv`; figure:
-`results/condtest.png`.
+`figures/condtest.png`.
 
 **Verbatim case** (0.400 ML/s, 100 ms ramp). SRS on the first ramp is 31.10 F₀/L₀ throughout:
 

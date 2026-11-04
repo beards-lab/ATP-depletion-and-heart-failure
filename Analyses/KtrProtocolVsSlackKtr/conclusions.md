@@ -10,8 +10,8 @@ Reproduce, in order:
 `BuildFastGateBest.m` → `PlotFeatureComparison.m` → `RunFinalCheck.m`.
 Held-out check on any paramset: `validateKtrProtocol('<tag>')`.
 
-Figures: `results/ktr_vs_slack.png` (the defect and the fix), `results/fv_finegrid.png` (§7),
-`results/features_all.png` + `results/features_bars.png` (every feature, both variants).
+Figures: `figures/ktr_vs_slack.png` (the defect and the fix), `figures/fv_finegrid.png` (§7),
+`figures/features_all.png` + `figures/features_bars.png` (every feature, both variants).
 
 ---
 
@@ -179,8 +179,8 @@ Priced against everything (`RunVerify.m`), `tau_reg` 26.65 → 0.2 ms:
 | trace RMSE vs noise, post-slack | 1.11× | 1.31× |
 
 Inside the objective it is a **swap, not a loss**. `PlotFeatureComparison.m` →
-`results/features_all.png` (every scored feature, data vs both variants) and
-`results/features_bars.png` (paired per-feature cost + what the fix trades):
+`figures/features_all.png` (every scored feature, data vs both variants) and
+`figures/features_bars.png` (paired per-feature cost + what the fix trades):
 
 | feature | incumbent | fast | Δ |
 |---|---|---|---|
@@ -277,7 +277,7 @@ is a statement about how badly the incumbent misses, not an argument for scoring
 
 ## 7. Does the fix break force-velocity? No — but the fine grid finds a different defect
 
-`RunFVFineGrid.m` / `RunFVLowV.m` / `MakeFVFigure.m` → `results/fv_finegrid.png`.
+`RunFVFineGrid.m` / `RunFVLowV.m` / `MakeFVFigure.m` → `figures/fv_finegrid.png`.
 Velocity grid 0.25 ML/s up to 4, then 1 ML/s to the end of the protocol (6).
 **The scored FV uses only five velocities: `FV_velocities = [0 -0.5 -1 -2 -4]`.**
 

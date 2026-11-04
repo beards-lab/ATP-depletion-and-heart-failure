@@ -28,8 +28,8 @@
 > **4 mM power:** 89 % that it differs from 8 mM, 77 % to catch a 15 % model error, at
 > n = 3 (S5). Curvature still needs ~42 preps and is still not worth attempting.
 
-`RunDesignPower.m` → `results/design_power.png` (§2–5).
-`RunDesignLadder.m` → `results/design_ladder.png` (§8).
+`RunDesignPower.m` → `figures/design_power.png` (§2–5).
+`RunDesignLadder.m` → `figures/design_ladder.png` (§8).
 Extends [RundownCorrection/strategy.md](../RundownCorrection/strategy.md), which settled
 order and pooling but did not cost sex, sample size, or a third dose.
 
@@ -148,7 +148,7 @@ n required, at the three planning CVs (80 % power, α = 0.05):
 
 **Verdict: 3 sessions.** At the CV 8 % planning value that places the 4 mM ratio to
 ±4.6 % (SEM) and catches any model prediction error ≥15 %, which is the size a genuine
-mechanistic failure would be. It is the point where the curve in `results/design_power.png`
+mechanistic failure would be. It is the point where the curve in `figures/design_power.png`
 (bottom left) crosses from cheap to expensive.
 
 **What 3 sessions will *not* buy, and no affordable number will:** the shape of the
@@ -277,13 +277,13 @@ three new sessions (A1, A2, B1) re-estimate it and re-run `RunDesignPower.m`:
 The systematic order bias does **not** shrink with n (`strategy.md` §2.4) — only the
 correction does. Extra sessions buy precision, never accuracy; the brackets buy accuracy.
 
-![Design power](results/design_power.png)
+![Design power](figures/design_power.png)
 
 ---
 
 ## 8. Revision: the bracketed, alternating ladder
 
-`RunDesignLadder.m` → `results/design_ladder.png`.
+`RunDesignLadder.m` → `figures/design_ladder.png`.
 
 §6 was costed under an unstated assumption — that brackets are scarce, so they go on a
 subset of sessions and φ is transferred to the rest. Under the opposite constraint,

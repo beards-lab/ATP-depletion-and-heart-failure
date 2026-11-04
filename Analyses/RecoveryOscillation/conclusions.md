@@ -36,7 +36,7 @@ left over three ways, with no model of the ripple:
 * **σ_w**, white transducer noise, from the flat plateau of the *same* window
   above 60 Hz. Two independent estimators (the high-passed plateau and the
   first difference) agree to within a few per cent across all 18 run × window
-  types — the middle-bottom panel of `results/noise_budget.png`.
+  types — the middle-bottom panel of `figures/noise_budget.png`.
 * **σ_c**, the part **phase-locked to the ramp**, by coherently averaging the
   five slack cycles of a run on their common post-ramp clock. Anything locked
   survives; white noise falls as 1/√5. The excess of the average's variance
@@ -57,7 +57,7 @@ broadband noise. The genuinely reproducible part is small and *slow* — its
 dominant period is 190–260 ms, comparable to the window itself, so over one
 recovery it is a wander, not a ring. There is no discrete resonance line
 anywhere in the residual spectra ([RunOscillationID.m](RunOscillationID.m),
-`results/oscillation_id.png`): the power is concentrated below 8 Hz and flat
+`figures/oscillation_id.png`): the power is concentrated below 8 Hz and flat
 above it.
 
 ### Three controls, all pointing the same way

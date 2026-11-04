@@ -76,14 +76,14 @@ duplicated `rsR2`; it costs 0, so its headline is unchanged).
 | `vall2_dy`, `PS_holdDecayRMSE`, `vall_t`, … | | | +0.03 | −1.3 % |
 | **total** | **3.8513** | **0.9786** | **−2.8727** | |
 
-![per-feature cost shift](results/fit_costshift.png)
+![per-feature cost shift](figures/fit_costshift.png)
 
 **The FV gain is real, not bookkeeping.** `realign4` fell *below* the band spanned by the
 two FV source curves at 2 ML/s (0.502 vs data 0.596); `spreadw` now tracks the data mean
 across the whole power curve, at χ² well inside the two sources' own disagreement. The
 long-standing FV shoulder is fixed.
 
-![force-velocity](results/fit_fv.png)
+![force-velocity](figures/fit_fv.png)
 
 ## 2. The model against three preparations, not one
 
@@ -97,7 +97,7 @@ way, so nothing here can be bought by moving the force level.
 **The envelope is tight: SD is 3.2 % of the mean (median), 6.2 % at p90.** It is a real
 yardstick, not a smear.
 
-![model on the timecourse envelope](results/fit_envelope_overlay.png)
+![model on the timecourse envelope](figures/fit_envelope_overlay.png)
 
 Distance from the envelope, in its own SDs, averaged over the five cycles. **03/27 is
 listed separately** — it is the only preparation the model was ever shown, so a miss
@@ -138,15 +138,15 @@ cluster: `rsT0` (−4.1), `vall_t` (+2.9), `peak1_dSL` (+2.8), `peak1_y` (+2.2).
 weighting de-rated them, and both got *worse* here because nothing defends them. `rsT0` and
 `peak1_y` are the real ones, and §3 shows they are the same defect.
 
-![features against the envelope](results/fit_features.png)
+![features against the envelope](figures/fit_features.png)
 
 ## 3. The predictions — and they agree with each other
 
 Neither protocol was scored during the fit (`RunKtr = 0`, `RunStairs = 0`), so these are
 genuine out-of-sample tests.
 
-![ktr prediction](results/fit_ktr_pred.png)
-![staircase prediction](results/fit_stairs_pred.png)
+![ktr prediction](figures/fit_ktr_pred.png)
+![staircase prediction](figures/fit_stairs_pred.png)
 
 | observable | data | realign4 | spreadw |
 |---|---|---|---|

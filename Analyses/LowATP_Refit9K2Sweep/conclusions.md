@@ -135,7 +135,7 @@ Every scored or read-out feature, from the saved runs (no new simulation):
 * Read-outs: XTOR 13–15 s⁻¹ (bound 3–15, i.e. at the ceiling at 8 mM); attached fraction 0.29 (8 mM)
   → 0.37 (2 mM), inside the objective's 0.10–0.45 bound but above the literature 0.12–0.15.
 
-## Steady force with its spread (`PlotSteadyStateSD.m`, `results/steady_state_sd.png`)
+## Steady force with its spread (`PlotSteadyStateSD.m`, `figures/steady_state_sd.png`)
 Trace plots use prep 03/27, whose isometric (79.8 kPa) is 15 % above the pooled level (69.3 kPa),
 so the model plateau looks low there. Against the pooled per-segment values the model is within
 +0.9…+1.2 raw SD at 8 mM and −0.2…−0.35 raw SD at 2 mM. The raw between-prep SD of steady (relative
