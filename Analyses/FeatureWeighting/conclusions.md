@@ -14,7 +14,7 @@ the weights (§4).
 > [RestretchRecoveryFit](../RestretchRecoveryFit/conclusions.md) named structurally.
 
 `RunFeatureSpread.m` → `results/feature_spread.mat`
-`BuildWeightedObjective.m` → `results/weight_table.txt`, `results/feature_weighting.png`,
+`BuildWeightedObjective.m` → `results/weight_table.txt`, `figures/feature_weighting.png`,
 `params/spreadw_seed.m`
 `RunOptimSpreadW.m` → the large-scale refit.
 
@@ -116,7 +116,7 @@ features. **`κ` is now 0, deliberately.** Three reasons, in order of weight:
    optimiser at the ATP features on its own: `rsK` is the largest χ² in the set.
 
 ATP relevance is instead **measured, reported and drawn** — red bars in every panel of
-`results/feature_weighting.png`, and the `z` column of `results/weight_table.txt`. Set
+`figures/feature_weighting.png`, and the `z` column of `results/weight_table.txt`. Set
 `KAPPA = 0.5` in `BuildWeightedObjective.m` to put it back into the weights.
 
 ### Two conditioning guards — engineering, and labelled as such
@@ -171,7 +171,7 @@ while the slack still has a vote** — one number in `BuildWeightedObjective.m`.
 
 ¹ pinned by fiat, not by `1/s²`.
 
-![Spread, ATP relevance, χ² and the reweighting](results/feature_weighting.png)
+![Spread, ATP relevance, χ² and the reweighting](figures/feature_weighting.png)
 
 *Red = carries the ATP effect (z ≥ 1). Top left: reproducibility. Top right: where the ATP
 signal is — every force-shape feature is flat. Bottom left: the model against the noise

@@ -8,7 +8,7 @@
 > → [`../KtrProtocolVsSlackKtr/conclusions.md`](../KtrProtocolVsSlackKtr/conclusions.md)
 
 Data only, 8 mM ATP, three protocol days (03/27, 04/03, 04/10).
-Reproduce: `CompareRecoveryRates.m` → `results/recovery_rates_traces.png`, `results/recovery_rates_summary.png`.
+Reproduce: `CompareRecoveryRates.m` → `figures/recovery_rates_traces.png`, `figures/recovery_rates_summary.png`.
 
 ## Answer: yes, the rates coincide. No, you may not compare the normalised traces.
 

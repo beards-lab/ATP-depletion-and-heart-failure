@@ -2,7 +2,7 @@
 
 Reproduce: `RunPeakAudit.m` → `RunSpreadReconcile.m` → `RunInstrument0410.m`.
 Fix: `Model/extractSlackAttributes.m`. Re-curation: `DataCuration/RecurateSlackFeatures2026.m`.
-Figure: `results/instrument_0410.png`.
+Figure: `figures/instrument_0410.png`.
 
 ---
 

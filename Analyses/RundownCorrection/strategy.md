@@ -351,9 +351,9 @@ repeat's hi-res data will merge.
 7. **Validate** by checking the two order groups agree, and that `φ` from the fit matches
    `φ` from any sandwich prep.
 
-Reproduce: `RunDesignStrategy.m` → `results/design_strategy.png`;
+Reproduce: `RunDesignStrategy.m` → `figures/design_strategy.png`;
 `../ATPEffectReconciliation/RunPoolingStrategies.m` → `pooling_strategies.png`.
 
-![Design strategy](results/design_strategy.png)
+![Design strategy](figures/design_strategy.png)
 
-![Pooling strategies](../ATPEffectReconciliation/results/pooling_strategies.png)
+![Pooling strategies](../ATPEffectReconciliation/figures/pooling_strategies.png)

@@ -8,7 +8,7 @@ measured on this machine (R2023a, `params/fastgate_best.m`, the set TriSegCoupli
 loop) unless marked *literature* or *estimate*.
 
 Reproduce: `RUN = [0 1 2 3 5 6 4]; run('Analyses/CalciumTwitch/RunTwitchProbe.m')` (~4 min).
-Figure: [`results/twitch_probe.png`](results/twitch_probe.png).
+Figure: [`figures/twitch_probe.png`](figures/twitch_probe.png).
 
 ---
 
@@ -317,7 +317,7 @@ reusable.**
 | [`dPUdT_CaGate.m`](dPUdT_CaGate.m) | probe RHS wrapper: one thin-filament state, gate on `ka`; identity at gate = 1 |
 | [`caTransient.m`](caTransient.m) | Rice 2008, Marzban 2020, Tewari/Piacentino, FiberSim two-compartment, constant pCa |
 | [`RunTwitchProbe.m`](RunTwitchProbe.m) | E0 signals, E1 clamp, E2 force–pCa, E3 twitches, E5 `k_on` scan, E6 numerics, E4 figure |
-| `results/probe_E*.mat`, [`results/twitch_probe.png`](results/twitch_probe.png) | outputs |
+| `results/probe_E*.mat`, [`figures/twitch_probe.png`](figures/twitch_probe.png) | outputs |
 
 ## Sources
 

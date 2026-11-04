@@ -19,10 +19,10 @@ divisor must be per *preparation*, not per *run*, or the ATP effect is defined a
 |---|---|---|
 | `poolLoadRuns.m` | one code path: traces, anchors, fresh features for all nine runs | `results/pool_raw.mat` |
 | `RunNormalizationLadder.m` | which normalisation, at which scope, with which corrections | `results/normalisation_ladder.mat` |
-| `RunPoolingComparison.m` | timecourse spread; extract-then-average vs average-then-extract; noise vs biology | `results/pooling_traces.png` |
-| `RunFVConsistency.m` | does the in-preparation F–V point rescue the borrowed F–V curve | `results/fv_consistency.png` |
+| `RunPoolingComparison.m` | timecourse spread; extract-then-average vs average-then-extract; noise vs biology | `figures/pooling_traces.png` |
+| `RunFVConsistency.m` | does the in-preparation F–V point rescue the borrowed F–V curve | `figures/fv_consistency.png` |
 | `buildPooledTarget.m` | **the deliverable**: pooled target + honest error bar per feature | `results/pooled_target.mat` |
-| `RunSummaryFigure.m` | the argument on one page | `results/datapooling_summary.png` |
+| `RunSummaryFigure.m` | the argument on one page | `figures/datapooling_summary.png` |
 | `WritePooledTarget.m` | freeze the target into version control, next to what it replaces | `../../Model/pooledTarget8mM.m`, `results/pooled_target_report.txt` |
 | `BuildPooledSeed.m` | put that target *into the objective* and reweight from its spreads | `../../params/pooled8_seed.m` |
 | `RunOptimPooled.m` | refit against it (engine: `../FeatureWeighting/RunOptimSpreadW.m`) | `params/pooled8_opt.m`, `params/pooled8_iter/` |
@@ -30,7 +30,7 @@ divisor must be per *preparation*, not per *run*, or the ATP effect is defined a
 **[methods.md](methods.md) is the paper-ready paragraph** — 167 words, and it is meant
 to be the entire data-manipulation section.
 
-![summary](results/datapooling_summary.png)
+![summary](figures/datapooling_summary.png)
 
 ---
 

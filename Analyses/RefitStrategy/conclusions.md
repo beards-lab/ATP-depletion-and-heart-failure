@@ -198,7 +198,7 @@ different parametrisation and has never been fitted on this objective.
 ## 5b. The campaign result — objective down 23.7 %, held-out ktr up 40 %
 
 `ktrfence`, 34 rounds, 14 improving snapshots, 8 h budget reached.
-`RunFinalVerify.m`, `CheckTimecourses.m` → `results/timecourse_check.png`.
+`RunFinalVerify.m`, `CheckTimecourses.m` → `figures/timecourse_check.png`.
 
 **Quote the reloaded cost, not the header.** Campaign printed 0.5271; reloading
 `params/ktrfence_opt.m` gives **0.5342** — the `%g` snapshot round-trip.

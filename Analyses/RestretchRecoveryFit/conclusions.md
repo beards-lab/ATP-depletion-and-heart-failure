@@ -60,7 +60,7 @@ The estimator is deliberately amplitude-fixed (only `k` and `t0` free), which
 makes it span-insensitive — refitting over 30 ms vs the full window moves the
 data value from 48.5 to 48.4 s⁻¹ — and keeps a force-scale error out of the rate.
 
-![Recovery windows, data vs model](results/baseline_windows.png)
+![Recovery windows, data vs model](figures/baseline_windows.png)
 
 *Top row: post-restretch. The model (blue) is done by ~30 ms where the data
 (black) is still climbing at 80 ms. Bottom row: post-slack, where the same model
@@ -101,7 +101,7 @@ The protocol already sweeps re-stretch amplitude (cycles 1–5 re-stretch by
 gets slower.** The sign is wrong, not merely the magnitude. This is a *shape*
 constraint: it survives any per-prep force scaling and cannot be re-weighted away.
 
-![Model vs data amplitude dependence](results/amplitude_vs_data.png)
+![Model vs data amplitude dependence](figures/amplitude_vs_data.png)
 
 *Left: the model (red) climbs with re-stretch size; every data point (circles,
 three preps) sits on a mildly falling trend. Right: mean `rsK` per prep — note
@@ -127,7 +127,7 @@ detachment `R2` (2100–4250 s⁻¹ at re-stretch strains). `UseR2Ceiling` satur
 | 200 | 1607 | 209.1 | 0.93 | 85.3 |
 | *data* | *−126* | *~52* | *~13* | *~80* |
 
-![R2 ceiling vs the amplitude slope](results/r2ceiling_slope.png)
+![R2 ceiling vs the amplitude slope](figures/r2ceiling_slope.png)
 
 **Rejected.** The slope improves marginally then gets much worse, because the
 ceiling keeps bridges attached through the stretch and *destroys the undershoot
@@ -173,7 +173,7 @@ Together they give **`rsK` ≈ 49 s⁻¹ at every amplitude with slope +21** —
 level *and* the flatness. On the real protocol with the full battery,
 `k2`×0.6 + `eta_M`×0.3 gives **`rsK` = 46.8, ×1.07 of data** (from ×2.70).
 
-![Slope under levers](results/slope_under_levers.png)
+![Slope under levers](figures/slope_under_levers.png)
 
 ### The bill, honestly
 

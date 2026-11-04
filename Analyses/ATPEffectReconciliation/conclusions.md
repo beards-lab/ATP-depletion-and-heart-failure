@@ -5,7 +5,7 @@
 > **Low ATP (2 mM vs 8 mM) makes the muscle ~×1.36 STRONGER and ×0.55 SLOWER.**
 > Force CV falls from 22 % to 11 %; `ktr` was already consistent at CV 8 %.
 
-`RunATPReconciliation.m` → `results/atp_reconciliation.png`, `.mat`.
+`RunATPReconciliation.m` → `figures/atp_reconciliation.png`, `.mat`.
 Correction from [RundownCorrection](../RundownCorrection/conclusions.md);
 dataset provenance from [SlackDataAnalysis](../SlackDataAnalysis/conclusions.md).
 
@@ -68,7 +68,7 @@ two eras, two different slack protocols.
 > between the conditions. The slack `ktr` remains the right probe for *rundown*,
 > which is itself largely a compliance lesion.
 
-![The ATP effect, reconciled](results/atp_reconciliation.png)
+![The ATP effect, reconciled](figures/atp_reconciliation.png)
 
 *Top left: force ratio per prep, raw vs corrected. Top middle: per feature (dashed =
 raw, solid = corrected) — the three preps converge. Top right: `ktr`, already
@@ -91,13 +91,13 @@ slower cycle**. It matches Beard 2022 in direction, with a larger force effect
 
 ## Does the model-based correction reconcile the reversed-order prep better?
 
-`RunModelBasedReconciliation.m` → `results/model_based_reconciliation.png`. Instead
+`RunModelBasedReconciliation.m` → `figures/model_based_reconciliation.png`. Instead
 of a fractional correction, the rundown **lesion** identified in
 [RundownCorrection §4b](../RundownCorrection/conclusions.md) (`kstiff` ×0.84 +
 `kSE` ×0.65 at the full bracket dose) is simulated at each preparation's own dose,
 and its predicted force *and* `ktr` changes are divided out.
 
-![Model-based vs empirical correction](results/model_based_reconciliation.png)
+![Model-based vs empirical correction](figures/model_based_reconciliation.png)
 
 | dose λ | lesion | predicted force × | predicted `ktr` × |
 |---|---|---|---|

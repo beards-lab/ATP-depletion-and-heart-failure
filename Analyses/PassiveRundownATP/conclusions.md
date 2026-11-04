@@ -173,7 +173,7 @@ persistent residuals, and those are three of the top terms in the 2 mM cost.
 
 # Third pass — CAN the passive be scaled up, and by how much? (2026-08-10)
 
-Script: `RunPassiveScaleFeasibility.m` · figure: `results/passive_feasibility.png`
+Script: `RunPassiveScaleFeasibility.m` · figure: `figures/passive_feasibility.png`
 
 ## The acquisition order — the user was right, and it is worse than assumed
 
@@ -215,7 +215,7 @@ to. (B) is the **indirect** demand from the 2 mM slack run.
 | 3.00 | 17.262 | 89.25 | 65.09 |
 | **4.00** | **34.711** (31× worse) | **92.43** = data | 201.45 |
 
-![passive feasibility](results/passive_feasibility.png)
+![passive feasibility](figures/passive_feasibility.png)
 
 ## Answers
 

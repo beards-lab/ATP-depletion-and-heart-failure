@@ -63,7 +63,7 @@ repeated at the end of the session, so the 2 mM run is *bracketed in time* by tw
 **last** (15:29:40, after the PNB+Mava run at 15:23:54). File numbering is not
 chronological; session times must be taken from the `Created:` header of each `.txt`.
 
-![The bracket, explained from the raw timecourses](results/bracket_explained.png)
+![The bracket, explained from the raw timecourses](figures/bracket_explained.png)
 
 **Panel (a)** the four raw force timecourses on the protocol clock — 2 mM (orange)
 highest, 8 mM fresh (light blue), 8 mM repeat (dark blue) lowest, PNB+Mava (grey) near
@@ -242,7 +242,7 @@ a small *recovery* of 2.6–4.0 % per rest interval, not further decay. This rou
 estimates the ATP effect as **×1.30–1.32 from one preparation, with no phi and no
 damage model** — an independent confirmation of the value obtained in M.7.
 
-![Decay geometry](results/decay_geometry.png)
+![Decay geometry](figures/decay_geometry.png)
 
 *(a) activation envelopes normalised to their own peak — 2 mM (red) peaks earlier
 than 8 mM (blue). (b) 03/27 decay lines extrapolated to each run's own peak (stars).
@@ -300,7 +300,7 @@ A correction derived from one preparation, applied blind to two others including
 of opposite running order, reduces scatter more than threefold. Applied at the feature
 level across six force features, CV falls from 22 % to 11 %.
 
-![Calibration and validation of the correction](results/rundown_correction.png)
+![Calibration and validation of the correction](figures/rundown_correction.png)
 
 **(a)** the linearity test of M.1. **(b)** integrated within-run slope versus the loss
 the bracket actually measures — the basis of phi (M.4). **(c)** the two independent
@@ -314,7 +314,7 @@ robust to this choice.
 
 The downstream consequence, across all four preparations:
 
-![The reconciled ATP effect](../ATPEffectReconciliation/results/atp_reconciliation.png)
+![The reconciled ATP effect](../ATPEffectReconciliation/figures/atp_reconciliation.png)
 
 ---
 
@@ -361,7 +361,7 @@ constants. A hi-res repeat run would be needed.
 > session gaps. Over the 132–308 s gaps actually used the implied `ktr` bias is ≈ 2 %,
 > smaller than the between-preparation scatter.
 
-![Joint correction](results/joint_correction.png)
+![Joint correction](figures/joint_correction.png)
 
 > **Recommendation:** correct force; report `ktr` raw; never compare `ktr` across long
 > session gaps.
@@ -371,7 +371,7 @@ the time constant is ≈ 20 ms. The fresh trace must be resampled onto the repea
 sample times and both fitted identically, making the sampling bias common-mode.
 Sampling alone accounts for ×0.956 of the apparent change.
 
-![Length-tension and ktr evidence from the data](results/rundown_mechanism.png)
+![Length-tension and ktr evidence from the data](figures/rundown_mechanism.png)
 
 ---
 
@@ -395,7 +395,7 @@ discriminators:
 No single lesion suffices. The `ktr` loss requires **added series compliance** — no
 alternative reaches it. The force half is settled by a second, stronger test below.
 
-![Model perturbation study](results/mechanism_simulation.png)
+![Model perturbation study](figures/mechanism_simulation.png)
 
 ### M.9b Which force lever? The five-segment profile decides
 
@@ -435,7 +435,7 @@ should be treated as provisional.**
 the attachments, which removes parallel force-generating material and leaves a
 compliant damaged region in series.
 
-![Rundown as a decaying model parameter](results/model_rundown_fit.png)
+![Rundown as a decaying model parameter](figures/model_rundown_fit.png)
 
 ### M.9c Rundown as a fitted nuisance parameter
 
@@ -491,13 +491,13 @@ Two consequences follow for practice:
 
 | script | produces |
 |---|---|
-| `RunBracketExplainer.m` | `results/bracket_explained.png` — the bracket and the damage staircase |
-| `RunDecayGeometry.m` | `results/decay_geometry.png`, `.mat` — activation rise vs decay, ATP-dependence of the decay rate, continuity/recovery test, own-peak referencing |
-| `RunJointCorrection.m` | `results/joint_correction.png`, `.mat` — phi on the own-peak/`T_dec` footing; free scan of the force→`ktr` correction coupling |
-| `RunModelRundownFit.m` | `results/model_rundown_fit.png`, `.mat` — rundown as a decaying model parameter, tested against the 5-segment `ktr` and amplitude profiles |
-| `RunRundownCorrection.m` | `results/rundown_correction.png`, `.mat` — linearity test, phi calibration, phi scan, sensitivity |
-| `RunRundownMechanisms.m` | `results/rundown_mechanism.png` — length–tension and `ktr` evidence from the data |
-| `RunMechanismSimulation.m` | `results/mechanism_simulation.png` — model perturbation study |
+| `RunBracketExplainer.m` | `figures/bracket_explained.png` — the bracket and the damage staircase |
+| `RunDecayGeometry.m` | `figures/decay_geometry.png`, `.mat` — activation rise vs decay, ATP-dependence of the decay rate, continuity/recovery test, own-peak referencing |
+| `RunJointCorrection.m` | `figures/joint_correction.png`, `.mat` — phi on the own-peak/`T_dec` footing; free scan of the force→`ktr` correction coupling |
+| `RunModelRundownFit.m` | `figures/model_rundown_fit.png`, `.mat` — rundown as a decaying model parameter, tested against the 5-segment `ktr` and amplitude profiles |
+| `RunRundownCorrection.m` | `figures/rundown_correction.png`, `.mat` — linearity test, phi calibration, phi scan, sensitivity |
+| `RunRundownMechanisms.m` | `figures/rundown_mechanism.png` — length–tension and `ktr` evidence from the data |
+| `RunMechanismSimulation.m` | `figures/mechanism_simulation.png` — model perturbation study |
 | `../ATPEffectReconciliation/RunATPReconciliation.m` | the corrected ATP effect across all preparations |
 
 Each runs standalone from a clean MATLAB session after

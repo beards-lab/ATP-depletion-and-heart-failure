@@ -112,13 +112,13 @@ it was mildly harmful (§2). Treat as untested at this point, not as supported.
 
 ### Slack protocol
 
-![full slack](results/fig_slack_full.png)
+![full slack](figures/fig_slack_full.png)
 
 Plateaus, the five descending steady levels, and the redevelopment from slack are all
 essentially exact in both fits — that part of the model has been right for a while and
 is not what is being tested.
 
-![first cycle](results/fig_slack_cycle1.png)
+![first cycle](figures/fig_slack_cycle1.png)
 
 The zoom is where the honest reading is. **Good:** from ~340 ms the reoptim (red)
 tracks the data where the baseline (blue) sits visibly above it — that is the whole
@@ -135,7 +135,7 @@ to check if `rsK` improves further.
 
 ### Force–velocity — the term that must not break
 
-![force-velocity](results/fig_fv.png)
+![force-velocity](figures/fig_fv.png)
 
 **This is the weakest part of the fit, the reoptim made it worse, and it is getting
 worse with every round.** The model sits *below* the data at every non-zero velocity,
@@ -161,7 +161,7 @@ longer run will keep doing unless FV is protected.
 
 ### Passive
 
-![passive](results/fig_passive.png)
+![passive](figures/fig_passive.png)
 
 Peaks and decay shape are tracked; the data is very noisy (±3 kPa on a 0–20 kPa
 signal). Two visible changes, both mild and both the wrong way: the reoptim's
@@ -174,7 +174,7 @@ rather than hidden.
 
 ### Feature ledger
 
-![features](results/fig_features.png)
+![features](figures/fig_features.png)
 
 | improved | Δ | | degraded | Δ |
 |---|---|---|---|---|
