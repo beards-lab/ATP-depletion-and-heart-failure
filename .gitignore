@@ -16,10 +16,14 @@ ctrl1.csv
 PARAMETERS.xlsx
 UpdatePhysiolibraryToBodylight.bat
 ~*
-# Generated parameter snapshots (writeParamsToMFile: <tag>_opt.m, _seed.m, _iter_*.m, abl*).
-# Already-tracked snapshots stay tracked; keep a new one deliberately with `git add -f`.
-# Hand-written .m code anywhere else is tracked as usual (#72).
-/params/*.m
+# params/: fitted snapshots (<tag>_opt.m, <tag>_seed.m, ...) are the model's parametrization
+# and ARE tracked. Only the optimiser's exploratory iterations stay out (#72): the per-run
+# galleries <tag>_iter/ and the numbered dumps <tag>_iter_<n>.m. An iteration a script
+# loads is kept with `git add -f` (e.g. refit7_iter/refit7_iter_001.m).
+/params/*_iter/
+/params/*_iter_[0-9].m
+/params/*_iter_[0-9][0-9].m
+/params/*_iter_[0-9][0-9][0-9].m
 /Analysis/batch_output_extracted_v1
 data/
 *.fig
@@ -31,7 +35,10 @@ tools/*.exe
 /resources/
 *.log
 *.err
-/params/*/
 *.bak
-/Analyses/LowATP_Refit9K2Sweep/results
-/Analyses/SRXDuringContraction/results
+
+# Analyses: results/ is regenerable output and is never committed; figures/ holds the
+# figures a report shows and is always committed, whatever the file type (#72).
+/Analyses/*/results/
+!/Analyses/*/figures/
+!/Analyses/*/figures/**
