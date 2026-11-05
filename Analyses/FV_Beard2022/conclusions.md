@@ -1,6 +1,6 @@
 # FV_Beard2022: the incumbent against the full Beard/Baker 2022 isovelocity dataset (8 / 4 / 2 mM)
 
-**Issue:** #75 · **Status:** done (findings; needs the PI's judgment) · **Authors:** Claude (AI agent) for fjezek · **Date:** 2026-11-05
+**Issue:** #75 · **Status:** done (findings, awaiting PI review) · **Authors:** Claude (AI agent) for fjezek · **Date:** 2026-11-05
 **Data:** `data/Beard2022/` (untracked; `data/` is gitignored). 12 rat-trabecula preparations, 2021-05-11 to 06-30, the dataset behind Beard, …, Baker, *Reduced cardiac muscle power with low ATP simulating heart failure*, Biophys J 2022.
 **Model:** `robust1_seed` (the Paper-1 incumbent, as in `Analyses/PooledFitFigures`). 2 mM uses fit A, the k2 power gate with R2 ×0.54. **4 mM uses the same gate evaluated at 4 mM** (R2 ×0.735), so it is a pure prediction from [ATP]. Nothing was refitted.
 
@@ -95,7 +95,7 @@ Three trace-level defects show up in every record:
   | 4 mM | 0 | 0 | 4.7 | 5.7 | 11 | 10 (whole) | 8.5 (whole) |
   | 2 mM | 0 | 0 | 6.7 | 9.4 | 13 | 10 (whole) | 8.5 (whole) |
 
-  The data **never go slack**: the 8 mM minima during the ramps are 0.178 / 0.162 / 0.094 / 0.044 / 0.034 at 2–6 ML/s. After the slack the model **overshoots** (2–3 ML/s), so its read value is partly right for the wrong reason. **The step stiffness itself is right**: at 1 ML/s the step trough is 0.447 model vs 0.452 data. The defect is redevelopment while shortening, and it worsens as ATP falls. (This corrects a first impression, given in chat while the runs were going, that the model is ~2× too stiff.)
+  The data **never go slack**: the 8 mM minima during the ramps are 0.178 / 0.162 / 0.094 / 0.044 / 0.034 at 2–6 ML/s. After the slack the model **overshoots** (2–3 ML/s), so its read value is partly right for the wrong reason. **The step stiffness itself is right**: at 1 ML/s the step trough is 0.447 model vs 0.452 data. The defect is redevelopment while shortening, and it worsens as ATP falls. (This retracts an earlier working hypothesis, made before the runs finished, that the model is ~2× too stiff.)
 - **Re-stretch transient has the wrong sign.** The re-stretch is +0.3 ML at ~15 ML/s, from slack to the 1.10 hold. Force after it, as a fraction of the following hold (median over 7 cycles):
 
   | | +5 ms data / model | +20 ms | +50 ms |
