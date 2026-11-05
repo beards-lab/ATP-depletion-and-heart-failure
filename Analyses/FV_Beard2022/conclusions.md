@@ -126,11 +126,11 @@ The issue set no numeric prediction. The implicit one was that a model fitted to
 
 ## Next steps (filed as issues)
 
-See the hand-off comment on #75 for the issue numbers.
-
-- Post-step slack and too-slow force redevelopment while shortening (model defect, worse at low ATP).
-- ATP effect at 2–3 ML/s is under-predicted by the k2-only gate (relates to #23 and #4).
-- Replace the single-prep F–V target with the 12-prep Beard2022 pool, with 4 mM as a held-out arm (relates to #28).
+- **#77**: post-step slack and too-slow force redevelopment while shortening (model defect, worse at low ATP).
+- **#78**: the ATP effect at 2–3 ML/s is under-predicted by the k2-only gate (relates to #23 and #4).
+- **#79**: replace the single-prep F–V target with the 12-prep Beard2022 pool, with 4 mM as a held-out arm (relates to #28).
+- The re-stretch transient (§3) belongs to the existing #19 and #20, with no new issue.
+- The `ktr fit` and `Passive fit` workbooks in the same folders are not analysed here.
 
 ## Reproduce
 
