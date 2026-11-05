@@ -35,6 +35,10 @@ function tw = tworldCaLayer(params, ca, prev)
 %     param     T-World parameter struct overrides (cellType, *_Multiplier, sex,
 %               stimAmp, stimDur, nao/cao/ko, ...; see getDefaultParameters.m).
 %               bcl is set from CaPeriod; runSignallingPathway is not supported.
+%     model     T-World model function handle, default @model_TWorld. Any function with
+%               model_TWorld's argument list works, e.g. @model_TWorld_shock_ATP (TW_ATP/,
+%               pH/ATP/ADP via param.extraParams = [isHypoxic, T, pH, ATP, ADP, GKATP]);
+%               put that model's own helpers (modelRunner, getStartingState, ...) on the path.
 %     absTol    AbsTol for the embedded T-World states (mM, mV, fractions);
 %               default 1e-6, T-World's own ode15s default. Applied per state by
 %               evaluateModel (the cross-bridge states keep their scalar AbsTol).
@@ -63,21 +67,22 @@ stateCode = getOpt(opt, 'state', 'TW_endo');
 X0in = getOpt(opt, 'X0', []);
 twp = getOpt(opt, 'param', struct());
 absTol = getOpt(opt, 'absTol', 1e-6);
+model = getOpt(opt, 'model', @model_TWorld);
 
 % reuse the previous resolution when nothing that shaped it changed
 key = struct('T', ca.T, 'coupling', coupling, 'prebeats', prebeats, 'state', stateCode, ...
-    'X0', X0in, 'param', twp, 'absTol', absTol);
+    'X0', X0in, 'param', twp, 'absTol', absTol, 'model', func2str(model));
 if ~isempty(prev) && isstruct(prev) && isfield(prev, 'key') && isequaln(prev.key, key)
     tw = prev;
     return;
 end
 
-if exist('model_TWorld', 'file') ~= 2
-    error('tworldCaLayer:path', ['model_TWorld.m not found. Add ThirdParty/TWorld to the path ' ...
-        '(addpath(genpath(''.'')) from the repo root).']);
+if exist(func2str(model), 'file') ~= 2
+    error('tworldCaLayer:path', ['%s.m not found. Add ThirdParty/TWorld to the path ' ...
+        '(addpath(genpath(''.'')) from the repo root).'], func2str(model));
 end
 
-twp.model = @model_TWorld;
+twp.model = model;
 twp.bcl = 1e3*ca.T;                       % ms
 twp = getDefaultParameters(twp);
 if twp.runSignallingPathway
@@ -104,7 +109,7 @@ args = {twp.cellType, twp.ICaL_Multiplier, twp.INa_Multiplier, twp.Itos_Multipli
     twp.nao, twp.cao, twp.ko, twp.ICaL_fraction_junc, twp.INaCa_fraction_junc, twp.PKA_P, twp.Whole_cell_PP1, ...
     twp.runSignallingPathway, [], twp.sex, twp.stimAmp, twp.stimDur, twp.vcParameters, twp.apClamp, twp.extraParams};
 
-tw = struct('key', key, 'coupling', coupling, 'n', n, 'x0', X0, 'args', {args}, ...
+tw = struct('key', key, 'coupling', coupling, 'model', model, 'n', n, 'x0', X0, 'args', {args}, ...
     'stimDur', twp.stimDur/1e3, ...          % s
     'Cadia', 1e3*X0(8), ...                  % uM, cytosolic Ca of the starting state
     'Bmax_TnClow', 70e-3, ...                % mM, troponin C low-affinity sites (model_TWorld.m, Buffering)
