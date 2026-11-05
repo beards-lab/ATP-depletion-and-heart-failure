@@ -545,8 +545,17 @@ if params.UseAtpDetachR2
     else
         Km_s = params.K_T2;
     end
-    gATP_R2 = (params.MgATP ./ (params.MgATP + Km_s)) ...
-           ./ (params.MgATP_ref ./ (params.MgATP_ref + Km_s));
+    % MgADP competes with MgATP for the empty nucleotide pocket of the post-stroke
+    % head (ADP rebinding after release), so with UseAdpCompR2 the apparent Km(ATP)
+    % rises by (1 + MgADP/K_D). Normalised at (MgATP_ref, MgADP_ref), so the gate is
+    % still exactly 1 at the reference state. Inert when off.
+    KmA = Km_s;  KmR = Km_s;
+    if isfield(params, 'UseAdpCompR2') && params.UseAdpCompR2
+        KmA = Km_s * (1 + params.MgADP/params.K_D);
+        KmR = Km_s * (1 + params.MgADP_ref/params.K_D);
+    end
+    gATP_R2 = (params.MgATP ./ (params.MgATP + KmA)) ...
+           ./ (params.MgATP_ref ./ (params.MgATP_ref + KmR));
     R2 = R2 .* gATP_R2;
 end
 
