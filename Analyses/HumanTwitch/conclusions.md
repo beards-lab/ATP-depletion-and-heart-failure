@@ -48,6 +48,30 @@ the Hill decay does. hiPSC set: τr 25 ms, m 1, t50 265 ms, h 3, onset 5 ms afte
 - Ca peaks ~140 ms before force (93 vs 230 ms), and Ca has fallen to 50 % at ~280 ms, just after the force
   peak: the twitch is a delayed, filtered image of the transient, as de Lange and Saleem describe.
 
+### 1.1 How variable is the "human iPSC-CM Ca transient" in the literature? (`Stage1b_CaVariability.m`)
+
+Each curve below is a `risedecay` transient fitted to the shape metrics one source reports (the metrics
+differ by source: TTP, time to 80 % of peak, peak→50 %, peak→20 %, 90→10 % decay, CaTD90), so the family is
+what "take the Ca transient from the literature" can mean. Panel B shows what the choice does to the
+identified human core (tier-1 refits of §2.2 and the ±indicator-error refits of §5).
+
+![Ca variability](results/stage1b_ca_variability.png)
+
+| source | preparation, indicator, T, pacing | TTP (ms) | peak→50 % | peak→90 % |
+|---|---|---|---|---|
+| de Lange 2021 (the anchor) | 3D hiPSC tissue, Fura-2, 37 °C, 1 Hz | 88 | 185 | 444 |
+| Saleem 2020 | Hamburg EHT, GCaMP6f, 37 °C, 1.5–2 Hz | 177 (80 % at 116) | 100 | 234 |
+| Paci 2018 (experimental) | single hiPSC-CM, Fluo-4, 37 °C, spontaneous | 269 | 225 | 493 |
+| Paci 2020 / Forouzandehmehr 2021 (models) | hiPSC-CM models, spontaneous | 163–183 | 160–165 | ~400 |
+| Akwaboah 2021 (model) | hiPSC-CM model, 2.3 Hz | 66 | 64 | 151 |
+| adult human LV (Coppini 2013, ToR-ORd) | myocytes / model, 37 °C, 1 Hz | 60 | 174 | 406 |
+
+The time to peak alone spans **60–270 ms** across sources that all call themselves human (iPSC) cardiac, and
+even the two paced 37 °C tissue measurements disagree 2× in TTP (Fura-2 vs GCaMP6f). §2.2 showed that a
+20–25 ms change in Ca TTP is a factor 2–8 on every rate of the fitted human core at an unchanged fit quality.
+**No literature choice can therefore substitute for a Ca recording in the tissues being modelled**; the
+prescribed set is a defensible anchor, not a measurement.
+
 **Zero-tuning baselines** (nothing refitted; σ solved; fit C's filament with `k_on` rescaled to the new Ca
 amplitude so that `k_on·ΔCa` is unchanged):
 
@@ -281,6 +305,85 @@ guesses (k_on is only identified relative to them). The isometric boundary is a 
 compliant posts. Fits are local (lsqnonlin, 2–3 starts for stage 3); the stage-2 ladder was started
 from the tier-1 optimum, so a tier reports what its extra direction adds there.
 
+## 5. Case B: with the Ca transient measured, how trustworthy are the identified parameters and the predictions?
+
+Setting: the prescribed transient stands in for a measurement; its only uncertainty is a realistic
+indicator error (TTP ± ~5 ms together with peak→50 % ± ~10 ms: refits `tB_caE1` faster/shorter and
+`tB_caE2` slower/longer; the two mixed-sign combinations were dropped for memory). The identifiability set
+`tB` has 8 free parameters: the net factor on the six isoform rates (r_net), the net factor on k1,k_1
+(r_Pi), the SRX exchange factor (r_SRX), the series factor (r_kSE), the thin filament and the offset. High
+ATP only. Profile likelihood over r_net (6 points), r_SRX (2) and r_kSE (1): the parameter is fixed, everything
+else refitted from the tier-1 start (`tierConfigs('tB__<par>__<k>')`, `profileSequencer*.sh`). Prediction
+validity: `PredictSet.m` evaluates every fit's muscle-level (saturating Ca, SL 2.2: F0, SRX, ATP use,
+Brenner ktr) and twitch-level predictions (response of peak force to Ca amplitude ×1.5 and ÷1.5, to 2 Hz
+pacing, and to a mavacamten-like ka ×0.5). `results/predict_caseB.csv`, `results/predict_caseB.png`.
+
+![case B](results/predict_caseB.png)
+
+### 5.1 The profiles
+
+| fixed | value | rms (% of peak) | r_SRX | r_kSE | k_off | K_coop |
+|---|---|---|---|---|---|---|
+| r_net | 0.15 | 2.82 | 2.7 | 0.58 | 21 | 20 |
+| r_net | 0.25 | 0.85 | 4.0 | 1.19 | 8.6 | 20 |
+| r_net | 0.45 (tier-1 value) | 0.73 | 0.50 | 0.97 | 5.5 | 20 |
+| r_net | 0.8 | 0.41 | 0.56 | 0.63 | 4.9 | 19.8 |
+| r_net | 3 | 0.33 | 0.29 | 0.85 | 4.6 | 18.9 |
+| r_net | 10 | 0.32 | 0.22 | 1.00 | 4.8 | 19.4 |
+| — (free) | **r_net 4.1** | **0.335** | 0.27 | 0.52 | 4.8 | 18.9 |
+| Ca error E1 (TTP −5, decay −10 ms) | r_net 3.6 | 0.35 | 0.29 | 0.53 | 4.2 | 19.3 |
+| Ca error E2 (TTP +5, decay +10 ms) | r_net 3.7 | 0.32 | 0.28 | 0.58 | 5.3 | 18.2 |
+| r_SRX | 0.15 | 0.57 | (r_net 4.9) | 1.09 | 5.4 | 19.7 |
+| r_SRX | 8 | 0.73 | (r_net 0.55) | 0.87 | 4.8 | 20 |
+
+- **The profile over the core speed is one-sided.** Below r_net ≈ 0.5 the fit degrades steeply (2.8 % at
+  0.15); from 0.8 to 10 it is flat within 0.1 percentage points (0.41 → 0.32 %). With the SRX exchange and the
+  series element free, a fast cycle is always compensated by a slower OFF↔ON exchange (r_SRX 0.56 → 0.22) and
+  a 50 % resting SRX pool. **A known Ca transient gives the human core a lower bound (≥ 0.5–0.8× the mouse),
+  not a value.** Formally (Δχ² at 95 % on the best fit's residual variance, which is optimistic because the
+  residual is autocorrelated) only r_net ≥ 3.7 is "acceptable"; pragmatically every fit below ~0.45 % rms
+  describes the data.
+- **The indicator error is no longer the limiting uncertainty**: ±5 ms TTP moves r_net 3.6–4.1 and the thin
+  filament by < 15 %, far less than the flat profile does.
+- **r_SRX is the mirror image**: it is bounded above (×8 costs 0.73 %) but trades off with r_net below.
+- **The thin filament is identified in every row**: k_off 4.2–5.5 s⁻¹, K_coop 18–20, k_on·ΔCa 3.8–4.8, across
+  a 20× range of core speeds. This is the quantity a measured transient really pins.
+
+### 5.2 Prediction validity
+
+Spread of predictions over the fits that describe the data to within 0.42 % rms (r_net 0.8 … 10, the free
+optimum and both Ca-error refits; n = 6), and over the wider set within 0.85 % (adds r_net 0.25, 0.45 and
+the two SRX points; n = 10):
+
+| prediction | rms ≤ 0.42 % set | rms ≤ 0.85 % set | verdict |
+|---|---|---|---|
+| **twitch**: peak force for Ca amplitude ×1.5 | **+10.6 … +14.3 %** | +9.8 … +14.3 % | **robust** |
+| **twitch**: Ca amplitude ÷1.5 | **−53 … −59 %** | −51 … −59 % | **robust** |
+| **twitch**: 2 Hz pacing (same transient shape) | −2.2 … −3.1 % | −0.9 … −4.9 % | robust (and small: the model has no Ca-handling frequency response, so this is only the cross-bridge carry-over) |
+| **twitch**: mavacamten-like ka ×0.5 | **−49 … −55 %** | −46 … −55 % | **robust** |
+| activation (twitch / saturating force) | 77 … 84 % | | robust |
+| F0 at saturating Ca, SL 2.2 (kPa) | 50 … 64 | 50 … 77 | fair (±15 %) |
+| resting SRX at saturating Ca | 0.038 … 0.049 | 0.011 … 0.049 | fair |
+| **Brenner ktr (s⁻¹)** | **23 … 97** | 15 … 97 | **not predicted** (4×) |
+| **ATP use at saturating Ca, R2T (s⁻¹ per head)** | **7 … 124** | 4.7 … 124 | **not predicted** (17×) |
+| **ATP per head per beat** | **1.5 … 24** | 1.0 … 24 | **not predicted** (16×) |
+| σ (µN per model kPa) | 11.5 … 15.5 | 8.9 … 15.5 | fair |
+
+**Reading.** With the Ca transient known, the fitted model's *twitch-level* predictions (how peak force
+responds to Ca amplitude, to rate, to an attachment inhibitor) are reproducible to a few percentage points
+across every core that fits the data: these follow from the thin filament and the activation level, which
+the twitch identifies. The *muscle-level* kinetic and energetic quantities (ktr, ATPase, ATP per beat) are
+not predicted at all: they follow the unidentified core speed and span 4–17×. So the fitted rates do **not**
+report "how the unseen muscle's inner properties changed" unless one of those muscle-level quantities is
+measured as well. A single ATPase, O₂-consumption or ktr/kACT measurement on the same tissue would collapse the
+r_net profile; without it, a measured Ca transient buys the thin filament and the slow bound of the core speed.
+
+### 5.3 Case A, for the record
+
+The assumption-level uncertainty of §1.1/§2.2 (literature TTP 60–270 ms) sits on top of all of this: it moves
+even the slow bound of r_net by a factor 2–8 and so removes the one core statement case B still allows.
+This is why the Ca recording is the first measurement to ask for, and the ATPase/ktr anchor the second.
+
 ## Files
 
 | file | role |
@@ -290,5 +393,7 @@ from the tier-1 optimum, so a tier reports what its extra direction adds there.
 | `caTransientMetrics.m`, `Stage1_CaTransient.m` | §1: metrics, comparison, zero-tuning baselines → `results/stage1_*` |
 | `tierConfigs.m`, `buildModel.m`, `simHumanTwitch.m`, `fitTwitchTier.m`, `finishTier.m`, `runTier.m`, `sequencer.sh` | the tiered fits (resumable; `runTier(name[, nIter])`); results `results/<tier>.log`, `<tier>_fit.mat`, `<tier>.png` |
 | `residTier.m`, `jacobianTier.m` | local identifiability at a tier optimum → `results/<tier>_jac.mat` |
+| `Stage1b_CaVariability.m` | §1.1: literature Ca-transient family and its effect on the identified core → `results/stage1b_ca_variability.*` |
+| `PredictSet.m`, `profileSequencer*.sh` | §5: case-B profiles and prediction spread → `results/predict_caseB.*` |
 | `OverviewTiers.m`, `ProbeCores.m` | cross-tier table/figure (`results/overview_tiers.*`) and saturating-Ca probes (`results/probe_cores.mat`) |
 | `params/human_twitch_t1_isoT.m`, `params/human_twitch_s3_free.m` | the realistic and the possible core as parameter snapshots (Ca and thin-filament settings in the header comment) |

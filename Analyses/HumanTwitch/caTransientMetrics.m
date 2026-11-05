@@ -15,11 +15,11 @@ up = Ca(1:ip);  tu = t(1:ip);  dn = Ca(ip:end);  td = t(ip:end);
 lvl = @(f) dia + f*amp;
 cu = @(f) tu(find(up >= lvl(f), 1));
 cd_ = @(f) td(find(dn <= lvl(f), 1));
-m.dia = dia;  m.peak = pk;  m.amp = amp;  m.ttp = t(ip);
 t0 = 0;  if isfield(opt, 't0'), t0 = opt.t0; end
-m.ttp_onset = t(ip) - t0;
+m.dia = dia;  m.peak = pk;  m.amp = amp;  m.ttp = t(ip);  m.ttp_onset = t(ip) - t0;
 m.t10_90 = cu(0.9) - cu(0.1);
-m.dec50 = cd_(0.5) - t(ip);  m.dec90 = cd_(0.1) - t(ip);
+m.dec50 = cd_(0.5) - t(ip);  m.dec90 = cd_(0.1) - t(ip);  m.dec80 = cd_(0.2) - t(ip);
+m.t80rise = cu(0.8) - t0;  m.dt90_10 = cd_(0.1) - cd_(0.9);
 m.ctd50 = cd_(0.5) - cu(0.5);  m.ctd90 = cd_(0.1) - cu(0.1);
 w = td >= cd_(0.8) & td <= cd_(0.2);
 pfit = polyfit(td(w), log(max(dn(w) - dia, 1e-12)), 1);  m.tau_d_fit = -1/pfit(1);
