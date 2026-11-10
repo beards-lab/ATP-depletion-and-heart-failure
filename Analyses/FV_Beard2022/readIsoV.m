@@ -18,6 +18,11 @@ function R = readIsoV(t, L, F, opts)
 %                  last 200 ms of the record)
 %   Lx      (Lo)   mean length over the same window
 %   tSlack  (ms)   onset of the post-ramp slack (end of the ramp)
+%   F0      (kPa)  force baseline: mean force while the preparation hangs slack
+%                  after the ramp (L within 0.01 Lo of the cycle's shortest
+%                  length, from 3 ms after the release). The workbook's own
+%                  `zero` column is the same quantity. The v = 0 row takes
+%                  the baseline of the last cycle.
 
 if nargin < 4, opts = struct(); end
 if ~isfield(opts, 'halfWin'), opts.halfWin = 0.5; end
@@ -38,8 +43,8 @@ end
 on = on(keep);
 
 n = numel(on);
-R = table(nan(n,1), nan(n,1), nan(n,1), nan(n,1), nan(n,1), nan(n,1), ...
-    'VariableNames', {'tStart', 'tCross', 'vMeas', 'Fx', 'Lx', 'tSlack'});
+R = table(nan(n,1), nan(n,1), nan(n,1), nan(n,1), nan(n,1), nan(n,1), nan(n,1), ...
+    'VariableNames', {'tStart', 'tCross', 'vMeas', 'Fx', 'Lx', 'tSlack', 'F0'});
 % smoothed speed (1 ms moving mean) for the slack detector, ML/s
 dt = median(diff(t));
 vS = -movmean([0; diff(L)] / dt * 1000, max(1, round(1/dt)));
@@ -62,10 +67,13 @@ for i = 1:n
     wr = seg(t(seg) >= t(i0) + 2 & t(seg) <= R.tSlack(i) - 1 & L(seg) > opts.Lx - 0.03);
     wr = wr(t(wr) >= t(ic) - max(10, 0.5 * (t(ic) - t(i0))));   % ramp part only
     p = polyfit(t(wr)/1000, L(wr), 1); R.vMeas(i) = -p(1);
+    % force baseline while slack (skip 3 ms of ringing after the release)
+    sl = seg(t(seg) > R.tSlack(i) + 3 & L(seg) <= min(L(seg)) + 0.01);
+    if ~isempty(sl), R.F0(i) = mean(F(sl)); end
 end
 % v = 0 point: the last cycle re-stretches to ~1.00 Lo and holds there to the end
 w = t > t(end) - 200;
 if abs(median(L(w)) - opts.Lx) < 0.01
-    R(end+1, :) = {NaN, NaN, 0, mean(F(w)), mean(L(w)), NaN};
+    R(end+1, :) = {NaN, NaN, 0, mean(F(w)), mean(L(w)), NaN, R.F0(n)};
 end
 end
