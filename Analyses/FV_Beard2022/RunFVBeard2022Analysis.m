@@ -301,6 +301,55 @@ xlabel('shortening velocity (ML/s)'); ylabel('P / P_0 (own record)'); xlim([0 7]
 title('Force-velocity shape'); legend('Location', 'northeast', 'FontSize', 8); box on; grid on;
 exportgraphics(fig, fullfile(figP, 'fv_points.png'), 'Resolution', 150); close(fig);
 
+% (b2) power-velocity. Power = (F / Fref) * v per preparation, in Fref ML/s, so it
+% carries the preparation's 8 mM isometric force scale like the F-V points do.
+% The peak is the largest of the seven measured speeds (no curve fit).
+vR = vS(:)'; PW = table(); PK = struct();
+fig = figure('Visible', 'off', 'Position', [50 50 1700 480]); tl = tiledlayout(fig, 1, 2, 'TileSpacing', 'compact');
+nexttile(tl); hold on;
+for ia = 1:3
+    a = ATP(ia); f = sprintf('a%d', a); n = size(Pd.(f), 1);
+    wd = Pd.(f) .* vR; wm = Pm.(f) .* vR; wf = St.Fs(ia, :) / s8 .* St.vFine(:)';
+    errorbar(vR, mean(wd), std(wd) / sqrt(n), 'o-', 'Color', col(ia, :), 'MarkerFaceColor', 'w', 'LineWidth', 1.5, 'MarkerSize', 7, ...
+        'DisplayName', sprintf('data %d mM (n=%d), mean \\pm sem', a, n));
+    plot(vR, mean(wm), 'x', 'Color', col(ia, :), 'LineWidth', 2, 'MarkerSize', 10, 'DisplayName', sprintf('model, measured protocol %d mM', a));
+    plot(St.vFine, wf, '--', 'Color', col(ia, :), 'LineWidth', 1, 'DisplayName', sprintf('model, step-free ramp %d mM', a));
+    [pk, ik] = max(wd, [], 2); [pkm, ikm] = max(wm, [], 2); [pf, jf] = max(wf);
+    PK.(f) = struct('data', pk, 'model', pkm);
+    PW = [PW; table(a, n, mean(pk), std(pk) / sqrt(n), median(vR(ik)), mean(pkm), median(vR(ikm)), pf, St.vFine(jf), ...
+        'VariableNames', {'ATP', 'n', 'peakData', 'sem', 'vPeakData', 'peakModel', 'vPeakModel', 'peakStepFree', 'vPeakStepFree'})]; %#ok<AGROW>
+end
+xlabel('shortening velocity (ML/s)'); ylabel('power, (F / F_{ref}) \times v  (F_{ref} ML/s)'); xlim([0 7]);
+title('Power-velocity, one force scale per preparation'); legend('Location', 'northeastoutside', 'FontSize', 8); box on; grid on;
+% paired peak power, low ATP against the same preparation's 8 mM record, by running order
+nexttile(tl); hold on; PR = table(); k8all = find([D.atp] == 8);
+for a = [4 2]
+    ia = find(ATP == a); f = sprintf('a%d', a); ks = find([D.atp] == a); x0 = find([4 2] == a);
+    r = nan(numel(ks), 1); rm = r; first8 = false(numel(ks), 1);
+    for c = 1:numel(ks)
+        k8 = find(strcmp({D.prep}, D(ks(c)).prep) & [D.atp] == 8); i8 = find(k8all == k8);
+        r(c) = PK.(f).data(c) / PK.a8.data(i8); rm(c) = PK.(f).model(c) / PK.a8.model(i8); first8(c) = D(k8).slot == 1;
+    end
+    plot(x0 - 0.12 + 0 * r(first8), r(first8), 'v', 'Color', col(ia, :), 'MarkerFaceColor', col(ia, :), 'MarkerSize', 7, 'DisplayName', sprintf('data %d/8 mM, 8 mM first', a));
+    plot(x0 + 0.12 + 0 * r(~first8), r(~first8), '^', 'Color', col(ia, :), 'MarkerFaceColor', 'w', 'LineWidth', 1.5, 'MarkerSize', 7, 'DisplayName', sprintf('data %d/8 mM, %d mM first', a, a));
+    bal = sqrt(mean(r(first8)) * mean(r(~first8)));
+    plot(x0 + [-0.3 0.3], bal * [1 1], '-', 'Color', col(ia, :), 'LineWidth', 2, 'DisplayName', sprintf('data %d/8 mM, order-balanced', a));
+    plot(x0 + [-0.3 0.3], mean(rm) * [1 1], 'k--', 'LineWidth', 1.5, 'DisplayName', sprintf('model %d/8 mM', a));
+    PR = [PR; table(a, mean(r(first8)), mean(r(~first8)), bal, std([r(first8) - mean(r(first8)); r(~first8) - mean(r(~first8))]) / sqrt(numel(r)), ...
+        mean(rm), 'VariableNames', {'ATP', 'r8first', 'rLowFirst', 'balanced', 'semBalanced', 'model'})]; %#ok<AGROW>
+end
+yline(1, 'k:', 'HandleVisibility', 'off'); set(gca, 'XTick', [1 2], 'XTickLabel', {'4 / 8 mM', '2 / 8 mM'}); xlim([0.4 2.6]); ylim([0 1.4]);
+ylabel('peak power relative to 8 mM, same preparation'); title('Peak power: ATP effect by running order');
+legend('Location', 'northeastoutside', 'FontSize', 8); box on; grid on;
+exportgraphics(fig, fullfile(figP, 'pv_points.png'), 'Resolution', 150); close(fig);
+fprintf('\nPeak power over the measured speeds (Fref ML/s). Model: on the measured protocol, and step-free.\n'); disp(PW);
+fprintf('Mean power at each measured speed (Fref ML/s):\n');
+for ia = 1:3
+    f = sprintf('a%d', ATP(ia));
+    fprintf('   %d mM  data  %s\n         model %s\n', ATP(ia), sprintf('%7.3f', mean(Pd.(f) .* vR)), sprintf('%7.3f', mean(Pm.(f) .* vR)));
+end
+fprintf('Paired peak-power ratio to the same preparation''s 8 mM record (balanced = geometric mean of the two orders):\n'); disp(PR);
+
 % (c) within-prep ratios
 fig = figure('Visible', 'off', 'Position', [50 50 650 420]); hold on;
 for a = [4 2]
