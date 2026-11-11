@@ -1,0 +1,117 @@
+==== featureSensitivity on params/params_2state_a2hop.m (base cost from cv) ====
+S = elasticity (dfeat/feat0)/(dparam/param0), +25% one-sided.
+For each feature: model0, data, gap(=data-model); then top levers.
+  "UP helps" = increasing param moves feature toward data; "DOWN helps" = decreasing does.
+
+---- ktr : model=52.42  data=49.21  gap=-3.209 ----
+    dr2                              S= +1.21   DOWN helps
+    k2                               S= +0.52   DOWN helps
+    kmsrd                            S= +0.33   DOWN helps
+    sigma_srd1                       S= -0.27   UP helps
+    kSE                              S= +0.27   DOWN helps
+    A0                               S= -0.24   UP helps
+
+---- A : model=60.67  data=62.19  gap=+1.525 ----
+    dr2                              S= -2.18   DOWN helps
+    dr                               S= +1.38   UP helps
+    kstiff2                          S= +0.89   UP helps
+    ka                               S= +0.51   UP helps
+    A0                               S= +0.50   UP helps
+    k2                               S= -0.41   DOWN helps
+
+---- peak1_y : model=95.51  data=89.28  gap=-6.236 ----
+    dr2                              S= -2.53   UP helps
+    dr                               S= +1.07   DOWN helps
+    kstiff2                          S= +0.58   DOWN helps
+    kstiff1                          S= +0.54   DOWN helps
+    ka                               S= +0.48   DOWN helps
+    k2                               S= -0.48   UP helps
+
+---- peak1_dSL : model=0.03448  data=0.0256  gap=-0.008888 ----
+    kstiff1                          S= +2.69   DOWN helps
+    dr2                              S= -2.58   UP helps
+    k_1                              S= +2.32   DOWN helps
+    PieceWiseStrainDepR1DParams__2   S= +0.82   DOWN helps
+    PieceWiseStrainDep2Params__4     S= +0.77   DOWN helps
+    dr                               S= +0.69   DOWN helps
+
+---- vall_y : model=70.01  data=71.11  gap=+1.102 ----
+    dr2                              S= -2.17   DOWN helps
+    kstiff1                          S= +0.72   UP helps
+    ka                               S= +0.55   UP helps
+    dr                               S= +0.54   UP helps
+    A0                               S= +0.54   UP helps
+    kd                               S= -0.41   DOWN helps
+
+---- peak2 : model=81.02  data=78.42  gap=-2.604 ----
+    dr2                              S= -1.03   UP helps
+    kstiff1                          S= +0.58   DOWN helps
+    dr                               S= +0.54   DOWN helps
+    ka                               S= +0.50   DOWN helps
+    A0                               S= +0.49   DOWN helps
+    kd                               S= -0.30   UP helps
+
+---- ovrsht_dy : model=1.26  data=1.331  gap=+0.07014 ----
+    k2                               S= +4.21   UP helps
+    dr2                              S= -4.02   DOWN helps
+    eta_M                            S= +3.99   UP helps
+    PieceWiseStrainDep2Params__4     S= +3.35   UP helps
+    PieceWiseStrainDep2Params__3     S= +3.13   UP helps
+    kSE_M                            S= +2.76   UP helps
+
+---- steady : model=77.41  data=77.35  gap=-0.06838 ----
+    dr2                              S= -1.80   UP helps
+    dr                               S= +1.19   DOWN helps
+    kstiff2                          S= +0.81   DOWN helps
+    ka                               S= +0.40   DOWN helps
+    A0                               S= +0.38   DOWN helps
+    k2                               S= -0.35   UP helps
+
+---- restretchSlopeStart : model=1506  data=1588  gap=+81.23 ----
+    dr2                              S= -1.90   DOWN helps
+    kSE                              S= +0.40   UP helps
+    k2                               S= -0.27   DOWN helps
+    kstiff2                          S= +0.27   UP helps
+    PieceWiseStrainDep2Params__4     S= -0.18   DOWN helps
+    ka                               S= +0.18   UP helps
+
+---- t0_crossing : model=0.01026  data=0.01022  gap=-3.769e-05 ----
+    dr2                              S= +4.53   DOWN helps
+    dr                               S= -1.87   UP helps
+    kstiff2_n                        S= +0.65   DOWN helps
+    k2                               S= -0.60   UP helps
+    PieceWiseStrainDep2Params__5     S= -0.44   UP helps
+    kstiff2                          S= -0.37   UP helps
+
+---- FV1 : model=0.9254  data=0.9187  gap=-0.006726 ----
+    dr2                              S= +1.46   DOWN helps
+    dr                               S= +0.46   DOWN helps
+    k2                               S= +0.46   DOWN helps
+    A0                               S= -0.37   UP helps
+    PieceWiseStrainDep2Params__4     S= +0.27   DOWN helps
+    kd                               S= +0.20   DOWN helps
+
+---- FV2 : model=0.5517  data=0.6639  gap=+0.1122 ----
+    dr                               S= +1.21   UP helps
+    dr2                              S= +0.72   UP helps
+    k2                               S= +0.53   UP helps
+    A0                               S= -0.37   DOWN helps
+    kstiff2                          S= +0.35   UP helps
+    sigma_srd1                       S= -0.28   DOWN helps
+
+---- FV3 : model=0.22  data=0.3156  gap=+0.09567 ----
+    dr                               S= +2.31   UP helps
+    k2                               S= +0.67   UP helps
+    kmsrd                            S= +0.47   UP helps
+    kstiff2                          S= +0.45   UP helps
+    A0                               S= -0.40   DOWN helps
+    PieceWiseStrainDep2Params__4     S= +0.30   UP helps
+
+---- FV4 : model=0.09228  data=0.1111  gap=+0.01879 ----
+    dr2                              S= -2.82   DOWN helps
+    dr                               S= +2.68   UP helps
+    k2                               S= +0.93   UP helps
+    A0                               S= -0.49   DOWN helps
+    PieceWiseStrainDep2Params__5     S= +0.44   UP helps
+    kstiff2_n                        S= -0.38   DOWN helps
+

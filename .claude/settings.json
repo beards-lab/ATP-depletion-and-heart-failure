@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:www.sciencedirect.com)",
+      "WebFetch(domain:www.pnas.org)",
+      "WebFetch(domain:kar.kent.ac.uk)",
+      "WebFetch(domain:www.cell.com)",
+      "WebFetch(domain:link.springer.com)",
+      "WebFetch(domain:academic.oup.com)",
+      "WebFetch(domain:pubmed.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:journals.physiology.org)",
+      "WebFetch(domain:physoc.onlinelibrary.wiley.com)",
+      "WebFetch(domain:doi.org)",
+      "WebFetch(domain:www.ahajournals.org)"
+    ]
+  }
+}

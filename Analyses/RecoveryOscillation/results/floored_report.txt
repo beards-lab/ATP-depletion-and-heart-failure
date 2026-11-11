@@ -1,0 +1,10 @@
+FLOORED CAMPAIGN -- four searches, one objective
+================================================================================================
+rsK80[1:4] + one-width deadband on every data term
+seed floored_seed = 0.9081 (expected 0.9081)
+
+snapshot                  header   re-eval     delta vs seed  rounds   stall
+------------------------------------------------------------------------------------------------
+floored_seed                 NaN    0.9081       NaN    0.0%     NaN     NaN
+
+(no campaign snapshots yet -- seed only)

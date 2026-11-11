@@ -1,0 +1,5 @@
+refit9_opt transition rates (8 mM MgATP). Strain grid 60 bins, -59 to 59 nm (grey band edges); x = pchip knots at their effective positions; rates held at edge-knot values beyond the outer knots (ClampStrainDepExtrapolation).
+Scale constants (s^-1): ka 292.2, kd 92.6, k1 160.8, k_1 31.38, k2 116.8, kah 175.7, kamh 8.80, ksr0 367.5 (sigma2 27.3 kPa), kmsr 0, ksr2srd 130.2, ksrd2sr 9.21, kmsrd 26.82 (sigma_srd1 22.8), ksrd 10.0 (sigma_srd2 37.6).
+Knots: R1D 4, R12 5 (outer knots at 100 and -1000 nm, off-plot; 3 knots inside the grid), R21 4, R2 8 (evaluated at s + dr2 - dr = s + 20.3 nm). Value at s = 0 (s^-1): R1D 115, R12 627, R21 201.9, R2 88.5. Max on the model grid: R12 9316, R2 5840.
+Attachment PD->A1 is k_a times gates: registration availability A_reg in [A0 = 0.210, 1] (A0 at isometric steady state), overlap, lattice spacing, global occupancy (1 - P_bound/1.21) and load-realignment deficit; new A1 heads land in a 6 nm triangular kernel at s = 0.
+SRX rates are functions of total force F (F_SR = F_total). A share 0.219 of the R2 flux (ramping in over 5 nm above sSRXrip = 13.9 nm) lands in SRX-ATP instead of PT (panel c, dashed).

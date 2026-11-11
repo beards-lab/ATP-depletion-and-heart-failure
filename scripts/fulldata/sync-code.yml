@@ -1,0 +1,89 @@
+# Sync code from the public repository into this private one.
+#
+#   THIS FILE BELONGS ON THE PRIVATE REPO'S `main` BRANCH ONLY.
+#   In the public repository it lives at scripts/fulldata/sync-code.yml (i.e.
+#   NOT under .github/workflows/), so it never runs there. Seed-FullDataRepo.ps1
+#   copies it into .github/workflows/ inside the share clone.
+#
+# What it does:
+#   1. Force-updates the `code` branch to match the public repo's Further-optim.
+#      `code` is a pure mirror written only by this workflow, so force is correct.
+#   2. Opens a pull request `code -> main` so you can review the incoming code
+#      diff and merge it with one click.
+#
+# The data commit on `main` touches only files under data/, which never exist on
+# `code`, so these merges cannot conflict on data.
+#
+# The public repository needs no credentials to fetch — it is public.
+
+name: Sync code from public repo
+
+on:
+  workflow_dispatch:        # the "Run workflow" button in the Actions tab
+  # Uncomment for an automatic weekly check (Mondays, 06:00 UTC):
+  # schedule:
+  #   - cron: '0 6 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PUBLIC_REPO: https://github.com/beards-lab/ATP-depletion-and-heart-failure.git
+  PUBLIC_BRANCH: Further-optim
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the mirror branch
+        uses: actions/checkout@v4
+        with:
+          ref: code
+          fetch-depth: 0
+
+      - name: Mirror the public branch onto `code`
+        run: |
+          set -euo pipefail
+          git config user.name  "fulldata-sync[bot]"
+          git config user.email "fulldata-sync@users.noreply.github.com"
+
+          git remote add public "$PUBLIC_REPO"
+          git fetch --no-tags public "$PUBLIC_BRANCH"
+
+          BEFORE=$(git rev-parse HEAD)
+          AFTER=$(git rev-parse "public/$PUBLIC_BRANCH")
+          echo "code was at   $BEFORE"
+          echo "public tip is $AFTER"
+
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "ALREADY_UP_TO_DATE=true" >> "$GITHUB_ENV"
+            echo "Nothing to do."
+            exit 0
+          fi
+
+          git reset --hard "public/$PUBLIC_BRANCH"
+          git push --force origin HEAD:code
+          echo "ALREADY_UP_TO_DATE=false" >> "$GITHUB_ENV"
+
+      - name: Open a pull request into main
+        if: env.ALREADY_UP_TO_DATE == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # `|| true`: a PR from code -> main may already be open from a previous
+          # run, in which case it simply picks up the new commits.
+          gh pr create \
+            --base main \
+            --head code \
+            --title "Sync code from public $PUBLIC_BRANCH" \
+            --body "Automated mirror of \`$PUBLIC_BRANCH\` from the public repository.
+
+          Merging this brings the code on \`main\` up to date while leaving the
+          \`data/\` payload untouched (those files exist only on \`main\`).
+
+          Review the diff below before merging — this is what collaborators will get." \
+            || true
+
+          gh pr list --base main --head code --state open

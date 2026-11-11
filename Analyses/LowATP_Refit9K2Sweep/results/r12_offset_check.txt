@@ -1,0 +1,14 @@
+R12 knot offset check (params/refit9_opt.m), built with getParams(...,[],true,false)
+PieceWiseStrainDepX_logOffset 0.964724 vs 0.5 (A.field=0.964724, B.field=0.500000):
+  isequal(cached.pwsd_brk) = 1
+  isequal(cached.pwsd_cof) = 1
+  isequal(PieceWiseStrainDep) = 1
+  max|R12(A)-R12(B)| on grid = 0 s^-1
+  other interpolants unchanged: pwsd2 1, pwsdR1D 1, pwsdR21 1
+Positive control PieceWiseStrainDep2X_logOffset 0.996165 vs 0.5:
+  isequal(cached.pwsd2_brk) = 0  (max |dbrk| = 0.0689305 um; expected log(0.5/0.996165)/10 = 0.0689305)
+  isequal(cached.pwsd2_cof) = 0
+  isequal(PieceWiseStrainDep2) = 0
+  max|R2(C)-R2(D)| on grid = 5651.75 s^-1
+Conclusion: PieceWiseStrainDepX_logOffset has no effect on the model (getParams.m builds params.PieceWiseStrainDep = pchip(pwsdX, pwsdP) without it); it is a dead parameter still listed in refit9 leanPool.
+grep: no .m/.c file outside params/, ModelOptParams/, _archive/ mentions PieceWiseStrainDepX_logOffset (MEX packer and RHS never read it).

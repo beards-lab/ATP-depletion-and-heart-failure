@@ -1,0 +1,97 @@
+% plot state transitions
+myl = 1000;
+
+% figure(22); clf;
+% ATTACHMENT - DETACHMENT
+nexttile; title('Hydrolyses and ATTACHMENT'); cla;hold on;
+plot([s(1), 0, s(end)], [RD1, RD1, RD1], '-', LineWidth=1.5);
+plot([s(1), 0, s(end)], [RTD,RTD, RTD], 'x-', LineWidth=1, MarkerSize=10);
+plot([s(1), 0, s(end)], [RDT,RDT, RDT], 'x-.', LineWidth=1, MarkerSize=10);
+
+plot([s(1), 0, s(end)], [RSR2SRD,RSR2SRD, RSR2SRD], 's-', LineWidth=0.5, MarkerSize=14);
+plot([s(1), 0, s(end)], [RSRD2SR,RSRD2SR, RSRD2SR], 's-.', LineWidth=0.5, MarkerSize=14);
+
+legend('R1D - Attachment', 'RD2 - detachment', 'RTD - hydrolysis', 'RDT - rev hydrolysis', ...
+    'SRX RTD - hydrolysis', 'SRX - rev hydrolysis');
+% ylim([0, myl])
+xlim([s(1) s(end)])
+xlabel('s (\mum)');ylabel('Transition rate (1/s)');
+
+%%  ATTACHED STATES
+nexttile(1);cla; title('Attached states'); hold on;
+line_R1D = plot(s, R1D,'<-.', LineWidth=1.5);
+line_R12 = plot(s, R12, '>-');
+line_R21 = plot(s, R21, '<-.');
+
+ylim([0, myl])
+xlim([s(1) s(end)])
+xlabel('s (\mum)');ylabel('Transition rate (1/s)');
+
+% nexttile; title('R21'); hold on;
+% plot(s, R21, 'x-'); % p2 to p1
+% ylim([0, myl])
+% xlim([s(1) s(end)])
+% xlabel('s (\mum)');ylabel('Transition rate (1/s)');
+
+% nexttile; title('R2T'); hold on;
+line_R2 = plot(s, R2, '>-');
+line_R2D = plot(s, R2D, '>-');
+ylim([0, myl])
+xlim([s(1) s(end)])
+xlabel('s (\mum)');ylabel('Transition rate (1/s)');
+legend('R1D', 'R12', 'R21', 'R2','R2D','AutoUpdate','off');
+% now just the function points 
+if isfield(params, 'PieceWiseStrainDepX') && ~isempty(params.PieceWiseStrainDepX)
+    plot(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, 'x', MarkerSize=14, LineWidth=5, Color=line_R12.Color)
+    
+    text(params.PieceWiseStrainDepX, params.k1*params.PieceWiseStrainDepParams, cellstr(num2str((1:length(params.PieceWiseStrainDepX))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
+end
+if isfield(params, 'PieceWiseStrainDep2X') && ~isempty(params.PieceWiseStrainDep2X)
+    plot(params.PieceWiseStrainDep2X - (params.dr2 - params.dr), params.k2*params.PieceWiseStrainDep2Params, 'x', MarkerSize=14, LineWidth=5, Color=line_R2.Color)
+    
+    text(params.PieceWiseStrainDep2X- (params.dr2 - params.dr), params.k2*params.PieceWiseStrainDep2Params, cellstr(num2str((1:length(params.PieceWiseStrainDep2X))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
+end
+if isfield(params, 'PieceWiseStrainDepR1DX') && ~isempty(params.PieceWiseStrainDepR1DParams)
+    plot(params.PieceWiseStrainDepR1DX , params.kd*params.PieceWiseStrainDepR1DParams, 'x', MarkerSize=14, LineWidth=5, Color=line_R1D.Color)
+    
+    text(params.PieceWiseStrainDepR1DX , params.kd*params.PieceWiseStrainDepR1DParams,  cellstr(num2str((1:length(params.PieceWiseStrainDepR1DX))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
+end
+
+if isfield(params, 'PieceWiseStrainDepR21X') && ~isempty(params.PieceWiseStrainDepR21X)
+    plot(params.PieceWiseStrainDepR21X, params.k_1*params.PieceWiseStrainDepR21Params, 'x', MarkerSize=14, LineWidth=5, Color=line_R21.Color)
+    
+    text(params.PieceWiseStrainDepR21X, params.k_1*params.PieceWiseStrainDepR21Params, cellstr(num2str((1:length(params.PieceWiseStrainDepR21X))')), ...
+        "FontSize",14, "HorizontalAlignment","center", VerticalAlignment="bottom", FontWeight="bold")
+end
+
+%% hopping
+% nexttile;
+% if length(dp2_RAm) > 1
+%     plot(s, dp2_RAm./p2, '--',s, (dp2_RAL + dp2_RAR)./p2, ':', LineWidth=2);
+% end
+
+return;
+
+nexttile; title('T2SR and SR2T'); hold on;
+plot(F_SR, RPT2SR, 'x-', F_SR, RSR2PT, '+-.', LineWidth=1.5, MarkerSize=10);
+plot(F_SR, RPD2SRD, 'o-', F_SR, RSRD2PD, 's-.', LineWidth=1, MarkerSize=14);
+
+legend('T to SR', 'SR to T','D to SRD', 'SRD to D');
+% ylim([0, myl])
+xlim([F_SR(1) F_SR(end)])
+xlabel('Force (kPa)');ylabel('Transition rate (1/s)');
+return
+
+%% test Hill SRD transition
+% F_SR, RPD2SRD,
+figure(24);clf;hold on;
+plot(F_SR, RPD2SRD, 'o-', F_SR, RSRD2PD, 'o-');
+
+D2SRD_hill = @(K, n, x) K./(1+exp(n*(x)));
+
+plot(F_SR, D2SRD_hill(200, 0.4, F_SR), 'x-');
+
+% s - Distance from attachment point

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#333" stroke-width="2"/>
+    </pattern>
+  </defs>
+
+  <!-- Left wall (fixed anchor) -->
+  <rect x="30" y="120" width="30" height="240" fill="url(#hatch)" stroke="#333" stroke-width="2"/>
+  <line x1="60" y1="120" x2="60" y2="360" stroke="#333" stroke-width="3"/>
+
+  <!-- Wire from wall to spring -->
+  <line x1="60" y1="240" x2="120" y2="240" stroke="#333" stroke-width="3"/>
+
+  <!-- Series LINEAR spring (SE): evenly spaced zig-zag -->
+  <polyline points="120,240 140,215 170,265 200,215 230,265 260,215 290,265 310,240"
+            fill="none" stroke="#1f4e79" stroke-width="4" stroke-linejoin="round"/>
+  <text x="215" y="185" text-anchor="middle" font-size="46" font-weight="700" fill="#1f4e79">SE</text>
+
+  <!-- Wire from spring to left junction of parallel block -->
+  <line x1="310" y1="240" x2="380" y2="240" stroke="#333" stroke-width="3"/>
+  <circle cx="380" cy="240" r="7" fill="#333"/>
+
+  <!-- Vertical rails of the parallel block -->
+  <line x1="380" y1="130" x2="380" y2="350" stroke="#333" stroke-width="3"/>
+  <line x1="820" y1="130" x2="820" y2="350" stroke="#333" stroke-width="3"/>
+
+  <!-- Top branch: XB box -->
+  <line x1="380" y1="150" x2="440" y2="150" stroke="#333" stroke-width="3"/>
+  <rect x="440" y="95" width="320" height="110" rx="14" ry="14"
+        fill="#fde8c8" stroke="#c07a1a" stroke-width="4"/>
+  <text x="600" y="165" text-anchor="middle" font-size="66" font-weight="700" fill="#8a4a00">XB</text>
+  <line x1="760" y1="150" x2="820" y2="150" stroke="#333" stroke-width="3"/>
+
+  <!-- Bottom branch: NONLINEAR passive spring -->
+  <!-- Progressively tighter coil spacing toward the right = strain-stiffening -->
+  <line x1="380" y1="330" x2="430" y2="330" stroke="#333" stroke-width="3"/>
+  <polyline points="430,330 452,305 496,355 534,305 566,355 592,305 614,355 632,305 648,355 662,305 674,355 684,305 692,355 700,330"
+            fill="none" stroke="#7a1f3f" stroke-width="4" stroke-linejoin="round"/>
+  <line x1="700" y1="330" x2="820" y2="330" stroke="#333" stroke-width="3"/>
+
+  <!-- Passive label -->
+  <text x="565" y="418" text-anchor="middle" font-size="42" font-weight="700" fill="#7a1f3f">passive</text>
+
+  <!-- Right junction -->
+  <circle cx="820" cy="240" r="7" fill="#333"/>
+
+  <!-- Wire from right junction to load arrow -->
+  <line x1="820" y1="240" x2="920" y2="240" stroke="#333" stroke-width="3"/>
+  <line x1="920" y1="240" x2="960" y2="240" stroke="#333" stroke-width="4"/>
+  <polygon points="960,225 985,240 960,255" fill="#333"/>
+  <text x="945" y="215" text-anchor="middle" font-size="34" font-weight="700" fill="#333">F, L</text>
+</svg>

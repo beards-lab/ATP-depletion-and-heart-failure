@@ -1,0 +1,75 @@
+HOW MUCH OF EACH FEATURE SPREAD IS THE TRANSDUCER?
+========================================================================================================
+s_noise : SD across 200 re-extractions of the SAME trace with its own measured
+          noise added -- biology held exactly fixed. Relative, per cent.
+s_prep  : the between-preparation spread the weight w = lambda/s^2 is built on.
+noise   : s_noise^2 / s_prep^2, the share of the weight that is rig, not biology.
+s_1-4   : the same, with the fifth slack cycle dropped. Cycle 5 re-stretches to a
+          DIFFERENT final length by the SMALLEST amplitude, so it is neither the
+          same manoeuvre nor as well conditioned (Analyses/RestretchMetricAudit).
+
+sigma per run (kPa): 03/27 8mM 1.58 | 04/03 8mM 1.31 | 04/10 8mM 0.96 | 03/27 2mM 1.57 | 04/03 2mM 1.37 | 04/10 2mM 0.96
+
+feature                s_noise %  s_prep %   noise %   s_1-4 %   verdict
+--------------------------------------------------------------------------------------------------------
+ktr_rmse                     0.8         -         -       0.9   not in the pooled target
+SLdiff                       0.0         -         -       0.0   not in the pooled target
+rsK80                       32.7      16.9       374       5.2   RIG -- s_prep is BELOW its own noise
+rsT0                        23.1      22.0       110      21.4   RIG -- s_prep is BELOW its own noise
+rsT20                       14.2      21.7        43      13.8   part rig
+rsK                         10.0      20.8        23       2.8   part rig
+restretchSlopeStart          9.7      20.3        23      10.2   part rig
+peak1_t                     20.9      44.1        22      22.1   part rig
+peak1_dSL                   22.9      51.7        20      24.3   biology
+vall_t                      24.2      56.4        18      23.4   biology
+rsR2                         6.9      17.4        16       2.0   biology
+vall2_t                     10.2      26.3        15      10.5   biology
+peak1_y                      3.9      17.0         5       4.5   biology
+vall2_dy                     2.8      21.5         2       1.7   biology
+rsA                          2.3      21.7         1       1.6   biology
+vall_y                       1.6      16.9         1       1.6   biology
+Am                           1.1      16.9         0       1.2   biology
+peak2                        0.9      16.3         0       1.0   biology
+t0                           1.1      29.0         0       1.3   biology
+ktr                          0.5      17.2         0       0.5   biology
+steady                       0.4      15.8         0       0.2   biology
+A                            0.0      17.0         0       0.0   biology
+coolDownLS                   0.0         -         -       0.0   not in the pooled target
+t0_crossing                  NaN         -         -       NaN   not in the pooled target
+
+WHAT DROPPING CYCLE 5 BUYS  (features whose noise falls by more than a third)
+   SLdiff                s_noise    0.0 % ->   0.0 %   (x 0.65)
+   rsK80                 s_noise   32.7 % ->   5.2 %   (x 0.16)
+   rsK                   s_noise   10.0 % ->   2.8 %   (x 0.28)
+   rsR2                  s_noise    6.9 % ->   2.0 %   (x 0.29)
+   vall2_dy              s_noise    2.8 % ->   1.7 %   (x 0.60)
+   steady                s_noise    0.4 % ->   0.2 %   (x 0.36)
+
+PER-RUN, PER-CYCLE s_noise for the re-stretch rate (the term at issue)
+day      cond    sigma | cycle 1..5, %
+03/27    8mM      1.58 |   15.1   12.8   10.5   11.9   28.9
+04/03    8mM      1.31 |    7.1    7.9    5.8    5.7   44.0
+04/10    8mM      0.96 |   11.1   13.1   10.4    7.1  245.0
+03/27    2mM      1.57 |   10.3    9.2    8.9    8.7   35.6
+04/03    2mM      1.37 |   11.7    9.3    6.6    6.2    NaN
+04/10    2mM      0.96 |    9.1   11.5    8.2   11.3   30.8
+
+FLOOR.  s must never be below s_noise. On the ALL-CYCLE feature:
+   rsK80                 s 16.9 % -> 32.7 %   (weight x 0.27)   [with cycle 5 dropped: 5.2 %]
+   rsT0                  s 22.0 % -> 23.1 %   (weight x 0.91)   [with cycle 5 dropped: 21.4 %]
+
+ATP CONTROL -- noise is a rig property and must not move with nucleotide:
+feature                      8 mM       2 mM    ratio
+restretchSlopeStart           9.7       10.2     1.05
+peak1_y                       3.9        4.1     1.03
+peak1_t                      20.9       18.5     0.88
+peak1_dSL                    22.9       18.0     0.79
+vall_t                       24.2       19.7     0.81
+vall2_dy                      2.8        1.9     0.67
+vall2_t                      10.2        9.8     0.97
+rsK                          10.0        8.7     0.87
+rsA                           2.3        1.8     0.80
+rsT0                         23.1       50.8     2.20
+rsR2                          6.9        2.2     0.31
+rsK80                        32.7        7.2     0.22
+rsT20                        14.2       12.5     0.88

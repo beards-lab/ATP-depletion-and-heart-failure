@@ -1,0 +1,203 @@
+<meta charset="utf-8">
+<title>Cross-bridge model — current fit (realign4)</title>
+<style>
+  :root{--fg:#1a1a1a;--mut:#5b5b5b;--line:#d9d9d9;--acc:#b5410f;--good:#1a7f37;--bad:#b02020;--bg:#fff;--card:#fafafa}
+  @media (prefers-color-scheme:dark){:root{--fg:#e6e6e6;--mut:#a0a0a0;--line:#3a3a3a;--acc:#ff8a5c;--good:#4ac26b;--bad:#ff6b6b;--bg:#161616;--card:#1e1e1e}}
+  :root[data-theme=dark]{--fg:#e6e6e6;--mut:#a0a0a0;--line:#3a3a3a;--acc:#ff8a5c;--good:#4ac26b;--bad:#ff6b6b;--bg:#161616;--card:#1e1e1e}
+  :root[data-theme=light]{--fg:#1a1a1a;--mut:#5b5b5b;--line:#d9d9d9;--acc:#b5410f;--good:#1a7f37;--bad:#b02020;--bg:#fff;--card:#fafafa}
+  body{background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;line-height:1.25;margin:0 0 4px;letter-spacing:-.02em}
+  h2{font-size:22px;margin:44px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line);letter-spacing:-.01em}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+  .sub{color:var(--mut);margin:0 0 26px;font-size:15px}
+  .hero{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:6px;padding:16px 20px;margin:22px 0}
+  .hero b{font-size:20px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px;display:block;overflow-x:auto}
+  th,td{border-bottom:1px solid var(--line);padding:7px 10px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{border-bottom:2px solid var(--line);font-weight:600;color:var(--mut);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  tbody tr:hover{background:var(--card)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+       background:var(--card);border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+  figure{margin:20px 0 28px}
+  figure img{width:100%;max-width:100%;height:auto;border:1px solid var(--line);border-radius:5px;display:block}
+  figcaption{color:var(--mut);font-size:14px;margin-top:8px}
+  .good{color:var(--good);font-weight:600}.bad{color:var(--bad);font-weight:600}
+  .warn{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:6px;padding:14px 18px;margin:22px 0}
+  .note{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 18px;margin:18px 0;font-size:15px}
+  ul{padding-left:22px}li{margin:5px 0}
+  .best{font-weight:700;color:var(--acc)}
+</style>
+
+<h1>Cross-bridge model — current fit</h1>
+<p class="sub"><code>params/realign4_opt.m</code> · 2-state · <code>@dPUdT_CombinedTransitions</code> ·
+scored on FV + slack + passive, power objective · 03/27 8 mM ATP · generated {{DATE}}</p>
+
+<div class="hero">
+<b>L2 = 3.8513</b> against a baseline of <b>7.0815</b> on the same objective — <b class="good">−45.6 %</b>.<br>
+<span style="color:var(--mut);font-size:14.5px">Not a converged optimum: 10 improvements in 11 completed rounds, still descending when the run wedged.</span>
+</div>
+
+<h2>1. Where the cost sits</h2>
+<table>
+<thead><tr><th>snapshot</th><th>L2 total</th><th>FV power</th><th>rsK</th><th>ktr</th><th>coolDownLS</th></tr></thead>
+<tbody>
+<tr><td>baseline <code>rskR2_w025_opt</code></td><td>7.0815</td><td>2.1142</td><td>2.3175</td><td>0.3206</td><td>0.4493</td></tr>
+<tr><td>realign3</td><td>5.0819</td><td>2.3107</td><td>0.3191</td><td>0.2357</td><td>0.1432</td></tr>
+<tr><td class="best">realign4 (current)</td><td class="best">3.8513</td><td class="best">1.3420</td><td>0.3810</td><td class="best">0.1430</td><td class="best">0.1347</td></tr>
+</tbody></table>
+
+<div class="note">
+realign3 scores <b>5.0819 on both objectives</b> — the cost-neutral metric swap working exactly as designed.
+<br><br>
+<b>realign3 was slightly worse than baseline on power</b> (2.3107 vs 2.1142) despite being much better overall.
+It was optimising <code>FV_fnorm</code>, and the force-normalised curve and the power curve are not the same
+target. Changing the metric is what exposed that.
+</div>
+
+<h2>2. Slack protocol</h2>
+<figure>
+  <img src="{{FIG_SLACK}}" alt="Slack protocol, force vs time, data and three model fits">
+  <figcaption>Five release–hold–re-stretch cycles. Plateaus, the descending steady levels and the
+  redevelopment from slack are essentially exact in all three fits — that part of the model has been
+  right for a while and is not what is being tested.</figcaption>
+</figure>
+
+<figure>
+  <img src="{{FIG_CYCLE}}" alt="First slack cycle detail with length command">
+  <figcaption>First cycle. <b>Good:</b> from ~340 ms realign4 tracks the data where the baseline runs
+  above it (<code>coolDownLS</code> 0.449 → 0.135; <code>rsK</code> 102.6 → 67.1 s⁻¹ against a measured 43.7).
+  <b>Bad:</b> the re-stretch spike still overshoots — ~100 kPa against a data peak of ~86 — and the
+  following valley is deeper than the data.</figcaption>
+</figure>
+
+<h2>3. Force–velocity and power–velocity</h2>
+<figure>
+  <img src="{{FIG_FV}}" alt="Force-velocity curves">
+  <figcaption>Force–velocity. <b>No longer scored directly</b> — it was folded into the power term to stop
+  double-counting, since power = force × velocity. Shown as a diagnostic. The model is low at 1–2 µm/s in
+  every fit; realign4 (red) recovers part of it.</figcaption>
+</figure>
+
+<figure>
+  <img src="{{FIG_PV}}" alt="Power-velocity, the fitted quantity">
+  <figcaption>Power–velocity — <b>the quantity now being fitted</b>. Two source datasets (dotted, grey),
+  their mean ± sd (black, scored), and the fits. <code>w</code> is the inverse-variance weight on each point:
+  the sources agree tightly at 0.5 µm/s (w = 2.89) and diverge most at 2 µm/s (w = 0.14), so the metric
+  deliberately does <i>not</i> chase the large discrepancy at 2 µm/s.</figcaption>
+</figure>
+
+<table>
+<thead><tr><th>v (µm/s)</th><th>data (2-source mean)</th><th>weight</th><th>baseline</th><th>realign3</th><th>realign4</th><th>error</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>0.4559</td><td>2.89</td><td>0.4759</td><td>0.4923</td><td class="best">0.4870</td><td class="bad">+6.8 %</td></tr>
+<tr><td>1</td><td>0.6488</td><td>0.78</td><td>0.5660</td><td>0.5746</td><td class="best">0.5986</td><td class="bad">−7.7 %</td></tr>
+<tr><td>2</td><td>0.5954</td><td>0.14</td><td>0.4539</td><td>0.4699</td><td class="best">0.5011</td><td class="bad">−15.8 %</td></tr>
+<tr><td>4</td><td>0.4133</td><td>0.19</td><td>0.3849</td><td>0.4047</td><td class="best">0.4150</td><td class="good">+0.4 %</td></tr>
+</tbody></table>
+
+<p>The model's power peak sits at v = 1 with 0.599 against a measured 0.649, and it falls away faster than
+the data through 2 µm/s. <b>This is the largest single term in the objective</b> (1.342 of 3.851 = 35 %) and
+the obvious next target.</p>
+
+<h2>4. Other observables</h2>
+<table>
+<thead><tr><th>observable</th><th>data</th><th>baseline</th><th>realign3</th><th>realign4</th></tr></thead>
+<tbody>
+<tr><td><code>rsK</code> (s⁻¹)</td><td>43.74</td><td>102.6</td><td>65.3</td><td>67.1</td></tr>
+<tr><td><code>ktr</code> (s⁻¹)</td><td>49.21</td><td>52.49</td><td>51.09</td><td class="best">50.49</td></tr>
+<tr><td>steady (kPa)</td><td>77.35</td><td>76.19</td><td>76.31</td><td class="best">76.99</td></tr>
+<tr><td><code>peak1_y</code> (kPa)</td><td>89.28</td><td>93.57</td><td>95.09</td><td class="best">93.26</td></tr>
+<tr><td><code>vall_y</code> (kPa)</td><td>71.11</td><td>67.56</td><td>69.23</td><td class="best">69.50</td></tr>
+<tr><td><code>peak2</code> (kPa)</td><td>78.42</td><td>77.32</td><td>79.48</td><td>80.16</td></tr>
+</tbody></table>
+<p><b>Improved</b> over realign3: <code>ktr</code>, <code>peak1_y</code>, <code>steady</code>, <code>A</code>,
+<code>vall_y</code>, <code>doublePeak</code>. &nbsp;<b>Worse:</b> <code>peak1_dSL</code> (0.241→0.328),
+<code>restretchSlopeStart</code>, <code>peak2</code>, and <code>rsK</code> drifted back slightly (0.319→0.381).</p>
+
+<h2>5. Mechanisms in play</h2>
+<p>No mechanism was added or removed in this refit — only retuned.</p>
+<h3>Core cycle</h3>
+<ul>
+<li><b>2 strain-resolved states</b> <code>p1</code> (weak) / <code>p2</code> (strong, post-stroke) over strain <i>s</i>;
+detached side is the scalar pools <code>PT</code> (ATP-cocked, DRX), <code>PD</code> (primed, attachment-ready) and two SRX pools.</li>
+<li><b>Piecewise strain dependence</b> <code>UsePieceWiseStrainDep</code> — <code>R12/R21/R1D/R2</code> as fitted pchip splines.
+<code>R2(s)</code> reaches 700–4600 s⁻¹ at re-stretch strains and is pinned at both ends by measured force peaks.</li>
+<li><b>Overlap + lattice spacing</b> — the protocol sweeps 0.94–1.10 ML, so neither is constant.</li>
+</ul>
+<h3>Three gates on attachment — all phenomenological</h3>
+<ul>
+<li><b>Global occupancy saturation</b> — <code>P_bound_max</code> = 1.02 is above any physical bound, so this term is nearly inert at this fit.</li>
+<li><b>Registration availability</b> (<code>A0</code>, <code>v_ref_reg</code>, <code>tau_reg</code>, <code>RegAvailShorteningOnly</code>) —
+the static target-zone part is well founded; the velocity-dependent part is <i>admitted double-counting</i>, since advection already carries heads past sites.</li>
+<li><b>Compliant realignment</b> (<code>UseLoadRealign</code>) — the one added by this campaign.
+<code>dA_def/dt = k_cr·max(0,−d(bound)/dt)·F/(F+F_cr) − A_def/tau_cr</code>, gating <code>ka</code> by <code>(1−A_def)</code>.
+Zero at any steady state by construction, so it cannot move the operating point. The force weighting is what
+separates post-re-stretch (strips <code>p2</code> at 0.84 F<sub>iso</sub>) from post-slack/ktr (strips it at zero force).</li>
+</ul>
+<h3>SRX and mechanics</h3>
+<ul>
+<li><b>SRX/SRXD</b> — with <code>kmsr = 0</code> a one-way force-gated trap; entry and exit gates point the
+same way, so the brake <b>auto-disengages under load</b>. That is the structural reason post-re-stretch is
+the model's fastest window.</li>
+<li><b>Series elastic + Maxwell dashpot</b> with <code>UseMaxwellTensionOnly</code> ON (titin pulls but cannot push).</li>
+<li><b>A2 re-attachment / hop</b>, negative-strain stiffness, titin passive.</li>
+</ul>
+
+<h2>6. Parameters that moved from baseline</h2>
+<table>
+<thead><tr><th>parameter</th><th>baseline</th><th>realign4</th><th>ratio</th><th>what it is</th></tr></thead>
+<tbody>
+<tr><td><code>k_cr</code></td><td>3</td><td>1.519</td><td>0.51</td><td>realignment gain</td></tr>
+<tr><td><code>eta_M</code></td><td>0.02700</td><td>0.01561</td><td>0.58</td><td>Maxwell decay time (s)</td></tr>
+<tr><td><code>sigma2</code></td><td>41.37</td><td>28.64</td><td>0.69</td><td>SRX <i>entry</i> force sensitivity</td></tr>
+<tr><td><code>sigma_srd1</code></td><td>26.70</td><td>34.12</td><td>1.28</td><td>SRX <i>exit</i> force sensitivity</td></tr>
+<tr><td><code>v_ref_reg</code></td><td>0.2659</td><td>0.3381</td><td>1.27</td><td>FV shoulder half-speed</td></tr>
+<tr><td><code>kSE_M</code></td><td>77.01</td><td>95.37</td><td>1.24</td><td>Maxwell charging stiffness</td></tr>
+<tr><td><code>kmsrd</code></td><td>19.78</td><td>23.50</td><td>1.19</td><td>SRXD → PD rate</td></tr>
+<tr><td><code>ka</code></td><td>216.2</td><td>253.3</td><td>1.17</td><td>attachment rate</td></tr>
+<tr><td><code>kah</code></td><td>101.6</td><td>118.7</td><td>1.17</td><td>hydrolysis / priming</td></tr>
+<tr><td><code>mu</code></td><td>0.01564</td><td>0.01786</td><td>1.14</td><td>series dashpot</td></tr>
+<tr><td><code>k2</code></td><td>100.5</td><td>111.0</td><td>1.10</td><td>master detachment rate</td></tr>
+<tr><td><code>kSE</code></td><td>4912</td><td>5392</td><td>1.10</td><td>series elastic stiffness</td></tr>
+<tr><td><code>k_1</code></td><td>33.16</td><td>30.17</td><td>0.91</td><td>p2 → p1 reversal</td></tr>
+<tr><td><code>sSRXrip</code></td><td>0.01500</td><td>0.01366</td><td>0.91</td><td>SRX routing strain threshold</td></tr>
+<tr><td><code>F_cr</code></td><td>25</td><td>23.60</td><td>0.94</td><td>realignment force half-point (kPa)</td></tr>
+<tr><td><code>tau_cr</code></td><td>0.0200</td><td>0.02125</td><td>1.06</td><td>realignment relaxation (s)</td></tr>
+<tr><td colspan="5" style="text-align:left;color:var(--mut)">minor (1.03–1.05): <code>kA2hop</code>, <code>kstiff2_n</code>, <code>ksr0</code>, <code>x_M_slack</code>, <code>kstiff1_n</code> · (0.93–0.97): <code>sA2hop</code>, <code>mu_neg</code>, <code>ekSE</code>, <code>kstiff2</code>, <code>R_thick</code></td></tr>
+</tbody></table>
+
+<div class="note">
+<b>Two things worth reading off this table.</b><br><br>
+<b><code>k_cr</code> = 1.52</b> — it has settled near 1.5 across three independent refits from different seeds
+(6 → 1.56 → 1.59 → 1.52). That is a genuinely identified value, not a wandering one.<br><br>
+<b>The two SRX force sensitivities moved in opposite directions</b> — <code>sigma2</code> ×0.69 (entry more
+force-sensitive) and <code>sigma_srd1</code> ×1.28 (exit less force-sensitive). Both changes <i>weaken</i> the
+auto-disengagement that was diagnosed as the structural reason post-re-stretch is the fastest window. The
+optimiser found that unaided, which is independent support for the diagnosis.
+</div>
+
+<h2>7. Caveats</h2>
+<div class="warn">
+<b>The run ended badly and the 12 h budget never applied.</b> <code>optimizeFeatures</code> checks elapsed time
+only <i>between</i> rounds. Round 13 entered a region where every evaluation hit <code>MaxRunTime</code> and
+returned the 1e6 failure penalty, and it stayed there for <b>four days</b> before being killed. The best
+snapshot was written on day one and is unaffected — nothing was lost — but the driver needs the budget check
+moved inside the simplex callback, or a consecutive-penalty circuit breaker.
+</div>
+<ul>
+<li><b>Not converged.</b> 10 improvements in 11 completed rounds, no real stall.</li>
+<li><b><code>k_cr</code> is unbounded</b> in <code>parameterBounds.m</code>. Until that is fixed this is a
+working hypothesis with a free gain, not physiology.</li>
+<li><b><code>SRXFromR2HighStrain</code> = 0.209</b> — essentially untouched from the 0.2 it was seeded at
+across three campaigns, and never shown to earn its place. Should be tested properly or zeroed.</li>
+<li><b><code>rsK</code> is still ×1.53 of data</b> (67.1 vs 43.7). Much reduced, not solved.</li>
+<li>Fitted against <b>one preparation</b> (03/27, 8 mM). The FV power target is the mean of two sources whose
+absolute forces differ by 20 % (56.4 vs 67.4 kPa isometric); only their shapes are being compared.</li>
+</ul>
+
+<p style="color:var(--mut);font-size:13.5px;margin-top:44px;border-top:1px solid var(--line);padding-top:14px">
+Sources: <code>Analyses/RestretchSRXRecoil/model_state.md</code> ·
+<code>conclusions.md</code> · figures from <code>PlotFinalReport.m</code>
+</p>

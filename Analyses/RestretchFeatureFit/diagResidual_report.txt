@@ -1,0 +1,66 @@
+==== diagResidual: params/opt2state_opt.m ====
+TOTAL feature cost = 4.5482
+
+---- per-feature cost (sorted) ----
+feature spec                                                                   cost
+ktr|2                                                                        1.7007
+peak1_dSL|1                                                                  0.8009
+peak1_y|10                                                                   0.5294
+ovrsht_dy|1                                                                  0.3806
+vall_y|10                                                                    0.2625
+t0_crossing|SLdiff|2                                                         0.2021
+A|50                                                                         0.1770
+FV_fnorm|FV_v|10                                                             0.1212
+vall_t|0.2                                                                   0.1012
+restretchSlopeStart|1                                                        0.0894
+vall2_dy|1.0                                                                 0.0786
+peak2|5                                                                      0.0652
+steady|50                                                                    0.0337
+k2|100-1500|0.01,ksrd|0.-20|0.001,kmsrd|0.0-20|0.001                         0.0040
+ktr_rmse|0-.5|.1                                                             0.0017
+XTOR[1]|3-15|15,XTOR_vmax[1]|5-25,SRX_ss[1]|0.01-0.40|5,attached_ss[1]|0.10-0.45|10,PT_ss[1]|0.01-0.70     0.0000
+
+sum(cv) = 4.5482
+
+---- model vs data, key features (per slack segment) ----
+  ktr                model=[69.07    69.17     68.4    68.12    72.27]
+                     data =[50.66    48.91    49.14    49.15     48.2]
+  ktr_rmse           model=[0.2774   0.3815   0.4487   0.4432   0.6444]
+                     data =[1.68     1.72    1.614    1.582    1.519]
+  A                  model=[67.09    64.91    61.89    58.27    52.28]
+                     data =[69.61    66.17    62.17    58.34    54.67]
+  peak1_y            model=[103.8    104.2    102.5    99.51    77.79]
+                     data =[96.18    94.17    89.81    89.48    76.74]
+  peak1_dSL          model=[0.03392  0.03588  0.03772  0.03882  0.02846]
+                     data =[0.02246  0.02272  0.02718  0.02844  0.02718]
+  peak2              model=[78.62    82.07    84.98    87.92    60.37]
+                     data =[80.43    82.11     81.1    82.44    66.02]
+  vall_y             model=[70.09    68.87    67.56    66.49    57.37]
+                     data =[76.74    74.73    72.39    70.38    61.33]
+  vall_t             model=[0.01466  0.01311  0.01175  0.01065  0.01617]
+                     data =[0.0125    0.013  0.00775  0.00575    0.013]
+  vall2_dy           model=[-14    -13.7   -13.57   -12.75   -13.23]
+                     data =[-12.57    -12.9   -13.91   -13.57   -10.22]
+  ovrsht_dy          model=[1.135    1.271    1.357    1.913   0.8995]
+                     data =[1.477    1.186    1.342    1.313    1.335]
+  steady             model=[79.51    80.08     80.7    81.04    64.16]
+                     data =[80.6    80.43    80.43    79.93    65.35]
+  restretchSlopeStart model=[1626     1565     1528     1474     1433]
+                     data =[1386     1494     1591     1779     1689]
+  t0_crossing        model=[0.007231 0.008917  0.01069  0.01252  0.01452]
+                     data =[0.004912 0.007313  0.01002  0.01295  0.01592]
+  XTOR               model=[7.545    7.545    7.545    7.545    7.545]
+                     data =[NaN      NaN      NaN      NaN      NaN]
+  XTOR_vmax          model=[11.71    11.81    11.64     11.4    11.38]
+                     data =[NaN      NaN      NaN      NaN      NaN]
+  SRX_ss             model=[0.08273  0.08165  0.08425  0.08411  0.08716]
+                     data =[NaN      NaN      NaN      NaN      NaN]
+  attached_ss        model=[0.2549   0.2618   0.2596   0.2617   0.2582]
+                     data =[NaN      NaN      NaN      NaN      NaN]
+  PT_ss              model=[0.1243   0.1282   0.1316   0.1331   0.1359]
+                     data =[NaN      NaN      NaN      NaN      NaN]
+
+---- force-velocity ----
+  FV_fnorm model = [1.000  0.911  0.599  0.304  0.113]
+  FV_fnorm data  = [1.000  0.919  0.664  0.316  0.111]
+  FV_v           = [0.000  0.500  1.000  2.000  4.000]

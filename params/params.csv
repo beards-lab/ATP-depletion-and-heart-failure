@@ -1,0 +1,31 @@
+Row,Value
+Pi,0
+MgATP,8
+MgADP,0
+UseCa,0
+UseOverlap,1
+UsePassive,0
+UseSerialStiffness,1
+UseSlack,1
+UseSuperRelaxed, 0
+UseTitinModel,0
+# kah + kahd ~ 100
+kah,100
+kadh,10
+ka,100
+kd,20
+k1,200
+k_1,5
+k2,50
+k_2,0
+k3,1000
+ksr0,9.0853
+sigma0,33.125
+kmsr,250
+kstiff1,1e1
+kstiff2,1e5
+alpha1,0
+alpha2,1000
+alpha3,3.2
+kSE,10000
+k_pas,200

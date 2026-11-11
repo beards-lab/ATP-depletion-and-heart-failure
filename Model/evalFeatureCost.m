@@ -1,0 +1,258 @@
+
+function [cost_total, weight, cost] = evalFeatureCost(feats_data, feats_sim, fn, costExp)
+% EVALFEATURECOST  Compute weighted feature-based cost between data and simulation.
+%
+%   [COST_TOTAL, WEIGHT, COST] = EVALFEATURECOST(FEATS_DATA, FEATS_SIM, FN, COSTEXP)
+%   evaluates the normalized absolute error for each feature group in FN.
+%
+%   FN is a cell array of feature specifiers. Each entry is a string that
+%   supports the following forms:
+%
+%     'field'                   plain feature, weight=1
+%     'field|weight'            plain feature with explicit weight
+%     'field_y|field_x'         X-Y scatter (normalised by mean(data_y))
+%     'field_y|field_x|weight'  X-Y scatter with weight
+%     'field|lb-ub'             boundary check: cost=0 inside [lb,ub], quadratic outside
+%     'field|lb-ub|weight'      boundary check with explicit weight
+%     'field|w:varfield'        PER-ELEMENT weights: varfield is read from
+%                               FEATS_DATA and treated as a variance; weights are
+%                               inverse-variance, floored at 10% of the mean
+%                               variance, renormalised to mean 1. Combines with a
+%                               scalar weight: 'field|w:varfield|weight'.
+%                               e.g. 'FV_normpowerAvg|w:FV_normpowerVar|20'
+%     'field|fl:X'              NOISE FLOOR: subtract X from the residual and
+%                               clamp at 0, so a term inside the measurement's
+%                               own resolution stops paying and starts again if
+%                               it drifts out. A deadband, not a deletion.
+%                               Combines with the others:
+%                               'ktr|fl:0.0148|0.59'. See the note at the
+%                               subtraction for how to choose X.
+%     'f1|w1|lb1-ub1,f2|lb2-ub2'  grouped boundary check: one joint cost, one bar tile
+%     'field|@(X,Y_data) expr'  custom cost function (escape hatch)
+%
+%   Boundary check cost (per element):
+%     viol = max(0,(lb-x)/lb)^2 + max(0,(x-ub)/ub)^2
+%   Cost = 0 inside [lb,ub]; rises to 1 when x reaches 0 (lower) or 2*ub (upper).
+%   feats_data is NOT accessed for boundary entries.
+%
+%   Grouped entries (comma at top level, outside any parentheses):
+%     Each sub-entry is 'field[|weight][|lb-ub]'. The returned cost is the
+%     weighted sum of individual violations; weight for the group slot = 1.
+%     For non-boundary sub-entries, cost is computed vs feats_data as normal.
+%
+%   NAN_COST = 1 per NaN in simulation output.
+%   MISSING_FEATURE_COST = 100 when a field is absent from feats_sim.
+%
+%   Inputs:
+%     FEATS_DATA - struct array with experimental feature values
+%     FEATS_SIM  - struct array with simulated feature values
+%     FN         - cell array of feature specifier strings
+%     COSTEXP    - exponent for the error norm (default 2 = L2 norm)
+%
+%   Outputs:
+%     COST_TOTAL - weighted cost per feature (length = numel(FN))
+%     WEIGHT     - weight vector extracted from FN
+%     COST       - unweighted cost per feature
+%
+%   See also: evaluateProblem, extractSlackAttributes, extractForceVelocityAttributes
+
+NAN_COST = 1;
+MISSING_FEATURE_COST = 100;
+
+if nargin < 4
+    costExp = 2;
+end
+
+cost   = zeros(1, length(fn));
+weight = ones(1,  length(fn));
+
+for i_feat = 1:length(fn)
+
+    fn_str = fn{i_feat};
+
+    % === GROUPED mode: comma at top level (outside any parentheses) ===
+    if hasTopLevelComma(fn_str)
+        [cost(i_feat), weight(i_feat)] = evalGroupedCost( ...
+            fn_str, feats_data, feats_sim, NAN_COST, MISSING_FEATURE_COST, costExp);
+        continue;
+    end
+
+    % Split off custom cost function at '@'
+    at_pos = strfind(fn_str, '@');
+    if ~isempty(at_pos)
+        prefix  = fn_str(1:at_pos(1)-1);
+        cost_fn = str2func(strtrim(fn_str(at_pos(1):end)));
+    else
+        prefix  = fn_str;
+        cost_fn = [];
+    end
+
+    tokens = split(prefix, '|');
+    tokens = tokens(~cellfun(@isempty, tokens));
+    [feat_y, sel_y] = parseFeatSelector(tokens{1});
+
+    if ~isempty(cost_fn)
+        % === CUSTOM COST FUNCTION mode ===
+        weight(i_feat) = 1;
+        if ~isfield(feats_data, feat_y) || ~isfield(feats_sim, feat_y)
+            cost(i_feat) = MISSING_FEATURE_COST; continue;
+        end
+        fd = applyFeatSelector(double([feats_data.(feat_y)]), sel_y);
+        fs = applyFeatSelector(double([feats_sim.(feat_y)]), sel_y);
+        cost(i_feat) = cost_fn(fs, fd) + sum(isnan(fs)) * NAN_COST;
+        continue;
+    end
+
+    % Delegate to shared sub-entry evaluator (handles boundary + normal modes)
+    [cost(i_feat), weight(i_feat)] = evalOneSubEntry( ...
+        feat_y, sel_y, tokens(2:end), feats_data, feats_sim, ...
+        NAN_COST, MISSING_FEATURE_COST, costExp);
+end
+
+cost_total = cost .* weight;
+end
+
+
+% -----------------------------------------------------------------------
+function [jcost, jweight] = evalGroupedCost(fn_str, feats_data, feats_sim, ...
+                                             NAN_COST, MISSING_FEATURE_COST, costExp)
+% Split on top-level commas and sum weighted sub-costs into one slot.
+parts   = splitTopLevelComma(fn_str);
+jcost   = 0;
+jweight = 1;   % group slot always has weight=1; sub-weights applied internally
+
+for pi = 1:numel(parts)
+    part   = strtrim(parts{pi});
+    tokens = split(part, '|');
+    tokens = tokens(~cellfun(@isempty, tokens));
+    if isempty(tokens); continue; end
+    [feat, sel] = parseFeatSelector(tokens{1});
+
+    [sub_cost, sub_weight] = evalOneSubEntry( ...
+        feat, sel, tokens(2:end), feats_data, feats_sim, ...
+        NAN_COST, MISSING_FEATURE_COST, costExp);
+    jcost = jcost + sub_weight * sub_cost;
+end
+end
+
+
+% -----------------------------------------------------------------------
+function [c, w] = evalOneSubEntry(feat, sel, tail_tokens, feats_data, feats_sim, ...
+                                   NAN_COST, MISSING_FEATURE_COST, costExp)
+% Evaluate cost for a single 'field[|weight][|lb-ub]' sub-entry.
+% FEAT/SEL come from parseFeatSelector on the first token.
+% TAIL_TOKENS is the remaining tokens (everything after the first pipe).
+%
+% Returns:
+%   C  - unweighted cost scalar
+%   W  - weight (default 1)
+
+VAR_FLOOR_FRAC = 0.1;   % shrinkage floor on the variance used for weighting,
+                        % as a fraction of its own mean. Without it a point where
+                        % the sources happen to agree exactly (e.g. power at v=0,
+                        % which is 0 in every dataset by construction) would get
+                        % infinite weight.
+
+w          = 1;
+range_tok  = '';
+wvec_field = '';
+floor_raw  = 0;
+
+for ti = 1:numel(tail_tokens)
+    tok = tail_tokens{ti};
+    if startsWith(tok, 'w:')
+        wvec_field = tok(3:end);          % per-element weights from a DATA field
+    elseif startsWith(tok, 'fl:')
+        floor_raw = str2double(tok(4:end));   % NOISE FLOOR, see below
+        if isnan(floor_raw) || floor_raw < 0
+            error('evalFeatureCost:badFloor', ...
+                  'floor token "%s" is not a non-negative number', tok);
+        end
+    elseif isRangeToken(tok)
+        range_tok = tok;
+    else
+        wv = str2double(tok);
+        if ~isnan(wv)
+            w = wv;
+        end
+        % Non-numeric, non-range tokens are X-axis field names (XY plots) — ignored for cost.
+    end
+end
+
+if ~isempty(range_tok)
+    % --- BOUNDARY CHECK: cost against sim only ---
+    if ~isfield(feats_sim, feat)
+        c = MISSING_FEATURE_COST; return;
+    end
+    fs   = applyFeatSelector(double([feats_sim.(feat)]), sel);
+    [lb, ub] = parseRange(range_tok);
+    viol = max(0, (lb - fs) / lb) .^ 2 + max(0, (fs - ub) / ub) .^ 2;
+    c    = mean(viol, 'omitnan') + sum(isnan(fs)) * NAN_COST;
+else
+    % --- NORMAL: normalised difference vs data ---
+    if ~isfield(feats_data, feat) || ~isfield(feats_sim, feat)
+        c = MISSING_FEATURE_COST; return;
+    end
+    fd  = applyFeatSelector(double([feats_data.(feat)]), sel);
+    fs  = applyFeatSelector(double([feats_sim.(feat)]),  sel);
+    n_F = mean(fd, 'omitnan');
+    if n_F == 0; n_F = 1; end
+
+    % Per-element weights (optional). 'w:FIELD' takes FIELD from feats_DATA —
+    % a weight is a property of how well the measurement is determined, so it
+    % must not depend on the model. Interpreted as a VARIANCE: weights are
+    % inverse-variance, floored at VAR_FLOOR_FRAC of the mean variance, then
+    % renormalised to mean 1 so the scalar weight keeps its usual meaning and
+    % the term's magnitude stays comparable to an unweighted one.
+    wvec = 1;
+    if ~isempty(wvec_field)
+        if ~isfield(feats_data, wvec_field)
+            error('evalFeatureCost:missingWeightField', ...
+                  'Weight field "%s" (from "w:%s") is not in feats_data.', ...
+                  wvec_field, wvec_field);
+        end
+        vv = applyFeatSelector(double([feats_data.(wvec_field)]), sel);
+        if numel(vv) ~= numel(fd)
+            error('evalFeatureCost:weightLengthMismatch', ...
+                  'Weight field "%s" has %d elements but "%s" has %d.', ...
+                  wvec_field, numel(vv), feat, numel(fd));
+        end
+        vbar = mean(vv, 'omitnan');
+        if isfinite(vbar) && vbar > 0
+            vv   = max(vv, VAR_FLOOR_FRAC * vbar);
+            wvec = 1 ./ vv;
+            wvec = reshape(wvec / mean(wvec, 'omitnan'), size(fd));
+        end
+        % all-zero / non-finite variance => leave wvec = 1 (uniform)
+    end
+
+    c = sum(wvec .* abs(fd/n_F - fs/n_F).^costExp, 'omitnan');
+
+    % NOISE FLOOR ('fl:X'). Subtract X from the residual and clamp at zero, so
+    % a term that is already within the measurement's own resolution stops
+    % paying -- and starts paying again the moment it drifts back out.
+    %
+    % WHY. Without it, an objective is a fixed budget that a search will spend
+    % wherever the gradient is smoothest, and that is whichever term is already
+    % best determined. The rigaware campaign is the demonstration: F-V held
+    % 40 % of the objective at chi-2 0.10 -- a third of one preparation-width,
+    % well inside the disagreement between its own two source curves -- and the
+    % search put 110 % of a 14-hour gain into it while every feature the
+    % campaign existed to fix went backwards (Analyses/RecoveryOscillation
+    % sec. 7). Capping or re-pinning the WEIGHT cannot fix that: any nonzero
+    % weight on a smooth, nearly-solved term still buys the cheapest descent.
+    % A floor is different in kind -- it removes the reward entirely below the
+    % noise, and it is a DEADBAND, not a deletion, so the term still defends
+    % itself against regression.
+    %
+    % SETTING IT. The cost here is a sum of squared relative residuals, so a
+    % model one preparation-width from the data scores nEl*s^2 with s the
+    % relative between-preparation spread. BuildWeightedObjective emits
+    % fl: FLOOR_CHI2 * nEl * s^2. The NaN penalty is deliberately added AFTER
+    % the floor: a NaN is a broken evaluation, not a small residual.
+    if floor_raw > 0
+        c = max(0, c - floor_raw);
+    end
+    c = c + sum(isnan(fs)) * NAN_COST;
+end
+end

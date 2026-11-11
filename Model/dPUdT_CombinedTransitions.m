@@ -1,0 +1,1087 @@
+function [f, outputs, rates] = dPUdT_CombinedTransitions(t,PU,params)
+% DPUDT_COMBINEDTRANSITIONS  ODE right-hand side for the cardiac cross-bridge model.
+%
+%   [F, OUTPUTS, RATES] = DPUDT_COMBINEDTRANSITIONS(T, PU, PARAMS) computes
+%   the time derivatives of the state vector PU at time T given model
+%   parameters PARAMS. Intended for use with ode15s via evaluateModel.
+%
+%   State vector layout:
+%     PU = [p1(1..ss), p2(1..ss), [p3(1..ss),] P_SR, NP, SL, LSE, PD, [P_SRD,] [x_dash]]
+%     where ss = params.ss is the number of strain bins.
+%     p1, p2, [p3] — strain-discretized cross-bridge state probability distributions
+%     P_SR          — super-relaxed (SRX) fraction
+%     NP            — nucleotide phosphate (ADP·Pi) fraction
+%     SL            — sarcomere length (um)
+%     LSE           — serial elastic element length (um)
+%     PD            — super-relaxed ADP state fraction (if UseSuperRelaxedADP)
+%     P_SRD         — optional SRX-ADP state
+%     x_dash        — Maxwell dashpot position (if UseMaxwellDashpot)
+%
+%   Inputs:
+%     T       - current time (s)
+%     PU      - state vector (see layout above)
+%     PARAMS  - parameter struct from getParams; must include Vums (velocity, um/s)
+%
+%   Outputs:
+%     F       - dPU/dt, time derivatives (same length as PU)
+%     OUTPUTS - scalar diagnostics: [Force, F_active, F_passive, N_overlap,
+%                 p1_0, p2_0, [p3_0,] p1_1, p2_1, [p3_1,] PT, F_Maxwell,
+%                 f_lattice, f_saturation]
+%     RATES   - transition rate scalars for post-processing
+%
+%   Behavior is controlled by boolean flags in PARAMS (UseOverlap,
+%   UseSuperRelaxed, UseSerialStiffness, UseA1AttachmentKernel, etc.).
+%
+%   See also: evaluateModel, getParams
+
+vel = params.Vums;
+
+% TODO: profile computational bottlenecks before optimizing.
+%   Run: profile on; RunBakersExp; profile viewer
+%   Candidate hotspot: overlap/lattice factor recomputed on every ODE RHS call.
+%   (SL changes continuously so true precomputation is not straightforward.)
+
+% Named constants
+MAX_RATE = 1e4;  % clamp for strain-dependent transition rates — prevents numerical blow-up during stiff phases
+POP_RATE = 1e6;  % large rate used to forcibly drain cross-bridge state (UseA2Popping)
+
+%% Unpack state vector
+% Decompose State Variables from PU vector
+ss = params.ss; % space size (length of the s for each of p1-p3)
+dS = params.dS; % step size
+
+p1 = PU(1:ss); p1(p1<0) = 0;
+p2 = PU(ss+1:2*ss); p2(p2<0) = 0;
+if params.NumberOfStates == 3
+    p3 = PU(2*ss+1:3*ss); p3(p3<0) = 0;  % clamp negatives like p1/p2 (prevents 3-state solver stalls)
+    Ns = 3; % number of states
+else
+    p3 = 0;
+    Ns = 2; % number of states
+end
+
+P_SR = max(0, PU(Ns*ss+1));  % always read; transitions gated separately below
+
+% if ~params.UseCa
+    NP = 0;
+
+% if ~params.UseSLInput
+    SL = PU(Ns*ss + 3);
+    dSL = vel;
+% else
+%     % too slow
+%     if t >= params.datatable(end-1, 1)
+%         % if the sim time is over the datatable length, hold the SL
+%         SL = params.datatable(end, 2);
+%         dSL = 0;
+%     elseif t <= params.datatable(1, 1)
+%         SL = params.datatable(1, 2);
+%         dSL = 0;
+%     else
+%         % TODO make it faster in sorted list
+%         % https://stackoverflow.com/questions/20166847/faster-version-of-find-for-sorted-vectors-matlab
+%         i = find(params.datatable(:, 1) >= t,1,'First');    
+%     %     i = min(length(params.datatable(:, 1))-1, i);
+%         SL = params.datatable(i, 2);
+%         if i == 1
+%             dSL = 0;
+%         else
+%             dSL = (params.datatable(i, 2) - params.datatable(i-1, 2))/((params.datatable(i, 1) - params.datatable(i-1, 1)));
+%         end
+%     end
+%     vel = dSL;
+% end    
+
+    
+% P_SRs = 1 - P_SR;
+LSE = PU(Ns*ss + 4); % length of the serial stiffness
+PD = PU(Ns*ss + 5);
+
+P_SRD = max(0, PU(Ns*ss+6));  % always read; transitions gated separately below
+
+if params.UseMaxwellDashpot
+    % Titin viscoelastic model: F_titin = F_elastic(SL_c) + X_visc
+    % X_visc is a viscous stress deviation; decays to zero so F_titin decays toward F_elastic.
+    % dX/dt = kSE_M * dSLc - X / eta_M   (computed after dLSEdt is known, below)
+    X_visc = PU(Ns*ss+7);
+    F_elastic_titin = params.k_pas * max((SL - LSE) - 1.51, 0)^params.gamma;
+    F_Maxwell = F_elastic_titin*0 + X_visc;
+    dx_dash_dt = 0; % placeholder; overwritten after dLSEdt
+else
+    X_visc = 0; F_Maxwell = 0; dx_dash_dt = 0;
+end
+
+% Registration availability (target-zone registration; the FV "shoulder").
+% A_reg in [A0,1] is the single scalar state appended at the tail of PU
+% (index Ns*ss+8) that gates attachment availability. Relaxation ODE in the
+% assembly section; gate applied to ka_eff below. When the feature is off the
+% state is absent and A_reg=1 (identity -> byte-compatible with the legacy model).
+if params.UseRegistrationAvailability
+    A_reg = min(1, max(params.A0, PU(Ns*ss + 8)));
+else
+    A_reg = 1;
+end
+
+% Nucleotide-free detached pool D0 (index Ns*ss+8+UseRegistrationAvailability,
+% i.e. appended AFTER A_reg). A cross-bridge torn off the thin filament under
+% strain (XB_Ripped) never completed the ATP-binding step that normally
+% terminates the stroke, so it is detached but apo: it cannot re-prime until
+% ATP binds. D0 holds those heads; they leave only via RD0T below. When the
+% feature is off the state is absent and D0=0 (identity -> byte-compatible).
+if params.UseD0State
+    D0 = max(0, PU(Ns*ss + 8 + params.UseRegistrationAvailability));
+else
+    D0 = 0;
+end
+
+% Compliant-realignment deficit A_def (index Ns*ss+8+UseRegistrationAvailability+UseD0State,
+% i.e. appended after D0). Bound bridges set the register of the neighbouring actin
+% sites through filament compliance (Daniel 1998; Tanner, Daniel & Regnier 2007), so
+% stripping bound mass WHILE THE FILAMENT STAYS LOADED leaves the register disturbed
+% and re-equilibration takes tau_cr. A_def is that disturbance; it gates attachment
+% below. Driven by the NET loss of bound mass, so it vanishes identically at any
+% steady state -> the mechanism is a pure transient and does not rescale ka.
+% When the feature is off the state is absent and A_def = 0 (identity).
+if params.UseLoadRealign
+    A_def = min(params.Adef_max, max(0, ...
+        PU(Ns*ss + 8 + params.UseRegistrationAvailability + params.UseD0State)));
+else
+    A_def = 0;
+end
+
+
+
+
+
+%% Overlap, lattice spacing, and filament geometry corrections
+% Sarcomere geometry
+if params.UseOverlap
+    L_thick = params.L_thick;% = 1.67; % Length of thick filament, um
+    L_hbare = params.L_hbare;% = 0.10; % Length of bare region of thick filament, um
+    L_thin = params.L_thin;  %= 1.20; % Length of thin filament, um
+
+    % deltaR  = 0.010; % um    
+    L_T_HS1 = min(L_thick*0.5, SL*0.5);
+    L_T_HS2 = max((SL-LSE)*0.5 - ((SL-LSE)-L_thin),L_hbare*0.5);
+    L_ov = L_T_HS1 - L_T_HS2; % Length of single overlap region
+    N_overlap = (L_ov*2/(L_thick - L_hbare))^1;
+    % N_overlap = min(1, 0.6 + (SL-1.8)); % this is just a function that Dan made up
+else
+    N_overlap = 1;
+end
+
+% Lattice spacing correction on attachment rate
+% Wider lattice (shorter SL) reduces attachment; narrower lattice (longer SL) saturates at 1
+if params.UseLatticeSpacing
+    d10 = params.d10_ref * sqrt(params.SL_ref_lattice / SL);
+    d_surface = d10 - params.R_thick - params.R_thin;
+    excess = max(0, d_surface - params.d_optimal); % only penalize when lattice is wider than optimal
+    f_lattice = exp(-(excess^2) / (2 * params.sigma_lattice^2));
+else
+    f_lattice = 1;
+end
+
+% strain - above the myosin heads is zero. 
+% Negative - shorter, Positive - longer
+% need to cut the change in two because half-sarcomere means half the speed
+% and half the space change
+if params.LegacyStrainFlipping
+    s = params.s' + (-(SL - LSE) + params.LXBpivot)/2;
+    s = flipud(-s);
+else
+    s = params.s - (-(SL - LSE) + params.LXBpivot)/2;
+end
+
+%% Force calculation
+% sum of all probabilities
+p1_0 = dS*sum(p1);
+p2_0 = dS*sum(p2); % p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
+p3_0 = dS*sum(p3);
+p3_1 = dS*sum((s+params.drp3).*p3);
+
+% Route B — p1 force offset: s1 = s + dr1 makes the PRE-stroke state p1 force-bearing
+% (dr1>0 = pre-stroke force; dr1<0 = back-force). dr1=0 (default) recovers the original
+% Σ(s·p1)≈0 exactly. Decouples force-duty (p1+p2) from the p2 detachment that welds ktr<->FV.
+s1 = s + params.dr1;
+if params.UseNegativeKstiff
+    p1_1_pos = dS*sum(s1.*p1.*(s1>=0));
+    p1_1_neg = dS*sum(s1.*p1.*(s1<=0));
+    p2_1_pos = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s >= -params.dr));
+    p2_1_neg = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2.*(s < -params.dr));
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1_pos) + params.kstiff2_n*(p2_1_neg) + params.kstiff1*(p1_1_pos) + params.kstiff1_n*(p1_1_neg);
+    p1_1 = p1_1_neg + p1_1_pos;
+    p2_1 = p2_1_pos + p2_1_neg;
+else
+    p1_1 = dS*sum(s1.*p1);
+    p2_1 = dS*sum((sign(s+params.dr).*abs(s+params.dr).^params.estiff).*p2);
+    F_active = params.kstiff3*(p3_1) + params.kstiff2*(p2_1) + params.kstiff1*(p1_1);
+    % F_active = max(params.kstiff2*(p2_1), 0) + max(params.kstiff1*(p1_1), 0);
+end
+
+% non-hydrolized ATP in non-super relaxed state
+PT = max(0, 1*(1.0 - NP) - (p1_0 + p2_0 + p3_0 + PD + P_SR + P_SRD + D0)); % unattached permissive fraction - (D0 is 0 unless UseD0State)
+    
+
+if params.UseOverlapFactor
+    N_overlap = (N_overlap - (p1_0 + p2_0))/(P_SR + P_SRD + PT + PD); % overlap factor
+end    
+
+F_passive = 0;
+if params.UsePassive && ~isempty(params.LoadPassiveMat)
+    F_passive = sigLookup(params.driveSig, t);
+else
+    if params.UsePassive && ~params.UseTitinIdentifiedPassive
+        % Lsc0    = 1.51;
+        % gamma = 7.5;
+        F_passive = F_passive + params.k_pas*max(SL-LSE -  params.Lsc0, 0)^params.gamma; 
+    elseif params.UsePassive && params.UseTitinIdentifiedPassive
+        % identified from FitPassiveRampUp.m
+        y = @(k_pas, x0, gamma, x) k_pas.*(x-x0).^gamma - 4*0 - x0*0 + 0.5e9.*(x-0.95).^13;    
+        F_passive = y(0.4, -0.4, 7.9, (SL-LSE)/2);
+        % F_passive = y(0.4, -0.4, 7.9, (SL-LSE+LSE)/2);
+    end
+    
+    if params.UseTitinInterpolation
+        F_passive = F_passive + max(0, interp1(params.TitinTable.Time, params.TitinTable.ForceV, ...
+            min(max(t, params.TitinTable.Time(1)), params.TitinTable.Time(end)), "linear") - params.TitinTable.ForceV(end));
+    end
+    
+    % H2: Dynamic passive — titin viscoelasticity during rapid restretch.
+    % Titin is stiffer at high stretch rates; after slack it re-engages with a
+    % transient force proportional to restretch velocity.
+    if params.UseDynamicPassive && vel > 0
+        F_passive = F_passive + params.c_titin_visc * vel;
+    end
+end
+
+if params.UseMaxwellDashpot
+    F_passive = F_passive + F_Maxwell;
+end
+
+% H3: Driving signal passive — time-varying force from preprocessed lookup.
+% params.LoadPassiveMat must be set and sig loaded into params.driveSig by getParams.
+
+
+% default
+F_total = F_active + F_passive;
+
+% F_total = max(0, F_total);
+
+
+if params.FudgeVmax && t > -1
+    Force = max(params.MaxSlackNegativeForce, params.kSE*LSE);
+    if params.kSE*LSE >= 0
+        velHS = (Force - F_total)/params.mu;
+    else
+        Force = params.MaxSlackNegativeForce;
+        velHS = -(params.FudgeA*SL^2 +params.FudgeB*SL + params.FudgeC);
+    end
+    dLSEdt = vel - velHS;
+else
+    Force = sign(LSE)*abs(max(params.MaxSlackNegativeForce, params.kSE*LSE)).^params.ekSE;
+    % Force = params.kSE*LSE*(LSE >= 0) + params.kSEn*LSE*(LSE < 0);
+    if params.UseViscoelasticSE && vel > 0
+        % Kelvin-Voigt SE: F_SE = kSE*LSE + c_SE*dLSEdt
+        % Implicit solve: (mu + c_SE)*dLSEdt = mu*vel + F_total - Force
+        % → dLSEdt = (mu*vel + F_total - Force) / (mu + c_SE)
+        % Effect: SE resists rapid extension → more restretch strain reaches cross-bridges.
+        % Inactive at vel≤0 so steady-state and slack phases are unaffected.
+        if (Force - F_total) > 0
+            dLSEdt = (params.mu     * vel + F_total - Force) / (params.mu     + params.c_SE_visc);
+        else
+            dLSEdt = (params.mu_neg * vel + F_total - Force) / (params.mu_neg + params.c_SE_visc);
+        end
+    else
+        if (Force - F_total) > 0
+            velHS = (Force - F_total)/params.mu;
+        else
+            velHS = (Force - F_total)/params.mu_neg;
+        end
+        dLSEdt = vel - velHS;
+    end
+end
+
+Force = Force + params.mu2*vel;
+
+if params.UseMaxwellDashpot
+    dSLc = vel - dLSEdt;
+    if params.UseMaxwellTensionOnly
+        % Titin pulls but cannot push. Charging is unchanged, but any shortening
+        % pays out slack and releases the stored unfolding stress, with a slack
+        % LENGTH constant x_M_slack: X decays as exp(-shortening/x_M_slack), so
+        % tension is gone after a fraction of a percent ML and can only be
+        % rebuilt by lengthening again. Behavioural stand-in for domain
+        % refolding. Written as one continuous expression (the release term
+        % vanishes smoothly as dSLc -> 0) so the solver sees no switch: a hard
+        % branch here chatters around dSLc = 0 and stalls ode15s.
+        % This is what stops a stretch-then-release (ktr restretch to 105% then
+        % return to 100%) leaving a force floor across the redevelopment window;
+        % passive cycles restretch monotonically and hold, so they are untouched.
+        % ...continuous, but max(0, dSLc) still has a CORNER at dSLc = 0, which is
+        % exactly the isometric steady state: charging switches between kSE_M and 0
+        % there, inside a force feedback loop, and ode15s chatters across it (at
+        % RelTol 1e-3 an isometric hold stalls). SmoothRectifierEps > 0 replaces
+        % both rectifiers with SiLU, u/(1+exp(-u/eps)): C-infinity, exactly 0 at 0.
+        ep = params.SmoothRectifierEps;
+        if ep > 0
+            chargeV  =  dSLc / (1 + exp(-dSLc/ep));
+            releaseV = -dSLc / (1 + exp( dSLc/ep));
+        else
+            chargeV  = max(0, dSLc);
+            releaseV = max(0, -dSLc);
+        end
+        dx_dash_dt = params.kSE_M * chargeV ...
+                   - X_visc / params.eta_M ...
+                   - X_visc * releaseV / params.x_M_slack;
+    else
+        dx_dash_dt = params.kSE_M * max(0, dSLc) - X_visc / params.eta_M;
+    end
+end
+
+%% TRANSITIONS
+% plotStateTransitionsFlag = true;
+if params.justPlotStateTransitionsFlag
+    % s = s - (s(end) - s(1))/2; 
+    s = (-0.02:0.001:0.02)';
+    F_total = linspace(-50, 80, 8);
+    F_passive = linspace(-5, 10, 8);
+    p1 = ones(size(s));
+    p2 = ones(size(s));
+    
+    PD = 1;PT = 1;P_SR = 1;P_SRD = 1;
+end
+
+%% Transition rates
+% quasi-equilibrium binding factor functions
+% TODO move to evalModel for optim
+% MgATP = params.MgATP;
+% Pi = params.Pi;
+% MgADP = params.MgADP;
+
+g1 = 1; g2 = 1; f1 = 0; f2 = 1;
+
+RTD = g2*params.kah*PT;
+RDT = g2*params.kamh*PD;
+
+% H4: Stretch activation — boost ka during rapid restretch.
+if params.UseStretchActivation && vel > 0
+    ka_eff = params.ka * (1 + params.k_SA * vel);
+else
+    ka_eff = params.ka;
+end
+% H5: 1-Gaussian velocity-dependent attachment modifier.
+% At isometric (v=0): target zone congestion reduces available sites.
+% At shortening velocities: old heads clear sites -> recovery toward full ka.
+% Formula: f = 1 - amplitude * exp(-(|v| - center)^2 / (2*sigma^2))
+if params.UseVelGaussAttachment
+    v_abs = abs(velHS);
+    f_vel_gauss = 1 - params.v_att_amplitude * exp(-(v_abs - params.v_att_center).^2 / (2 * params.v_att_sigma^2));
+    ka_eff = ka_eff * max(0, f_vel_gauss);
+end
+% Registration-availability gate: multiply attachment by the slow availability
+% state A_reg. Driven by the IMPOSED vel (not velHS) so SE velocity ringing cannot
+% corrupt it -> ktr stays single-order. A_reg==1 when the feature is off (no change).
+if params.UseRegistrationAvailability
+    ka_eff = ka_eff * A_reg;
+end
+% Compliant-realignment gate: sites whose register was disturbed by bound mass
+% stripped under load are unavailable until re-equilibration. A_def = 0 when off.
+if params.UseLoadRealign
+    ka_eff = ka_eff * (1 - A_def);
+end
+RD1 = ka_eff*PD*N_overlap*f_lattice; % to loosely attachment state
+
+% Global (mean-field) binding-site occupancy saturation of attachment.
+% The strain axis is not a site axis, so the only faithful occupancy proxy in
+% this strain-distribution model is the total bound fraction P_bound. Attenuate
+% the whole attachment flux as occupancy rises toward the physical ceiling
+% P_bound_max (rat-cardiac max-Ca isometric ~0.12-0.15). p1_0/p2_0/p3_0 are the
+% integrated bound fractions computed above.
+if params.UseGlobalOccupancySaturation
+    P_bound = p1_0 + p2_0 + p3_0;
+    if strcmpi(params.OccupancyForm, 'langmuir')
+        f_sat_global = 1 / (1 + P_bound / params.P_bound_max);
+    else
+        f_sat_global = max(0, 1 - P_bound / params.P_bound_max);
+    end
+    RD1 = RD1 * f_sat_global;
+end
+
+if params.UsePassiveForSR
+    F_SR = F_passive;
+else
+    if params.useHalfActiveForSR
+        F_SR  = F_active/2 + F_passive;
+    else
+    % default
+        F_SR  = F_total;
+    end
+end
+
+if params.UsePieceWiseStrainDep
+    
+    if params.UseFastPPval && isfield(params.cached, 'pwsd_brk')
+        % Fast path: inline piecewise cubic evaluation — no ppval/unmkpp call overhead.
+        % Breaks (row) and coefs (n_segs×4) were pre-unpacked in getParams Step 6b.
+        % Segment search: count breaks strictly less than s (vectorised broadcast).
+        % Broadcasting: s (ss×1) vs b(1:end-1) (1×k) → (ss×k) logical, then sum→(ss×1).
+
+        % b stored as (k+1)×1 column → b(1:end-1)' is (1×k) row for broadcast
+        % s (ss×1) >= b_row (1×k) → (ss×k); sum along dim 2 → (ss×1)
+        % b(si) with b column and si (ss×1) always returns (ss×1)  ← key invariant
+
+        cl = params.ClampStrainDepExtrapolation;
+        R1D = params.kd  * p1 .* pwEval(params.cached.pwsdR1D_brk, params.cached.pwsdR1D_cof, s, cl);
+        R12 = params.k1  * p1 .* pwEval(params.cached.pwsd_brk,    params.cached.pwsd_cof,    s, cl);
+        R21 = params.k_1 * p2 .* pwEval(params.cached.pwsdR21_brk, params.cached.pwsdR21_cof, s, cl);
+        R2  = params.k2  * p2 .* pwEval(params.cached.pwsd2_brk,   params.cached.pwsd2_cof,   s + params.dr2 - params.dr, cl);
+    else
+        % Original path: piecewise cubic (pchip) evaluation via ppval.
+        kx = @(pp, x) x;
+        if params.ClampStrainDepExtrapolation
+            kx = @(pp, x) min(max(x, pp.breaks(1)), pp.breaks(end));
+        end
+        R1D = params.kd*p1.*ppval(params.PieceWiseStrainDepR1D, kx(params.PieceWiseStrainDepR1D, s));
+        R12 = params.k1*p1.*ppval(params.PieceWiseStrainDep, kx(params.PieceWiseStrainDep, s));
+        R21 = params.k_1.*p2.*ppval(params.PieceWiseStrainDepR21, kx(params.PieceWiseStrainDepR21, s));
+        s2  = s + params.dr2 - params.dr;
+        R2  = params.k2*p2.*ppval(params.PieceWiseStrainDep2, kx(params.PieceWiseStrainDep2, s2));
+    end
+
+elseif params.UseUniformTransitionFunc
+    % the cycle goes: PT (ATP bound) <-> PD(ready) <-> P1 <-> P2 -> P3 -> PT
+    % dPUdT_TransitionRates;
+    sd = @(kx, alphaL, alphaR, dr,eL, eR) min(MAX_RATE, kx*(exp((alphaL*(s-dr)).^eL).*(s<dr) + exp((alphaR*(s-dr)).^eR).*(s>=dr)));
+    R1D = p1.*sd(params.kd, params.alpha0_L, params.alpha0_R, params.dr0, 2, 2);
+    
+    R12 = p1.*sd(params.k1, params.alpha1, 0, params.dr1, 2, 2); % P1 to P2
+    R21 = f1*p2.*sd(params.k_1, params.alpha_1, params.alpha_1, params.dr_1, 2, 2); % p2 to p1
+    
+    R2 = p2.*sd(params.k2, params.alpha2_L, params.alpha2_R, params.dr2, params.e2L, params.e2R);
+else 
+    % s_b = s;
+    % s = s*( max(-1, -Force))
+    strainDep = @(alpha, dr) min(MAX_RATE, exp((alpha*(s+dr)).^params.StrainExp));																		
+
+    R12 = params.k1*p1.*exp(-params.alpha1*s); % P1 to P2
+    R21 = f1*params.k_1*p2.*strainDep(params.alpha_1, params.dr_1); % p2 to p1
+
+    if params.UseWDetachment
+        R2 = params.k2_L*exp(-params.alpha2_L*(s - (params.dr2_L-1))) + params.k2*exp(-params.alpha2*(s - (params.dr2-1)).^2)  + params.k2_R*exp(params.alpha2_R*(s - (params.dr2_R-1)));
+        R2 = min(MAX_RATE, R2.*p2);
+    else
+        if params.UseNegativeForceRip
+            f = @(x,A,s) (x <= 1).* (1 + (A - 1).*(1 - x).^s) + (x > 1);
+            R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+        + strainDep(params.alpha0_R, params.dr0).*(s> 0))*f(F_SR, 2, 3); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant           
+            kL = min(MAX_RATE, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2)*f(F_SR, 2, 3);
+         else
+           R1D = params.kd*p1.*(strainDep(params.alpha0_L, params.dr0).*(s<= 0) ...
+        + strainDep(params.alpha0_R, params.dr0).*(s> 0)); %(exp(-params.alpha1*s)) + params.TK*(s>params.TK0).*s.*p1; % p1 to PU - detachment rate + tearing constant            
+            kL = min(MAX_RATE, params.k2_L*((s+params.dr2_L)<=0).*(1 - exp(-(s+params.dr2_L)*params.alpha2_L)).^2);
+        end
+        kR = max(0, params.k2_R*(s-params.dr2_R)).^params.alpha2_R; %.*(s>0.002);
+        R2 = p2.*(params.k2 + kL + kR);
+    end
+end
+
+% Series ATP-binding ceiling on strong-bridge detachment.
+% Strain legitimately accelerates the ADP-release / isomerisation step, but the
+% head still has to bind ATP before it can let go, and THAT step has a finite
+% maximal rate. The strain-dependent R2(s) above grows without bound (it reaches
+% 2000-4600 /s at restretch strains), which is chemically impossible and is why
+% every stretched bridge is annihilated in <1 ms. Combine the two steps in
+% SERIES (resistances add), so low strain is untouched and high strain saturates:
+%     1/R2_eff = 1/R2_strain(s) + 1/R2max,   R2max = k2max*[ATP]/(K_T2c+[ATP])
+% Inert when UseR2Ceiling is false. R2 here is a FLUX (rate*p2), so the per-head
+% rate is recovered before the ceiling is applied.
+if params.UseR2Ceiling
+    R2max  = params.k2max * params.MgATP / (params.K_T2c + params.MgATP);
+    r2rate = R2 ./ max(p2, 1e-12);
+    R2     = R2 .* (R2max ./ (R2max + r2rate));
+end
+
+% Low-ATP, ATP-LIMITED detachment. A CK/CrP-buffered fibre keeps [ADP] ~ 0, so the
+% driver of the 2 mM phenotype is low [ATP] directly, not high [ADP]: the P2 head
+% must bind ATP before it can let go, so R2 x gATP_R2. Normalised so gATP_R2 = 1 at
+% MgATP_ref (8 mM) -> the high-ATP fit is untouched for ANY K_T2. Inert when off.
+if params.UseAtpDetachR2
+    % STRAIN-DEPENDENT ATP GATING (UseStrainDepAtpGate), ported from
+    % lowatp-2state.
+    %
+    % Physiology: positive strain inhibits ADP release (Nyitrai & Geeves 2004 --
+    % the accepted basis of load-dependent detachment). A head cannot bind ATP
+    % until ADP has left, so for a STRAINED post-stroke head the ATP-binding
+    % step sits in SERIES behind a strain-slowed step and becomes more
+    % rate-controlling => the APPARENT Km for ATP-dependent detachment RISES
+    % with positive strain:
+    %
+    %     Km_eff(s) = K_T2 * (1 + kAtpStrain * max(0, s - sAtpStrain0))
+    %
+    % WHY IT MATTERS HERE. A strain-UNIFORM gate scales every detachment
+    % equally, so it cannot suppress the post-stretch recovery MORE than the
+    % isometric one. The measured residual needs exactly that: rsK is x0.428 in
+    % the model against x0.382 in the data, while ktr is x0.657 against x0.544.
+    % One scalar cannot fix both; a strain-dependent Km can, because only the
+    % post-stretch window runs at high strain.
+    %
+    % Km_s is a vector over the strain grid. gATP_R2 = 1 at MgATP_ref for ANY
+    % Km_s, so 8 mM stays BIT-IDENTICAL whatever kAtpStrain does -- including
+    % the ktr overstretch peak that falsified the R2 ceiling (which acted at
+    % 8 mM and so could not dodge that constraint). Inert when off.
+    if isfield(params, 'UseStrainDepAtpGate') && params.UseStrainDepAtpGate
+        Km_s = params.K_T2 * (1 + params.kAtpStrain * max(0, s - params.sAtpStrain0));
+    else
+        Km_s = params.K_T2;
+    end
+    gATP_R2 = (params.MgATP ./ (params.MgATP + Km_s)) ...
+           ./ (params.MgATP_ref ./ (params.MgATP_ref + Km_s));
+    R2 = R2 .* gATP_R2;
+end
+
+% p3 detachment, strain-dependent (revives the previously-dead alpha3/s3).
+% The factor is FLOORED at 1: base turnover k3 at/above s3 (so force-bearing p3
+% at positive operating strain still detaches at k3 and cannot accumulate), and
+% ENHANCED (fast detachment) for s<s3 -- post-stroke heads dragged back during
+% shortening, providing the velocity-dependent FV force drop that R2 gave in
+% 2-state. It never suppresses turnover below k3. alpha3==0 => factor==1 =>
+% legacy flat R3 = k3*p3 exactly (backward compatible).
+R3 = params.k3*p3 .* min(MAX_RATE, max(1, exp(-params.alpha3*(s - params.s3))));
+R3m = params.k3m*p3;
+
+% to PT state directly (or to the apo pool D0 when UseD0State — see below)
+XB_Ripped = params.k2rip*p2.*min(1e9, max(0, exp(params.alphaRip*(s+params.dr3))));
+
+% Yield gate: forced detachment of heads dragged past an elastic limit on the
+% STRETCHED side only. A saturating logistic in s, so it is a bounded rate
+% (k_yield at full engagement, never the exp() blow-up of XB_Ripped) and it is
+% ~0 at isometric and shortening strains, where no head reaches s_yield
+% (Analyses/OverstretchedHeads). p1 (weak, pre-stroke, nucleotide ADP.Pi kept)
+% ruptures to PD with the ordinary R1D flux; p2 ruptures with XB_Ripped, i.e.
+% to PT, or to the apo pool D0 when UseD0State. Inert when off.
+% YieldHop1 is the share of the p1 yield flux that REBINDS at once near zero
+% strain instead of detaching to PD: a weak bond is in rapid equilibrium with
+% actin (k+ >> k-, Brenner), so a torn weak head re-forms the bond further
+% along the filament rather than joining the rate-limited ka*PD attachment.
+% Mass-conserving, so it moves no bound population (and so no A_def).
+J1y = 0;
+if params.UseYieldGate
+    gYield = 1 ./ (1 + exp(-(s - params.s_yield) / params.w_yield));
+    J1y = params.k_yield1 * gYield .* p1;
+    hop1 = 0; if isfield(params, 'YieldHop1'), hop1 = min(1, max(0, params.YieldHop1)); end   % a split: an optimiser multiplier must not push it past 1
+    R1D = R1D + (1 - hop1) * J1y;
+    J1y = hop1 * J1y;
+    XB_Ripped = XB_Ripped + params.k_yield2 * gYield .* p2;
+end
+
+% D0 -> PT: the torn head binds ATP and rejoins the cycle. Saturating in
+% [MgATP] so k_D0T is the ATP-saturated ceiling and K_D0T sets where the step
+% becomes ATP-limited. This is what makes the refractory pool [ATP]-dependent.
+if params.UseD0State
+    RD0T = params.k_D0T * params.MgATP/(params.K_D0T + params.MgATP) * D0;
+    % Fixed-dwell version (see the P_SRD note below). D0 is fed ONLY by the
+    % rupture/recoil flux, so a constant outflow here is a dwell time imposed on
+    % exactly the heads torn off by the stretch and on nothing else — the one
+    % place in this model where a residence time can be made protocol-selective.
+    if params.D0OutflowK > 0
+        RD0T = RD0T * params.D0OutflowK / (D0 + params.D0OutflowK);
+    end
+else
+    RD0T = 0;
+end
+
+if params.UseStrictDetachmentAt > 0
+    strictArea = s > params.UseStrictDetachmentAt | s < -params.UseStrictDetachmentAt;
+    R2(strictArea) = p2(strictArea)*(10000);
+    R1D(strictArea) = p1(strictArea)*(10000);
+end
+
+% H3: Catch bonds — during rapid restretch, reduce detachment rates.
+% Physiological basis: actomyosin bonds strengthen under rapid stretch
+% (catch bond behaviour), producing the initial force spike. As velocity
+% drops the catch effect disappears, bridges detach → valley, then
+% reattachment → second peak.
+if params.UseCatchBond && vel > 0
+    catch_factor = max(0, 1 - params.k_catch_bond * vel);
+    R1D = R1D * catch_factor;
+    if ~params.UseCatchBondR1DOnly
+        % Strain-limited catch: apply R2 suppression only below CatchBondStrainMax.
+        % At high strain (slip region) bridges detach normally — fixes first-peak dSL timing.
+        catch_mask = s <= params.CatchBondStrainMax;
+        R2(catch_mask)  = R2(catch_mask)  * catch_factor;
+    end
+end
+
+% Destination of the strong-bridge detachment flux: DRX (PT) or SRX.
+% The detaching head has two ways out of p2 and the model currently gives both the
+% same destination — the DRX/ATP-cocked pool PT:
+%   (a) chemical cycle completion (ADP release -> ATP binding -> detach), the
+%       low-strain part of R2. Ends as M.ATP, so PT *or* SRX-with-ATP (P_SR) are
+%       both chemically legal destinations; which one it is, is the question
+%       SRXFromR2 asks (1 => folding back is obligatory, SRX is in series with
+%       every cycle rather than a side pool fed only from PT).
+%   (b) mechanical rupture, the unbounded strain acceleration of R2 (700-4600 /s at
+%       restretch strains). That head never released its ADP, so PT is the one
+%       destination it cannot have. SRXFromR2HighStrain routes that branch alone,
+%       leaving the operating-point path untouched: the detour exists only while
+%       the fibre is stretched past sSRXrip, i.e. only during a restretch.
+%       Note this is a DESTINATION switch, not a rate cap — R2(s) itself is
+%       unchanged, so the restretch and ktr-overstretch force peaks that pin it
+%       (Analyses/ApoPoolDetachment) are unaffected by construction.
+% SRXRecoilToD picks P_SRD (SRX.ADP) over P_SR (SRX.ATP) as the landing state,
+% which is the nucleotide-consistent choice for branch (b).
+% Fully inert at the defaults (both fractions 0).
+fR2_srx = params.SRXFromR2;
+if params.UseDirectSRXTransition
+    fR2_srx = 1;   % legacy all-or-nothing flag == SRXFromR2 = 1
+end
+if params.SRXFromR2HighStrain > 0
+    fR2_srx = fR2_srx + params.SRXFromR2HighStrain * ...
+        min(1, max(0, (s - params.sSRXrip) / max(params.dSRXrip, 1e-9)));
+end
+if any(fR2_srx > 0)
+    % The flux that leaves the attached pool for the detached pool: R2 in
+    % 2-state, R3 in 3-state (there R2 is only p2 -> p3, still attached).
+    if Ns == 3
+        RdetSRX = sum(min(1, fR2_srx) .* R3) * dS;
+    else
+        RdetSRX = sum(min(1, fR2_srx) .* R2) * dS;
+    end
+else
+    RdetSRX = 0;
+end
+
+%% Super-relaxed (SRX/DRX) dynamics
+% F_SR = (SL-LSE);
+if params.UseSuperRelaxedADP
+    % Low-ATP: the SRX-ADP return (P_SRD -> PD) needs ATP to re-prime, so it slows at
+    % low [ATP]. kmsrd_eff = kmsrd*gATP, normalised so gATP = 1 at MgATP_ref (8 mM)
+    % => the 8 mM run is byte-identical. This is the ktr lever (force is flat in it).
+    kmsrd_eff = params.kmsrd;
+    if params.UseAtpKmsrd
+        gATP = (params.MgATP/(params.MgATP + params.K_srx)) ...
+             / (params.MgATP_ref/(params.MgATP_ref + params.K_srx));
+        kmsrd_eff = kmsrd_eff * gATP;
+    end
+    RSRD2PD = kmsrd_eff*exp(F_SR/params.sigma_srd1)*max(0, P_SRD);
+    % FIXED-DWELL outflow. A first-order rate gives an exponential residence time
+    % whose mean is set by the rate alone; a head that has just arrived is as
+    % likely to leave as one that has been there 50 ms. Saturating the outflow in
+    % the pool occupancy makes it a CONSTANT FLUX once the pool is stocked
+    % (P_SRD >> SRDOutflowK), so the pool drains LINEARLY: a slug of size m takes
+    % m/J to clear. That is a dwell time rather than a rate, and — unlike a rate —
+    % it makes a BIGGER slug take PROPORTIONALLY LONGER, which is the sign the
+    % post-restretch amplitude dependence needs.
+    %   flux = kmsrd_eff*e^(F/s) * K * P_SRD/(P_SRD+K)
+    %        -> legacy first-order EXACTLY as P_SRD -> 0 (factor K/(P_SRD+K) -> 1)
+    %        -> constant flux kmsrd_eff*e^(F/s)*K once P_SRD >> K
+    % So SRDOutflowK is the crossover occupancy and the only new parameter; the
+    % legacy rate is preserved at low occupancy. Inert at SRDOutflowK = 0.
+    if params.SRDOutflowK > 0
+        % max(0,·): P_SRD can undershoot slightly during a solver trial step, and
+        % a raw P_SRD near -SRDOutflowK would put a pole in the RHS.
+        RSRD2PD = RSRD2PD * params.SRDOutflowK / (max(0, P_SRD) + params.SRDOutflowK);
+    end
+    if params.UseLimitedSRDTransition
+        RPD2SRD = params.Srd_max./(1+exp(params.Srd_n*(F_SR)))*PD;
+    else
+        RPD2SRD = params.ksrd*exp(-F_SR/params.sigma_srd2)*PD;
+    end    
+else
+    RSRD2PD = 0;
+    RPD2SRD = 0;
+end
+
+if params.UseSuperRelaxed     
+    RSR2PT = params.kmsr*exp(F_SR/params.sigma1)*max(0, P_SR);
+	% RSR2PT = params.kmsr*(1 + log(max(1, F_SR))*params.sigma1)*P_SR;
+    RPT2SR = params.ksr0*exp(-F_SR/params.sigma2)*max(0, PT);
+else 
+    RSR2PT = 0;
+    RPT2SR = 0;    
+end
+
+
+if params.UseSuperRelaxed && params.UseSuperRelaxedADP
+    RSRD2SR = params.ksrd2sr*max(0, P_SRD);    
+    RSR2SRD = params.ksr2srd*max(0, P_SR);
+else
+    RSRD2SR = 0;    
+    RSR2SRD = 0;
+end
+
+
+dU_SRD = RSR2SRD - RSRD2SR - RSRD2PD  + RPD2SRD ;
+dU_SR  = -RSR2PT  + RPT2SR + RSRD2SR - RSR2SRD;
+
+% Land the detachment flux routed to SRX above. PT is the complementary pool, so
+% adding the mass here is what withholds it from PT — no explicit PT term exists.
+% Guarded so the routing can never create an absorbing sink: a pool whose exit
+% machinery is switched off would swallow the mass permanently.
+% (the D0 destination is landed further down, where dD0 is assembled)
+if RdetSRX > 0 && ~(params.SRXRecoilToD0 && params.UseD0State)
+    if params.SRXRecoilToD && params.UseSuperRelaxedADP
+        dU_SRD = dU_SRD + RdetSRX;   % SRX.ADP — nucleotide-consistent for rupture
+    elseif params.UseSuperRelaxed
+        dU_SR  = dU_SR  + RdetSRX;   % SRX.ATP
+    end
+end
+
+if params.UseA2AttachmentShift
+
+    % A2 hopping: strained p2 heads hop to neighboring actin site (d_actin apart)
+    slope_over_dr = params.slope / params.dr;
+
+    % 1. Hopping rate: ramps up beyond threshold strain
+    RA_K = max(0, slope_over_dr * (s - params.s_threshold_R)) ...
+         + max(0, -slope_over_dr * (s + params.s_threshold_L));
+    dp2_RAm = p2 .* RA_K;
+
+    % 2. Target positions (shifted toward center by one actin monomer)
+    s_target = (s > params.s_threshold_R) .* (s - params.d_actin) ...
+             + (s < -params.s_threshold_L) .* (s + params.d_actin);
+
+    % 3. Bin indices via arithmetic (uniform grid, replaces discretize)
+    L = max(1, min(ss-1, 1 + floor((s_target - s(1)) / dS)));
+    R = L + 1;
+
+    % 4. Linear interpolation weights
+    w_R = (s_target - s(L)) ./ (s(R) - s(L));
+    w_L = 1 - w_R;
+
+    % 5. Accumulate hopping mass into target bins
+    dp2_RAL = accumarray(L, dp2_RAm .* w_L, [ss, 1]);
+    dp2_RAR = accumarray(R, dp2_RAm .* w_R, [ss, 1]);
+else
+    dp2_RAm = 0; dp2_RAL = 0; dp2_RAR = 0;
+end
+
+
+% UseA2Reattaching flux is applied BELOW, after dp2 is defined (the original
+% in-place version here referenced dp2 and s_i0k before either existed, so the
+% mechanism could never actually run). See the governing-flows section.
+
+if params.UseA2MechanicalRecocking
+    R2D = params.k2d*p2.*(s > params.drmr);
+else
+    R2D = 0;
+end
+
+if params.justPlotStateTransitionsFlag    
+    plotStateTransitions;
+    % plotStateTransitions_subpanels;
+    error('Quitting after plotting states');
+end
+%% governing flows
+% PT - calculated as complement of sum of all probabilities
+% state 0: unattached, ATP-cocked
+
+dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D)*dS + sum(R2D)*dS ;
+% dPD = RSRD2PD - RPD2SRD + RTD - RDT - RD1 + sum(R1D);
+dp1 = - R1D -  R12 + R21; % state 1: loosely attached, just sitting&waiting
+dp2 = + R12 - R21  - R2 - XB_Ripped + R3m - R2D + dp2_RAR + dp2_RAL - dp2_RAm; % strongly attached, post-ratcheted: hydrolyzed ATP to ADP, producing Pi - ready to ratchet
+dp3 = - R3 + R3m + R2;
+
+% Apo pool balance. Both inflows already leave their source state above; PT is
+% the complementary pool, so adding mass to D0 automatically withholds it from
+% PT — no explicit PT term is needed (or possible).
+%   (a) XB_Ripped: torn off under strain, never bound ATP  -> always via D0
+%   (b) D0FromR2 : optionally route that share of the normal p2->PT flux
+%                  through D0 too, making the whole cycle ATP-gated in one place
+dD0 = 0;
+if params.UseD0State
+    dD0 = sum(XB_Ripped)*dS - RD0T;
+    if params.D0FromR2 > 0
+        dD0 = dD0 + params.D0FromR2 * sum(R2)*dS;
+    end
+    %   (c) the strain-gated recoil flux, when D0 is its chosen destination.
+    %       D0 is identical to the SRX states as a refractory pool EXCEPT that
+    %       its exit k_D0T is force-independent, so this is the control that
+    %       isolates the SRX exit force gate.
+    if params.SRXRecoilToD0
+        dD0 = dD0 + RdetSRX;
+    end
+end
+
+% A2 re-attachment during restretch (UseA2Reattaching): ATP-cocked heads (PT)
+% bind DIRECTLY into the strong post-stroke state p2 at strain dA2re (default 0)
+% and are then carried to positive strain by the ongoing stretch -- adding force
+% through the restretch/valley phase. A "jump to the next available actin site"
+% during lengthening. Unlike catch bond (which freezes existing strained bridges,
+% coupling valley<->peak), this adds NEW low-strain heads. Gated to lengthening
+% (vel>0) so isometric / FV / shortening behaviour is byte-identical when off or
+% contracting; fully inert when kA2re=0. RT2 = kA2re*PT is the PT->p2 flux (PT is
+% the complementary pool, so no explicit outflow term is needed).
+RT2 = 0;
+if params.UseA2Reattaching && vel > 0
+    % landing bin for re-attached / hopped heads (strain dA2re, default 0)
+    [s_i0_a2, s_i1_a2, s_i0k_a2] = attachmentPoint(s(1) - params.dA2re, params.dS, params.ss);
+    % (a) VALLEY FILL: unattached ATP-cocked heads (PT) bind directly into p2 at
+    %     low strain, then are carried +ve by the stretch.
+    if params.kA2re > 0
+        RT2 = params.kA2re * PT;
+        dp2(s_i0_a2) = dp2(s_i0_a2) + s_i0k_a2       * (RT2/dS);
+        dp2(s_i1_a2) = dp2(s_i1_a2) + (1 - s_i0k_a2) * (RT2/dS);
+    end
+    % (b) PEAK RELIEF (the hop / "jump to next site"): high-strain p2 heads
+    %     detach FASTER as strain grows past sA2hop (rate ramps with s), and
+    %     re-appear at the low-strain landing bin -> caps the restretch spike
+    %     (peak1_y/peak1_dSL) while conserving p2 mass. Only during lengthening.
+    if params.kA2hop > 0
+        R_hop   = min(MAX_RATE, params.kA2hop * max(0, s - params.sA2hop)) .* p2;
+        dp2     = dp2 - R_hop;                         % leave high strain
+        hopmass = sum(R_hop) * dS;                     % total hopped mass
+        dp2(s_i0_a2) = dp2(s_i0_a2) + s_i0k_a2       * (hopmass/dS);
+        dp2(s_i1_a2) = dp2(s_i1_a2) + (1 - s_i0k_a2) * (hopmass/dS);
+    end
+end
+
+
+% if ~params.UseMutualPairingAttachment && params.UseSpaceInterpolation
+% Attachment
+try
+    % if params.A1AttachmentWidth <= dS
+    Ax = params.A1AttachmentWidth;
+    % Vernier / target zone modulation of attachment (per-bin or velocity-based)
+    f_sat = ones(size(p1)); % default: no modulation
+    if params.UseTargetZoneSaturation
+        % [DEPRECATED as site occupancy — see report] Per-strain-bin attachment
+        % modifier. dS-invariant: compare attached-head DENSITY (p1+p2+p3) [1/um]
+        % to a density cap rho_attach_max, so the grid spacing dS cancels. (The
+        % old form (p1+p2+p3)*dS / max_attached_per_bin was per-bin MASS and thus
+        % grid-dependent.) NOTE: this penalizes heads sharing a strain value, not
+        % heads sharing an actin site; use UseGlobalOccupancySaturation for the
+        % physically faithful occupancy term.
+        f_sat = max(0, 1 - (p1 + p2 + p3) / params.rho_attach_max);
+    elseif params.UseVernierVelocity
+        v_hs = abs(velHS);
+        % f_sat_scalar = 1 + params.alpha_vernier * v_hs / (v_hs + params.v_ref_vernier);
+        % f_sat = f_sat_scalar * ones(size(p1));
+        f_sat = params.alpha_vernier + (1 - params.alpha_vernier)./(1+params.v_ref_vernier./v_hs);
+    end
+
+    if params.UseA1AttachmentKernel
+        % Find nearest grid index of zero
+        s_i0 = 1 + floor(-s(1)/dS);
+        if s_i0 > params.cached.halfSpan && s_i0 <= length(dp1)-params.cached.halfSpan
+            s_pos = s_i0 + params.cached.jj;
+            dp1(s_pos) = dp1(s_pos) + (RD1) * params.cached.K0 .* f_sat(s_pos);
+        else
+            s_pos = s_i0 + params.cached.jj;
+            vp = s_pos >= 1 & s_pos <= length(dp1);
+            dp1(s_pos(vp)) = dp1(s_pos(vp)) + (RD1) * params.cached.K0(vp) .* f_sat(s_pos(vp));
+        end
+
+    elseif Ax == 0
+            [s_i0, s_i1, s_i0k] = attachmentPoint(s(1), dS, ss);
+            dp1(s_i0) = dp1(s_i0) + s_i0k*(RD1/dS)*f_sat(s_i0);
+            dp1(s_i1) = dp1(s_i1) + (1-s_i0k)*(RD1/dS)*f_sat(s_i1);
+    else
+        s_0 = 1 + round(-s(1)/dS, 6);
+        halfspan = ceil(Ax/dS);
+        att = zeros(size(dp1));
+        for jj = floor(max(1,s_0-halfspan)):ceil(min(length(dp1), s_0+halfspan))
+            xj = s(jj);
+            dist = abs(xj - 0.0);
+            w = max(0,1 - dist/Ax);
+            att(jj) = w;
+        end
+        att_norm = att/max(1, sum(att))/dS;
+        dp1 = dp1 + att_norm .* f_sat .* RD1;
+    end
+catch e
+
+    disp([num2str(t) ' : ' e.message]);
+end
+
+% Yield-gate rebinding of weak heads (see the gate above): leave the stretched
+% bins and land either at the zero-strain attachment point (YieldHopShift = 0,
+% the rapid-equilibrium limit), or YieldHopShift back along the filament -- the
+% head slips to the NEIGHBOURING actin site and rebinds still strained, the A1
+% analogue of UseA2AttachmentShift (d_actin = 5.5 nm is one monomer). Linear
+% split over the two bins around the target, as there. Mass-conserving.
+if any(J1y > 0)
+    dp1 = dp1 - J1y;
+    hopShift = 0; if isfield(params, 'YieldHopShift'), hopShift = params.YieldHopShift; end
+    if hopShift > 0
+        s_tgt = s - hopShift;
+        yL = max(1, min(ss-1, 1 + floor((s_tgt - s(1)) / dS)));  yR = yL + 1;
+        wR = min(1, max(0, (s_tgt - s(yL)) ./ (s(yR) - s(yL))));
+        dp1 = dp1 + accumarray(yL, J1y .* (1 - wR), [ss, 1]) + accumarray(yR, J1y .* wR, [ss, 1]);
+    else
+        [y_i0, y_i1, y_i0k] = attachmentPoint(s(1), dS, ss);
+        hopmass = sum(J1y) * dS;
+        dp1(y_i0) = dp1(y_i0) + y_i0k       * (hopmass/dS);
+        dp1(y_i1) = dp1(y_i1) + (1 - y_i0k) * (hopmass/dS);
+    end
+end
+
+% if ~params.UseCa
+    dNP = 0;
+
+if params.UseA2Popping
+    s_pop = s <= params.pop_s;
+    % ignoring at this level
+    % all probabilities are auto shifted to UT
+    if any(s_pop==1) && t > 0
+        dp2(s_pop) = -p2(s_pop)*POP_RATE;
+        % dp1(s_pop) = -p1(s_pop)*1e6;
+    end
+end
+
+
+% Scalar f_saturation for output: value at attachment point (s≈0)
+if params.UseTargetZoneSaturation
+    s_i0_out = max(1, min(ss, 1 + floor(-s(1)/dS)));
+    f_saturation = f_sat(s_i0_out);
+elseif params.UseVernierVelocity
+    f_saturation = f_sat;
+else
+    f_saturation = 1;
+end
+
+%% Assemble ODE derivatives and outputs
+if Ns == 2
+    f = [dp1; dp2; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD;dx_dash_dt];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p1_1, p2_1, PT, F_Maxwell, f_lattice, f_saturation];
+elseif Ns == 3
+    f = [dp1; dp2; dp3; dU_SR; dNP; dSL;dLSEdt;dPD;dU_SRD; dx_dash_dt];
+    outputs = [Force, F_active, F_passive, N_overlap, p1_0, p2_0, p3_0, p1_1, p2_1, p3_1, PT, F_Maxwell, f_lattice, f_saturation];
+end
+
+% Registration-availability relaxation (FV shoulder). First-order approach to the
+% velocity-set target A_inf with time constant tau_reg (~1/ktr -> adds no new slow
+% mode; the isometric depression appears as a lower plateau, not a separate phase).
+% Driven by the IMPOSED vel (params.Vums). Appended as the final state (Ns*ss+8);
+% outputs/rates are deliberately left unchanged to avoid shifting downstream indices.
+if params.UseRegistrationAvailability
+    % Speed that drives availability. Default: |vel| (symmetric). Shortening-only
+    % (max(0,-vel)) means restretch/lengthening does NOT boost attachment, so the
+    % post-restretch undershoot is preserved while the FV (shortening) shoulder is kept.
+    if isfield(params, 'RegAvailShorteningOnly') && params.RegAvailShorteningOnly
+        vreg = max(0, -vel);
+        % Partial lengthening recruitment (second-head binding under stretch,
+        % Brunello 2007): lengthening counts at RegAvailLengtheningGain of its
+        % speed. 0 => shortening-only exactly (Analyses/OverstretchedHeads).
+        if isfield(params, 'RegAvailLengtheningGain') && params.RegAvailLengtheningGain > 0
+            vreg = vreg + params.RegAvailLengtheningGain * max(0, vel);
+        end
+    else
+        vreg = abs(vel);
+    end
+    A_inf  = params.A0 + (1 - params.A0) * vreg / (vreg + params.v_ref_reg);
+    dA_reg = (A_inf - A_reg) / params.tau_reg;
+    f = [f; dA_reg];
+end
+
+% Apo pool, appended LAST so its index is Ns*ss+8+UseRegistrationAvailability.
+if params.UseD0State
+    f = [f; dD0];
+end
+
+% Compliant-realignment deficit, appended after D0.
+%   dA_def/dt = k_cr * [rate of bound-mass LOSS] * [load weighting] - A_def/tau_cr
+% The driver is the NET change of the bound population (dp1+dp2+dp3 integrated,
+% i.e. attachment minus detachment), so it is identically zero at any steady
+% state — the mechanism cannot rescale ka or shift the operating point, it only
+% acts on transients. This is deliberate: the register is set by the bound
+% population, and a population that is not changing has an equilibrated register.
+%
+% The load weighting F/(F+F_cr) is what separates the recovery windows, and it is
+% the whole point of the mechanism:
+%   post-restretch  p2 is stripped 0.19 -> 0.05 while force HOLDS at 0.84 F_iso
+%                   -> large loss x large weight -> large deficit
+%   post-slack/ktr  p2 collapses too, but force goes to ZERO with it
+%                   -> large loss x ~zero weight -> no deficit
+% so it slows the window that is too fast and leaves the two that are right.
+% Unlike A_reg this is direction-agnostic (it reads disrupted mass, not the sign
+% of velocity) — see Analyses/RestretchVsKtrRecovery §C on why that matters.
+if params.UseLoadRealign
+    % NB in 2-state dp3 is computed but DISCARDED (it carries R2, the flux that
+    % actually leaves for PT), so it must not be counted here.
+    if Ns == 3
+        dBound = sum(dp1 + dp2 + dp3) * dS;
+    else
+        dBound = sum(dp1 + dp2) * dS;
+    end
+    g_load = max(0, F_total) / (max(0, F_total) + params.F_cr);
+    % SMOOTH rectifier (SiLU: u/(1+e^{-u/e})). A hard max(0,·) on the DERIVATIVE
+    % switches every time the bound population crosses from shrinking to growing,
+    % which happens continuously in the post-stretch ringing — ode15s then chases
+    % the corner and the evaluation time explodes. This form is C-infinity, is
+    % exactly 0 at u = 0 (so the steady-state inertness is preserved to machine
+    % precision), and equals u for u >> LOSS_EPS.
+    LOSS_EPS = 0.5;                              % 1/s; << the ~14 1/s stripping rate
+    u = -dBound;
+    loss = u / (1 + exp(-u/LOSS_EPS));
+    dA_def = params.k_cr * loss * g_load - A_def/params.tau_cr;
+    if A_def >= params.Adef_max; dA_def = min(0, dA_def); end   % hold the ceiling
+    f = [f; dA_def];
+end
+
+% RdetSRX appended LAST so existing rates(1..16) indices are untouched.
+rates = [RTD, RDT, RD1, sum([R1D, R12,R21,R2, XB_Ripped], 1)*dS, RSR2PT, RPT2SR, RSRD2PD, RPD2SRD, RSR2SRD, RSRD2SR, RT2, sum(R2D)*dS, RdetSRX];
+
+if params.DryRun
+    f = zeros(size(PU));
+    % outputs = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1];
+    rates = zeros(size(rates));
+    return;
+end
+
+%% breakpints
+if any(isnan(f)) || t > 76 % && any(PD > 0)
+    % P_SR < 0 % && dU_SR < 0 
+    % || any(~isreal(f)) || t > 0.012 % || t > 0 && (p1_0 + p2_0 + PD + P_SR) > 1
+    numberofthebeast = 66788;
+    
+end
+
+% disp('oj')
+end
+
+function y = pwEval(b, c, x, clampToKnots)
+% Piecewise-cubic evaluation on pre-unpacked breaks b ((k+1)x1) and coefs c
+% (kx4). Interior breaks pick the segment; beyond the outer knots the end cubic
+% is extrapolated, unless clampToKnots holds x at the knot range (constant
+% extrapolation at the edge-knot value).
+if clampToKnots
+    x = min(max(x, b(1)), b(end));
+end
+si = max(1, min(size(c,1), sum(x >= b(1:end-1)', 2)));
+dx = x - b(si);
+y = ((c(si,1).*dx + c(si,2)).*dx + c(si,3)).*dx + c(si,4);
+end
+
+function [s_i0, s_i1, s_i0k] = attachmentPoint(s0, dS, ss)
+    % estimate the position of the actual index of zero strain
+    % IMPORTANT: s MUST be around 0 somewhere!
+    s_p0 = 1 + round(-s0/dS, 6); % strain position in space at 0
+    
+    if isnan(s_p0) || floor(s_p0) < 0
+        % this can happen during numerical rottfinding iteration step, should be avoided in the result
+        s_i0 = 1; % just hold on..
+        s_i1 = 2;
+        s_i0k = 1;
+        % warning(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(1) was %0.2f', t, SL, s(1)));
+    elseif floor(s_p0) == 0
+        s_i0 = 1;
+        s_i1 = 2;
+        s_i0k = 1;
+    elseif ceil(s_p0) == ss
+        s_i0 = ss - 1;
+        s_i1 = ss;
+        s_i0k = 0;
+    elseif ceil(s_p0) > ss
+        s_i0 = ss - 1;
+        s_i1 = ss;
+        s_i0k = 0;
+        % error(sprintf('Out of bounds! At %0.6fs and SL %0.2fum, the s(end) was %0.2f', t, SL, s(end)));
+    else
+        % if params.UseSpaceInterpolation
+        s_i0 = floor(s_p0);
+        s_i1 = ceil(s_p0);
+        s_i0k = s_i1 - s_p0;
+    end
+end
+

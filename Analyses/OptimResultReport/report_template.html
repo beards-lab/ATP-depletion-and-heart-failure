@@ -1,0 +1,235 @@
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<style>
+  :root{--fg:#1a1a1a;--mut:#5b5b5b;--line:#d9d9d9;--acc:#b5410f;--good:#1a7f37;--bad:#b02020;--bg:#fff;--card:#fafafa;--ref:#0073bd}
+  @media (prefers-color-scheme:dark){:root{--fg:#e6e6e6;--mut:#a0a0a0;--line:#3a3a3a;--acc:#ff8a5c;--good:#4ac26b;--bad:#ff6b6b;--bg:#161616;--card:#1e1e1e;--ref:#5fb0e8}}
+  :root[data-theme=dark]{--fg:#e6e6e6;--mut:#a0a0a0;--line:#3a3a3a;--acc:#ff8a5c;--good:#4ac26b;--bad:#ff6b6b;--bg:#161616;--card:#1e1e1e;--ref:#5fb0e8}
+  :root[data-theme=light]{--fg:#1a1a1a;--mut:#5b5b5b;--line:#d9d9d9;--acc:#b5410f;--good:#1a7f37;--bad:#b02020;--bg:#fff;--card:#fafafa;--ref:#0073bd}
+  body{background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;line-height:1.25;margin:0 0 4px;letter-spacing:-.02em}
+  h2{font-size:22px;margin:44px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line);letter-spacing:-.01em}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+  .sub{color:var(--mut);margin:0 0 26px;font-size:15px}
+  .hero{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:6px;padding:16px 20px;margin:22px 0}
+  .hero b{font-size:20px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px;display:block;overflow-x:auto}
+  th,td{border-bottom:1px solid var(--line);padding:7px 10px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{border-bottom:2px solid var(--line);font-weight:600;color:var(--mut);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  tbody tr:hover{background:var(--card)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+       background:var(--card);border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+  figure{margin:20px 0 28px}
+  figure img{width:100%;max-width:100%;height:auto;border:1px solid var(--line);border-radius:5px;display:block}
+  figcaption{color:var(--mut);font-size:14px;margin-top:8px}
+  .good{color:var(--good);font-weight:600}.bad{color:var(--bad);font-weight:600}
+  .ref{color:var(--ref);font-weight:600}
+  .warn{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:6px;padding:14px 18px;margin:22px 0}
+  .note{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 18px;margin:18px 0;font-size:15px}
+  ul{padding-left:22px}li{margin:5px 0}
+  .best{font-weight:700;color:var(--acc)}
+  /* the 2x2 slide block: same arrangement as the PowerPoint slide */
+  .slidegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 8px}
+  .slidegrid img{width:100%;height:auto;border:1px solid var(--line);border-radius:5px;display:block}
+  .slidegrid .wide{grid-column:1 / -1}
+  @media (max-width:640px){.slidegrid{grid-template-columns:1fr}}
+</style>
+
+<h1>{{TITLE}}</h1>
+<p class="sub"><code>{{TAG_NEW}}</code> vs <code>{{TAG_BASE}}</code> · 2-state ·
+<code>@dPUdT_CombinedTransitions</code> · scored on FV + slack + passive, spread-weighted
+objective · fitted to 03/27 8 mM · generated {{DATE}}</p>
+
+<div class="hero">
+<b>{{COST_BASE}} → {{COST_NEW}}</b> on the spread-weighted objective — <b class="good">{{COST_PCT}}</b>.<br>
+<span style="color:var(--mut);font-size:14.5px">But <b>{{FV_SHARE_OF_GAIN}} of the gain is force&#8209;velocity alone</b>, which is what pinning FV at 70&nbsp;% told the optimiser to buy. Not converged.</span>
+</div>
+
+<div class="note">
+<b>Provenance.</b> The run executed off-machine and only the iteration gallery came back —
+no <code>spreadw_state.mat</code>, so no <code>optIter</code>/<code>featCost</code> history.
+<code>spreadw_opt</code> is <code>spreadw_iter_018</code> (header 0.9715, round 38),
+<b>re-verified here at {{COST_NEW}}</b>, +0.7&nbsp;% of its header.
+<br><br>
+<b>One iteration did not reproduce, and it is worth knowing why.</b> Iterations 1–12 and
+14–18 all replay within 1.1&nbsp;% of their recorded costs, but <b>iteration 13's 1.4769
+evaluates 1.6615 here</b> (+12.5&nbsp;%) — and the model is deterministic on this machine,
+so that is not local noise. Only <b>9 scalars move</b> between iter&nbsp;12 and 13, all by
+0.4–1.6&nbsp;%; a 1&nbsp;% parameter step cannot produce a 9&nbsp;% cost drop. That step
+was a numerical wobble the run machine pocketed. The search climbed past it — round 14
+resumed from a genuine point — so it does not contaminate the result, but
+<code>optimizeFeatures</code> has no repeat-evaluation guard on accept.
+<br><br>
+<b>Not converged.</b> A 20-round stall (rounds 14–33) broke, then five straight
+improvements to round 38, still descending when the budget ran out.
+</div>
+
+<h2>At a glance — the slide</h2>
+<p>The four presentation figures, in the arrangement they occupy on the slide
+(<code>results/{{PPTX_NAME}}</code>). These show <b>03/27 only</b> — the preparation the
+model is fitted to. The three-preparation envelope is in §2.</p>
+
+<div class="slidegrid">
+  <img src="{{SLIDE_FV}}"     alt="Force-velocity, normalised power">
+  <img src="{{SLIDE_STAIRS}}" alt="Staircase prediction">
+  <img src="{{SLIDE_RSDET}}"  alt="Slack cycle 4, release through re-stretch">
+  <img src="{{SLIDE_RSALL}}"  alt="Slack protocol, all five cycles" class="wide">
+</div>
+<p class="sub">Force–velocity power, the scored quantity — the whole of the improvement.
+Staircase, never fitted, and the model overshoots every step. Slack cycle 4 from 20 ms
+before the release through 100 ms past the re-stretch. Across the bottom, the whole slack
+protocol. Slack, slack-detail and staircase carry the commanded length (ML) on a muted
+right-hand axis, parked below the force trace.</p>
+
+<h2>1. Where the gain went</h2>
+<table>
+<thead><tr><th>feature</th><th>{{TAG_BASE}}</th><th>{{TAG_NEW}}</th><th>&Delta;</th><th>share of gain</th></tr></thead>
+<tbody>
+{{TABLE_COST}}
+</tbody></table>
+
+<figure>
+  <img src="{{FIG_COSTSHIFT}}" alt="Per-feature cost, base versus new, and the change per feature">
+  <figcaption>Left: per-feature weighted cost, log scale. Right: change — green improved, red paid.</figcaption>
+</figure>
+
+<div class="note">
+<b>The FV gain is real, not bookkeeping.</b> <code>{{TAG_BASE}}</code> fell <i>below</i> the
+band spanned by the two FV source curves at 2&nbsp;ML/s (0.502 vs data 0.596);
+<code>{{TAG_NEW}}</code> tracks the data mean (0.578) across the whole power curve. The
+long-standing FV shoulder is fixed.
+</div>
+
+<figure>
+  <img src="{{FIG_FV}}" alt="Force-velocity: normalised force and normalised power">
+  <figcaption>Left: F/F<sub>0</sub>. Right: normalised power — the quantity actually scored,
+  70&nbsp;% of the objective. Band = &plusmn;SD between the two source datasets.</figcaption>
+</figure>
+
+<h2>2. The three-preparation envelope</h2>
+<p>All three 2026 days share 4&nbsp;kHz sampling, five cycles at 0.600&nbsp;s, the same release
+velocities and the same 4/5/6/7/3&nbsp;ML/s re-stretch ladder — only the session-time offset
+differs — so aligning on each release is a pure index shift. Every trace is divided by its
+<b>own</b> mean <code>steady</code> ({{SCALES}}&nbsp;kPa), because absolute force is not
+transferable between preparations but shape is. The model is normalised the same way, so
+nothing here can be bought by moving the force level.</p>
+
+<div class="note">
+The envelope is a real yardstick, not a smear: <b>SD is {{BAND_MED}} of the mean (median),
+{{BAND_P90}} at p90</b>.<br><br>
+<span class="ref">03/27 is drawn separately in every panel</span> — it is the only preparation
+the model was ever shown, so a miss against the 3-prep <i>mean</i> is a defect only if it is
+also a miss against <i>that</i> trace.
+</div>
+
+<figure>
+  <img src="{{FIG_ENVELOPE}}" alt="Model against the three-preparation timecourse envelope">
+  <figcaption>Thick black = mean of all three preparations, grey band = &plusmn;SD,
+  <span class="ref">blue dashed = 03/27, the fitted preparation</span>. Middle row: release and
+  redevelopment. Bottom row: the re-stretch transient.</figcaption>
+</figure>
+
+<figure>
+  <img src="{{FIG_FEATURES}}" alt="Every scored feature against the three-preparation envelope">
+  <figcaption>Every scored feature, model vs the envelope.
+  <span class="ref">Blue = 03/27, the fitted preparation.</span></figcaption>
+</figure>
+
+<h3>Distance from the envelope, in its own SDs</h3>
+<table>
+<thead><tr><th>feature</th><th>3-prep mean</th><th class="ref">03/27</th><th>{{TAG_BASE}}</th><th>{{TAG_NEW}}</th><th>z vs mean</th><th>z vs 03/27</th></tr></thead>
+<tbody>
+{{TABLE_Z}}
+</tbody></table>
+
+<div class="note">
+<b>The last two columns are why 03/27 is worth drawing separately.</b><br><br>
+Four features that look off against the 3-prep <i>mean</i> are essentially exact against the
+preparation the model was actually fitted to: <code>steady</code> +1.0&rarr;<b>+0.0</b>,
+<code>A</code> +0.9&rarr;<b>+0.1</b>, <code>Am</code> +1.1&rarr;<b>+0.3</b>,
+<code>vall_y</code> +0.5&rarr;<b>+0.1</b>. Those are not defects — 03/27 is simply the
+strongest and stiffest of the three preps, and the model is sitting on it.<br><br>
+<b>One goes the other way, and it is the one that matters.</b> 03/27 has the <i>lowest</i>
+<code>rsK</code> of the three (43.7 vs a 3-prep mean of 53.5), so the model at 61.0 is
+<b>z = +1.9 against its own preparation</b>, not +1.0. The "rsK is inside the envelope now"
+claim is real but softer than the mean alone suggests: it is inside the <i>population</i>
+band, not matched to the trace it was fitted to.
+</div>
+
+<p class="sub"><code>vall_t</code> and <code>peak1_dSL</code> are outside on both columns, but
+carry 68&nbsp;% and 64&nbsp;% between-prep spread — barely measured, which is why the
+weighting de-rated them.</p>
+
+<h2>3. Slack protocol</h2>
+<figure>
+  <img src="{{FIG_SLACK_FULL}}" alt="Whole slack protocol, force and sarcomere length">
+  <figcaption>Whole protocol against 03/27, absolute kPa.</figcaption>
+</figure>
+<figure>
+  <img src="{{FIG_SLACK_DETAIL}}" alt="Slack detail per cycle">
+  <figcaption>Top: full cycle. Bottom: the re-stretch transient, where <code>rsK</code> lives.</figcaption>
+</figure>
+
+<h2>4. Predictions — two protocols that were never scored</h2>
+<p><code>RunKtr = 0</code> and <code>RunStairs = 0</code> throughout the fit, so these are
+genuine out-of-sample tests. They agree with each other, and about <i>both</i> parametrisations.</p>
+
+<table>
+<thead><tr><th>observable</th><th>data</th><th>{{TAG_BASE}}</th><th>{{TAG_NEW}}</th></tr></thead>
+<tbody>
+{{TABLE_PRED}}
+</tbody></table>
+
+<figure>
+  <img src="{{FIG_KTR}}" alt="ktr protocol prediction">
+  <figcaption>k<sub>tr</sub> protocol — never scored during the fit.</figcaption>
+</figure>
+<figure>
+  <img src="{{FIG_STAIRS}}" alt="Staircase protocol prediction">
+  <figcaption>Staircase ramp-up — never scored during the fit.</figcaption>
+</figure>
+
+<div class="warn">
+<b>One defect, seen three ways.</b><br><br>
+<b>Transient response to imposed LENGTHENING is systematically too large:</b> slack re-stretch
+<code>peak1_y</code> <b>{{P1_PCT}}</b> over the envelope (z&nbsp;=&nbsp;{{P1_Z}}),
+<code>ktr</code>-protocol re-stretch overshoot <b>{{KTR_OVER}}</b>, staircase step peaks
+<b>{{STAIRS_OVER}}</b>. Three independent protocols, one sign — and the staircase is
+<i>worse</i> than the previous fit's {{STAIRS_BASE}}.<br><br>
+<b>And force redevelopment after a length change is systematically too fast:</b> slack
+<code>ktr</code> <b>{{KTR_PCT}}</b> over the envelope, <code>ktr</code> protocol
+<b>{{KTR_FAST}}×</b> too fast, and <code>rsT0</code> — the delay before recovery starts —
+is the single worst feature in the set at z&nbsp;=&nbsp;{{RST0_Z}}.<br><br>
+Nothing in the objective defends these: <code>peak1_y</code> holds ~4&nbsp;% of it,
+<code>ktr</code> ~4&nbsp;%, and the two protocols above 0&nbsp;%.
+</div>
+
+<h2>5. The one win worth keeping</h2>
+<div class="note">
+<code>rsK</code>, the post-re-stretch recovery rate that has been the open structural defect
+for months, now sits <b>on the three-preparation mean</b>: z&nbsp;=&nbsp;{{RSK_Z}} against it
+({{RSK_PCT}}), and z&nbsp;=&nbsp;{{RSK_ZREF}} against 03/27 itself — which is the
+lowest-<code>rsK</code> preparation of the three, so that is the harder of the two tests.
+The previous fit sat at ×1.26 of the envelope mean. This is the first time it has been inside.
+</div>
+
+<h2>6. What to do next</h2>
+<ul>
+<li><b>Re-pin FV lower.</b> <code>FV_SHARE = 0.40</code> in <code>BuildWeightedObjective.m</code>,
+rebuilt on <code>{{TAG_NEW}}</code> rather than <code>{{TAG_BASE}}</code>. FV is inside its band
+now; holding it at 70&nbsp;% spends the whole search defending a solved problem.</li>
+<li><b>Score <code>rsT0</code>.</b> Worst feature in the set (z&nbsp;=&nbsp;&minus;3.9),
+data-backed, and a strong ATP feature (×0.43). It is the time-axis twin of the
+<code>rsK</code> defect this run just closed. It would take ~60&nbsp;% at its χ² weight, so it
+needs a share cap and probably a mechanism that can move it.</li>
+<li><b>Put the lengthening overshoot in the objective</b> — the one defect three independent
+protocols agree on, currently scored only by <code>peak1_y</code> at 4.5&nbsp;%. Turning on
+<code>RunKtr</code>/<code>RunStairs</code> costs you those two out-of-sample tests.</li>
+</ul>
+
+<p class="sub" style="margin-top:44px">
+Generated by <code>Analyses/OptimResultReport/BuildReport.m</code> ·
+figures from <code>RunDataEnvelope.m</code> + <code>RunFitReport.m</code> ·
+full write-up in <code>Analyses/OptimResultReport/conclusions.md</code>
+</p>
