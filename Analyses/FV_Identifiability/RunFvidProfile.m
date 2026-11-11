@@ -18,8 +18,13 @@ wt = strsplit(genpath(fullfile(root, '.claude')), pathsep); wt = wt(~cellfun(@is
 if ~isempty(wt), rmpath(wt{:}); end
 if ~exist('NW', 'var'), NW = 6; end
 [pBat, pBeard, ~, recs] = fvidBase();
-L = load(fullfile(here, 'results', 'profile_plan.mat')); plan = L.plan; nP = numel(plan);
-A = load(fullfile(here, 'results', 'fvid.mat'));
+% the plan and the incumbent's vectors: from AnalyzeFvid.m, or from its Python twin
+if isfile(fullfile(here, 'results', 'fvid.mat'))
+    L = load(fullfile(here, 'results', 'profile_plan.mat')); A = load(fullfile(here, 'results', 'fvid.mat'));
+else
+    A = load(fullfile(here, 'results', 'fvid_py.mat')); L = A;
+end
+plan = L.plan; nP = numel(plan);
 outP = fullfile(here, 'results', 'profile'); if ~isfolder(outP), mkdir(outP); end
 
 % tasks: (point, record 1..3) on the Beard protocol, (point, 4) = the slack battery

@@ -1,6 +1,6 @@
 # FV_Identifiability: can the model be identified from the Beard2022 isovelocity data alone?
 
-**Issue:** #88 · **Status:** findings; profiles not run (MATLAB unavailable, see §5) · **Authors:** Claude (AI agent) for fjezek · **Reviewed by:** not yet · **Date:** 2026-11-10
+**Issue:** #88 · **Status:** findings · **Authors:** Claude (AI agent) for fjezek · **Reviewed by:** not yet · **Date:** 2026-11-10
 **Data:** `data/Beard2022/` (untracked), 12 mouse-trabecula preparations, 24 isovelocity records (8 mM n = 12, 4 mM n = 6, 2 mM n = 6), baseline-subtracted with the #75 loader. Compared with the slack battery of the Paper-1 objective (pooled 8 mM, n = 3).
 **Model:** `robust1_seed` + fit A (k2 power gate) as it stands. No model change, no refit, no objective change.
 
@@ -9,7 +9,7 @@
 1. **The F–V points alone cannot identify the model.** 23 points (8/4/2 mM) pin 5 of 80 parameters and about 10 parameter combinations.
 2. **The full records carry as much information as the slack battery, and add the ATP dimension.** At 8 mM the two span the same number of constrained directions (15 / 24 / 35 within 4 / 5 / 6 decades of the stiffest, against 15 / 24 / 36). With the low-ATP records the Beard2022 set nominally identifies 45 parameters against the battery's 23, and nothing is identified by the battery that the records miss. The two together identify 55.
 3. **The model cannot use most of that information.** It reproduces 133 of the 384 record elements within 3 standard errors (χ²/N = 123 on the traces, 11 on the F–V points), against 89 of 95 for the slack battery (χ²/N = 2.1). 75 % of the records' information sits in the redevelopment after the re-stretch, which the model gets wrong (#19, #20). Restricted to what the model fits, the records identify 21 parameters, the battery 22.
-4. **The linear verdicts are not validated.** A known move of one parameter is recovered within ±50 % in about half the tests (15 of 28 for the records, 5 of 12 for the battery); a known move of all parameters at once (sd 10 %) is not recovered at all in either data set. Read the counts as a like-for-like comparison of two data sets, not as a promise that a fit would recover those parameters.
+4. **The linear verdicts are not validated.** A known move of one parameter is recovered within ±50 % in about half the tests (15 of 28 for the records, 5 of 12 for the battery); a known move of all parameters at once (sd 10 %) is not recovered at all in either data set. A real ×2 move along directions the Fisher information calls nearly free for the records changes them by 220–2,500 χ² units against a predicted 1–2 (§5). Read the counts as a like-for-like comparison of two data sets, not as a promise that a fit would recover those parameters.
 5. **The dataset is sound at 8 mM and not sufficient alone for the ATP claim.** Each preparation saw two ATP levels in one order with no 8 mM bracket; at 2 ML/s the 4/8 ratio is 0.67 when 8 mM ran first and 0.87 when 4 mM ran first. The ATP effect exists only under a symmetric-rundown assumption with n = 3 per order.
 
 **For the decision:** identification is limited by the model, not by the amount of data. The Beard2022 records are a strong second target or held-out test at 8 mM. They do not replace the bracketed 8-4-8-2-8 experiments, whose job is the order-free ATP effect.
@@ -116,11 +116,26 @@ For the median parameter, 81 % of its information comes from the redevelopment s
 
 Consequence: the Fisher information is valid only very close to the incumbent. The tier comparison is like for like (same model, same method, same non-linearity), but a real answer on recoverability needs multi-start refits on each data set, which this issue excluded.
 
-## 5. Profiles of the three worst-identified parameters: not run
+## 5. Profiles of the three worst-identified parameters
 
-No parameter is identified by the battery and missed by the records, so the plan takes the three battery-identified parameters the records constrain worst: `k_pas`, `kSE_M`, `PieceWiseStrainDep2X__2`. Moving each ×2 or ×1/2 with the others compensating is predicted to move the record features by 1.2–1.7 χ² units and the battery features by 120–730.
+No parameter is identified by the battery and missed by the records, so the profile takes the three battery-identified parameters the records constrain worst: `k_pas`, `kSE_M`, `PieceWiseStrainDep2X__2`. Each is moved ×2 and ×1/2 while every other parameter compensates as the record Fisher information says it can, and the point is simulated on the three records and on the battery. "Move" is the squared distance of the model features from the incumbent's, in sem (χ² units).
 
-The six simulations were not run: `matlab -batch` and the MATLAB MCP both hung at start-up after the Jacobian runs finished (the online-licence hang). `RunFvidProfile.m` is written and untested. For the same reason the final numbers come from `analyzeFvid.py`, a Python twin of `AnalyzeFvid.m`; it reproduces the MATLAB feature vectors on 23,424 values to 4·10⁻¹³.
+| Parameter | Factor | Records: predicted move | Records: real move | Records: change of misfit to data | Battery: predicted move | Battery: real move | Battery: change of misfit |
+|---|---|---|---|---|---|---|---|
+| `k_pas` | ×0.5 | 1.2 | 221 | −2,824 | 120 | 37 | +12 |
+| `k_pas` | ×2 | 1.2 | 694 | +6,933 | 120 | 86 | +165 |
+| `kSE_M` | ×0.5 | 1.5 | 407 | −5,329 | 257 | 164 | +38 |
+| `kSE_M` | ×2 | 1.5 | 745 | +6,320 | 257 | 344 | +532 |
+| `PieceWiseStrainDep2X__2` | ×0.5 | 1.7 | 1.06·10⁶ | +1.46·10⁶ | 733 | 4,973 (28 features lost) | +4,874 |
+| `PieceWiseStrainDep2X__2` | ×2 | 1.7 | 2,464 | −16,401 | 733 | 146 | +192 |
+
+For scale, the incumbent's total misfit is about 44,600 on the records (384 elements) and about 200 on the battery (95 elements).
+
+- **The linear verdict does not survive a real ×2 move.** Directions the Fisher information calls nearly free for the records (1–2 χ² units) move them by 220–2,500, and in one case by 10⁶. The linear compensation is not a compensation at this amplitude. Whether a non-linear one exists can only be answered by a refit.
+- **For the battery the prediction holds to within a factor of 3** for `k_pas` and `kSE_M` (37–344 against 120–257).
+- **The two data sets pull in different directions.** Three of the six points lower the misfit to the records by 6–37 % (2,800–16,400 of 44,600) and raise the battery's by 6–97 % (12–192 of about 200). The incumbent is far from the records' optimum, and a fit to the records would give a different parameter set from the battery fit.
+
+The final numbers of §1–4 come from `analyzeFvid.py`, a Python twin of `AnalyzeFvid.m`, because MATLAB could not start when the Jacobian runs finished (online-licence hang). It reproduces the MATLAB feature vectors on 23,424 values to 4·10⁻¹³ and writes the inputs of `RunFvidProfile.m`.
 
 ## 6. Is the dataset sound enough for a publication?
 
@@ -181,12 +196,14 @@ matlab -batch "TIER='battery'; NW=4; run('Analyses/FV_Identifiability/RunFvidJac
 matlab -batch "run('Analyses/FV_Identifiability/AuditBeard2022.m')"
 matlab -batch "run('Analyses/FV_Identifiability/RunProtocolSwap.m')"
 matlab -batch "run('Analyses/FV_Identifiability/AnalyzeFvid.m')"       % data features -> results/fvid*.mat
-python Analyses/FV_Identifiability/analyzeFvid.py                      % tables and figures of this report
+python Analyses/FV_Identifiability/analyzeFvid.py                      % tables and figures of this report, profile inputs
+matlab -batch "NW=6; run('Analyses/FV_Identifiability/RunFvidProfile.m')"   % 24 simulations, ~15 min
 ```
 
 Run the two Jacobian tiers one after the other: together on 10 workers each simulation took three times longer.
 
 ## Open
 
-- Profiles (§5): run `AnalyzeFvid.m` then `RunFvidProfile.m` when MATLAB starts again.
+- `AnalyzeFvid.m` has run on partial results only; its complete-set branch (synthetic recovery, profile plan) is untested. The Python twin is the analysis of record.
+- Recoverability and the size of the conflict between the two data sets (§5) need multi-start refits on each, which this issue excluded.
 - Filed: #89 (battery re-stretch features vanish under 10 % moves), #90 (incumbent on a kink in `PieceWiseStrainDep2X_logOffset`).

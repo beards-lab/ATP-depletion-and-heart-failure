@@ -312,11 +312,13 @@ cand = [j for j in range(P_) if V['C']['cls'][j] == 'identified' and V['B']['cls
 if len(cand) < 3: cand = [j for j in range(P_) if V['C']['cls'][j] == 'identified']
 worst = sorted(cand, key=lambda j: -V['B']['sFree'][j])[:3]
 FB = SP['B']['F'] + np.eye(P_) / SIG_PRIOR ** 2
+plan = []
 print('\nProfile plan (stage 2): %s' % ', '.join(names[j] for j in worst))
 for j in worst:
     o = [i for i in range(P_) if i != j]
     for dl in [-THR, THR]:
         d = np.zeros(P_); d[j] = dl; d[o] = -np.linalg.solve(FB[np.ix_(o, o)], FB[o, j] * dl); d = np.clip(d, -np.log(3), np.log(3))
+        plan.append((names[j], dl, d.copy(), d @ SP['B']['F'] @ d, d @ SP['C']['F'] @ d))
         print('   %-30s x%.2f: predicted move (chi2 units), Beard records %.2f, slack battery %.1f; compensation clipped in %d parameters' % (
             names[j], np.exp(dl), d @ SP['B']['F'] @ d, d @ SP['C']['F'] @ d, (np.abs(d[o]) >= np.log(3) - 1e-9).sum()))
 
@@ -361,4 +363,12 @@ with open(os.path.join(FIG, 'verdicts.csv'), 'w') as fh:
         fh.write('%s,%s,' % (names[j], grp[j]) + ','.join('%.4g,%.4g,%s' % (V[k]['sFix'][j], V[k]['sFree'][j], V[k]['cls'][j]) for k in keys) + '\n')
 np.savez(os.path.join(RES, 'fvid_py.npz'), names=np.array(names), Vp=Vp, Vt=Vt, Vc=Vc, Jp=Jp, Jt=Jt, Jc=Jc, ptATP=ptATP, ptV=ptV,
          trATP=trATP, trV=trV, trKind=trKind, trDt=trDt, dPts=dPts, semPts=semPts, dTrc=dTrc, semTrc=semTrc, dBat=dBat, semBat=semBat, labBat=labBat)
+# inputs of RunFvidProfile.m (the plan, the sample plan and the incumbent's vectors)
+pl = np.zeros((1, len(plan)), dtype=[(k, 'O') for k in ['name', 'f', 'kind', 'target', 'delta', 'predChi2B', 'predChi2C']])
+for i, (tg, dl, d, cb, cc_) in enumerate(plan):
+    pl[0, i] = (np.array(names, dtype=object).reshape(1, -1), np.exp(d).reshape(1, -1), 'profile', tg, float(dl), float(cb), float(cc_))
+cidx = np.empty((1, 3), dtype=object)
+for a in range(3): cidx[0, a] = (idxs[a] + 1).astype(float).reshape(1, -1)
+sio.savemat(os.path.join(RES, 'fvid_py.mat'), dict(plan=pl, S={'idx': cidx}, semPts=semPts, semTrc=semTrc, dPts=dPts, dTrc=dTrc, Vp=Vp, Vt=Vt,
+            Vc=Vc, okB=np.ones((1, Vc.shape[1]), dtype=bool), semBat=semBat, dBat=dBat))
 print('\nfigures -> %s' % FIG)

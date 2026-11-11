@@ -8,8 +8,9 @@
 % that reads this script's data features (results/fvid*.mat) and reproduces its
 % model feature vectors to 4e-13. This script has run on PARTIAL results only;
 % it lacks the twin's later additions (tiers Bnr/Bok/Cok, single-parameter
-% recovery) and writes the same figure names. RunFvidProfile.m needs its
-% results/fvid.mat and results/profile_plan.mat.
+% recovery) and writes the same figure names. RunFvidProfile.m takes its
+% inputs from this script (results/fvid.mat, profile_plan.mat) or, when those
+% are absent, from the twin (results/fvid_py.mat).
 %
 % Method
 %   Feature vector f(theta) per data tier, each element with the standard error
