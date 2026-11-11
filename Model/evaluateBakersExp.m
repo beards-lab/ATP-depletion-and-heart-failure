@@ -36,6 +36,42 @@ if limitNegative && any(g<0)% || ...
     return;
 end
 
+% --- Joint (dual-condition) ABSOLUTE ATP objective -------------------------
+% Et = w8*E(high ATP, as configured) + w2*E(low ATP, AtpJoint_* overrides).
+% Each leg is evaluated by a recursive call with the flag cleared, so all the
+% existing machinery (RunBakersExp, evalFeatureCost, featCost decomposition) is
+% reused verbatim. Guarded => inert when UseAtpJointFit is false.
+if isfield(params0, 'UseAtpJointFit') && params0.UseAtpJointFit
+    p8 = params0; p8.UseAtpJointFit = false;
+
+    p2 = p8;
+    p2.MgATP               = params0.AtpJoint_MgATP2;
+    p2.Pi                  = params0.AtpJoint_Pi2;
+    p2.velocitytableonfile = params0.AtpJoint_vt2;
+    % The low-ATP day has slack data only: drop the experiments it cannot score,
+    % otherwise their features register as missing (cost 100 each) every eval.
+    if ~params0.AtpJoint_RunFV2
+        p2.RunForceVelocity = false; p2.RunForceVelocityTime = false;
+    end
+    if ~params0.AtpJoint_RunPS2
+        p2.RunSlackPassive = false;
+    end
+    if ~isempty(params0.AtpJoint_fn2); p2.fn = params0.AtpJoint_fn2; end
+
+    if wantFeat
+        [Et8, E8, fc8, fn8] = evaluateBakersExp(g, p8, limitNegative, plotDebug);
+        [Et2, E2, fc2, fn2] = evaluateBakersExp(g, p2, limitNegative, plotDebug);
+        featCost  = [params0.AtpJoint_w8 * fc8, params0.AtpJoint_w2 * fc2];
+        featNames = [strcat('hi:', fn8), strcat('lo:', fn2)];
+    else
+        [Et8, E8] = evaluateBakersExp(g, p8, limitNegative, plotDebug);
+        [Et2, E2] = evaluateBakersExp(g, p2, limitNegative, plotDebug);
+    end
+    Et = params0.AtpJoint_w8 * Et8 + params0.AtpJoint_w2 * Et2;
+    E  = [E8(:); E2(:)]';
+    return;
+end
+
 if ~plotDebug
     params0.PlotEachSeparately = false;
     params0.PlotFeatureFitting = false;

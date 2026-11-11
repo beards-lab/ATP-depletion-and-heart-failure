@@ -1,6 +1,7 @@
-function writeParamsToMFile(filename, params, modNames, comment)
+function writeParamsToMFile(filename, params, modNames, comment, quiet)
 % Writes params to m file, so we can easily load. 
 
+    if nargin < 5 || isempty(quiet); quiet = false; end
     params = getParams(params, params.g, false, true);
     
     if nargin < 3 || isempty(modNames)
@@ -26,7 +27,7 @@ function writeParamsToMFile(filename, params, modNames, comment)
         par = params.(modNames{i_row});
         nam = modNames{i_row};
         if isa(par, 'function_handle') || isa(par, 'struct')
-            fprintf("Skipping %s\r\n", nam);
+            if ~quiet; fprintf("Skipping %s\r\n", nam); end
             continue;     
         elseif length(par) == 1
             % %.17g, not %g. %g keeps 6 significant digits, and on 2026-09-23
@@ -58,7 +59,7 @@ function writeParamsToMFile(filename, params, modNames, comment)
             par_s = mat2str(par);
             fprintf(fid, "params0.%s = %s;\r\n", nam, par_s); 
         else
-            fprintf("Skipping %s\r\n", nam);
+            if ~quiet; fprintf("Skipping %s\r\n", nam); end
             continue;
         end
     end
