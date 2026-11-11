@@ -110,6 +110,37 @@ In the data, low ATP raises isometric force but **cuts force at 2–3 ML/s by 23
 
 A Michaelis–Menten gate through the same 2 mM point would give R2 ×0.78 at 4 mM instead of the power law's ×0.735, so it would predict a slightly smaller 4 mM effect and a slightly larger gap. At ≥ 4 ML/s the model ratio is undefined (the model is slack).
 
+### 2b. Power–velocity (added 2026-11-11 on the PI's request)
+
+Power = (F / F_ref) × v per preparation, in F_ref·ML/s. The same data as §1, but the ATP levels separate more clearly because power weights the mid-speed range.
+
+![power-velocity](figures/pv_points.png)
+
+Mean power at each measured speed:
+
+| v (ML/s) | 0.5 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| 8 mM data (n = 12) | 0.46 | 0.67 | 0.66 | 0.66 | 0.51 | 0.38 | 0.31 |
+| 8 mM model | 0.46 | 0.63 | 0.58 | 0.50 | 0.45 | 0.16 | 0 |
+| 4 mM data (n = 6) | 0.44 | 0.62 | 0.49 | 0.48 | 0.28 | 0.22 | 0.18 |
+| 4 mM model | 0.46 | 0.61 | 0.52 | 0.42 | 0 | 0 | 0 |
+| 2 mM data (n = 6) | 0.47 | 0.62 | 0.43 | 0.41 | 0.25 | 0.22 | 0.21 |
+| 2 mM model | 0.45 | 0.57 | 0.44 | 0.34 | 0 | 0 | 0 |
+
+- **At 8 mM the measured power is flat from 1 to 3 ML/s** (0.66–0.67) and the model's is not: it peaks at 1 ML/s (0.63) and has lost a quarter by 3 ML/s (0.50). This is the same 0.04–0.05 F_ref force gap as §1, but in power it is a missing plateau, not a small offset.
+- **Low ATP removes that plateau.** At 2–3 ML/s the 4 and 2 mM records give 0.41–0.49 against 0.66 at 8 mM, while at 0.5–1 ML/s the three levels agree within 0.05. The ATP effect on power is a loss of the high-speed half of the curve.
+- **Peak power** (largest of the seven measured speeds, 1 ML/s in the median preparation at every ATP level) is 0.70 ± 0.02 at 8 mM against a model 0.63.
+- **Peak power paired within a preparation**, low ATP over 8 mM:
+
+| | 8 mM first | low ATP first | order-balanced | model |
+|---|---|---|---|---|
+| 4 / 8 mM | 0.79 | 1.05 | 0.91 ± 0.03 | 0.97 |
+| 2 / 8 mM | 0.77 | 0.93 | 0.84 ± 0.04 | 0.90 |
+
+The model under-predicts the loss of peak power by 0.05–0.06, which is 1.4–1.9 standard errors of the order-balanced mean. The running order moves the ratio by more than the ATP level does (#92).
+
+The speeds are coarse around the peak (0.5, 1, 2 ML/s), so peak power and its speed are lower bounds on the true maximum; no curve was fitted.
+
 ### 3. Traces
 
 ![](figures/traces_8mM.png)
