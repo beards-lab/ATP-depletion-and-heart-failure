@@ -11,12 +11,14 @@ function R = runHostBeats(P, nBeats, opt)
 %   OPT.tPre (s, default 0.5), OPT.dtOut (s, default 0.5e-3), OPT.JPattern (sparse
 %   n x n or [] = full finite-difference Jacobian; see jacPattern).
 %   R: t, F (total), Factive, Fpassive, SL, gate, N, Ca, v_host, v_mech, velHS,
-%   A_reg, bound, nShift, tShift, massLost, wall (s), wallPerBeat, nSteps, nFailed.
+%   A_reg, bound, nShift, tShift, massLost, wall (s, all), wallPre, wallBeats,
+%   wallPerBeat (beats only), nSteps, nFailed, nFevals, nPD (Jacobians), nLU.
 
 if nargin < 3, opt = struct(); end
 if ~isfield(opt, 'tPre'),     opt.tPre = 0.5; end
 if ~isfield(opt, 'dtOut'),    opt.dtOut = 0.5e-3; end
 if ~isfield(opt, 'JPattern'), opt.JPattern = []; end
+if ~isfield(opt, 'maxWall'),  opt.maxWall = 900; end   % s of wall clock before the run is abandoned
 
 T  = P.hostT;
 ss = P.ss;  Ns = P.NumberOfStates;
@@ -28,23 +30,26 @@ Pp = P;
 L0 = P.host.Ls(0);  C0 = P.tf.CaFcn(0);
 Pp.host.Ls = @(t) L0;  Pp.host.v = @(t) 0;  Pp.tf.CaFcn = @(t) C0;
 y0 = P.PU0(:);
-tic;
-[~, Y] = ode15s(@dPUdT_HostWall, [-opt.tPre 0], y0, odeset('RelTol', P.odeRelTol, 'AbsTol', P.odeAbsTol), Pp);
+tStart = tic;  stopFcn = @(t, y, flag, varargin) toc(tStart) > opt.maxWall;
+[tp, Y] = ode15s(@dPUdT_HostWall, [-opt.tPre 0], y0, odeset('RelTol', P.odeRelTol, 'AbsTol', P.odeAbsTol, 'OutputFcn', stopFcn), Pp);
+if tp(end) < -1e-9, error('runHostBeats:preEquilibration', 'pre-equilibration stopped at t = %.4g s (integration failure)', tp(end)); end
 y0 = Y(end, :)';
+R.wallPre = toc(tStart);  tBeats = tic;
 
 % ---- beats ----
 tEnd = nBeats*T;
 tOut = 0:opt.dtOut:tEnd;
 ts = 0;  R.t = [];  Yall = [];  R.nShift = 0;  R.tShift = [];  R.dirShift = [];  R.massLost = [];
-R.nSteps = 0;  R.nFailed = 0;
+R.nSteps = 0;  R.nFailed = 0;  R.nFevals = 0;  R.nPD = 0;  R.nLU = 0;
 while ts < tEnd - 1e-12
-    o = odeset('RelTol', P.odeRelTol, 'AbsTol', P.odeAbsTol, 'Events', @win, 'Stats', 'off');
+    o = odeset('RelTol', P.odeRelTol, 'AbsTol', P.odeAbsTol, 'Events', @win, 'Stats', 'off', 'OutputFcn', stopFcn);
     if ~isempty(opt.JPattern)
         o = odeset(o, 'JPattern', opt.JPattern);
     end
     tspan = unique([ts, tOut(tOut > ts), tEnd]);
     sol = ode15s(@dPUdT_HostWall, [ts tEnd], y0, o, P);
     R.nSteps = R.nSteps + sol.stats.nsteps;  R.nFailed = R.nFailed + sol.stats.nfailed;
+    R.nFevals = R.nFevals + sol.stats.nfevals;  R.nPD = R.nPD + sol.stats.npds;  R.nLU = R.nLU + sol.stats.ndecomps;
     te = sol.x(end);
     tk = tspan(tspan <= te);
     if ~isempty(tk)
@@ -52,6 +57,9 @@ while ts < tEnd - 1e-12
         R.t = [R.t; tk(:)];  Yall = [Yall; Yk]; %#ok<AGROW>
     end
     y0 = sol.y(:, end);  ts = te;
+    if (~isfield(sol, 'ie') || isempty(sol.ie)) && ts < tEnd - 1e-12
+        error('runHostBeats:integration', 'integration stopped at t = %.4g s without a window event', ts);
+    end
     if isfield(sol, 'ie') && ~isempty(sol.ie) && ts < tEnd - 1e-12
         ie = sol.ie(end);
         m0 = P.dS*sum(y0(1:Ns*ss));
@@ -63,8 +71,8 @@ while ts < tEnd - 1e-12
         tOut = tOut(tOut > ts);
     end
 end
-R.wall = toc;
-R.wallPerBeat = R.wall/nBeats;
+R.wall = toc(tStart);  R.wallBeats = toc(tBeats);
+R.wallPerBeat = R.wallBeats/nBeats;      % the beats only; the pre-equilibration is R.wallPre
 [R.t, iu] = unique(R.t);  Yall = Yall(iu, :);
 
 % ---- outputs (re-evaluated; pivot changes are piecewise, so recompute per segment) ----
