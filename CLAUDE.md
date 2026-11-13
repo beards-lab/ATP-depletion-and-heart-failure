@@ -11,11 +11,10 @@ gives the repo's own values and wins where it says so.
 - **Repo / board:** `beards-lab/ATP-depletion-and-heart-failure` · https://github.com/orgs/beards-lab/projects/3 · WIP limit 2 on In progress for `needs-judgment`
 - **People (may approve and review):** Filip (`filip-jezek`)
 - **Milestones:** M0 branch & release model, A new-data fit (8 + 2 mM), 1 mouse Ca transient, α Ca transient ATP sensitivity, 2 humanized model, 3 reduced cell-mechanics model, 4 Pi and pH sensitivity, 5 organ model (full XB in TriSeg with Ca), P1 paper 1 (rodent 8 + 2 mM fit).
-- **Base branch:** two lines, see `decisions/0001-branch-and-release-model.md`. Fork **paper work** (Paper 1: saturating-Ca, 1-D, mouse, 8 + 2 mM) from **`ca-sat-1d-mouse`** and open its PR against that branch. Fork **everything else** (Ca dynamics, humanization, reduced model, Pi/pH, organ model) from **`main`**, with new features behind flags that default OFF. Merges flow `ca-sat-1d-mouse` → `main` only, never back.
+- **Base branch:** two lines, see `decisions/0001-branch-and-release-model.md`. Fork **paper work** (Paper 1: saturating-Ca, 1-D, mouse, 8 + 2 mM) from **`ca-sat-1d-mouse`** and open its PR against that branch. Fork **everything else** (Ca dynamics, humanization, reduced model, Pi/pH, organ model) from **`main`**, with new features behind flags that default OFF. Merges flow `ca-sat-1d-mouse` → `main` only, never back. A PR merged into `ca-sat-1d-mouse` closes its issue just as one merged into `main` does; GitHub auto-closes only from the default branch, so close the issue in the same step as the merge.
 - **Analyses folder:** `Analyses` (index and cross-analysis synthesis in `Analyses/README.md`) · **Extra flag labels:** none
 - **Checks before a PR:** none defined yet. The regression guard (non-paper flags off on `main` reproduce `ca-sat-1d-mouse`) is tracked in #14; list it here once it exists.
 - **Local deviations from WORKFLOW.md:**
-  - A PR merged into `ca-sat-1d-mouse` (not the default branch) doesn't close its issue: on approval, close the issue and move the card by hand.
   - Type labels `science` and `objective` predate the shared label set and are still on open issues; they count as type labels until those issues are relabelled.
   - Analyses up to 2026-11 are undated `Analyses/<Name>/` folders with `conclusions.md` instead of `yy-mm-dd-Name/report.md`; leave them as they are.
 
