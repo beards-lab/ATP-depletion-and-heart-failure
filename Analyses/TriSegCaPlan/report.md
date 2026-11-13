@@ -9,13 +9,15 @@
 
 1. **The numerics are not the blocker.** Wrapping the unchanged right-hand side works: on a hold–shorten–hold–stretch protocol the wrapper matches `evaluateModel` to 0.08 kPa (0.1 % of peak). One host beat of one wall costs 3.6 s at 60 strain bins. Window slides lose no attached heads on this beat, so the wide grid is not needed for correctness.
 2. **On the host's kinematics the model fails in three ways, all of them scientific.**
-   - **Speed.** At the start of ejection the host's LV sarcomere shortens at 27.6 µm/s (12 lengths/s). The model's force collapses from 63 kPa to zero within 3 ms, it is slack for 10.5 ms, and it carries about 4 kPa through ejection where the host carries 19 kPa.
-   - **Passive.** At the host's end-diastolic length (2.25 µm) the incumbent passive law gives 23.6 kPa; the host has 0.8 kPa. The ventricle would not fill.
+   - **Speed.** At the start of ejection the host's LV sarcomere shortens at 27.6 µm/s (12 lengths/s). The model's force collapses from 63 kPa to zero within 3 ms, it is slack for 10.5 ms, and it carries about 4 kPa through ejection where the host carries 19 kPa. On the lab's mouse host the ejection is slower (4.9 lengths/s) but sits at the model's unloaded speed for 40 ms, and the model is slack for 30–45 ms.
+   - **Passive.** At the host's end-diastolic length (2.25 µm) the incumbent passive law gives 23.6 kPa; the host has 0.8 kPa. The ventricle would not fill. On the mouse host (end-diastolic length 2.04 µm) this static mismatch disappears, and a viscous one appears in fast filling.
    - **Activation.** With the host's (literature) thin-filament constants the Ca gate opens to 0.05 and the active stress is 6.6 kPa; the host's own cross-bridges give 24.3 kPa.
 3. **The velocity the mechanisms see changes peak stress by ±20 %.** Imposed dLs/dt gives 63 kPa, the contractile-element velocity 75 kPa, no velocity 51 kPa. The model was calibrated with the imposed velocity, so the coupling must supply dLs/dt.
 4. **Recommended architecture: one monolithic DAE that wraps the unchanged model**, with no `UseTriSeg` flag. An explicit co-simulation would need macro-steps of 0.1 ms or less (a 0.1 ms lag already costs 2.5 kPa), which is no cheaper than the 3,000 steps per beat the solver takes anyway.
 5. **The biggest cost lever is the Jacobian.** 63 % of all right-hand-side calls are finite-difference Jacobian columns, because 25 rows are dense. Supplying those rows analytically (#54) cuts the calls by 61 % at 60 bins and makes a 250-bin grid cost the same number of calls as a 60-bin one.
 6. **Calcium does stiffen the passive response, but only the fast part.** Peak stress on a 0.1 s ramp is ×4.0 at pCa 4.4; on a 100 s ramp ×1.07; 60 s into the hold there is no difference. The beating wall needs a Ca-dependent viscoelastic passive (#85), not a Ca-dependent static one.
+
+7. **The lab's mouse TriSeg (`Rat_Triseg`) is the better target host**: right species, sarcomere lengths in the calibrated range. It has no Ca transient, one fitted animal without measured pressures, and it is private (Q7b).
 
 The implementation plan (Q10) puts a closed-loop harness first, run with the host's passive and a calibrated activation so the numerics can be finished, and treats speed, passive and activation as separate science packages. Until those three land, the coupled model will run but its pressures and volumes mean nothing.
 
@@ -198,9 +200,55 @@ The 19 saved fits (`background/host_fits.md`, `figures/host_fits.csv`):
 
 - **Mismatches with the cross-bridge data:** rat at postnatal day 21 against (adult) mouse; 37 °C in vivo against an unrecorded rig temperature; 292–388 bpm; sarcomere lengths down to 1.41 µm in the RV, below anything the model was calibrated on (the slack battery starts at 2.2 µm and the passive ramps at 1.92 µm).
 - **What the host has:** the same sarcomere interface, working code, 19 fitted animals with their data, and a steady-state routine.
-- **Alternatives on disk:** `../CVS_TriSeg` appears to be a human clinical model (CMR and catheter data files); it belongs with the humanised model (milestone 2), not here. A mouse 37 °C TriSeg model was not found in a verified source.
+- **Other hosts:** `../CVS_TriSeg` appears to be a human clinical model (CMR and catheter data files); it belongs with the humanised model (milestone 2), not here. The lab's mouse TriSeg is examined next.
 
-**Recommendation:** keep the P21 rat host for the harness and the numerics, and record that nothing it produces is a prediction until Q3, Q5 and Q6 are resolved. Revisit the host when #43 and #44 are answered. Decision draft: `decisions/0005-host-for-the-first-organ-model.md`.
+### Q7b. The lab's mouse TriSeg host (added 2026-11-13 at the PI's request)
+
+`beards-lab/Rat_Triseg` (private; named "rat", parameterised for mouse). It is the human TriSeg model of the lab re-scaled to mouse: a Lumens-type sarcomere with a prescribed activation function of time, atria, pericardium and valve regurgitation, 11 states plus the four geometry variables. It has two fitted cases: a healthy 3-month mouse built from literature targets (409 bpm) and one mouse fitted to its echo data (579 bpm). `RunMouseHost.m` runs both with the host's own scripts and repeats the open-loop probe on their beats; `mouseHostFigures.py` makes the figures.
+
+| | P21 rat host (Nx51) | Mouse host, literature targets | Mouse host, one echo fit |
+|---|---|---|---|
+| Species, heart rate | rat, postnatal day 21, 325 bpm | mouse, 3 months, 409 bpm | mouse, 579 bpm |
+| Sarcomere in the host | cross-bridge moments, Ca-activated, with energetics | activation function Y(t), `sigma_act = k_act·Y·(Lsc − Lsc0)·(Ls − Lsc)` | same |
+| Ca transient | analytic, in the host | none | none |
+| LV sarcomere length, max / min (µm) | 2.25 / 1.97 | 2.04 / 1.74 | 2.03 / 1.72 |
+| LV peak shortening speed | 27.6 µm/s (12.2 lengths/s), a spike | 9.9 µm/s (4.9 lengths/s), a plateau | 9.9 µm/s (4.9 lengths/s), a plateau |
+| LV shortening, 10 to 90 % | 15 ms | 27 ms | 28 ms |
+| LV peak lengthening speed | 4.7 µm/s | 10.2 µm/s | 35.3 µm/s |
+| Host passive stress at end diastole (kPa) | 0.83 | 0.44 | 1.71 |
+| Host peak active stress, LV (kPa) | 24.3 | 69.7 | 26.0 |
+| LV volume (µL), ejection fraction | 10–38, 73 % | 39–80, 52 % | 7–35, 79 % |
+| Data behind the fit | pressure–volume loops of both ventricles, 19 animals | literature values | echo and a volume trace; arterial pressure assumed |
+| Cost of one host run | — | 3 s for 20 beats | 2 s |
+| Repository | public | private | private |
+
+The cross-bridge wall on the mouse host's LV beat (`k_on` ×3 unless stated; Ca(t) is the P21 host's transient compressed to the mouse period, an assumption because the mouse host has none):
+
+| Case | Active stress, peak (kPa) | Host's peak (kPa) | Slack, total < 0.05 kPa (ms) | Stress while the host lengthens (kPa) |
+|---|---|---|---|---|
+| Literature mouse | 24.9 | 69.7 | 30.0 | 5–7 |
+| same, `k_on` ×10 | 44.7 | 69.7 | 8.5 | 5–7 |
+| same, cycle rates ×5 | 45.1 | 69.7 | 0 | 5–7 |
+| Echo-fitted mouse | 28.2 | 26.0 | 45.5 | 9–11 |
+| same, `k_on` ×10 | 46.1 | 26.0 | 27.0 | 9–11 |
+| same, cycle rates ×5 | 46.2 | 26.0 | 0 | 9–11 |
+
+![mouse host](figures/mouse_host_kinematics.png)
+![probe on the mouse host](figures/mouse_host_probe.png)
+
+- **Species and sarcomere length fit better.** It is a mouse, and the LV runs 1.72–2.04 µm, closer to the in-vivo range (rat, inferred 1.75–1.90 µm at end diastole) than the P21 fit's 2.25 µm. At 2.04 µm the incumbent static passive law gives 0.2 kPa and the measured relaxed passive about 0.9 kPa, against the host's 0.4–1.7 kPa. **The static passive mismatch that blocks the P21 host (23.6 against 0.8 kPa) is not there.**
+- **The speed problem is the same, and cleaner.** The host ejects at a steady 9.9 µm/s for about 40 ms. That is the model's own unloaded speed (4.6 ML/s), so the model carries no force for the whole of ejection: it is slack for 30–45 ms, and with the cycle rates ×5 its force still falls below 1 kPa by 40 ms, where the host carries 18–65 kPa. The steady 9.9 µm/s is the same in both fits, which suggests it is set by the host's sarcomere law (`v_max` = 21 µm/s) more than by the data.
+- **A new problem shows: viscous passive in filling.** The mouse fills fast (10–35 µm/s). The model's stress is 5–11 kPa during filling against a host stress near zero. Its passive part is 4.4–8.6 kPa at the start of the beat, where the static law alone gives 0.2 kPa, so nearly all of it is the velocity-dependent passive, which was fitted at high Ca. The passive data say the relaxed viscous response is 4 times weaker than the high-Ca one (Q3). This is #85 seen from the diastolic side.
+- **What the mouse host lacks:** a Ca transient (one has to come from elsewhere: #76, #49, or literature), measured pressures for its individual fit, and more than one fitted animal. Its sarcomere is not a cross-bridge model, but the slot is the same: one `Lsc` state per wall and `Ls` from the geometry.
+- **It is private.** Anything published on it needs that repository released or its equations and parameters restated.
+
+**Recommendation:** make the mouse host the target of the organ model, and keep the P21 host as the numerical test bed.
+- The harness (#97) can be developed on either. The P21 host has the same thin filament and a Ca transient, so the parity test against the open-loop probe is immediate there.
+- Validation (#99) and the native passive (#83) move to the mouse host: the species matches, the sarcomere lengths are in the calibrated range, and the host re-scaling that #83 plans is largely unnecessary.
+- The kinetics package (#98) is unchanged and becomes the main blocker: on either host the model has to carry load at 5 lengths/s or more.
+- New needs: a mouse Ca transient at 400–600 bpm, and a decision on publishing the host.
+
+Decision draft: `decisions/0005-host-for-the-first-organ-model.md`.
 
 ## Q8. Initialisation and steady state
 
@@ -236,6 +284,7 @@ How well the host reproduces its own data, over the 19 fits (the tolerance a new
 | WP7 | **Validation on the P21 Nx fits** | WP1–WP5 | EDV, ESV, peak pressure of both ventricles within 8 %, 6 %, 10 % | 1 week | #99 |
 
 - **Critical path:** WP1 → WP2 → WP7. WP3, WP4 and WP5 are the science and can run in parallel with WP1 and with each other; WP6 is an optimisation and can wait until WP1 shows the cost.
+- **If the mouse host becomes the target** (Q7b, decision draft 0005): WP7 and the host part of WP4 move to it, WP4 needs little or no host re-scaling, and a mouse Ca transient at 400–600 bpm becomes a new dependency of WP7. WP1, WP2 and WP6 stay on the P21 host.
 - **Follow-up:** the moment-truncated model (#55) uses the WP1 and WP7 runs as its reference.
 - **Not planned here:** merging the Ca gate (#36), which WP1 can start without because the wrapper carries its own gate.
 
@@ -248,9 +297,11 @@ matlab -batch "run('Analyses/TriSegCaPlan/PlotHostProbe.m')"      % figures and 
 python -I Analyses/TriSegCaPlan/hostFits.py                       % background/host_fits.md
 python -I Analyses/TriSegCaPlan/passiveBackground.py              % passive tables and figure
 python -I Analyses/TriSegCaPlan/passiveDynamic.py                 % background/passive_dynamic.md
+matlab -batch "run('Analyses/TriSegCaPlan/RunMouseHost.m')"       % the mouse host and the probe on it, 5 min
+python -I Analyses/TriSegCaPlan/mouseHostFigures.py               % figures for Q7b
 ```
 
-The host repository must sit next to this one (`../Multiscale-Hx-P21-Model`), or set `HOSTROOT`.
+The host repository must sit next to this one (`../Multiscale-Hx-P21-Model`), or set `HOSTROOT`. The mouse host is `../Rat_Triseg` (private), or set `MOUSEROOT`.
 
 ## Caveats
 
