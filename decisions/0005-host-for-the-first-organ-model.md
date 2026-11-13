@@ -1,9 +1,9 @@
 # 0005 — The host for the first organ model
 
-- **Status:** proposed, for the PI (revised 2026-11-13 after the mouse host was examined)
+- **Status:** point 2 accepted by the PI on 2026-11-13 ("I agree to test the harness with the P21"); points 1, 3 and 4 proposed
 - **Date:** 2026-11-12, revised 2026-11-13
 - **Issue:** #82 (milestone 5)
-- **Drafted by:** Claude (AI agent). **Decided by:** —
+- **Drafted by:** Claude (AI agent). **Decided by:** Filip Jezek (point 2)
 
 ## Context
 
