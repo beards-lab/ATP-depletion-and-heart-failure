@@ -13,7 +13,7 @@ if ~exist('NBEATS', 'var'),   NBEATS = 2; end
 if ~exist('OPT', 'var'),      OPT = struct(); end
 
 H = hostP21Load('Nx51', HOSTROOT);
-tic;  C = setupTrisegXB(H, OPT);  tSetup = toc;
+t0 = tic;  C = setupTrisegXB(H, OPT);  tSetup = toc(t0);
 G0 = hostP21Geometry(C.y0(1:4), H);
 fprintf('setup %.0f s: %d states (walls %d each); geometry residual %.1e; g0 host %s -> %s; Ls0 host %s -> %s\n', tSetup, C.n, C.W(1).nW, C.resG0, ...
     mat2str(H.g0', 4), mat2str(C.y0(1:4)', 4), mat2str(H.Ls0, 4), mat2str(G0.Ls, 4));
