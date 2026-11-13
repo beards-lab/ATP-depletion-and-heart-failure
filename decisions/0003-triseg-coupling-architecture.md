@@ -1,9 +1,9 @@
 # 0003 — How the full cross-bridge model is coupled to TriSeg
 
-- **Status:** proposed, for the PI
-- **Date:** 2026-11-12
+- **Status:** accepted
+- **Date:** 2026-11-12, accepted 2026-11-13
 - **Issue:** #82 (milestone 5)
-- **Drafted by:** Claude (AI agent). **Decided by:** —
+- **Drafted by:** Claude (AI agent). **Decided by:** Filip Jezek
 
 ## Context
 
@@ -11,7 +11,7 @@ The full strain-distributed cross-bridge model is to be the sarcomere of all thr
 closed loop with the circulation. `Analyses/TriSegCaPlan/report.md` (Q1, Q2) measured what the
 options cost on a host beat (P21 rat fit Nx51, open loop).
 
-## Decision (proposed)
+## Decision
 
 1. **One monolithic DAE.** The host's circulation and geometry states plus three copies of the
    wall state, integrated by one `ode15s` call. A wrapper hands each wall its sarcomere length
@@ -21,7 +21,12 @@ options cost on a host beat (P21 rat fit Nx51, open loop).
 3. **The velocity-driven mechanisms get dLs/dt**, not the contractile-element velocity (#84).
 4. **The grid stays at 60 bins with the sliding window** until the coupled system shows a reason
    to widen it. The first cost optimisation is the structured Jacobian (#54).
-5. **Parity tests guard the wrapper.** (a) Wrapper against `evaluateModel` on the same length
+5. **The code says which part comes from where** (added by the PI on acceptance). Every block of
+   the coupled system is marked with its source: host equations with the host file and commit
+   they were taken from, the cross-bridge model as a call into `Model/` (never a copy), and the
+   wrapper's own glue. The cross-bridge code will change as that model advances; because it is
+   called and not copied, an update needs no change in the coupling.
+6. **Parity tests guard the wrapper.** (a) Wrapper against `evaluateModel` on the same length
    protocol with the Ca gate open: within 0.2 kPa (measured 0.08 kPa). (b) The closed-loop
    wrapper driven by a recorded Ls(t) against the open-loop probe: within 0.2 kPa.
 

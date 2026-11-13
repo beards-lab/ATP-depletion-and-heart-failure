@@ -1,9 +1,9 @@
 # 0004 — The passive law of the walls in the organ model
 
-- **Status:** proposed, for the PI
-- **Date:** 2026-11-12
+- **Status:** accepted
+- **Date:** 2026-11-12, accepted 2026-11-13
 - **Issue:** #82 (milestone 5); work in #85 and #83
-- **Drafted by:** Claude (AI agent). **Decided by:** —
+- **Drafted by:** Claude (AI agent). **Decided by:** Filip Jezek
 
 ## Context
 
@@ -12,13 +12,17 @@ The host has its own law, `6.67·(Ls − 1.51)^7`, fitted to pressure and volume
 sarcomere length scale. `Analyses/TriSegCaPlan/report.md` (Q3) compared both with the passive
 data of seven skinned mouse trabeculae.
 
-## Decision (proposed)
+## Decision
 
 1. **The first closed loop uses the host's passive law.** It lets the harness (WP1) be finished
    and tested without the passive question.
 2. **The incumbent law is not used in the organ model as it stands.**
 3. **The native passive is a Ca-dependent viscoelastic law** (#85), and the host is re-scaled to
    it (#83). A Ca-dependent static law is not pursued.
+
+The PI's reasoning on acceptance: the model's own passive is the high-Ca passive, so it has to be
+made sensitive to the Ca transient before it can serve a beating wall. That is a later stage
+(#85); until then the host's passive is used.
 
 ## Evidence
 

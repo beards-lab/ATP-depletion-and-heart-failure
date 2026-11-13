@@ -1,9 +1,9 @@
 # 0005 — The host for the first organ model
 
-- **Status:** point 2 accepted by the PI on 2026-11-13 ("I agree to test the harness with the P21"); points 1, 3 and 4 proposed
-- **Date:** 2026-11-12, revised 2026-11-13
+- **Status:** accepted
+- **Date:** 2026-11-12, revised and accepted 2026-11-13
 - **Issue:** #82 (milestone 5)
-- **Drafted by:** Claude (AI agent). **Decided by:** Filip Jezek (point 2)
+- **Drafted by:** Claude (AI agent). **Decided by:** Filip Jezek
 
 ## Context
 
@@ -19,7 +19,7 @@ recorded, #43). Two TriSeg hosts are available:
 
 `Analyses/TriSegCaPlan/report.md` (Q5, Q7, Q7b, Q9) measured both.
 
-## Decision (proposed)
+## Decision
 
 1. **The mouse host is the target of the organ model**: validation (#99) and the native passive
    (#83) are done on it.
