@@ -2,9 +2,9 @@
 %
 % P21 host fit Nx51 with the full cross-bridge model (robust1_seed) in all three
 % walls: host passive law, host Ca(t), k_on x KONMULT, velocity signal a 1 ms low-pass
-% of dLs/dt, 60 strain bins. Runs blocks of 10 beats until the LV peak pressure and
-% stroke volume change by less than 1 % from one beat to the next (the host's own
-% criterion is of this kind), up to MAXBEATS.
+% of dLs/dt, 60 strain bins. Runs blocks of 10 beats until the LV peak pressure,
+% stroke volume and end-diastolic volume change by less than TOLPER (1 %) from one
+% beat to the next for three beats running, up to MAXBEATS.
 %   matlab -batch "run('Analyses/TriSegHarness/RunTrisegHarness.m')"
 % Results -> results/harness_<TAG>.mat; log -> results/harness_<TAG>.log
 
@@ -12,8 +12,9 @@ here = fileparts(mfilename('fullpath'));  root = fileparts(fileparts(here));
 cd(root);  addpath(genpath(fullfile(root, 'Model')));  addpath(genpath(fullfile(root, 'Auxiliary')));
 addpath(fullfile(root, 'params'));  addpath(fullfile(root, 'Organ'));
 if ~exist('HOSTROOT', 'var'), HOSTROOT = fullfile(fileparts(root), 'Multiscale-Hx-P21-Model'); end
-if ~exist('KONMULT', 'var'),  KONMULT = 3; end
+if ~exist('KONMULT', 'var'),  KONMULT = 5.3; end
 if ~exist('MAXBEATS', 'var'), MAXBEATS = 60; end
+if ~exist('TOLPER', 'var'),   TOLPER = 0.01; end      % beat-to-beat change that counts as periodic
 if ~exist('OPT', 'var'),      OPT = struct(); end
 if ~exist('TAG', 'var'),      TAG = sprintf('kon%g', KONMULT); end
 OPT.konMult = KONMULT;
@@ -28,10 +29,10 @@ while ~done && nb < MAXBEATS
     R = runTrisegXB(C, 10, struct('verbose', false));
     C = R.C;  b = R.beat;  b.beat = b.beat + nb;  B = [B; b];  nb = nb + 10; %#ok<AGROW>
     for f = {'nSteps', 'nFailed', 'nFevals', 'nPD', 'nShift', 'massLost'}, S.(f{1}) = S.(f{1}) + R.(f{1}); end
-    dP = abs(diff(B.Pmax_LV))./B.Pmax_LV(2:end);  dS = abs(diff(B.SV_LV))./B.SV_LV(2:end);
-    fprintf('beats %2d-%2d (%.0f s): Pmax_LV %.3f kPa, SV_LV %.2f uL, EDV %.2f uL; last beat-to-beat change: Pmax %.2f %%, SV %.2f %%\n', ...
-        nb - 9, nb, toc(tAll), B.Pmax_LV(end), 1e3*B.SV_LV(end), 1e3*B.EDV_LV(end), 100*dP(end), 100*dS(end));
-    done = all(dP(end-2:end) < 0.01) && all(dS(end-2:end) < 0.01);
+    dP = abs(diff(B.Pmax_LV))./B.Pmax_LV(2:end);  dS = abs(diff(B.SV_LV))./B.SV_LV(2:end);  dE = abs(diff(B.EDV_LV))./B.EDV_LV(2:end);
+    fprintf('beats %2d-%2d (%.0f s): Pmax_LV %.3f kPa, SV_LV %.2f uL, EDV %.2f uL; last beat-to-beat change: Pmax %.2f %%, SV %.2f %%, EDV %.2f %%\n', ...
+        nb - 9, nb, toc(tAll), B.Pmax_LV(end), 1e3*B.SV_LV(end), 1e3*B.EDV_LV(end), 100*dP(end), 100*dS(end), 100*dE(end));
+    done = all(dP(end-2:end) < TOLPER) && all(dS(end-2:end) < TOLPER) && all(dE(end-2:end) < TOLPER);
     save(fullfile(here, 'results', ['harness_' TAG '.mat']), 'R', 'B', 'S', 'H', 'nb');
 end
 wall = toc(tAll);

@@ -10,7 +10,7 @@ function C = setupTrisegXB(H, opt)
 %   C = setupTrisegXB(H, opt)
 %   opt.paramSet       cross-bridge snapshot                      'robust1_seed'
 %   opt.ss             strain bins (sliding window)               60
-%   opt.konMult        calibration factor on the host's k_on      3
+%   opt.konMult        calibration factor on the host's k_on      5.3 (see Analyses/TriSegHarness)
 %   opt.tauV           time constant of the velocity signal (s)   1e-3
 %   opt.hostPassive    host passive law in the model's slot       true  (decision 0004)
 %   opt.nativeViscous  keep the model's Maxwell element           false (decision 0004)
@@ -18,7 +18,7 @@ function C = setupTrisegXB(H, opt)
 %   opt.tPre           wall pre-equilibration (s)                 0.5
 
 if nargin < 2, opt = struct(); end
-def = struct('paramSet', 'robust1_seed', 'ss', 60, 'konMult', 3, 'tauV', 1e-3, 'hostPassive', true, ...
+def = struct('paramSet', 'robust1_seed', 'ss', 60, 'konMult', 5.3, 'tauV', 1e-3, 'hostPassive', true, ...
              'nativeViscous', false, 'relTol', 1e-3, 'absTol', 1e-6, 'tPre', 0.5, 'N0', 1);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opt, fn{i}), opt.(fn{i}) = def.(fn{i}); end, end

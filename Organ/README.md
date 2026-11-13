@@ -43,7 +43,7 @@ Every file states its provenance in its header, and the copied blocks are fenced
 ```matlab
 addpath(genpath('Model')); addpath(genpath('Auxiliary')); addpath('params'); addpath('Organ');
 H = hostP21Load('Nx51');             % host repository at ../Multiscale-Hx-P21-Model
-C = setupTrisegXB(H);                % defaults: robust1_seed, 60 bins, k_on x3, host passive
+C = setupTrisegXB(H);                % defaults: robust1_seed, 60 bins, k_on x5.3, host passive
 R = runTrisegXB(C, 10);              % 10 beats; R.beat is the per-beat table
 ```
 
