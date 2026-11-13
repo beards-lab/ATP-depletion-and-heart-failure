@@ -40,5 +40,6 @@ tools/*.exe
 # Analyses: results/ is regenerable output and is never committed; figures/ holds the
 # figures a report shows and is always committed, whatever the file type (#72).
 /Analyses/*/results/
+/Organ/Tests/results/
 !/Analyses/*/figures/
 !/Analyses/*/figures/**
