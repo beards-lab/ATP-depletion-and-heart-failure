@@ -9,7 +9,7 @@
 1. **At 8 mM the model's F–V sits 0.04–0.05 F_ref below the 12-preparation mean at 1–6 ML/s** (except 4 ML/s, −0.01). That is inside the spread of preparations (z −0.4 to −1.9) but **not the mean preparation**: five of the seven points are 2.7–6.6 standard errors low. Vmax is **4.6 vs 5.5 ML/s** (Hill medians). Part of the gap is not F–V at all: at ≥ 2 ML/s the pre-ramp step leaves the **model slack for 2–8.5 ms**, so it reads **0 at 6 ML/s**, while the data never go slack.
 2. **The 4 mM prediction is within 1 sd and within 2 standard errors up to 3 ML/s** (|z| ≤ 0.7, RMS 0.038 F_ref). **The model under-predicts how much low ATP cuts force at 2–3 ML/s, but the evidence is weaker than first reported.** With the force baseline subtracted, the measured 4/8 ratio is **0.77 / 0.75** against a model **0.89 / 0.84** (1.2–1.3 sd, about 3 standard errors). The gap is carried by the preparations that ran 8 mM first (0.67 / 0.71); in those that ran 4 mM first the ratio is 0.87 / 0.79, within 0.03–0.05 of the model. At 2 mM the same direction holds at 1.3–1.8 standard errors (0.60 / 0.58 vs 0.75 / 0.68).
 3. **The isometric ATP effect is over-predicted, within the uncertainty.** 4/8 is **1.15 vs 1.07 ± 0.12** and 2/8 is **1.30 vs 1.18 ± 0.14**; the data ratios are rundown-contaminated (§4). On the traces, **every re-stretch gives the wrong-signed transient**: 5 ms after the +0.3 ML re-stretch the data sit at **0.67** of the following hold and the model at **1.04** (an overshoot). The data take ~50 ms to recover.
-4. **The 4 and 2 mM protocol is not the 8 mM protocol** (new in this revision). At 0.5–4 ML/s its pre-ramp step is 0.01 Lo larger and the force is read 2–20 ms sooner after the step. The model is driven by each record's own length, so model and data are compared like for like, but the measured ATP ratio at those speeds is not a pure ATP effect. #88 quantifies it.
+4. **The 4 and 2 mM protocol is not the 8 mM protocol** (new in this revision). At 0.5–4 ML/s its pre-ramp step is 0.01 Lo larger and the force is read 2–20 ms sooner after the step. It holds in all 12 preparations and both running orders, and it is a programmed second protocol, not an Lo offset (§5). The model is driven by each record's own length, so model and data are compared like for like, but the measured ATP ratio at those speeds is not a pure ATP effect. #88 quantifies it.
 
 What this changes: the single-prep F–V target (`2021 06 15`, one of these 12) is replaceable by a 12-prep pool with error bars and a held-out 4 mM arm. One model defect that the old target could not see is now firmly measurable (the post-step slack). The speed-dependence of the ATP effect is a second candidate, at about 3 standard errors and not separable from rundown.
 
@@ -190,6 +190,38 @@ Trace-level defects that show up in every record:
 
 The paired ratios move strongly with running order. At v = 0, 4/8 is 0.961 when 8 mM ran first and 1.169 when 4 mM ran first; 2/8 is 1.103 vs 1.260. Whichever record ran second is depressed. The balanced design cancels this only to first order, and `RundownCorrection/strategy.md` shows that 2→8 carries ≈3× the bias of 8→2. **No rundown correction is applied here.** The isometric over-prediction (+0.09 / +0.11) is therefore inside the uncertainty, and so is most of the speed-dependence gap of §2.
 
+### 5. The protocol difference, record by record (added 2026-11-19 on the PI's request)
+
+Question: is the larger step at 4 and 2 mM in every record and both running orders, was it programmed, and could it be an Lo set slightly off, which would not matter? Script `RunProtocolByATP.m`, data only, all 24 records.
+
+![Length around each cycle, all 24 records](figures/protocol_by_atp.png)
+
+*Black 8 mM, orange 4 mM, blue 2 mM (the 4 mM lines lie under the 2 mM ones); solid = the record run first in its preparation, dashed = run second. The 24 records fall on two lines at 0.5–4 ML/s and on one line at 5 and 6 ML/s.*
+
+**It is in every record, in both orders, and it is the same at 4 and 2 mM.** Low-ATP step minus the 8 mM step of the same preparation, range over the 12 preparations (Lo):
+
+| v (ML/s) | 0.5 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| step, 8 mM (n = 12) | 0.011 | 0.021 | 0.042 | 0.043 | 0.054 | 0.065 | 0.066 |
+| step, 4 and 2 mM (n = 12) | 0.021 | 0.031 | 0.052 | 0.053 | 0.064 | 0.065 | 0.066 |
+| difference, min to max | 0.0099–0.0102 | 0.0100–0.0101 | 0.0099–0.0102 | 0.0099–0.0102 | 0.0097–0.0100 | −0.0001–0.0001 | −0.0002–0.0001 |
+| ramp shorter by (ms) | 19.4–19.6 | 10.3–10.4 | 5.0 | 3.3 | 2.45 | 0 | 0 |
+
+Within one [ATP] and running order the step sizes agree to 0.0005 Lo or better across preparations. In the six preparations where the low-ATP record ran first, the larger step came first and the smaller second, so the difference follows the [ATP], not the order or the time on the rig.
+
+**It is not an Lo offset.** An Lo set slightly off would shift every length of the record. Nothing else moves:
+
+- The hold before each of the seven steps is 1.1002–1.1004 Lo in all 24 records, and the two records of a preparation agree to 0.0001 Lo.
+- The final hold is 1.0000 Lo in all 24. The slack minimum is 0.794–0.799 Lo and differs by at most 0.003 Lo within a preparation, with either sign.
+- The length at the force read differs by at most 0.0003 Lo within a preparation.
+- The cycles at 5 and 6 ML/s, in the same continuous record, are identical to 0.0002 Lo and 0.05 ms.
+
+**It was programmed.** The difference is 0.0100 Lo in five cycles and zero in two, the same in 12 preparations over seven weeks, and each ramp is shorter by exactly 0.01 Lo / v, so that every ramp ends at the same length (0.983–0.989 Lo) as at 8 mM. That is a second protocol file, used for 4 and 2 mM. The step seems capped near 0.065 Lo, which the 5 and 6 ML/s cycles already reach at 8 mM. The lab's own summary columns agree with two versions: the `iso-V Length` is 1.0005 / 1.0010 / 1.0021 Lo at 0.5 / 1 / 4 ML/s on every 8 mM sheet and 1.0000–1.0002 on every low-ATP sheet.
+
+**Whether it was intended as a design choice is not in the files.** The workbooks carry no note (headers only), and the reason for a larger step at low ATP is not stated anywhere we hold. A plausible reason is that a larger step brings the force to its isovelocity level sooner when cross-bridge detachment is slower, but that is a guess. It stays a question for the Baker lab (#43).
+
+**Does it matter?** For model against data, no: each simulation is driven by its own record. For the measured ATP ratio the data cannot say, because no preparation was run on both protocols at one [ATP]. The model can (`Analyses/FV_Identifiability/conclusions.md` §6): the 8 mM model on the low-ATP protocol gives the same force as on its own up to 2 ML/s (within 0.2 %), 4 % more at 3 ML/s and 25 % more at 4 ML/s. So the ratios at 0.5–2 ML/s are clean, 5 and 6 ML/s are clean by construction, and 3 and 4 ML/s carry a protocol effect. That estimate is the model's, and the model redevelops force too slowly after the step (#77), so it is more likely an upper bound than a lower one.
+
 ## Did the expectation hold?
 
 The issue set no numeric prediction. The implicit one was that a model fitted to the single 06/15 F–V would land inside the 12-prep pool at 8 mM and predict 4 mM. **Partly.** As a member of the population it does: 8 mM is within 2 sd at every point and 4 mM within 1 sd to 3 ML/s. As the mean preparation it does not: 8 mM is 3–7 standard errors low at most speeds. It fails on the **high-speed end**, through post-step slack and Vmax 4.6 vs 5.5. Whether it also fails on **how the ATP effect scales with speed** is not settled by these data.
@@ -211,6 +243,7 @@ The issue set no numeric prediction. The implicit one was that a model fitted to
 run('Analyses/FV_Beard2022/RunFVBeard2022.m')          % -> results/sims.mat (+ per-record checkpoints)
 run('Analyses/FV_Beard2022/RunFVBeard2022Steady.m')    % -> results/steady.mat
 run('Analyses/FV_Beard2022/RunFVBeard2022Analysis.m')  % -> results/metrics.mat, figures/*.png, tables
+run('Analyses/FV_Beard2022/RunProtocolByATP.m')        % data only, ~10 s -> results/protocol_by_atp.log, figures/protocol_by_atp.png
 ```
 
 `RunFVBeard2022Analysis.m` finds its own folder, so it runs from any checkout or worktree. Set `ZERO = false` before running it to get the numbers without the baseline subtraction. The first `loadBeard2022FV()` call reads the 12 xlsx files (~2.5 min) and caches them to `results/beard2022_fv_raw.mat`. On a machine with < 8 GB free, use ≤ 4 workers: a 6-worker pool lost a worker mid-run here.
