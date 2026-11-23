@@ -1,4 +1,11 @@
 {
+  "extraKnownMarketplaces": {
+    "lab-workflow": {
+      "source": { "source": "github", "repo": "filip-jezek/lab-workflow" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": { "lab-workflow@lab-workflow": true },
   "permissions": {
     "allow": [
       "WebFetch(domain:www.ncbi.nlm.nih.gov)",
