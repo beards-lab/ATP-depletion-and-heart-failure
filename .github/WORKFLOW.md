@@ -1,5 +1,5 @@
-<!-- lab-workflow: v2.0.0 (ed56942) -->
-> Synced from [filip-jezek/lab-workflow](https://github.com/filip-jezek/lab-workflow) v2.0.0 (ed56942).
+<!-- lab-workflow: v2.1.0 (e4d94d4) -->
+> Synced from [filip-jezek/lab-workflow](https://github.com/filip-jezek/lab-workflow) v2.1.0 (e4d94d4).
 > Don't edit this copy: change the rules in lab-workflow, then re-run its `scripts/sync.sh`.
 
 # Lab workflow: the rules agents follow
@@ -54,6 +54,8 @@ moves a card to Ready or Done on a human's word only, given in one of three ways
 - On a **Review** card it approves the result.
 - Anything more, even "ok, but …", is feedback.
 - "go" followed by plan edits ("go, A2 no") approves the plan with those edits applied.
+- On a Review card, an approval word followed only by which numbered items of the hand-off's
+  *On approval* list to leave out ("ok, not 2") approves the result without those items.
 
 **When unsure** (which cards, approval or feedback, a comment that contradicts an earlier one),
 the agent lists exactly what it would do and waits for a yes. It may always ask.
@@ -74,12 +76,15 @@ where §3 says to ask:
    - **Approval:** merge the PR into the base named in `## This repo`, and close the issue (the
      approval is also the judgment for `needs-judgment`). Move the card to Done and post a short
      closing comment. For stacked PRs, retarget the dependent PR before deleting the merged branch.
+     Then carry out the rest of the hand-off's *On approval* list (§6): file each proposed issue
+     or decision issue with a Plan in Next. "ok, not 2" leaves item 2 out.
    - **Quick feedback, no code to run** (reword, fill in a report, answer a question, file an
      issue): do it now, post a new hand-off, and the card stays in Review.
    - **Feedback that needs code or runs:** move the card to Ready (the feedback is the go-ahead),
      and post a short comment saying what will be done.
-   - **Feedback that asks a new question:** file it as a new issue with a Plan in Next, and handle
-     the rest of the comment as above.
+   - **Feedback that asks for a new issue:** file it with a Plan in Next, and handle the rest of
+     the comment as above. A new question the agent only spots in the feedback goes on the *On
+     approval* list of the next hand-off, not straight into an issue.
 2. **Next cards with PI comments.**
    - "go" → Ready.
    - Plan edits → revise the Plan, starting it with `Plan vN · YYYY-MM-DD · what changed`, post
@@ -108,8 +113,10 @@ their meaning.
 - **One issue → one short-lived branch `<n>-<slug>` → one PR** (`Closes #<n>`). The base is the
   one `## This repo` names.
 - **Every card that goes to Review has an open PR,** so the PI can read and merge it.
-- **Side findings become new issues** with a Plan, in Next (an `agent-ready` one may go to Ready).
-  Never fix them on the current branch.
+- **Nothing a result leads to happens before the result is approved.** Side findings and next
+  steps the agent recommends go into the hand-off's *On approval* list (§6) as issues or decision
+  issues to file. The agent never files one on its own; the approval of the card files them, with
+  a Plan, into Next. Never fix them on the current branch.
 - **Plans:** the agent may write or expand a plan on a Backlog or Next card when a human asks.
   That is plan only: no code, no runs. Then the card goes to Next.
 - **Never start a card in Next or Backlog.**
@@ -135,7 +142,10 @@ questions with defaults, Budget) / Acceptance criteria (measurable where possibl
 Pointers.
 
 **Hand-off:** status, branch@commit and PR, *Deviations from plan* (or "none"), the one next step,
-and issues filed. Plus, by kind:
+and *On approval*: the numbered list of everything the PI's `ok` will make the agent do. Item 1
+is the merge of the PR and the closing of the issue; the others are the issues and decision
+issues the agent recommends filing, one or two lines each (title, type, why). Only what the
+agent recommends goes on the list; weaker ideas stay in the report's next steps. Plus, by kind:
 - **analysis:** a link to the report .md, its bottom line in at most 2 sentences, and acceptance
   pass/fail per item. No result tables; they live in the report.
 - **decision:** a link to the decision record, and the choice in one line.
@@ -175,8 +185,9 @@ Every analysis lives in its own folder `<analyses dir>/yy-mm-dd-Name/`:
 - `results/`: raw, regenerable, git-ignored, never committed.
 
 The analyses folder's `README.md` is the index and the step-by-step instructions, so read it
-first. Add the index row when you start and the bottom line when you finish. Next steps become
-issues.
+first. Add the index row when you start and the bottom line when you finish. Next steps are
+listed in the report; the ones the agent recommends as issues go on the hand-off's *On approval*
+list (§6) and are filed when the card is approved.
 
 ## 10. Checks before a PR
 
