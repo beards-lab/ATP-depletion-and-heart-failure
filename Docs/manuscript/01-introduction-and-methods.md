@@ -8,7 +8,9 @@ citations use `\citep{}`/`\citet{}` against the accompanying `references.bib`.
 >
 > §1 Introduction replaced by the Overleaf version (main.tex @ 51e26da); `references.bib`
 > replaced by the Overleaf bib (a superset). The old §1.1–1.6 subsections are gone, so the
-> §1.x cross-references below and in §2–3 are stale; the old §1.6 "Principal findings"
+> §1.x cross-references in this note block and in the Notes for the co-authors are stale
+> (those in §2–3 now point to Results, and §2.3.5 uses the H1/H2 labels of the new
+> Introduction; 2026-11-24, #87); the old §1.6 "Principal findings"
 > numbers belong in Results now. Git history (deb4103) has the previous text.
 >
 > ## Revision status (2026-10-07)
@@ -339,7 +341,7 @@ only as a boundary constraint and never as a fit target.
 #### 2.3.1 State space
 
 Parameter values and active switches quoted below are those of the reported 8 mM set,
-`params/robust1_seed.m` (the `refit9` lineage), from which the 2 mM results of §1.6 are
+`params/robust1_seed.m` (the `refit9` lineage), from which the 2 mM results (to be reported in Results) are
 computed. **[TODO: update to the final joint-fit set.]**
 
 The model tracks the probability distribution of a myosin head over six pools. Two are
@@ -486,7 +488,7 @@ $$
 
 The bracketed term on $p_2$ is an optional mechanism that is **disabled in the reported set**
 ($k_\mathrm{re} = k_\mathrm{hop} = 0$); it was active in the preceding lineage and is
-described because it bears on the re-stretch residual (§1.6). It acts only while the muscle
+described because it bears on the re-stretch residual (Results). It acts only while the muscle
 is being lengthened ($v>0$, imposed velocity). Heads strained beyond $s_\mathrm{hop} = 4.75$ nm slip to a neighbouring actin site
 at a rate proportional to the excess strain ($k_\mathrm{hop} = 3.6\times10^4\
 \mu\mathrm{m^{-1}s^{-1}}$), re-entering $p_2$ at zero strain (mass-conserving), and detached
@@ -538,10 +540,10 @@ $$
 Gates are *available* at each ATP-dependent step; in the 8 mM reference set they are
 identically 1 by construction, and they are switched on only for the low-ATP arm. The
 **cycle gate** multiplies the A2 detachment rate: a post-stroke head must bind ATP before it
-can release, so low ATP retains strongly-bound bridges — the force lever (H2). The
+can release, so low ATP retains strongly-bound bridges — the force lever (H1). The
 **availability gates** act on the super-relaxed pool: on the return $S_D \to D_D$
 (re-priming a folded head) and on the entry $D_T \to S_T$ — the kinetic levers, in which
-isometric force is nearly flat (H3). For the exploratory low-ATP fits reported in §1.6 the
+isometric force is nearly flat (H2). For the exploratory low-ATP fits (to be reported in Results) the
 gates are written as power laws, $g = ([\mathrm{ATP}]/[\mathrm{ATP}]_\mathrm{ref})^{p}$, whose
 single exponent is the identified quantity; the Michaelis form above is used when a
 $K_m$ is to be reported. **[TODO: fix the final form with the joint fit.]**
@@ -1151,7 +1153,7 @@ branch feeds.
 
 The claim is reproduction, not unique identification. A single A2-detachment gate
 reproduces most of the 2 mM behaviour, and an SRX-entry partner improves it; the data do not
-exclude other combinations of comparable plausibility, and the 2 mM numbers in §1.6 come
+exclude other combinations of comparable plausibility, and the 2 mM numbers (Results) come
 from a one-dimensional sweep on the 8 mM set, not yet from a joint fit. The 0.2 mM arm is
 not used. The model is calibrated at one Ca$^{2+}$ level, one temperature and one species,
 and the rate constants are therefore not directly comparable to literature values obtained
