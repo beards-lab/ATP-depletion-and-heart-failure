@@ -550,7 +550,7 @@ if params.UseAtpDetachR2
     % rises by (1 + MgADP/K_D). Normalised at (MgATP_ref, MgADP_ref), so the gate is
     % still exactly 1 at the reference state. Inert when off.
     KmA = Km_s;  KmR = Km_s;
-    if isfield(params, 'UseAdpCompR2') && params.UseAdpCompR2
+    if params.UseAdpCompR2
         KmA = Km_s * (1 + params.MgADP/params.K_D);
         KmR = Km_s * (1 + params.MgADP_ref/params.K_D);
     end

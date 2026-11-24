@@ -1,6 +1,6 @@
 %% AnalyzeADP.m -- ADP study: how free ADP follows ATP at a given pH, and what it does to the twitch
 % Reads results/sa_adp_*.mat (runStandalone('adp')) and results/ad_*.mat (runCoupledADP).
-% Writes results/adp_*.csv and figures/figA1_adp_scenarios.png, figA2_traces.png, figA3_split.png.
+% Writes figures/adp_*.csv (tables) and figures/figA1_adp_scenarios.png, figA2_traces.png, figA3_split.png.
 
 here = fileparts(mfilename('fullpath'));
 res = fullfile(here, 'results');  fig = fullfile(here, 'figures');
@@ -20,7 +20,7 @@ for q = {'control', 'mild', 'severe'}
     end
 end
 T1 = cell2table(rows, 'VariableNames', {'path', 'pH', 'ATP_mM', 'fPCr', 'ADP_uM', 'f_SERCA_vs_ref', 'gR2_ATP_ADP', 'gR2_ATP_only'});
-disp(T1);  writetable(T1, fullfile(res, 'adp_scenarios.csv'));
+disp(T1);  writetable(T1, fullfile(fig, 'adp_scenarios.csv'));
 
 col = containers.Map({7.2, 6.9, 6.6}, {[0.12 0.30 0.55], [0.90 0.55 0.15], [0.75 0.12 0.15]});
 lsP = struct('control', ':', 'mild', '--', 'severe', '-');
@@ -64,7 +64,7 @@ end
 TC = cell2table(rows, 'VariableNames', {'case', 'kind', 'path', 'pH', 'ATP_mM', 'ADP_Ca_uM', 'ADP_XB_uM', 'Fdev_kPa', 'Fdia_kPa', ...
     'F_TTP_ms', 'F_RT50_ms', 'F_RT90_ms', 'Ca_dia_uM', 'Ca_peak_uM', 'Ca_amp_uM', 'Ca_d50_ms', 'Ca_tau_ms', 'APD90_ms', ...
     'CaSR_dia_mM', 'f_SERCA', 'ATP_per_head_beat', 'gate_max', 'drift_rel', 'maxdCa_vs_standalone_uM'});
-writetable(TC, fullfile(res, 'adp_cases.csv'));
+writetable(TC, fullfile(fig, 'adp_cases.csv'));
 fprintf('ADP coupled: %d cases, max drift %.2g %%, max |Ca - standalone| %.2g uM\n', height(TC), 100*max(TC.drift_rel), max(TC.maxdCa_vs_standalone_uM));
 disp(TC(:, {'case', 'ADP_Ca_uM', 'Fdev_kPa', 'Fdia_kPa', 'F_TTP_ms', 'F_RT50_ms', 'Ca_dia_uM', 'Ca_amp_uM', 'Ca_d50_ms', 'f_SERCA', 'ATP_per_head_beat'}));
 
@@ -85,7 +85,7 @@ for p = pHs
     end
 end
 TS = cell2table(rows, 'VariableNames', {'pH', 'ATP_mM', 'path', 'metric', 'ADP_uM', 'total_pct', 'ATP_pct', 'ADP_Ca_side_pct', 'ADP_XB_side_pct'});
-writetable(TS, fullfile(res, 'adp_split.csv'));
+writetable(TS, fullfile(fig, 'adp_split.csv'));
 disp(TS(TS.metric == "Fdev_kPa", :));  disp(TS(TS.metric == "F_RT50_ms", :));  disp(TS(TS.metric == "Ca_amp_uM", :));
 disp(TS(TS.metric == "Ca_d50_ms", :));  disp(TS(TS.metric == "Fdia_kPa", :));
 % the reference row per pH (pH effect at 8 mM with its own CK ADP)

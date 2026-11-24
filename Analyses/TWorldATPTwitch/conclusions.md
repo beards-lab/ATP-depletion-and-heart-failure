@@ -21,8 +21,8 @@
 
 - **ADP, derived from CK equilibrium (section 4), is the larger lever once PCr is gone.**
   - Free ADP ∝ ATP·Cr/PCr·10^(pH−7). It rises only as PCr is spent (at 2 mM: 154 µM on the mild path, 1.08 mM on the severe one, at pH 7.2), and acidosis cuts it 2×/4× (pH 6.9/6.6).
-  - At 1.08 mM, ADP turns the 2 mM twitch from −7 % to **+35 %** force. It slows relaxation (RT50 +58 %) and raises diastolic force +72 %: the XB side gives +57 %, SERCA inhibition on the Ca side −15 %.
-  - On the mild path ADP moves force by ≤ 8 %.
+  - At 1.08 mM, ADP turns the 2 mM twitch from −7 % to **+35 %** force (**ADP only, Pi excluded**, so an upper bound: the PCr loss that makes this ADP also releases Pi, with 5 % of the PCr left on the severe path, and Pi lowers force). It slows relaxation (RT50 +58 %) and raises diastolic force +72 %: the XB side gives +57 %, SERCA inhibition on the Ca side −15 %.
+  - On the mild path ADP moves force by ≤ 8 %. Its sign change from 4 to 2 mM (+6.8 % to −5.3 %) comes from the path's anchors: ADP is 257 µM at 4 mM but 154 µM at 2 mM.
 
 The prediction held for ATP: pumps ~1 %, and the XB side dominates. The pH and ADP results were not predicted.
 
@@ -178,8 +178,8 @@ The PCr fraction left is bracketed by two depletion paths, each anchored on publ
 
 Findings:
 1. **ADP matters only once PCr is gone, and then it dominates.**
-   - On the mild path, ADP stays ≤ 257 µM and moves force by ≤ 8 %.
-   - On the severe path at 2 mM, 1.08 mM ADP at pH 7.2 turns the ATP-alone loss (−6.7 %) into a **+35 % gain**.
+   - On the mild path, ADP stays ≤ 257 µM and moves force by ≤ 8 %. The total changes sign from 4 mM (+6.8 %) to 2 mM (−5.3 %) because of the path's anchors, not a mechanism: its ADP is higher at 4 mM (257 µM) than at 2 mM (154 µM).
+   - On the severe path at 2 mM, 1.08 mM ADP at pH 7.2 turns the ATP-alone loss (−6.7 %) into a **+35 % gain**. This is **ADP only, Pi excluded**, and therefore an upper bound: on the severe path only 5 % of the PCr is left, and the PCr that was lost was released as Pi, which is not modelled and lowers force.
    - It also slows relaxation (RT50 +58 %, TTP +55 %) and raises diastolic force **+72 %**. This is the ADP signature of ischaemic diastolic dysfunction: delayed detachment, the route toward rigor contracture.
 2. **On the two sides, ADP pulls in opposite directions.**
    - Ca side: SERCA is inhibited by ADP (f_SERCA 0.80 at 1.08 mM), so the CaT amplitude falls 10.6 % and decay t50 slows 16 %. That costs −15 % force through the steep force–Ca curve.
@@ -189,7 +189,7 @@ Findings:
    - Two caveats apply to the pH 6.6 numbers. The large "ATP alone" +22 % there is the high-activation regime of section 2, where slower detachment wins. And the pH axis still has no myofilament H⁺ desensitisation (section 3).
 4. **The ATP-alone effect is smaller here than in section 2** (2 mM, pH 7.2: −6.7 % vs −12.4 %). This is a consequence of the model, not a numerical artefact.
    - K_T2 = 2.5 mM was set on skinned fibres, where ADP ≈ 0. With 132 µM ADP at baseline, the apparent Km(ATP) of R2 is 3.2 mM, so the R2 gate bites harder and offsets more of the SRX-gate loss.
-   - Whether K_T2 should be read as the ADP-free constant (as here) or as the in-vivo apparent one is a judgment call. It moves the ATP-alone number by ~6 points.
+   - K_T2 is kept as the ADP-free constant, normalised at the in-vivo reference, as implemented (PI decision, 2026-11-09). The two readings bracket the ATP-alone loss at 2 mM, pH 7.2: **−6.7 %** (ADP-free constant, this section) to **−12.4 %** (K_T2 read as the in-vivo apparent constant, section 2).
 
 ## Caveats
 
@@ -215,6 +215,6 @@ From `Analyses/TWorldATPTwitch/`, each step in its own MATLAB process (`matlab -
 2. `runCoupled()`: 42 cases, 50–120 s each; 4–9 processes, about 15 min. Needs step 1.
 3. `runGateSplit()`: 4 cases, about 2 min.
 4. ADP study: `runStandalone('adp')` (30 runs), then `runCoupledADP()` (48 cases; waits for its standalone states, so both can be launched together), then `AnalyzeADP`. About 20 min on 12 processes.
-5. `AnalyzeTWorldATPTwitch`: tables to `results/*.csv`, figures to `figures/`, under 1 min.
+5. `AnalyzeTWorldATPTwitch`: tables to `figures/*.csv`, figures to `figures/`, under 1 min. (`AnalyzeADP` writes its `adp_*.csv` tables there too.)
 
 Every run is cached in `results/` (git-ignored). Delete a `.mat` file to rerun that case.

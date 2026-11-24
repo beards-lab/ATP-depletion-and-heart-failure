@@ -1,6 +1,6 @@
 %% AnalyzeTWorldATPTwitch.m -- tables and figures of the TW_ATP / lowAtp comparison and the coupled twitch
 % Reads results/sa_*.mat (runStandalone) and results/cp_*.mat (runCoupled); needs no T-World on the path.
-% Writes results/*.csv and figures/fig1_summary.png, fig2_tworld_variants.png, fig3_split.png.
+% Writes figures/*.csv (tables) and figures/fig1_summary.png, fig2_tworld_variants.png, fig3_split.png.
 
 here = fileparts(mfilename('fullpath'));
 res = fullfile(here, 'results');  fig = fullfile(here, 'figures');
@@ -33,7 +33,7 @@ for v = rel
     TA.(['d_' v{1} '_pct']) = y;
 end
 disp(TA(:, {'model', 'ATP_mM', 'Ca_dia_uM', 'Ca_amp_uM', 'd_Ca_amp_uM_pct', 'd_Ca_d90_ms_pct', 'd_APD90_ms_pct', 'd_CaSR_dia_mM_pct', 'f_SERCA', 'f_NaK', 'IKATP_peak', 'beat_to_beat_amp'}));
-writetable(TA, fullfile(res, 'standalone_compare.csv'));
+writetable(TA, fullfile(fig, 'standalone_compare.csv'));
 
 % reference checks
 rr = ld('sa_twatp_ref');  rp = ld('sa_twatp_plain');  r8 = ld('sa_twatp_A8_pH7.2');
@@ -59,7 +59,7 @@ for p = pHs
 end
 TB = cell2table(rows, 'VariableNames', {'pH', 'ATP_mM', 'Ca_dia_uM', 'Ca_peak_uM', 'Ca_amp_uM', 'Ca_TTP_ms', 'Ca_d50_ms', ...
     'Ca_d90_ms', 'Ca_tau_ms', 'APD90_ms', 'CaSR_dia_mM', 'Nai_mM', 'LandTa_peak_kPa', 'beat_to_beat_amp'});
-disp(TB);  writetable(TB, fullfile(res, 'standalone_twatp_pH.csv'));
+disp(TB);  writetable(TB, fullfile(fig, 'standalone_twatp_pH.csv'));
 
 %% C. coupled twitch
 K = coupledCases();
@@ -76,7 +76,7 @@ TC = cell2table(rows, 'VariableNames', {'case', 'core', 'kind', 'ATP_Ca', 'ATP_X
     'F_RT50_ms', 'F_RT90_ms', 'Ca_dia_uM', 'Ca_peak_uM', 'Ca_amp_uM', 'Ca_TTP_ms', 'Ca_d50_ms', 'Ca_d90_ms', ...
     'ATP_per_head_beat', 'gate_max', 'bound_max', 'drift_rel', 'maxdCa_vs_standalone_uM', 'wall_s'});
 disp(TC(:, {'case', 'Fdev_kPa', 'Fdia_kPa', 'F_TTP_ms', 'F_RT50_ms', 'Ca_amp_uM', 'ATP_per_head_beat', 'drift_rel', 'maxdCa_vs_standalone_uM'}));
-writetable(TC, fullfile(res, 'coupled_cases.csv'));
+writetable(TC, fullfile(fig, 'coupled_cases.csv'));
 fprintf('coupled: %d cases, max beat-to-beat Fdev drift %.2g %%, max |Ca coupled - standalone| %.2g uM\n', ...
     height(TC), 100*max(TC.drift_rel), max(TC.maxdCa_vs_standalone_uM));
 
@@ -94,7 +94,7 @@ for p = pHs
 end
 TS = cell2table(rows, 'VariableNames', {'pH', 'ATP_mM', 'metric', 'total_pct', 'Ca_side_pct', 'XB_side_pct', 'interaction_pct'});
 disp(TS(TS.metric == "Fdev_kPa" | TS.metric == "F_RT50_ms", :));
-writetable(TS, fullfile(res, 'coupled_split.csv'));
+writetable(TS, fullfile(fig, 'coupled_split.csv'));
 
 % the full grid relative to 8 mM / pH 7.2
 F0 = g(8, 8, 7.2, 'Fdev_kPa');  G = zeros(4);  GC = zeros(4);  C0 = g(8, 8, 7.2, 'Ca_amp_uM');
@@ -103,7 +103,7 @@ for ip = 1:4, for ia = 1:4
     GC(ip, ia) = 100*(g(ATP(ia), ATP(ia), pHs(ip), 'Ca_amp_uM')/C0 - 1);
 end, end
 TG = array2table([pHs' G GC], 'VariableNames', [{'pH'}, compose('dFdev_pct_ATP%g', ATP), compose('dCaAmp_pct_ATP%g', ATP)]);
-disp(TG);  writetable(TG, fullfile(res, 'coupled_grid.csv'));
+disp(TG);  writetable(TG, fullfile(fig, 'coupled_grid.csv'));
 rb = TC(TC.core == "s3_free", :);
 fprintf('robustness, s3_free core: Fdev %.2f -> %.2f kPa at 2 mM (%+.1f %%) vs t1_isoT %+.1f %%\n', rb.Fdev_kPa(1), rb.Fdev_kPa(2), ...
     100*(rb.Fdev_kPa(2)/rb.Fdev_kPa(1) - 1), 100*(g(2, 2, 7.2, 'Fdev_kPa')/F0 - 1));
@@ -122,7 +122,7 @@ for p = [7.2 6.6]
     end
 end
 TD = cell2table(rows, 'VariableNames', {'pH', 'XB', 'Fdev_kPa', 'dFdev_pct', 'SRX_dia', 'SRX_min', 'bound_max', 'F_TTP_ms', 'ATP_per_head_beat'});
-disp(TD);  writetable(TD, fullfile(res, 'gate_split.csv'));
+disp(TD);  writetable(TD, fullfile(fig, 'gate_split.csv'));
 
 %% Figures
 col = containers.Map({8, 6, 4, 2}, {[0.12 0.30 0.55], [0.35 0.60 0.80], [0.90 0.55 0.15], [0.75 0.12 0.15]});
