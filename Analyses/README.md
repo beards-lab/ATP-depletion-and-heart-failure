@@ -18,6 +18,8 @@ and what to do next. This page is the index and the cross-analysis synthesis.
 
 ## Start here — the numbers that are settled
 
+> **Caveat, 2026-11-24 (issue #111, one preparation).** The two `ktr` rows below rest on the protocol `ktr` being insensitive to rundown. In the bracketed 11/19/2026 M prep it drifted as much as the slack `ktr` (both −16 % over three 8 mM contractions), and that prep showed no force gain at 2 mM (×0.93–0.98). Treat the force and `ktr` numbers of the first two rows as open until the pending decision on fitting bracketed ratios; see the **26-11-23-Rundown1119M** row of the index.
+
 | question | answer | where |
 |---|---|---|
 | What does 2 mM ATP do? | **force ×1.34–1.35**; `ktr` **×0.72 from the ktr protocol** (CV 4 %) — *not* the ×0.58 the slack gives, which is compliance-contaminated | [ATPEffectReconciliation](ATPEffectReconciliation/conclusions.md) |
