@@ -143,7 +143,7 @@ if tt < 0
     return;
 end
 tms  = 1e3*mod(tt, ca.T);                 % ms since the beat onset: the stimulus is on for tms <= stimDur
-ydot = model_TWorld(tms, y(:), 1, tw.args{:});
+ydot = tw.model(tms, y(:), 1, tw.args{:});
 if tw.coupling == 3
     % 'xb': the troponin Ca flux is this model's thin filament, not Land's Ca_TRPN.
     % ydot(iTnC) = Bmax_TnClow*dCa_TRPN/dt is Land's flux (mM/ms), already subtracted

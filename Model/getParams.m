@@ -370,6 +370,8 @@ end
     params0.K_T2 = 2.5;             % Km(ATP) (mM) of R2's ATP-binding detachment step
     params0.UseAtpKmsrd = false;    % kmsrd (SRX-ADP return) x gATP -> ktr lever (force flat in it)
     params0.K_srx = 9.3;            % Km(ATP) (mM) of the SRX-ADP return
+    params0.UseAdpCompR2 = false;   % MgADP competes with ATP in the R2 gate: Km(ATP) x (1 + MgADP/K_D); needs UseAtpDetachR2
+    params0.MgADP_ref = 0;          % [MgADP] (mM) at which that gate equals 1 (with MgATP_ref)
 
     % Strain-dependent ATP gating of R2 detachment (ported from lowatp-2state).
     % Positive strain inhibits ADP release, putting the ATP-binding step in
