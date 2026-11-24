@@ -1,6 +1,6 @@
 # Post-step slack on the isovelocity cycle: what carries it
 
-Issue #77 · 2026-11-19 · drafted by Claude (AI agent) · status: carrier named; no fix that keeps the 8 mM objective
+Issue #77 · 2026-11-19 · drafted by Claude (AI agent) · status: carrier named; no fix that keeps the 8 mM objective; the PI chose option 1 (2026-11-24)
 
 ## Bottom line
 
@@ -30,7 +30,27 @@ On the Beard2022 isovelocity protocol the incumbent model is slack for 2–8.5 m
 
 ![Post-step slack](figures/post_step_slack.png)
 
-*Top: force, series-element extension and contractile shortening speed through one cycle (step 0.054 Lo, ramp 4 ML/s); black incumbent, orange the series element with a toe. Bottom: slack time against step size; lowest force after the step, model against data; the 8 mM objective of the candidates.*
+*Top: force through the 1, 4 and 6 ML/s cycles, measured (blue: mean and full range of the twelve 8 mM records) and modelled (black incumbent, orange the series element with a toe); right, the series-element extension on the 4 ML/s cycle. Bottom: contractile shortening speed on the 4 ML/s cycle; slack time against step size; lowest force after the step, model against data; the 8 mM objective of the candidates.*
+
+### 0. The measured time course against the model (added 2026-11-24)
+
+Force as a fraction of the force in the hold before the step, at fixed times after the step onset. Data: the twelve 8 mM records, force above the slack baseline, mean (lowest to highest preparation). Model: the same cycle with the median measured step.
+
+| Cycle | Time (ms) | Data | Incumbent | Toe (exponent 3) |
+|---|---|---|---|---|
+| 1 ML/s, step 0.021 Lo | 2 | 0.43 (0.36–0.53) | 0.35 | 0.44 |
+| | 5 | 0.48 (0.41–0.56) | 0.47 | 0.49 |
+| | 10 | 0.54 (0.49–0.61) | 0.55 | 0.54 |
+| 4 ML/s, step 0.054 Lo | 2 | 0.09 (0.04–0.19) | 0 | 0.02 |
+| | 5 | 0.11 (0.06–0.20) | 0 | 0.08 |
+| | 10 | 0.10 (0.05–0.18) | 0.12 | 0.12 |
+| 6 ML/s, step 0.066 Lo | 2 | 0.04 (−0.01–0.11) | 0 | 0.00 |
+| | 5 | 0.05 (−0.01–0.10) | 0 | 0.01 |
+
+- **The data settle within about 2 ms of the step** and then hold a nearly flat force through the ramp: 0.10 at 4 ML/s, 0.04–0.05 at 6 ML/s. The first 2 ms are a damped ringing of the motor and the preparation.
+- **The incumbent is at zero for the first 5–6 ms at 4 ML/s and for the whole ramp at 6 ML/s.** So on the measured protocol its force–velocity curve drops to zero at the top speeds, where the data still carry force. (The PI: "The problem is that the FV profile collapses to 0"; I read this as the high-speed end of the curve.)
+- At 1 ML/s the incumbent is never slack, but it dips lower than the data right after the step (0.35 against 0.43) and falls below them late in the ramp (0.49 against 0.53 at 70 ms).
+- The toe follows the 1 ML/s trace within the data range throughout and reaches the data at 4 ML/s by 6 ms. At 6 ML/s it is still below the data for the whole ramp (0.02 at 8 ms).
 
 ### 1. What happens in the cycle (0.054 Lo, 4 ML/s)
 
@@ -120,10 +140,14 @@ Not done from the plan: the re-run of the 24 records with a fix (there is no fix
 
 Recommendation: option 1 as the next issue, since it is one day of work and decides whether option 2 is needed.
 
+**Decision (filip-jezek, 2026-11-24):** "Pick option 1. A further analysis is needed to reconcile the two." Proposed follow-up issues, to be filed on approval:
+- **A series element for the isovelocity records:** fit `kSE` and `ekSE` to the step troughs and the first 10 ms of the 1–6 ML/s cycles of the Beard2022 set; everything else stays at the incumbent. Unblocks #79.
+- **Reconcile the two series elements:** why the slack battery wants a short, stiff element and the isovelocity cycle a long one with a soft foot. Candidates: end compliance of the preparation (2021 against 2026 mounts), a joint refit with `ekSE` free (option 2), or a mechanism missing in the model that the toe stands in for.
+
 ## Reproduce
 
 ```matlab
 run('Analyses/26-11-19-PostStepSlack/scripts/RunStepScan.m')          % 39 simulations, ~4.5 min, one core
 run('Analyses/26-11-19-PostStepSlack/scripts/RunScoreCandidates.m')   % 4 objective evaluations, 5 workers, ~3 min; runs in the checkout that has data/
-run('Analyses/26-11-19-PostStepSlack/scripts/PlotStepScan.m')         % figure
+run('Analyses/26-11-19-PostStepSlack/scripts/PlotStepScan.m')         % figure and the table of section 0; 6 simulations, ~1 min; needs the cached records of Analyses/FV_Beard2022
 ```
