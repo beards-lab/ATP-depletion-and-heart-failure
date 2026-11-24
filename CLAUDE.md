@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## This repo
 
-Working rules: `.github/WORKFLOW.md`, synced from `filip-jezek/lab-workflow` (v2.0.0; don't edit
+Working rules: `.github/WORKFLOW.md`, synced from `filip-jezek/lab-workflow` (v2.1.0; don't edit
 the copy, change the rules there). People's side of the process: that repo's README. This section
 gives the repo's own values and wins where it says so.
 
