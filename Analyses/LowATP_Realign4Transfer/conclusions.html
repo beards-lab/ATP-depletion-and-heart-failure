@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LowATP realign4 transfer - conclusions</title>
+<style>
+ :root{--fg:#1a1a1a;--mut:#5b6570;--bg:#fff;--card:#f7f8fa;--bd:#d8dde3;--acc:#0b5cad}
+ @media (prefers-color-scheme:dark){:root{--fg:#e8eaed;--mut:#9aa4af;--bg:#15181c;--card:#1e2228;--bd:#333a42;--acc:#68b0ff}}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--fg);
+  font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+ article{max-width:1180px;margin:0 auto;padding:44px 26px 90px}
+ h1{font-size:2.0rem;line-height:1.22;margin:.2em 0 .5em;letter-spacing:-.02em}
+ h2{font-size:1.42rem;margin:2.1em 0 .6em;padding-bottom:.28em;border-bottom:2px solid var(--bd)}
+ h3{font-size:1.13rem;margin:1.7em 0 .5em;color:var(--acc)}
+ h4{font-size:1rem;margin:1.4em 0 .4em;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+ p{margin:.75em 0} li{margin:.3em 0}
+ a{color:var(--acc)}
+ code{background:var(--card);border:1px solid var(--bd);border-radius:4px;
+  padding:.08em .34em;font:.87em/1.4 ui-monospace,SFMono-Regular,Consolas,monospace}
+ pre{background:var(--card);border:1px solid var(--bd);border-radius:8px;
+  padding:14px 16px;overflow-x:auto}
+ pre code{background:none;border:0;padding:0;font-size:.86rem}
+ blockquote{margin:1.1em 0;padding:.7em 1.1em;border-left:4px solid var(--acc);
+  background:var(--card);border-radius:0 6px 6px 0;color:var(--fg)}
+ hr{border:0;border-top:1px solid var(--bd);margin:2.4em 0}
+ table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.93rem;display:block;overflow-x:auto}
+ th,td{border:1px solid var(--bd);padding:7px 11px;text-align:left;vertical-align:top}
+ th{background:var(--card);font-weight:650;white-space:nowrap}
+ tbody tr:nth-child(even){background:color-mix(in srgb,var(--card) 55%,transparent)}
+ img{max-width:100%;height:auto;display:block;margin:1.3em auto;
+  border:1px solid var(--bd);border-radius:8px;background:#fff}
+</style>
+</head>
+<body>
+<article>
+<h1>Transferring the low-ATP fit onto the realign4 8 mM baseline</h1>
+<p><strong>Question.</strong> The 8 mM baseline moved on <code>Further-optim</code> (<code>realign4_opt</code>, the load-realignment refit). The low-ATP fit was built on the <em>previous</em> baseline (<code>rskR2_w025_opt</code>). Re-base it — new baseline, same ATP gates, no refit — and ask how good the 2 mM fit is now.</p>
+<p><strong>Verdict.</strong> The transfer works and it is a large, real improvement: <strong>2 mM feature cost 19.58 → 12.44</strong> on one fixed yardstick, against a scatter floor of ~0.25. Refitting the gates on the new baseline then buys a further <strong>12.44 → 11.20</strong> (§5).</p>
+<p>But the gain is <strong>not</strong> the gates doing something new — it is that realign4 fixed a defect the two conditions <em>share</em>, and the 2 mM condition inherited it. The specifically-ATP part of the residual survives both steps intact: <code>rsK</code>'s ratio is 0.587 against a measured 0.363, versus 0.600 before any of this. The refit, given 21 free ATP exponents, moved <code>rsK</code> by <strong>0.02</strong> and spent two of its three accepted moves on <strong>mechanical</strong> levers (<code>eta_M</code>, <code>kSE</code>) rather than rate constants. The kinetic gates are exhausted; what remains is structural.</p>
+<hr>
+<h2>1. What was transferred</h2>
+<p>The low-ATP specifics are a cleanly separable block — everything else in <code>lowATP_powergate2_opt.m</code> <em>is</em> the old 8 mM baseline. So the re-base is exactly: <code>realign4_opt.m</code> verbatim, plus</p>
+<ul>
+<li><code>UseAtpPowerGates = 1</code>, <code>MgATP_ref = 8</code></li>
+<li>the 21 <code>pAtp_*</code> exponents</li>
+<li>the 2 mM condition itself (<code>MgATP = 2</code>, <code>Pi = 0.8</code>, 2 mM slack protocol)</li>
+</ul>
+<p>written to <strong><code>params/lowATP_realign4_gates.m</code></strong>. The gates are exactly 1 at <code>MgATP_ref</code> for any exponents, so <strong>the 8 mM fit above them is untouched by construction</strong>.</p>
+<p>Exponents were taken from the optimiser state at <strong>full precision</strong>, not from the committed <code>%.6g</code> snapshot — that rounding alone is worth ~0.60 of the 2 mM objective (<a href="../AtpGateHillForm/conclusions.md">AtpGateHillForm</a> §3a).</p>
+<p>Merging <code>Further-optim</code> was a prerequisite, not a convenience: <code>realign4_opt</code> sets <code>UseLoadRealign</code>, <code>SRXFromR2HighStrain</code>, <code>UseMaxwellTensionOnly</code> and the <code>FV_normpowerAvg</code> feature, none of which existed on <code>lowatp-2state</code>.</p>
+<h2>2. The numbers</h2>
+<p><strong>The two baselines were fitted against different objectives</strong>, so the incumbent's recorded 15.98 is <em>not</em> comparable to anything below. <code>realign4</code>'s list drops <code>ovrsht_dy</code> (retired by <a href="../SlackDataAnalysis/conclusions.md">SlackDataAnalysis</a>), reweights <code>rsK</code> 0.1 → 0.25, and rescales the passive terms. Everything here is therefore scored <strong>both ways</strong>, and the like-for-like column is the one to read.</p>
+<table>
+<thead>
+<tr>
+<th>configuration</th>
+<th>OLD list (19 feats)</th>
+<th><strong>NEW list (18 feats)</strong></th>
+</tr>
+</thead><tbody>
+<tr>
+<td>OLD baseline + gates @ 2 mM</td>
+<td>15.985</td>
+<td><strong>19.575</strong></td>
+</tr>
+<tr>
+<td><strong>NEW baseline + gates @ 2 mM</strong></td>
+<td>15.687</td>
+<td><strong>12.440</strong></td>
+</tr>
+<tr>
+<td>NEW baseline, <strong>gates OFF</strong> @ 2 mM</td>
+<td>133.49</td>
+<td><strong>138.30</strong></td>
+</tr>
+<tr>
+<td>OLD baseline @ 8 mM (floor)</td>
+<td>4.685</td>
+<td>5.669</td>
+</tr>
+<tr>
+<td>NEW baseline @ 8 mM (floor)</td>
+<td>6.738</td>
+<td><strong>3.112</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Three readings, in order of importance:</p>
+<ul>
+<li><strong>On the current objective the 2 mM fit improves 19.58 → 12.44 (−36 %)</strong>, ~29× the measured peak-to-peak scatter of 0.25. The 8 mM floor improves 5.67 → 3.11, so the <strong>excess over floor</strong> goes 13.91 → 9.33 (−33 %). Roughly a third of the win is the shared baseline getting better and two thirds is better low-ATP behaviour — though that split is a framing, not a decomposition, since the features interact.</li>
+<li><strong>On the <em>old</em> objective the same change is worth only −0.30</strong> — about one peak-to-peak, i.e. nothing. The entire improvement lives in <code>rsK</code>, which the old list weighted at 0.1 and which realign4 was built to fix. The two lists disagree about whether this transfer is a triumph or a wash; the new one is right, because <code>rsK</code> is where the model is actually wrong.</li>
+<li><strong>The transferred gates still carry the whole low-ATP effect on the new baseline</strong>: turning them off costs 12.44 → 138.30. They did not become inert or harmful under the new parameters, which is the thing that could have gone wrong and did not.</li>
+</ul>
+<blockquote><strong>Constant offset, read before quoting any absolute number.</strong> The bound term <code>k2|…,ksrd|…,kmsrd|…</code> contributes <strong>exactly 1.200 to every cell above</strong>. A slack-only run does not produce <code>k2</code>/<code>ksrd</code>/<code>kmsrd</code>, so each sub-entry returns <code>MISSING_FEATURE_COST = 100</code> × its weight (0.01/0.001/0.001). It is not a bound violation and not a residual. It cancels in every comparison here, but the honest floors are 1.91 (new) and 4.47 (old), not 3.11 and 5.67.</blockquote>
+<h2>3. Where the improvement is, feature by feature</h2>
+<p>2 mM, NEW list, old baseline → new baseline:</p>
+<table>
+<thead>
+<tr>
+<th>feature</th>
+<th>OLD 2 mM</th>
+<th><strong>NEW 2 mM</strong></th>
+<th>Δ</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><strong><code>rsK</code></strong></td>
+<td>10.595</td>
+<td><strong>2.756</strong></td>
+<td><strong>−7.84</strong></td>
+</tr>
+<tr>
+<td><code>coolDownLS</code></td>
+<td>2.020</td>
+<td>1.616</td>
+<td>−0.40</td>
+</tr>
+<tr>
+<td><code>steady</code></td>
+<td>0.476</td>
+<td>0.171</td>
+<td>−0.31</td>
+</tr>
+<tr>
+<td><code>vall_y</code></td>
+<td>0.978</td>
+<td>0.798</td>
+<td>−0.18</td>
+</tr>
+<tr>
+<td><code>peak2</code></td>
+<td>0.330</td>
+<td>0.240</td>
+<td>−0.09</td>
+</tr>
+<tr>
+<td><code>vall2_dy</code></td>
+<td>1.204</td>
+<td>1.801</td>
+<td>+0.60</td>
+</tr>
+<tr>
+<td><code>ktr</code></td>
+<td>0.273</td>
+<td>0.725</td>
+<td>+0.45</td>
+</tr>
+<tr>
+<td><code>A</code></td>
+<td>0.195</td>
+<td>0.610</td>
+<td>+0.42</td>
+</tr>
+<tr>
+<td><code>ktr_rmse</code></td>
+<td>0.074</td>
+<td>0.191</td>
+<td>+0.12</td>
+</tr>
+<tr>
+<td>(bound-term artifact)</td>
+<td>1.200</td>
+<td>1.200</td>
+<td>0</td>
+</tr>
+<tr>
+<td><strong>total</strong></td>
+<td><strong>19.575</strong></td>
+<td><strong>12.440</strong></td>
+<td><strong>−7.14</strong></td>
+</tr>
+</tbody>
+</table>
+<p><code>rsK</code> alone is <strong>110 %</strong> of the net improvement; six terms get modestly worse and pay some of it back. <code>rsK</code> is still the largest single residual at 2 mM (2.76, 22 % of the total), so it remains the thing to work on — it is just no longer catastrophic.</p>
+<h2>4. The physiology: is the <em>ATP effect</em> any better?</h2>
+<p>Mostly no, and this is the honest limit of the result. Ratios are 2 mM / 8 mM:</p>
+<table>
+<thead>
+<tr>
+<th>observable</th>
+<th>data</th>
+<th>OLD model</th>
+<th><strong>NEW model</strong></th>
+<th>new model/data</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>steady</code> (force)</td>
+<td>1.180</td>
+<td>1.153</td>
+<td><strong>1.163</strong></td>
+<td>0.99</td>
+</tr>
+<tr>
+<td><code>A</code> (amplitude)</td>
+<td>1.184</td>
+<td>1.176</td>
+<td><strong>1.193</strong></td>
+<td>1.01</td>
+</tr>
+<tr>
+<td><code>peak1_y</code></td>
+<td>1.254</td>
+<td>1.213</td>
+<td><strong>1.233</strong></td>
+<td>0.98</td>
+</tr>
+<tr>
+<td><code>ktr</code></td>
+<td>0.537</td>
+<td>0.490</td>
+<td><strong>0.469</strong></td>
+<td>0.87</td>
+</tr>
+<tr>
+<td><code>vall_y</code></td>
+<td>1.198</td>
+<td>1.085</td>
+<td><strong>1.072</strong></td>
+<td>0.89</td>
+</tr>
+<tr>
+<td><code>peak2</code></td>
+<td>1.179</td>
+<td>1.064</td>
+<td><strong>1.049</strong></td>
+<td>0.89</td>
+</tr>
+<tr>
+<td><code>rsK</code></td>
+<td>0.363</td>
+<td>0.600</td>
+<td><strong>0.588</strong></td>
+<td><strong>1.62</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Force amplitudes are excellent and were already</strong>: force, <code>A</code> and <code>peak1_y</code> all land within 1–2 % of the measured ATP effect. The 2 mM force enhancement is a solved problem in this model.</li>
+<li><strong><code>rsK</code>'s <em>ratio</em> barely moved</strong> (0.600 → 0.588, still 1.6× too shallow) — but its <em>absolute</em> value improved a lot at both concentrations: 8 mM 102.6 → 67.1 (data 43.7, so ×2.35 → ×1.53) and 2 mM 61.6 → 39.5 (data 15.9, ×3.88 → ×2.48). That is exactly the shape of a defect <strong>shared</strong> with 8 mM, which is what <a href="../AtpGateHillForm/conclusions.md">AtpGateHillForm</a> §5.4 predicted would be immune to anything done to the gates. Fixing it at 8 mM fixed it at 2 mM. The <em>residual</em> ATP asymmetry in <code>rsK</code> is a separate, still-open defect.</li>
+<li><strong><code>ktr</code>, <code>vall_y</code> and <code>peak2</code> drifted slightly the wrong way</strong> (m/d 0.87–0.89): the model now over-slows <code>ktr</code> at low ATP and under-produces the low-ATP enhancement of the valley and second peak. These are the terms that got worse in §3 and they are the natural targets for a refit.</li>
+</ul>
+<h2>5. The refit</h2>
+<p>Round 3, <code>RunGateRefit.m</code>: the same 21 exponents, seeded from the transferred values, optimised on the realign4 baseline against its own feature list. Three changes from round 2, all forced by <a href="../AtpGateHillForm/conclusions.md">AtpGateHillForm</a> §3a — accept threshold <strong>0.25</strong> (the measured peak-to-peak scatter) instead of <code>1e-4</code>, coarse steps, and <code>%.17g</code> serialisation. Converged in <strong>36.5 min / 79 evaluations</strong>, well inside the 3 h budget: it ran out of moves, not time.</p>
+<p><strong>2 mM cost 12.4399 → 11.2037</strong> (−1.24, −10 %). Written to <code>params/lowATP_realign4_gates_opt.m</code>. 8 mM invariance asserted exactly zero.</p>
+<p><strong>Only three moves cleared the threshold, out of 21 gates:</strong></p>
+<table>
+<thead>
+<tr>
+<th>gate</th>
+<th>tier</th>
+<th>seed → refit</th>
+<th>×factor at 2 mM</th>
+<th>Δcost</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>kmsrd</code> SRX-ADP return</td>
+<td>A</td>
+<td>+0.636 → +0.486</td>
+<td>0.414 → <strong>0.510</strong></td>
+<td>−0.251</td>
+</tr>
+<tr>
+<td><code>eta_M</code> Maxwell dashpot</td>
+<td>A*</td>
+<td>0.000 → <strong>−0.200</strong></td>
+<td>1.000 → <strong>1.319</strong></td>
+<td>−0.464</td>
+</tr>
+<tr>
+<td><code>kSE</code> series elastic</td>
+<td>B</td>
+<td>+0.070 → +0.150</td>
+<td>0.907 → <strong>0.812</strong></td>
+<td>−0.521</td>
+</tr>
+</tbody>
+</table>
+<p>The other 18 — including <strong>every core rate constant</strong>: <code>k2</code>, <code>kah</code>, <code>kamh</code>, <code>ka</code>, <code>kd</code>, <code>k1</code>, <code>k_1</code>, <code>ksr0</code>, <code>ksr2srd</code>, <code>ksrd2sr</code> — did not move at all. Stage 1 tested the nine already-active gates at ±0.15/±0.30 and accepted exactly one.</p>
+<h3>5a. What the refit is telling us, which is more than the −1.24</h3>
+<p><strong>The gains are in the mechanical levers, not the kinetic ones.</strong> <code>eta_M</code> (a viscosity) and <code>kSE</code> (a series stiffness) together supply <strong>0.99 of the 1.24</strong> — and both are the levers this project has flagged as the weakest physiological claims (<code>getParams</code> calls <code>eta_M</code> "least defensible"; <code>kSE</code> is tier B by construction). The cross-bridge <em>rate</em> gates are done: they were already at a local optimum, and the objective's remaining low-ATP degrees of freedom are compliance, not chemistry.</p>
+<p>That is exactly what §4's conflict predicts. <code>ktr</code> needed <em>less</em> low-ATP suppression and <code>rsK</code> needed <em>more</em>, on two rates driven by the same core cycle, so no strain-uniform kinetic gate can serve both. The optimiser did the only thing available: it took the one kinetic move that helps <code>ktr</code> (<code>kmsrd</code>, the <code>ktr</code> lever, relaxed 0.414 → 0.510) and paid for the rest with series compliance.</p>
+<p><strong>Where the −1.24 landed, and what it cost:</strong></p>
+<table>
+<thead>
+<tr>
+<th>feature</th>
+<th>seed</th>
+<th>refit</th>
+<th>Δ</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>vall2_dy</code></td>
+<td>1.801</td>
+<td>1.180</td>
+<td>−0.62</td>
+</tr>
+<tr>
+<td><code>coolDownLS</code></td>
+<td>1.616</td>
+<td>1.280</td>
+<td>−0.34</td>
+</tr>
+<tr>
+<td><code>ktr</code></td>
+<td>0.725</td>
+<td>0.424</td>
+<td>−0.30</td>
+</tr>
+<tr>
+<td><code>vall_y</code></td>
+<td>0.798</td>
+<td>0.691</td>
+<td>−0.11</td>
+</tr>
+<tr>
+<td><code>ktr_rmse</code></td>
+<td>0.191</td>
+<td>0.114</td>
+<td>−0.08</td>
+</tr>
+<tr>
+<td><code>A</code></td>
+<td>0.610</td>
+<td>0.534</td>
+<td>−0.08</td>
+</tr>
+<tr>
+<td><code>peak1_dSL</code></td>
+<td>0.282</td>
+<td>0.427</td>
+<td>+0.15</td>
+</tr>
+<tr>
+<td><code>restretchSlopeStart</code></td>
+<td>0.580</td>
+<td>0.700</td>
+<td>+0.12</td>
+</tr>
+<tr>
+<td><strong><code>rsK</code></strong></td>
+<td><strong>2.756</strong></td>
+<td><strong>2.736</strong></td>
+<td><strong>−0.02</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The refit <strong>recovered the terms the transfer had broken</strong> — <code>ktr</code>, <code>A</code>, <code>ktr_rmse</code> and <code>vall2_dy</code> were four of the six that got worse in §3, and all four came back. <code>ktr</code>'s ratio improves 0.469 → 0.504 against a measured 0.537 (m/d 0.87 → <strong>0.94</strong>).</p>
+<p><strong><code>rsK</code> did not move — 2.756 → 2.736.</strong> It is now <strong>24 % of the whole 2 mM residual</strong> and by far the largest single term, and 21 free ATP exponents bought 0.02 of it. Its ratio sits at 0.587 against a measured 0.363 (m/d 1.61, unchanged). This is the cleanest statement yet that <strong>the residual low-ATP defect is not reachable by any 8 mM-inert rate gate</strong>: the levers exist, the optimiser has them, and they do nothing.</p>
+<p><code>vall_y</code> and <code>peak2</code> also stay stuck at m/d 0.90 — the model under-produces the low-ATP enhancement of the valley and second peak, and no gate fixed that either.</p>
+<h3>5b. Two caveats on the number</h3>
+<ul>
+<li><code>kmsrd</code>'s move cleared the threshold by 0.001 (−0.251 against 0.25). At σ ≈ 0.076 that is ~3.3σ — defensible, but it is the one move here that a re-run might not reproduce. The <code>eta_M</code> and <code>kSE</code> moves are ~6σ and ~7σ and are not in question.</li>
+<li>All costs still carry the constant +1.200 bound-term artifact (§2). The refit's honest numbers are 11.24 → <strong>10.00</strong> against a floor of <strong>1.91</strong>.</li>
+</ul>
+<p><strong>Side note, in the model's favour:</strong> the refit moved <code>kmsrd</code>'s 2 mM factor from 0.414 to 0.510, which raises its implied Km from 7.15 mM toward ~5 mM and its <code>k/K</code> from 2.8×10³ toward ~4×10³ M⁻¹s⁻¹. Still 100× too slow to be ATP binding, so AtpGateHillForm's falsification stands — but the fit moved <em>toward</em> chemical plausibility when given the freedom, not away from it.</p>
+<h2>6. What this does and does not license</h2>
+<ul>
+<li><strong>Does:</strong> adopt <code>params/lowATP_realign4_gates.m</code> as the low-ATP snapshot. It is strictly better than the incumbent on the current objective and the gates transfer intact.</li>
+<li><strong>Does not:</strong> claim the low-ATP <em>mechanism</em> improved. No low-ATP parameter was refitted, and the ATP ratios are the same or marginally worse except through <code>rsK</code>'s shared component.</li>
+<li><strong>The refit is now done</strong> (§5) and lands at <strong>11.20</strong>. It recovered the terms the transfer broke, but only by spending series compliance, and it did not touch <code>rsK</code>.</li>
+<li><strong>Next is not another gate fit.</strong> Round 3 had 21 free exponents and used three, two of them mechanical. The kinetic gates are exhausted. <code>rsK</code> is 24 % of the residual and moved by 0.02, so the next step has to be <em>structural</em>: something that can slow the post-restretch recovery at low ATP <strong>without</strong> slowing <code>ktr</code>. <code>UseStrainDepAtpGate</code> (already wired, default-off) is the cheapest candidate — it makes the apparent Km(ATP) rise with strain, which is exactly the <code>rsK</code>-vs-<code>ktr</code> separation a strain-uniform gate cannot express. It has never been fitted.</li>
+</ul>
+<h2>6. Files</h2>
+<table>
+<thead>
+<tr>
+<th>file</th>
+<th>what it does</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>BuildCombinedSnapshot.m</code></td>
+<td>writes <code>params/lowATP_realign4_gates.m</code> = realign4 + the gate block, exponents at <code>%.17g</code> from the optimiser state</td>
+</tr>
+<tr>
+<td><code>RunTransferCheck.m</code></td>
+<td>the five slack simulations, scored under both feature lists; writes <code>results/realign4_transfer.mat</code></td>
+</tr>
+<tr>
+<td><code>RunGateRefit.m</code></td>
+<td>round-3 gate refit on this baseline; accept threshold 0.25, staged coordinate descent, asserts 8 mM invariance; writes <code>params/lowATP_realign4_gates_opt.m</code> and <code>results/gaterefit_state.mat</code></td>
+</tr>
+</tbody>
+</table>
+<p>matlab -batch "run('Analyses/LowATP_Realign4Transfer/BuildCombinedSnapshot.m')" matlab -batch "run('Analyses/LowATP_Realign4Transfer/RunTransferCheck.m')" matlab -batch "BUDGET_H=3; run('Analyses/LowATP_Realign4Transfer/RunGateRefit.m')"</p>
+</article>
+</body>
+</html>
