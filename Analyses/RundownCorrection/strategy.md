@@ -3,6 +3,8 @@
 *A decision document. What to do, what not to do, and why. Supersedes the
 per-feature recommendations scattered through `conclusions.md`.*
 
+> **Caveat, 2026-11-24 (issue #111, one preparation).** The bracketed 11/19/2026 M prep measured what §0(a) and §4 leave open. Across three 8 mM contractions the protocol `ktr` fell as much as the slack `ktr` (both −16 %; ratio of the drifts 0.7–1.6, against the ~4 predicted here), so the protocol `ktr` is not rundown-proof and its ×0.72 ATP effect, quoted uncorrected, needs a bracket. Part of the force lost inside one activation is probably Pi building up in the muscle and not damage, which bears on φ. The recommendations below are not yet revised; a decision on how to fit the ATP dependence is pending. Report: `Analyses/26-11-23-Rundown1119M/report.md` (local, not in git).
+
 ---
 
 ## 0. First, two corrections to what I previously said
