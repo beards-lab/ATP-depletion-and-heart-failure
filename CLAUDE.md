@@ -17,6 +17,7 @@ gives the repo's own values and wins where it says so.
 - **Local deviations from WORKFLOW.md:**
   - Type labels `science` and `objective` predate the shared label set and are still on open issues; they count as type labels until those issues are relabelled.
   - Analyses up to 2026-11 are undated `Analyses/<Name>/` folders with `conclusions.md` instead of `yy-mm-dd-Name/report.md`; leave them as they are.
+  - **Trial of lab-workflow 2.2.0 (from 2026-11-24, `filip-jezek/lab-workflow` PR 10; remove this line when 2.2.0 is synced):** the last comment says whose move a card is. A card with a hand-off whose last comment is the PI's is the agent's move in Review and in Ready alike, and the comment means the same in both (an approval word on such a Ready card is merge and close, not a start). The PI may drag an answered card to Ready; it is never required. A card dragged to Ready with no comment after the last hand-off goes back to Review. Whenever the agent posts a new hand-off, an answer or a question, the card goes back to Review. On "process the board" read Ready as well: the installed `board.sh inbox` scans only Next and Review, so use `bash C:/home/git/lab-workflow-wt-9/skills/issue/board.sh inbox` and `… turn` (whose move each Review and Ready card is) while the trial runs.
 
 ## Overview
 
