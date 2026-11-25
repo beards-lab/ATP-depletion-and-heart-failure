@@ -1,19 +1,20 @@
 # Rundown correction of the Beard2022 F–V data
 
-Issue #92 · 2026-11-19 · drafted by Claude (AI agent) · data only, no simulation
+Issue #92 · 2026-11-19, review round 2026-11-25 (sections 7 and 8) · drafted by Claude (AI agent) · data only, no simulation
 
 ## Bottom line
 
-1. **One number does most of the work: the second record of a preparation reads 0.88 of the first** (0.881, standard error 0.019, at 0–3 ML/s). It is the same for the 4 mM pairs (0.89) and the 2 mM pairs (0.88).
-2. **A speed-dependent rundown is not supported at 0–3 ML/s** (it fits worse by the information criteria; the five factors are 0.85–0.92 with a standard error of 0.05 each). Above 3 ML/s something else shows: the 8 mM records run second read *higher* than those run first (0.139 against 0.110 at 4 ML/s, 0.068 against 0.033 at 6 ML/s).
+1. **One number does most of the work: the second record of a preparation reads 0.88 of the first** (0.881, standard error 0.019, at 0–3 ML/s). It is the same for the 4 mM pairs (0.89) and the 2 mM pairs (0.88). The correction gives the same means as order-balanced averaging and removes rundown only on average: each preparation keeps its own deviation from 0.88, and the result rests on the assumption that the loss is the same whichever [ATP] came first.
+2. **A speed-dependent rundown is not supported at 0–3 ML/s** (it fits worse by the information criteria; the five factors are 0.85–0.92 with a standard error of 0.05 each). **Above 3 ML/s the loss is not proportional** (section 8). Within preparations, order-balanced, the second record reads +0.1, +0.7 and +0.6 kPa against the first at 4, 5 and 6 ML/s, where the factor 0.88 predicts −0.6, −0.4 and −0.2 kPa. The whole ramp plateau is higher, with the same baseline and ramp speed, so it is not a reading artefact. It sits in the 8 mM records run after low ATP (about +2 kPa, 3 % of the isometric force); low-ATP records run after 8 mM show −0.4 kPa.
 3. **Within a record the drift is small**, −1 to +4 % of the hold force over the seven cycles, and correcting for it adds little. Dividing by the hold does not remove the between-record rundown: the 1.10 Lo hold runs down by 1–4 %, the F–V points by 12 %.
 4. **The pooled 8 mM curve in normalised units does not change** (each preparation was already scaled by its own 8 mM isometric force). What changes is the spread, the low-ATP curves and the ATP ratios:
    - between-preparation spread at 2 ML/s: 8 mM 11 % → 4 %, 4 mM 18 % → 4 %, 2 mM 45 % → 21 %;
    - 4/8 ratio at 2 ML/s: 0.67 (8 mM first) and 0.87 (4 mM first) → **0.76 in both orders**, 0.763 ± 0.009;
    - the 2 mM curve is 3–9 % lower than the uncorrected one.
-5. **What the design cannot separate:** a preparation-specific rundown from a preparation-specific ATP effect; rundown by time from an after-effect of the low-ATP exposure; and, within a record, time from speed.
+5. **Rundown per preparation is readable once the ATP effect is taken as common to a pair** (section 7). The six 4 mM preparations agree: 0.87–0.92. The six 2 mM preparations do not: 0.72–1.10, and two of them show no rundown. The same preparations stand out at 0.5–1 ML/s, where the ATP effect is small, at 2–3 ML/s and in the hold (r = 0.78 and 0.69), so the differences are real (F test p = 0.0004). A factor per preparation does not narrow the pooled curves further.
+6. **What the design still cannot separate:** rundown by time from an after-effect of the low-ATP exposure (the high-speed offset of item 2 may be exactly that); a preparation's rundown from a preparation's own force response to low ATP, if that response is the same at all speeds; and, within a record, time from speed.
 
-Recommendation for #79: use the corrected pool at 0–3 ML/s. Treat 4–6 ML/s separately until the order effect there is understood.
+Recommendation for #79: use the corrected pool at 0–3 ML/s with the single factor. At 4–6 ML/s do not apply the factor: use the first records only, or the factor-plus-offset curve of section 8, and treat those points as uncertain by about 1 kPa.
 
 ## Question
 
@@ -87,7 +88,7 @@ Hold before the seventh cycle against the first (%, mean ± sd):
 | Split | Separable? | Evidence |
 |---|---|---|
 | Mean rundown between records from the mean ATP effect | **Yes**, through the balanced order | Second over first record, log, by order at 0–3 ML/s: 8→4 −0.04…−0.40, 4→8 −0.16…+0.24. Half the sum is the rundown (−0.05 to −0.17), half the difference the ATP effect (4/8 = 1.06, 0.97, 0.94, 0.76, 0.75). The same for the 2 mM pairs (2/8 = 1.17, 0.95, 0.87, 0.58, 0.56). |
-| A rundown per preparation from that preparation's own ATP effect | **No** | Each preparation has one record per [ATP], so its second/first ratio is the product of both. The model with a factor per preparation is rank deficient by two. Within an order the ratios agree closely for the 4 mM pairs (sd of log 0.02–0.03) and scatter for the 2 mM pairs (0.15–0.22); which of the two causes scatters cannot be told. |
+| A rundown per preparation from that preparation's own ATP effect | **Yes, if the ATP effect is common to the pair** (section 7) | Each preparation has one record per [ATP], so its second/first ratio is the product of both, and the model with a factor per preparation is rank deficient by two: only the mean rundown of each pair is tied to the mean ATP effect. With the order-balanced ATP effect removed, the deviations of the preparations are estimable. They agree between 0.5–1 ML/s, where the ATP effect is 0.87–0.97, and 2–3 ML/s, where it is 0.56–0.76 (r = 0.78), which a preparation-specific ATP effect of the usual speed-dependent shape would not give. |
 | Rundown with time from an after-effect of low ATP | **No** | Half-sum and half-difference assume the loss is the same whichever solution came first. There is no 8→8 control and no closing 8 mM bracket. |
 | Within-record time from speed | **Only through the holds** | The speeds run in one order in all 24 records. The hold is the only quantity measured seven times at one condition. |
 | Speed-dependence of rundown | **Weakly** | From the 8 mM records alone, run second against run first, relative to the isometric point: 0.98, 0.98, 1.07, 1.13 at 0.5–3 ML/s (se 0.03–0.08). A comparison between preparations, 6 against 6. |
@@ -147,6 +148,66 @@ Low-ATP over 8 mM force within a preparation, mean of three preparations per ord
 
   Up to 3 ML/s they agree within 5–10 %. From 4 ML/s the second records are higher, by 0.03 of the fresh isometric force (about 2 kPa), which doubles the reading at 6 ML/s. It is neither a pure factor nor a pure offset (the sign is opposite below 2 ML/s). Possible causes, not tested here: a baseline that differs after the low-ATP exposure, a slower preparation after rundown, or chance (6 against 6 preparations).
 
+### 7. Rundown per preparation (review round, 2026-11-25)
+
+![Rundown per preparation and the high-speed offset](figures/fv_rundown_perprep.png)
+
+*Top left: rundown per preparation with the pair's ATP effect removed, read at 0–3 ML/s (filled, ± se over the five speeds), at 0.5–1 ML/s (open) and on the first 1.10 Lo hold (×); dashed line 0.88. Top middle: the same preparation read in two speed bands. Top right: second minus first record in kPa, order-balanced, against the single factor and the factor plus offset. Bottom left: 8 mM records, group mean of those run second against those run first, by speed. Bottom middle and right: mean force trace of the 6 and 4 ML/s ramps at 8 mM (± sem).*
+
+Method: for each preparation, log(second/first) at each speed minus (or plus) the order-balanced ATP effect of its pair from section 3. What is left is that preparation's rundown, under the assumption that the ATP effect is the same in all preparations of a pair.
+
+| Prep. | Order | 0.5–1 ML/s | 2–3 ML/s | 0–3 ML/s (se) | 1.10 Lo hold |
+|---|---|---|---|---|---|
+| 1 | 8→4 | 0.87 | 0.95 | 0.92 (0.03) | 1.02 |
+| 2 | 8→4 | 0.85 | 0.86 | 0.87 (0.01) | 0.94 |
+| 10 | 8→4 | 0.84 | 0.94 | 0.88 (0.03) | 0.92 |
+| 3 | 4→8 | 0.84 | 0.89 | 0.87 (0.01) | 0.93 |
+| 4 | 4→8 | 0.86 | 0.92 | 0.90 (0.03) | 1.00 |
+| 7 | 4→8 | 0.87 | 0.94 | 0.90 (0.02) | 0.95 |
+| 5 | 8→2 | 0.80 | 0.85 | 0.84 (0.03) | 0.97 |
+| 6 | 8→2 | 0.76 | 0.76 | 0.77 (0.01) | 0.88 |
+| 11 | 8→2 | 1.08 | 0.96 | 1.03 (0.03) | 1.12 |
+| 8 | 2→8 | 0.75 | 0.62 | 0.72 (0.05) | 0.92 |
+| 9 | 2→8 | 1.03 | 1.27 | 1.10 (0.07) | 0.98 |
+| 12 | 2→8 | 0.85 | 0.78 | 0.84 (0.04) | 1.06 |
+
+- **4 mM pairs: one number fits all six**, 0.87–0.92 (sd of log 0.025, less than the 0.064 expected from point scatter alone).
+- **2 mM pairs: the preparations differ**, 0.72–1.10 (sd of log 0.17). Preparations 9 and 11 show no rundown, 6 and 8 lose a quarter.
+- **The differences are real.** One factor against one per preparation: F(9, 84) = 3.82, p = 0.0004. Between preparations the 0.5–1 ML/s reading correlates with the 2–3 ML/s reading (r = 0.78; 0.67 without preparation 9) and with the hold (r = 0.69).
+- **Why this is rundown and not the ATP effect:** the ATP effect grows with speed (2/8 = 0.95 at 0.5 ML/s, 0.56 at 3 ML/s). A preparation with a stronger ATP effect would stand out at 2–3 ML/s and not at 0.5–1 ML/s. The preparations stand out equally in both bands. What it cannot rule out is a preparation whose force responds to low ATP by the same factor at every speed.
+- **Between preparations in kPa** (records run second over records run first, different preparations): 8 mM 0.80 ± 0.07 at v = 0 and 0.79 ± 0.05 at 1 ML/s; 4 mM 1.12 ± 0.13 and 0.99 ± 0.08; 2 mM 0.98 ± 0.08 and 0.87 ± 0.15. The rundown shows in the 8 mM records only. With a force scale that varies 13 % between preparations, three or six per group resolve it no better than this.
+- **A factor per preparation does not improve the pooled curves.** Means change by less than 1 %; the spread at 2 ML/s goes 4.3 → 7.8 % (8 mM), 3.9 → 4.3 % (4 mM) and 21.4 → 20.7 % (2 mM). The single factor stays the correction; the table says which preparations it fits badly (8, 9, 11).
+
+### 8. Why one factor fails above 3 ML/s (review round, 2026-11-25)
+
+All eight speeds of a record come from one activation, so a rundown that only scales the force must scale them all alike. It does not:
+
+| v (ML/s) | 0 | 0.5 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|---|
+| second − first, kPa, order-balanced | −5.0 | −7.8 | −5.7 | −2.5 | −1.0 | +0.1 | +0.7 | +0.6 |
+| se | 1.5 | 1.9 | 1.2 | 0.6 | 0.4 | 0.2 | 0.1 | 0.2 |
+| predicted by the factor 0.88 | −7.5 | −6.6 | −4.7 | −2.0 | −1.3 | −0.6 | −0.4 | −0.2 |
+| as a ratio second/first | 0.92 | 0.86 | 0.85 | 0.85 | 0.91 | 1.01 | 1.23 | 1.33 |
+
+- **Size.** The misfit is about 1 kPa, 1.5 % of the isometric force. It looks large above 3 ML/s only because the force there is 2–7 kPa.
+- **Not a reading artefact.** In the 8 mM records the ramp plateau is flat from 2 ms after the step and higher over its whole length in the records run second (6 ML/s: 3.6 against 1.9 kPa; 4 ML/s: 7.8 against 6.6 kPa). Slack baseline (0.7 against 0.6 kPa) and ramp speed (5.997 against 6.000 ML/s) are the same.
+- **It sits in the 8 mM records run after low ATP.** Group means of those six against the six run first follow second = 0.76 × first + 2.0 kPa at all eight speeds, largest residual 0.6 kPa. Within preparations, 8 mM exceeds its low-ATP partner at 5 and 6 ML/s by 2.4 and 1.7 kPa when it ran second, and by 1.0 and 0.4 kPa when it ran first (se 0.2–0.3).
+- **Models in kPa on all 192 points** (weights 1 kPa plus 10 % of the force):
+
+  | Rundown form | Parameters | χ² | AIC | Fitted |
+  |---|---|---|---|---|
+  | none | 35 | 223.4 | 293.4 | |
+  | one factor | 36 | 190.4 | 262.4 | 0.894 |
+  | factor + offset | 37 | 182.5 | 256.5 | 0.856, +0.7 kPa (jackknife se 0.4) |
+  | **factor + offset by [ATP] of the second record** | 38 | 157.2 | **233.2** | 0.847; +2.1 kPa when 8 mM ran second (se 0.8), −0.4 kPa when low ATP ran second (se 1.2) |
+  | factor per speed | 43 | 168.3 | 254.3 | 0.91, 0.86, 0.85, 0.85, 0.91, 1.05, 1.29, 1.46 |
+
+- **With the factor plus offset** the corrected 8 mM curves of first and second records agree better at high speed but not fully (4 ML/s 0.109 against 0.127; 6 ML/s 0.033 against 0.055; single factor 0.111 against 0.137 and 0.033 against 0.067). The 4/8 order gap at 4 ML/s closes from 0.17 to 0.05. Below 3 ML/s nothing changes (4/8 at 2 ML/s 0.761 ± 0.010).
+- **What it is, as far as the data go.** A force of about 2 kPa that does not scale with the activation and appears in 8 mM after a low-ATP activation. Two readings fit, and this set cannot choose:
+  - an after-effect of the low-ATP exposure (for example a stiffer passive or slowly detaching component that resists shortening);
+  - a difference between the two groups of six preparations. The force at 6 ML/s is partly a property of the preparation (first against second record of the same preparation r = 0.59), and preparations 8 and 9, both high, are in the run-second group.
+- The records hold no relaxed segment, so a change in passive force at 1.00 Lo cannot be checked directly.
+
 ## Against the acceptance criteria
 
 | Criterion | Result |
@@ -161,7 +222,9 @@ Low-ATP over 8 mM force within a preparation, mean of three preparations per ord
 ## Caveats
 
 - The correction assumes the loss between records is the same whichever [ATP] came first. Nothing in this design tests that.
-- The fit uses 0–3 ML/s. The same factor is applied at 4–6 ML/s, where section 6 shows it does not hold.
+- The fit uses 0–3 ML/s. The same factor is applied at 4–6 ML/s in section 4, where sections 6 and 8 show it does not hold.
+- The rundown per preparation of section 7 assumes a common ATP effect within a pair.
+- The split of the high-speed offset by the [ATP] of the second record leans on comparing the 8 mM curve shape between two groups of six preparations.
 - The low-ATP protocol has a larger pre-ramp step at 0.5–4 ML/s (#75 §5). It is absorbed in g, so the corrected low-ATP curves are curves on that protocol.
 - Standard errors treat the 6 or 12 records of a group as independent.
 - The 2 mM preparations disagree most (CV 21–27 % at 2–3 ML/s after correction), driven by one 2→8 preparation whose 8 mM record reads 1.39 of its 2 mM record over 0–3 ML/s.
@@ -169,13 +232,17 @@ Low-ATP over 8 mM force within a preparation, mean of three preparations per ord
 ## Next steps
 
 - #79: take the corrected pool at 0–3 ML/s as the target, with these standard errors; decide separately on 4–6 ML/s.
-- The order effect at 4–6 ML/s at 8 mM is worth a look at the raw traces of the six second records (baseline after the ramp).
-- A closing 8 mM bracket in new data (the target-dataset design) would settle the two things this set cannot: the after-effect of low ATP, and a rundown per preparation.
+- The order effect at 4–6 ML/s was traced to the ramp plateau itself (section 8); the baseline is not the cause.
+- A closing 8 mM bracket in new data (the target-dataset design) would settle what this set cannot: the after-effect of low ATP, including the 2 kPa high-speed offset, and a rundown per preparation without the common-ATP-effect assumption. A relaxed record at 1.00 Lo before each activation would test the passive reading.
 
 ## Reproduce
 
 ```matlab
 run('Analyses/26-11-19-FV_RundownCorrection/scripts/RunFVRundown.m')   % data only, ~10 s -> results/fv_rundown.log, .mat, figures/fv_rundown.png
+```
+
+```matlab
+run('Analyses/26-11-19-FV_RundownCorrection/scripts/RunFVRundownPerPrep.m')   % sections 7 and 8, ~20 s; needs results/fv_rundown.mat -> results/fv_rundown_perprep.log, .mat, figures/fv_rundown_perprep.png
 ```
 
 The first call reads the 12 workbooks (about 2.5 minutes) unless `Analyses/FV_Beard2022/results/beard2022_fv_raw.mat` exists.
