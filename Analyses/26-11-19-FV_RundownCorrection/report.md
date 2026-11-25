@@ -1,6 +1,6 @@
 # Rundown correction of the Beard2022 F–V data
 
-Issue #92 · 2026-11-19, review round 2026-11-25 (sections 7 and 8) · drafted by Claude (AI agent) · data only, no simulation
+Issue #92 · 2026-11-19, review round 2026-11-25 (sections 7 to 9) · drafted by Claude (AI agent) · data only, no simulation
 
 ## Bottom line
 
@@ -14,7 +14,12 @@ Issue #92 · 2026-11-19, review round 2026-11-25 (sections 7 and 8) · drafted b
 5. **Rundown per preparation is readable once the ATP effect is taken as common to a pair** (section 7). The six 4 mM preparations agree: 0.87–0.92. The six 2 mM preparations do not: 0.72–1.10, and two of them show no rundown. The same preparations stand out at 0.5–1 ML/s, where the ATP effect is small, at 2–3 ML/s and in the hold (r = 0.78 and 0.69), so the differences are real (F test p = 0.0004). A factor per preparation does not narrow the pooled curves further.
 6. **What the design still cannot separate:** rundown by time from an after-effect of the low-ATP exposure (the high-speed offset of item 2 may be exactly that); a preparation's rundown from a preparation's own force response to low ATP, if that response is the same at all speeds; and, within a record, time from speed.
 
-Recommendation for #79: use the corrected pool at 0–3 ML/s with the single factor. At 4–6 ML/s do not apply the factor: use the first records only, or the factor-plus-offset curve of section 8, and treat those points as uncertain by about 1 kPa.
+7. **The points above 3 ML/s should not be used for Vmax or for exact model fitting** (section 9). The force there is 2–7 kPa, the non-scaling part is about 2 kPa, and the three ways of estimating the fresh curve differ by 6, 12 and 20 % of the 8 mM force at 4, 5 and 6 ML/s. Vmax is set by exactly these points: a Hill fit to the 8 mM curve gives 4.9 ML/s on 0–3 ML/s and 6.8 ML/s on 0–6 ML/s, and the effect of ATP on Vmax changes from none (first records only: 6.45 at 8 mM, 6.51 at 2 mM) to −13 % (factor plus offset: 6.83, 5.93).
+
+Recommendation for #79:
+- **One correction for all eight speeds**, so the curve has no break at 3 ML/s: second records as (F − 0.7 kPa) / 0.856 (factor plus offset, section 8). At 0–3 ML/s it agrees with the single factor within 2 %.
+- **Fit the model to 0–3 ML/s.** The target table with its errors is in section 9.
+- **Keep 4–6 ML/s as a check only**, with the wide errors of section 9: the model should pass through the band, and nothing should be tuned to it. Do not quote a Vmax from these data.
 
 ## Question
 
@@ -208,6 +213,79 @@ All eight speeds of a record come from one activation, so a rundown that only sc
   - a difference between the two groups of six preparations. The force at 6 ML/s is partly a property of the preparation (first against second record of the same preparation r = 0.59), and preparations 8 and 9, both high, are in the run-second group.
 - The records hold no relaxed segment, so a change in passive force at 1.00 Lo cannot be checked directly.
 
+### 9. What the points above 3 ML/s can carry (review round, 2026-11-25)
+
+![The tail above 3 ML/s](figures/fv_rundown_highspeed.png)
+
+*Per [ATP], log force scale: the fresh curve from the factor plus offset (black, error = sem and the range of the candidates combined), from first records only (green) and from the single factor (red); Hill hyperbola fitted to 0–3 ML/s (dashed) and to 0–6 ML/s (solid).*
+
+**The three estimates of the fresh curve part above 3 ML/s.** Force in units of the fresh 8 mM isometric force:
+
+| [ATP] | Estimate | 2 ML/s | 3 ML/s | 4 ML/s | 5 ML/s | 6 ML/s |
+|---|---|---|---|---|---|---|
+| 8 mM | first records only (n = 6) | 0.319 | 0.205 | 0.109 | 0.058 | 0.033 |
+| | factor + offset (n = 12) | 0.321 | 0.210 | 0.118 | 0.069 | 0.044 |
+| | single factor (n = 12) | 0.325 | 0.215 | 0.124 | 0.075 | 0.050 |
+| | half range, % of the force | 1 | 2 | 6 | 12 | 20 |
+| | half range / sem | 1.0 | 1.2 | 1.6 | 1.5 | 1.5 |
+| 4 mM | first records only (n = 3) | 0.247 | 0.151 | 0.062 | 0.032 | 0.023 |
+| | factor + offset (n = 6) | 0.242 | 0.156 | 0.064 | 0.040 | 0.024 |
+| | single factor (n = 6) | 0.245 | 0.161 | 0.069 | 0.046 | 0.029 |
+| | half range, % of the force | 1 | 3 | 5 | 17 | 14 |
+| 2 mM | first records only (n = 3) | 0.212 | 0.134 | 0.062 | 0.045 | 0.037 |
+| | factor + offset (n = 6) | 0.188 | 0.117 | 0.050 | 0.033 | 0.023 |
+| | single factor (n = 6) | 0.194 | 0.124 | 0.057 | 0.040 | 0.030 |
+| | half range, % of the force | 6 | 7 | 11 | 19 | 29 |
+
+- At 8 mM the estimates agree within 1–2 % up to 3 ML/s and part by 6, 12 and 20 % at 4, 5 and 6 ML/s, 1.5 times the standard error. Which one is the fresh muscle depends on whether the 2 kPa of section 8 is an after-effect of low ATP (then: first records only) or a group difference (then: the pooled estimates). The data cannot say.
+- At 4 and 2 mM the first-records estimate rests on three preparations and its scatter is as large as the disagreement.
+
+**Vmax is set by these points.** Hill hyperbola F = F0 (1 − v/Vmax) / (1 + v/(a·Vmax)), fitted to the mean curves (weights 1 % of isometric plus 5 % of the force):
+
+| [ATP] | Estimate | Vmax, fit on 0–6 ML/s | Vmax, fit on 0–3 ML/s |
+|---|---|---|---|
+| 8 mM | first records only | 6.45 | 4.72 |
+| | factor + offset | 6.83 (bootstrap 6.46–7.28) | 4.89 (4.68–5.16) |
+| | single factor | 7.05 | 4.96 |
+| 4 mM | first records only | 5.91 | 4.31 |
+| | factor + offset | 6.10 (5.59–6.85) | 4.54 (4.28–4.97) |
+| | single factor | 6.30 | 4.61 |
+| 2 mM | first records only | 6.51 | 4.36 |
+| | factor + offset | 5.93 (5.37–6.71) | 4.07 (3.76–4.46) |
+| | single factor | 6.25 | 4.17 |
+
+- **Including or leaving out 4–6 ML/s moves Vmax by 40 %** (8 mM: 4.9 to 6.8 ML/s). The two intervals do not overlap, so this is not noise: one hyperbola does not describe 0–6 ML/s. The tail lies 0.04 to 0.07 of the isometric force (2.5–4 kPa) above the hyperbola through 0–3 ML/s, which reaches zero at 4.9 ML/s while 7 kPa is still measured at 4 ML/s.
+- **The excess is the size of the non-scaling force of section 8** (about 2 kPa). A Vmax read from 0–6 ML/s may therefore measure where that component ends, not the unloaded shortening speed of the cross-bridges.
+- **The correction changes Vmax by 0.6 ML/s** at 8 mM (6.45–7.05) and at 2 mM (5.93–6.51).
+- **The ATP effect on Vmax is not resolved.** 2 mM against 8 mM on 0–6 ML/s: 6.51 against 6.45 with first records only (no effect), 5.93 against 6.83 with the factor plus offset (−13 %), 6.25 against 7.05 with the single factor (−11 %).
+
+**The force itself is close to its limits there.**
+
+| | 3 ML/s | 4 ML/s | 5 ML/s | 6 ML/s |
+|---|---|---|---|---|
+| 8 mM mean force, kPa (sd between preparations) | 12.3 (1.9) | 7.1 (1.3) | 4.2 (1.3) | 2.8 (1.3) |
+| 4 mM | 9.5 (1.1) | 4.1 (1.4) | 2.7 (1.4) | 1.7 (1.5) |
+| 2 mM | 7.0 (3.3) | 3.3 (1.9) | 2.3 (1.6) | 1.8 (1.3) |
+| records below 2 kPa (8 / 4 / 2 mM) | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 2 / 3 | 4 of 12 / 4 of 6 / 5 of 6 |
+
+- The spread between preparations stays at 1.3–1.9 kPa while the force falls from 12 to 2 kPa, so it is an additive spread, not a proportional one. The slack baseline itself varies by 0.18 kPa (sd over the seven cycles of a record).
+- The low-ATP protocol also differs from the 8 mM protocol at these speeds (#75 §5).
+
+**Target for #79** (factor plus offset; error = sem and half the candidate range, combined in quadrature):
+
+| v (ML/s) | 8 mM | 4 mM | 2 mM | Use |
+|---|---|---|---|---|
+| 0 | 1.002 ± 0.033 | 1.090 ± 0.040 | 1.147 ± 0.083 | fit |
+| 0.5 | 0.921 ± 0.024 | 0.884 ± 0.017 | 0.880 ± 0.041 | fit |
+| 1 | 0.665 ± 0.014 | 0.621 ± 0.014 | 0.586 ± 0.032 | fit |
+| 2 | 0.321 ± 0.004 | 0.242 ± 0.005 | 0.188 ± 0.022 | fit |
+| 3 | 0.210 ± 0.006 | 0.156 ± 0.009 | 0.117 ± 0.017 | fit |
+| 4 | 0.118 ± 0.008 | 0.064 ± 0.010 | 0.050 ± 0.011 | check only |
+| 5 | 0.069 ± 0.010 | 0.040 ± 0.011 | 0.033 ± 0.011 | check only |
+| 6 | 0.044 ± 0.011 | 0.024 ± 0.010 | 0.023 ± 0.011 | check only |
+
+The errors at 4–6 ML/s are 7–25 % of the force at 8 mM and 16–48 % at low ATP. They cover the disagreement between the estimates, not the question of what the tail is.
+
 ## Against the acceptance criteria
 
 | Criterion | Result |
@@ -224,6 +302,7 @@ All eight speeds of a record come from one activation, so a rundown that only sc
 - The correction assumes the loss between records is the same whichever [ATP] came first. Nothing in this design tests that.
 - The fit uses 0–3 ML/s. The same factor is applied at 4–6 ML/s in section 4, where sections 6 and 8 show it does not hold.
 - The rundown per preparation of section 7 assumes a common ATP effect within a pair.
+- The Hill fits of section 9 are on mean curves with one choice of weights; the 0–3 ML/s fit has five points for three parameters. They show how much Vmax depends on the tail, not what Vmax is.
 - The split of the high-speed offset by the [ATP] of the second record leans on comparing the 8 mM curve shape between two groups of six preparations.
 - The low-ATP protocol has a larger pre-ramp step at 0.5–4 ML/s (#75 §5). It is absorbed in g, so the corrected low-ATP curves are curves on that protocol.
 - Standard errors treat the 6 or 12 records of a group as independent.
@@ -231,7 +310,8 @@ All eight speeds of a record come from one activation, so a rundown that only sc
 
 ## Next steps
 
-- #79: take the corrected pool at 0–3 ML/s as the target, with these standard errors; decide separately on 4–6 ML/s.
+- #79: take the section 9 table as the target: fit 0–3 ML/s, keep 4–6 ML/s as a check, quote no Vmax from these data.
+- Vmax needs its own measurement (unloaded shortening by slack test), which does not rest on forces of 2 kPa.
 - The order effect at 4–6 ML/s was traced to the ramp plateau itself (section 8); the baseline is not the cause.
 - A closing 8 mM bracket in new data (the target-dataset design) would settle what this set cannot: the after-effect of low ATP, including the 2 kPa high-speed offset, and a rundown per preparation without the common-ATP-effect assumption. A relaxed record at 1.00 Lo before each activation would test the passive reading.
 
@@ -242,7 +322,7 @@ run('Analyses/26-11-19-FV_RundownCorrection/scripts/RunFVRundown.m')   % data on
 ```
 
 ```matlab
-run('Analyses/26-11-19-FV_RundownCorrection/scripts/RunFVRundownPerPrep.m')   % sections 7 and 8, ~20 s; needs results/fv_rundown.mat -> results/fv_rundown_perprep.log, .mat, figures/fv_rundown_perprep.png
+run('Analyses/26-11-19-FV_RundownCorrection/scripts/RunFVRundownPerPrep.m')   % sections 7 to 9, ~40 s; needs results/fv_rundown.mat -> results/fv_rundown_perprep.log, .mat, figures/fv_rundown_perprep.png, fv_rundown_highspeed.png
 ```
 
 The first call reads the 12 workbooks (about 2.5 minutes) unless `Analyses/FV_Beard2022/results/beard2022_fv_raw.mat` exists.

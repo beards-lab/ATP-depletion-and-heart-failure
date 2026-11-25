@@ -14,7 +14,9 @@
 %    and an offset model in kPa on all 192 points:
 %        F = s_p * R^[second] * g(v, ATP) + b * [second]
 %    against the single factor (b = 0) and a free factor per speed.
-% Output: results/fv_rundown_perprep.log, .mat, figures/fv_rundown_perprep.png
+% C. What the points above 3 ML/s can carry: the candidate fresh curves and
+%    Vmax from a Hill fit, with and without those points.
+% Output: results/fv_rundown_perprep.log, .mat, figures/fv_rundown_perprep.png, figures/fv_rundown_highspeed.png
 
 here = fileparts(mfilename('fullpath'));  ana = fileparts(here);  root = fileparts(fileparts(ana));
 addpath(fullfile(root, 'Analyses', 'FV_Beard2022'));
@@ -193,8 +195,52 @@ for c = cyc
     fprintf('%g ML/s: plateau from 2 ms to the crossing %.2f | %.2f kPa; first to second half of the plateau %+.2f | %+.2f kPa; slack baseline %.2f | %.2f kPa; ramp speed %.3f | %.3f ML/s\n', vNom(c), ...
         mean(TR.(sprintf('c%d', c)).m1(wv)), mean(TR.(sprintf('c%d', c)).m2(wv)), halfdiff(TR.(sprintf('c%d', c)).m1(wv)), halfdiff(TR.(sprintf('c%d', c)).m2(wv)), mean(B(i1)), mean(B(i2)), mean(V(i1)), mean(V(i2)));
 end
+%% C. what the points above 3 ML/s can carry: candidate fresh curves, and Vmax from a Hill fit
+fprintf('\n== Candidate fresh curves (fresh 8 mM isometric = 1) at v = %s\n', mat2str(vAll));
+cn = {'first records only', 'factor + offset', 'single factor', 'uncorrected (#75 scale)'};
+CC = struct();  rng(1);
+for a = [8 4 2]
+    ma = T.atp == a;
+    cv = {T.Fo(ma & T.slot == 1), T.Fo(ma), T.F1(ma), T.Fn(ma)};  vv = {T.v(ma & T.slot == 1), T.v(ma), T.v(ma), T.v(ma)};
+    cur = nan(4, nV);
+    for i = 1:4, cur(i, :) = arrayfun(@(v) mean(cv{i}(vv{i} == v)), vAll); end
+    sem = arrayfun(@(v) std(T.Fo(ma & T.v == v))/sqrt(sum(ma & T.v == v)), vAll);
+    sys = (max(cur(1:3, :), [], 1) - min(cur(1:3, :), [], 1))/2;          % half the range of the three corrected candidates
+    fprintf('%d mM\n', a);
+    for i = 1:4, fprintf('  %-26s %s\n', cn{i}, mat2str(round(cur(i, :), 3))); end
+    fprintf('  %-26s %s\n  %-26s %s\n  %-26s %s\n  %-26s %s\n', 'sem (factor + offset)', mat2str(round(sem, 3)), 'half range of candidates', mat2str(round(sys, 3)), ...
+        'half range / sem', mat2str(round(sys./sem, 1)), 'half range, % of the force', mat2str(round(100*sys./cur(2, :), 0)));
+    % Hill fits: F = F0 (1 - v/vmax)/(1 + v/(a vmax)); weights 1/(0.01^2 + (0.05 F)^2)
+    fprintf('  Hill fit, Vmax (ML/s) and a/F0:   0-6 ML/s          0-3 ML/s\n');
+    hv = nan(4, 2);
+    for i = 1:4
+        h6 = hillfit(vAll, cur(i, :));  h3 = hillfit(vAll(1:5), cur(i, 1:5));  hv(i, :) = [h6(3) h3(3)];
+        fprintf('  %-26s        %5.2f (%.2f)      %5.2f (%.2f)\n', cn{i}, h6(3), h6(2), h3(3), h3(2));
+    end
+    % bootstrap over records, factor + offset curve
+    recs = unique(T.rec(ma));  nB = 500;  vb = nan(nB, 2);
+    Fm = nan(numel(recs), nV);
+    for r = 1:numel(recs), for j = 1:nV, Fm(r, j) = T.Fo(T.rec == recs(r) & T.v == vAll(j)); end, end
+    for b = 1:nB
+        c = mean(Fm(randi(numel(recs), numel(recs), 1), :), 1);
+        h6 = hillfit(vAll, c);  h3 = hillfit(vAll(1:5), c(1:5));  vb(b, :) = [h6(3) h3(3)];
+    end
+    q = prctile(vb, [2.5 50 97.5]);
+    fprintf('  bootstrap over the %d records (factor + offset): Vmax 0-6 ML/s %.2f [%.2f, %.2f]; 0-3 ML/s only %.2f [%.2f, %.2f]\n', numel(recs), q(2, 1), q(1, 1), q(3, 1), q(2, 2), q(1, 2), q(3, 2));
+    fprintf('  Vmax across the three corrected candidates, 0-6 ML/s: %.2f-%.2f ML/s\n', min(hv(1:3, 1)), max(hv(1:3, 1)));
+    CC.(sprintf('a%d', a)) = struct('cur', cur, 'sem', sem, 'sys', sys, 'hv', hv, 'boot', q);
+end
+% how large the force is against what limits it
+bsd = nan(numel(D), 1);
+for k = 1:numel(D), R = readIsoV(D(k).t, D(k).L, D(k).F);  bsd(k) = std(R.F0(1:7)); end
+fprintf('slack baseline, sd over the seven cycles of a record: mean %.2f kPa (range %.2f-%.2f)\n', mean(bsd), min(bsd), max(bsd));
+for a = [8 4 2]
+    fprintf('%d mM, mean force (kPa) at 3, 4, 5, 6 ML/s: %s ; between-preparation sd %s ; records with force below 2 kPa: %s of %d\n', a, ...
+        mat2str(round(arrayfun(@(v) mean(T.F(T.atp == a & T.v == v)), [3 4 5 6]), 1)), mat2str(round(arrayfun(@(v) std(T.F(T.atp == a & T.v == v)), [3 4 5 6]), 1)), ...
+        mat2str(arrayfun(@(v) sum(T.F(T.atp == a & T.v == v) < 2), [3 4 5 6])), sum(T.atp == a & T.v == 0));
+end
 diary off;
-save(fullfile(ana, 'results', 'fv_rundown_perprep.mat'), 'rv', 'rLow', 'rHi', 'rAll', 'rH', 'seAll', 'A', 'dAll', 'seAllv', 'exAll', 'fitm', 'q2', 'qL', 'g1', 'g2', 'pl', 'TR', 'T');
+save(fullfile(ana, 'results', 'fv_rundown_perprep.mat'), 'CC', 'rv', 'rLow', 'rHi', 'rAll', 'rH', 'seAll', 'A', 'dAll', 'seAllv', 'exAll', 'fitm', 'q2', 'qL', 'g1', 'g2', 'pl', 'TR', 'T');
 
 %% figure
 col = containers.Map({8, 4, 2}, {[0 0 0], [0.85 0.33 0.10], [0 0.45 0.74]});
@@ -237,6 +283,25 @@ title(tl, 'Beard2022 isovelocity records: rundown per preparation, and the high-
 exportgraphics(fig, fullfile(ana, 'figures', 'fv_rundown_perprep.png'), 'Resolution', 150);
 close(fig);
 
+%% figure for part C: the tail above 3 ML/s
+fig = figure('Visible', 'off', 'Position', [50 50 1500 430], 'Color', 'w');
+tl = tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+hf = @(h, v) h(1)*(1 - v/h(3))./(1 + v/(h(2)*h(3)));  vf = linspace(0, 8, 200);
+mkc = {'v', 'o', 's'};  cc = {[0 0.6 0.3], [0 0 0], [0.8 0 0]};
+for a = [8 4 2]
+    nexttile; hold on;  c = CC.(sprintf('a%d', a));
+    h6 = hillfit(vAll, c.cur(2, :));  h3 = hillfit(vAll(1:5), c.cur(2, 1:5));
+    plot(vf, max(hf(h3, vf), 1e-4), 'b--', 'LineWidth', 1.2, 'DisplayName', sprintf('Hill on 0-3 ML/s: V_{max} %.1f', h3(3)));
+    plot(vf, max(hf(h6, vf), 1e-4), 'b-', 'LineWidth', 1.2, 'DisplayName', sprintf('Hill on 0-6 ML/s: V_{max} %.1f', h6(3)));
+    for i = [1 3], plot(vAll + 0.06*(i - 2), c.cur(i, :), mkc{i}, 'Color', cc{i}, 'MarkerSize', 6, 'DisplayName', cn{i}); end
+    errorbar(vAll, c.cur(2, :), sqrt(c.sem.^2 + c.sys.^2), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 5, 'LineWidth', 1, 'DisplayName', 'factor + offset, sem and candidate range');
+    xline(3, ':', 'HandleVisibility', 'off'); set(gca, 'YScale', 'log'); ylim([0.01 1.3]); xlim([0 8]); grid on;
+    xlabel('speed (ML/s)'); ylabel('force (fresh 8 mM isometric = 1)'); title(sprintf('%d mM', a)); legend('Box', 'off', 'Location', 'southwest', 'FontSize', 8);
+end
+title(tl, 'Above 3 ML/s the estimates of the fresh curve disagree, and V_{max} is set by those points');
+exportgraphics(fig, fullfile(ana, 'figures', 'fv_rundown_highspeed.png'), 'Resolution', 150);
+close(fig);
+
 function [chi2, s, g] = bilinear(y, w, pI, gI, nP, nG)
 % weighted least squares of y = s(pI) * g(gI) by alternating updates
 s = ones(nP, 1);  g = accumarray(gI, w.*y, [nG 1])./accumarray(gI, w, [nG 1]);
@@ -252,4 +317,16 @@ end
 
 function d = halfdiff(x)
 h = floor(numel(x)/2);  d = mean(x(h+1:end)) - mean(x(1:h));
+end
+
+function h = hillfit(v, F)
+% Hill hyperbola F = F0 (1 - v/vmax)/(1 + v/(a vmax)); returns [F0, a/F0, vmax]
+w = 1./(0.01^2 + (0.05*F).^2);
+f = @(q, v) q(1)*(1 - v/exp(q(3)))./(1 + v/(exp(q(2))*exp(q(3))));
+o = @(q) sum(w.*(F - f(q, v)).^2);
+best = inf;
+for v0 = [5 8 12]
+    q = fminsearch(o, [F(1) log(0.3) log(v0)], optimset('MaxFunEvals', 4000, 'MaxIter', 4000, 'TolX', 1e-6, 'TolFun', 1e-10));
+    if o(q) < best, best = o(q); h = [q(1) exp(q(2)) exp(q(3))]; end
+end
 end
